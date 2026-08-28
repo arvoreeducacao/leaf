@@ -7,7 +7,7 @@ export default function Loading() {
         Carregando
       </span>
       <Skeleton className="h-10 w-full max-w-[360px]" />
-      <div className="mx-auto flex w-full max-w-[720px] flex-col gap-3">
+      <div className="mx-auto flex w-full max-w-prose-leaf flex-col gap-3">
         <Skeleton className="h-4 w-full" />
         <Skeleton className="h-4 w-full max-w-[520px]" />
         <Skeleton className="h-4 w-full max-w-[440px]" />

@@ -44,7 +44,7 @@ export default async function DocumentPage({ params }: Props) {
         isOwner={access === 'owner'}
         title={document.title}
       />
-      <div className="mx-auto w-full max-w-[720px]">
+      <div className="mx-auto w-full max-w-prose-leaf">
         <DocumentEditor
           documentId={document.id}
           initialContent={document.content}

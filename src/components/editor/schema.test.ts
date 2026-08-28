@@ -2,6 +2,7 @@ import { ServerBlockNoteEditor } from '@blocknote/server-util'
 import { describe, expect, it } from 'vitest'
 
 import { leafSchema } from './schema'
+import { leafServerSchema } from './server-schema'
 
 const server = ServerBlockNoteEditor.create({ schema: leafSchema })
 
@@ -49,5 +50,11 @@ describe('leafSchema', () => {
   it('converte citação e bloco de código de markdown', async () => {
     await expect(typesFor('> citação')).resolves.toEqual(['quote'])
     await expect(typesFor('```\ncodigo\n```')).resolves.toEqual(['codeBlock'])
+  })
+
+  it('expõe os mesmos tipos de bloco do schema do servidor', () => {
+    expect(Object.keys(leafSchema.blockSchema).sort()).toEqual(
+      Object.keys(leafServerSchema.blockSchema).sort()
+    )
   })
 })

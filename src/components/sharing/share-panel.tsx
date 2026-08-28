@@ -4,6 +4,7 @@ import { useCallback, useEffect, useId, useState } from 'react'
 import { toast } from 'sonner'
 
 import { ClipboardIcon, GlobeIcon, TrashIcon } from '@/components/icons'
+import { ConfirmDisablePublicLink } from '@/components/sharing/confirm-disable-public-link'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { ButtonIcon } from '@/components/ui/button-icon'
@@ -67,6 +68,7 @@ export function SharePanel({ documentId, canManage }: Props) {
   const [inviteRole, setInviteRole] = useState<ShareRole>('viewer')
   const [inviteError, setInviteError] = useState<string | null>(null)
   const [status, setStatus] = useState('')
+  const [confirmingDisable, setConfirmingDisable] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -155,6 +157,19 @@ export function SharePanel({ documentId, canManage }: Props) {
     })
   }
 
+  async function confirmDisable() {
+    const result = await run(
+      () => disablePublicLink(documentId),
+      'Link público desativado',
+    )
+
+    setConfirmingDisable(false)
+
+    if (result.ok) {
+      toast.success('Link público desativado')
+    }
+  }
+
   async function copyLink(url: string) {
     try {
       await navigator.clipboard.writeText(url)
@@ -166,7 +181,12 @@ export function SharePanel({ documentId, canManage }: Props) {
 
   if (loading) {
     return (
-      <div className="flex flex-col gap-4" data-testid="share-panel-loading">
+      <div
+        aria-busy="true"
+        className="flex flex-col gap-4"
+        data-testid="share-panel-loading"
+        role="status"
+      >
         {canManage ? <Skeleton className="h-12 w-full" /> : null}
         <Skeleton className="h-12 w-full" />
         <Skeleton className="h-10 w-2/3" />
@@ -296,7 +316,7 @@ export function SharePanel({ documentId, canManage }: Props) {
                   >
                     <SelectTrigger
                       aria-label={`Papel de ${person.email}`}
-                      className="h-12 w-[160px] shrink-0 desktop:h-10"
+                      className="w-[160px] shrink-0"
                     >
                       <SelectValue />
                     </SelectTrigger>
@@ -355,24 +375,34 @@ export function SharePanel({ documentId, canManage }: Props) {
                   className="font-bold text-body-small text-gray-900"
                   htmlFor={publicSwitchId}
                 >
-                  Ativar link público
+                  Link público
                 </Label>
               </div>
               <Switch
                 checked={state.publicToken !== null}
                 disabled={pending}
                 id={publicSwitchId}
-                onCheckedChange={(checked) =>
+                onCheckedChange={(checked) => {
+                  if (!checked) {
+                    setConfirmingDisable(true)
+
+                    return
+                  }
+
                   void run(
-                    () =>
-                      checked
-                        ? enablePublicLink(documentId)
-                        : disablePublicLink(documentId),
-                    checked ? 'Link público ativado' : 'Link público desativado',
+                    () => enablePublicLink(documentId),
+                    'Link público ativado',
                   )
-                }
+                }}
               />
             </div>
+
+            <ConfirmDisablePublicLink
+              onConfirm={() => void confirmDisable()}
+              onOpenChange={setConfirmingDisable}
+              open={confirmingDisable}
+              pending={pending}
+            />
 
             <p className="text-body-small text-gray-700">
               Qualquer pessoa com o link pode ver este documento. Desativar
@@ -382,7 +412,7 @@ export function SharePanel({ documentId, canManage }: Props) {
             {publicUrl ? (
               <div className="flex flex-col gap-2 tablet:flex-row tablet:items-end">
                 <div className="flex min-w-0 flex-1 flex-col gap-2">
-                  <Label htmlFor={publicLinkId}>Link público</Label>
+                  <Label htmlFor={publicLinkId}>Endereço do link</Label>
                   <Input
                     className="max-w-full"
                     id={publicLinkId}
