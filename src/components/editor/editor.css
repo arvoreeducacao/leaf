@@ -1,0 +1,97 @@
+@reference "../../app/globals.css";
+@import "tailwindcss/utilities.css" layer(utilities) source(none);
+@source "../../../node_modules/@blocknote/shadcn";
+
+.leaf-editor.bn-root {
+  --bn-font-family: inherit;
+  --bn-border-radius: var(--radius);
+  --bn-colors-editor-text: var(--card-foreground);
+  --bn-colors-editor-background: var(--background);
+  --bn-colors-menu-text: var(--popover-foreground);
+  --bn-colors-menu-background: var(--popover);
+  --bn-colors-tooltip-text: var(--background);
+  --bn-colors-tooltip-background: var(--card-foreground);
+  --bn-colors-hovered-text: var(--accent-foreground);
+  --bn-colors-hovered-background: var(--accent);
+  --bn-colors-selected-text: var(--accent-foreground);
+  --bn-colors-selected-background: var(--accent);
+  --bn-colors-disabled-text: var(--muted-foreground);
+  --bn-colors-disabled-background: var(--muted);
+  --bn-colors-border: var(--border);
+  --bn-colors-side-menu: var(--muted-foreground);
+  --bn-colors-shadow: var(--border);
+  --bn-colors-highlights-gray-background: var(--muted);
+  --bn-colors-highlights-gray-text: var(--muted-foreground);
+}
+
+.leaf-editor {
+  @apply w-full max-w-full;
+}
+
+.leaf-editor .bn-editor {
+  @apply px-8 text-body-medium text-gray-900 tablet:px-14;
+}
+
+.leaf-editor .bn-block-outer {
+  @apply leading-large;
+}
+
+.leaf-editor.bn-container .bn-editor .bn-block-content[data-content-type="heading"] {
+  @apply pt-6 font-bold text-display-small leading-medium text-gray-900;
+}
+
+.leaf-editor.bn-container .bn-editor .bn-block-content[data-content-type="heading"][data-level="2"] {
+  @apply text-heading-large;
+}
+
+.leaf-editor.bn-container .bn-editor .bn-block-content[data-content-type="heading"][data-level="3"] {
+  @apply text-heading-medium;
+}
+
+.leaf-editor.bn-container .bn-editor .bn-block-content[data-content-type="heading"][data-level="4"],
+.leaf-editor.bn-container .bn-editor .bn-block-content[data-content-type="heading"][data-level="5"],
+.leaf-editor.bn-container .bn-editor .bn-block-content[data-content-type="heading"][data-level="6"] {
+  @apply text-body-medium;
+}
+
+.leaf-editor .bn-block-content[data-content-type="quote"] {
+  @apply border-l-4 border-gray-300 pl-4 text-gray-700 italic;
+}
+
+.leaf-editor .bn-block-content[data-content-type="codeBlock"] {
+  @apply rounded-large bg-gray-100 text-body-small leading-medium;
+}
+
+.leaf-editor .bn-block-content[data-content-type="table"] {
+  @apply max-w-full overflow-x-auto;
+}
+
+.leaf-editor .bn-inline-content a {
+  @apply text-primary-900 underline underline-offset-2 hover:text-primary-950;
+}
+
+.leaf-editor img {
+  @apply max-w-full rounded-large;
+}
+
+.leaf-editor .bn-editor:focus-visible {
+  @apply outline-none;
+}
+
+.leaf-editor [data-placeholder]::before {
+  @apply text-gray-600;
+}
+
+.bn-container .bg-neutral-400 {
+  @apply bg-gray-300;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .leaf-editor *,
+  .leaf-editor *::before,
+  .leaf-editor *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
