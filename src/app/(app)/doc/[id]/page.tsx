@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { notFound, redirect } from 'next/navigation'
 
 import { DocumentHeader } from '@/components/app/document-header'
-import { EditorPlaceholder } from '@/components/editor/editor-placeholder'
+import { DocumentEditor } from '@/components/editor/document-editor'
 import { getSession } from '@/lib/auth'
 import { canEdit, getDocumentAccess } from '@/lib/authz'
 import { getDocument } from '@/lib/documents'
@@ -45,7 +45,7 @@ export default async function DocumentPage({ params }: Props) {
         title={document.title}
       />
       <div className="mx-auto w-full max-w-[720px]">
-        <EditorPlaceholder
+        <DocumentEditor
           documentId={document.id}
           initialContent={document.content}
           readOnly={!canEdit(access)}

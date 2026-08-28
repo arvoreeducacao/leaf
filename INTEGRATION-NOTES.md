@@ -165,10 +165,114 @@ necessidade entre agents: registre aqui em vez de editar arquivo de outro dono.
   eu tinha criado foi removido em favor do `vitest.config.mts` da onda de
   sharing, que é equivalente.
 
+## Onda 2 — Editor (entregue)
+
+- Arquivos criados: `src/components/editor/{editor.css, dictionary.ts,
+  callout-block.tsx, schema.ts, types.ts, content.ts, upload-file.ts,
+  slash-menu-items.tsx, save-indicator.tsx, editor-skeleton.tsx,
+  block-note-editor.tsx, document-editor.tsx, block-note-renderer.tsx,
+  document-renderer.tsx, content.test.ts, schema.test.ts}`.
+  `editor-placeholder.tsx` foi removido e `src/app/(app)/doc/[id]/page.tsx`
+  agora usa `DocumentEditor` com as mesmas props
+  (`{ documentId, initialContent, readOnly }`).
+- Dependências adicionadas: `@blocknote/react@0.54.0` e
+  `@blocknote/shadcn@0.54.0` (mesma linha do `core`/`server-util` que a onda do
+  markdown já tinha posto). Nada de `@blocknote/mantine`.
+- **Tema Bonsai sem `shadCNComponents`:** o `BlockNoteView` do
+  `@blocknote/shadcn` roda com os componentes que vêm no pacote, e não com os de
+  `src/components/ui/**`. Motivo concreto: na 0.54 o pacote migrou para
+  `@base-ui/react`, então o `Button` dele tem sizes `xs/icon-xs/icon-sm/icon-lg`
+  e o `Select` é `SelectRoot` do base-ui; passar nossos componentes Radix não
+  typecheca, e a doc do BlockNote ainda exige componentes **sem Portal**
+  (o nosso `dropdown-menu`/`popover`/`select`/`tooltip` usa Portal do Radix).
+  Isso não custa o visual: os componentes internos consomem `--popover`,
+  `--muted`, `--border`, `--primary`, `--accent`, `--radius` etc., que o
+  `globals.css` do Leaf já mapeia para tokens Bonsai. Se um dia alguém quiser
+  trocar, precisa forkar os componentes sem Portal dentro de
+  `src/components/editor/`.
+- **`globals.css` não foi tocado.** O `@blocknote/shadcn` precisa que o Tailwind
+  gere as utilities usadas dentro do pacote, o que normalmente pede um
+  `@source ".../node_modules/@blocknote/shadcn"` no entry do Tailwind. Em vez de
+  editar arquivo de outro dono, `src/components/editor/editor.css` é um segundo
+  entry do Tailwind:
+  `@reference "../../app/globals.css"` (puxa o tema Bonsai sem emitir CSS) +
+  `@import "tailwindcss/utilities.css" layer(utilities) source(none)` +
+  `@source "../../../node_modules/@blocknote/shadcn"`. Validado rodando o
+  `@tailwindcss/postcss` na mão sobre o arquivo (gera ~56 KB, sem preflight
+  duplicado, com `bg-popover`/`text-muted-foreground`/`shadow-md` etc.).
+  **Não apague essas três linhas do topo do `editor.css`**: sem elas o editor
+  perde o estilo dos menus.
+  Consequência do `@reference`: nesse arquivo `var(--color-gray-900)` **não**
+  funciona (o `@theme` do globals é `inline`, os tokens são inlinados e só os
+  tokens efetivamente referenciados chegam ao `:root`). Por isso o `editor.css`
+  usa `@apply` para tudo que é utility e só as vars semânticas declaradas
+  literalmente no `:root` do globals (`--background`, `--card-foreground`,
+  `--popover`, `--muted`, `--accent`, `--border`, `--radius`...) para alimentar
+  as `--bn-*` do BlockNote.
+- **`leafSchema` (`src/components/editor/schema.ts`) é o schema compartilhado:**
+  `defaultBlockSpecs` + bloco custom `callout` (o BlockNote 0.54 não tem callout
+  nativo). O arquivo é server-safe de propósito (sem `'use client'`), então a
+  onda do markdown pode passar `leafSchema` para o `ServerBlockNoteEditor` e o
+  callout sobrevive ao import/export. Hoje `src/lib/markdown/convert.ts` cria o
+  `ServerBlockNoteEditor` sem schema, ou seja, **um callout exportado vira
+  parágrafo/bloco desconhecido**. `src/components/editor/schema.test.ts` já
+  prova que `ServerBlockNoteEditor.create({ schema: leafSchema })` funciona e
+  converte `#`, `-`, `1.`, `- [ ]`, `>` e ``` ``` ``` nos blocos certos.
+  O `toExternalHTML` do callout emite `<blockquote>`, então o export degrada
+  para citação em vez de sumir. **Ressalva medida:** num probe local,
+  `blocksToMarkdownLossy`/`blocksToHTMLLossy` de um bloco `callout` devolveu
+  conteúdo (o teste passou), mas o `react-dom` soltou erros de teardown no JSDOM
+  (`Cannot read properties of undefined (reading 'event')`). Antes de passar
+  `leafSchema` para o `ServerBlockNoteEditor` da rota de export, confirme que
+  isso não vira ruído/erro no servidor.
+- `DocumentRenderer` (`src/components/editor/document-renderer.tsx`) entregue com
+  a assinatura combinada `{ content: string | null }`, read-only e com todos os
+  menus de edição desligados. É o que `/share/[token]` usa.
+- Persistência: autosave com debounce de 1s em
+  `src/components/editor/use-autosave.ts`, chamando `updateDocumentContent`.
+  Flush no `blur` do editor e no `visibilitychange` para `hidden`; o
+  `beforeunload` só avisa quando ainda há alteração não salva (não dá para
+  garantir server action no unload). Indicador "Salvando/Salvo/Alterações não
+  salvas/Não foi possível salvar" fica dentro do próprio componente do editor,
+  acima do conteúdo. O `document-header.tsx` não foi tocado.
+- Dicionário: `pt` do `@blocknote/core/locales` com override em
+  `src/components/editor/dictionary.ts` (o `pt` do pacote usa Title Case, que o
+  Bonsai não aceita, e falta a chave `placeholders.emptyDocument`). Placeholder
+  do documento vazio: "Digite / para comandos".
+- Slash menu: itens default filtrados (grupos "Mídia" e "Outros" saem, menos
+  "Imagem") mais o item "Destaque" do callout. Os blocos `audio`, `video` e
+  `file` continuam **no schema** (para não quebrar conteúdo vindo de import),
+  só não aparecem no menu.
+- Upload de imagem: `uploadFile` do editor chama `POST /api/uploads` e mostra
+  `toast.error` em pt-BR no erro (`src/components/editor/upload-file.ts`).
+- `@blocknote/shadcn` traz `lucide-react` como dependência própria. Nenhum
+  arquivo nosso importa lucide; o gate continua valendo para código do Leaf.
+- **Estrago que eu causei e consertei, para ninguém repetir:** duas ondas rodaram
+  `pnpm add` ao mesmo tempo e o `package.json` foi sobrescrito, o que deixou
+  `@blocknote/react`/`shadcn` fora dele e o pnpm resolveu **duas cópias** de
+  `@blocknote/core` (uma com peer `y-prosemirror`, outra só com `yjs`) — o tsc
+  acusava "separate declarations of a private property 'opts'". No meio do
+  diagnóstico eu removi `y-prosemirror`, `y-protocols` e `yjs` do
+  `package.json`; eles **voltaram para `dependencies`**, que é onde a onda do
+  markdown precisa deles. Hoje `core`, `react`, `shadcn` e `server-util`
+  apontam todos para a mesma instância de `@blocknote/core`. Se alguém tornar a
+  mexer em deps, confira com
+  `readlink -f node_modules/@blocknote/{core,react,shadcn,server-util}/../core`.
+- Não rodei `pnpm build` nem `pnpm dev` (regra das ondas paralelas), então **o
+  editor não foi aberto em navegador**. O que foi verificado: `tsc --noEmit`
+  limpo, `vitest run` verde e a compilação do `editor.css` pelo
+  `@tailwindcss/postcss`. Falta teste manual de: menus flutuantes do BlockNote
+  em mobile, drag handle, upload de imagem de ponta a ponta e o autosave real.
+- Deixado de propósito com o default da lib: a paleta de "cor de texto/fundo" do
+  BlockNote (`--bn-colors-highlights-*`), porque é cor de conteúdo escolhida pelo
+  usuário e o Bonsai não tem equivalente para marrom/rosa. Só o cinza foi
+  remapeado para `--muted`.
+
 ## Pendências conhecidas
 
-- `y-prosemirror`, `y-protocols` e `yjs` estão em `devDependencies` mas são
-  runtime do servidor (ver a seção do markdown acima).
+- `src/lib/markdown/convert.ts` cria o `ServerBlockNoteEditor` sem
+  `schema: leafSchema`; enquanto isso, callout não sobrevive ao import/export
+  (ver a seção do editor acima).
 - `next.config.ts` pode precisar de `serverExternalPackages` por causa do JSDOM
   do `@blocknote/server-util`; não validado porque `pnpm build` não foi rodado.
 - Export de markdown/HTML não passa pela rota pública `/share/[token]`, só pelo
