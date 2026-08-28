@@ -101,6 +101,14 @@ necessidade entre agents: registre aqui em vez de editar arquivo de outro dono.
   adicionado ao `package.json` pela onda do markdown. `src/lib/authz.test.ts`
   usa `vi.mock('@/db')` com SQLite `:memory:` migrado a partir dos `.sql` de
   `drizzle/`, então não toca o `data/leaf.db`.
+- Ressalvas do design-review que ficaram em aberto de propósito: desativar o
+  link público não tem modal de confirmação (o aviso "desativar invalida o link
+  atual para sempre" fica visível antes da ação, e remover convidado tem
+  "Desfazer" no toast); e o `cn` de `src/shared/utils` é `twMerge` sem
+  `extendTailwindMerge`, então classe `text-<token>` passada via `className` para
+  componente shadcn é tratada como cor e perde para o `text-sm` da base. O
+  segundo item é do dono de `src/shared/utils` resolver; aqui foi contornado não
+  combinando tamanho e cor no mesmo `className`.
 
 ## Onda 2 — Markdown (entregue)
 
