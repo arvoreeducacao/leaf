@@ -4,10 +4,12 @@ import { useRouter } from 'next/navigation'
 import { useState, useTransition } from 'react'
 import { toast } from 'sonner'
 
+import { MoveDocumentDialog } from '@/components/app/move-document-dialog'
 import {
   EllipsisIcon,
   FileCodeIcon,
   FileDownloadIcon,
+  HierarchyIcon,
   TrashIcon,
 } from '@/components/icons'
 import { ButtonIcon } from '@/components/ui/button-icon'
@@ -24,7 +26,7 @@ type ExportFormat = 'md' | 'html'
 
 type Props = Readonly<{
   documentId: string
-  canDelete: boolean
+  isOwner: boolean
 }>
 
 function fileNameFromResponse(response: Response, format: ExportFormat) {
@@ -34,9 +36,10 @@ function fileNameFromResponse(response: Response, format: ExportFormat) {
   return match ? match[1] : `documento.${format}`
 }
 
-export function DocumentMenu({ documentId, canDelete }: Props) {
+export function DocumentMenu({ documentId, isOwner }: Props) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
+  const [moving, setMoving] = useState(false)
   const [exporting, setExporting] = useState(false)
   const [pending, startTransition] = useTransition()
 
@@ -85,45 +88,65 @@ export function DocumentMenu({ documentId, canDelete }: Props) {
   }
 
   return (
-    <DropdownMenu onOpenChange={setOpen} open={open}>
-      <DropdownMenuTrigger asChild>
-        <ButtonIcon
-          aria-label="Ações do documento"
-          size="xlarge"
-          variant="secondary"
-        >
-          <EllipsisIcon aria-hidden="true" />
-        </ButtonIcon>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-64">
-        <DropdownMenuItem
-          disabled={exporting}
-          onSelect={() => handleExport('md')}
-        >
-          <FileDownloadIcon aria-hidden="true" />
-          Exportar como Markdown
-        </DropdownMenuItem>
-        <DropdownMenuItem
-          disabled={exporting}
-          onSelect={() => handleExport('html')}
-        >
-          <FileCodeIcon aria-hidden="true" />
-          Exportar como HTML
-        </DropdownMenuItem>
-        {canDelete ? (
-          <>
-            <DropdownMenuSeparator />
+    <>
+      <DropdownMenu onOpenChange={setOpen} open={open}>
+        <DropdownMenuTrigger asChild>
+          <ButtonIcon
+            aria-label="Ações do documento"
+            size="xlarge"
+            variant="secondary"
+          >
+            <EllipsisIcon aria-hidden="true" />
+          </ButtonIcon>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-64">
+          {isOwner ? (
             <DropdownMenuItem
-              disabled={pending}
-              onSelect={handleTrash}
-              variant="destructive"
+              onSelect={(event) => {
+                event.preventDefault()
+                setOpen(false)
+                setMoving(true)
+              }}
             >
-              <TrashIcon aria-hidden="true" />
-              Mover para a lixeira
+              <HierarchyIcon aria-hidden="true" />
+              Mover para outra página
             </DropdownMenuItem>
-          </>
-        ) : null}
-      </DropdownMenuContent>
-    </DropdownMenu>
+          ) : null}
+          <DropdownMenuItem
+            disabled={exporting}
+            onSelect={() => handleExport('md')}
+          >
+            <FileDownloadIcon aria-hidden="true" />
+            Exportar como Markdown
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            disabled={exporting}
+            onSelect={() => handleExport('html')}
+          >
+            <FileCodeIcon aria-hidden="true" />
+            Exportar como HTML
+          </DropdownMenuItem>
+          {isOwner ? (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                disabled={pending}
+                onSelect={handleTrash}
+                variant="destructive"
+              >
+                <TrashIcon aria-hidden="true" />
+                Mover para a lixeira
+              </DropdownMenuItem>
+            </>
+          ) : null}
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <MoveDocumentDialog
+        documentId={documentId}
+        onOpenChange={setMoving}
+        open={moving}
+      />
+    </>
   )
 }

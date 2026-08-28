@@ -1,11 +1,12 @@
 import type { Metadata } from 'next'
 import { notFound, redirect } from 'next/navigation'
 
+import { DocumentBreadcrumb } from '@/components/app/document-breadcrumb'
 import { DocumentHeader } from '@/components/app/document-header'
 import { DocumentEditor } from '@/components/editor/document-editor'
 import { getSession } from '@/lib/auth'
 import { canEdit, getDocumentAccess } from '@/lib/authz'
-import { getDocument } from '@/lib/documents'
+import { getDocument, listAncestors } from '@/lib/documents'
 
 type Props = Readonly<{ params: Promise<{ id: string }> }>
 
@@ -36,8 +37,11 @@ export default async function DocumentPage({ params }: Props) {
     notFound()
   }
 
+  const crumbs = await listAncestors(document.id)
+
   return (
     <article className="mx-auto flex w-full max-w-content flex-col gap-6 px-4 py-8 tablet:px-8 tablet:py-10">
+      <DocumentBreadcrumb crumbs={crumbs} />
       <DocumentHeader
         canEdit={canEdit(access)}
         documentId={document.id}

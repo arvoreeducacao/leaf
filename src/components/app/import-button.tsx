@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useRef, useState, useTransition } from 'react'
 import { toast } from 'sonner'
 
+import { NotionImportDialog } from '@/components/app/notion-import-dialog'
 import { FileUploadIcon } from '@/components/icons'
 import { Button } from '@/components/ui/button'
 import { importMarkdown } from '@/lib/markdown/import-action'
@@ -12,30 +13,26 @@ import {
   MAX_MARKDOWN_BYTES,
   MAX_MARKDOWN_LABEL,
 } from '@/lib/markdown/limits'
+import {
+  MAX_ZIP_BYTES,
+  MAX_ZIP_LABEL,
+  ZIP_EXTENSIONS,
+} from '@/lib/notion/limits'
 import { cn } from '@/shared/utils'
 
-const extensionsLabel = MARKDOWN_EXTENSIONS.join(', ')
+const acceptedExtensions = [...MARKDOWN_EXTENSIONS, ...ZIP_EXTENSIONS]
 
 export function ImportButton() {
   const router = useRouter()
   const inputRef = useRef<HTMLInputElement>(null)
   const [dragging, setDragging] = useState(false)
+  const [zipFile, setZipFile] = useState<File | null>(null)
   const [pending, startTransition] = useTransition()
 
-  function handleFile(file: File | undefined) {
-    if (!file) {
-      return
-    }
-
-    const name = file.name.toLowerCase()
-
-    if (!MARKDOWN_EXTENSIONS.some((extension) => name.endsWith(extension))) {
-      toast.error(`Escolha um arquivo markdown (${extensionsLabel})`)
-      return
-    }
-
+  function handleMarkdown(file: File) {
     if (file.size > MAX_MARKDOWN_BYTES) {
       toast.error(`O arquivo passa de ${MAX_MARKDOWN_LABEL}`)
+
       return
     }
 
@@ -47,6 +44,7 @@ export function ImportButton() {
         if (result.ok) {
           toast.success('Markdown importado')
           router.push(`/doc/${result.id}`)
+
           return
         }
 
@@ -59,6 +57,34 @@ export function ImportButton() {
         toast.error('Não foi possível importar o arquivo')
       }
     })
+  }
+
+  function handleFile(file: File | undefined) {
+    if (!file) {
+      return
+    }
+
+    const name = file.name.toLowerCase()
+
+    if (ZIP_EXTENSIONS.some((extension) => name.endsWith(extension))) {
+      if (file.size > MAX_ZIP_BYTES) {
+        toast.error(`O arquivo passa de ${MAX_ZIP_LABEL}`)
+
+        return
+      }
+
+      setZipFile(file)
+
+      return
+    }
+
+    if (MARKDOWN_EXTENSIONS.some((extension) => name.endsWith(extension))) {
+      handleMarkdown(file)
+
+      return
+    }
+
+    toast.error('Escolha um arquivo markdown ou um zip exportado do Notion')
   }
 
   return (
@@ -84,7 +110,7 @@ export function ImportButton() {
       }}
     >
       <input
-        accept={MARKDOWN_EXTENSIONS.join(',')}
+        accept={acceptedExtensions.join(',')}
         aria-hidden="true"
         className="sr-only"
         onChange={(event) => {
@@ -103,7 +129,7 @@ export function ImportButton() {
           'w-full',
           dragging && 'border-primary-800 bg-primary-100 text-gray-900',
           pending &&
-            'cursor-not-allowed bg-muted text-gray-400 hover:border-gray-400 hover:text-gray-400',
+            'cursor-not-allowed bg-muted text-gray-600 hover:border-gray-600 hover:text-gray-600',
         )}
         onClick={() => {
           if (pending) {
@@ -116,7 +142,7 @@ export function ImportButton() {
         variant="secondary"
       >
         <FileUploadIcon aria-hidden="true" />
-        Importar markdown
+        Importar arquivo
       </Button>
 
       <p className="min-h-6 px-3 text-body-small text-gray-700">
@@ -124,12 +150,21 @@ export function ImportButton() {
           ? 'Importando o arquivo'
           : dragging
             ? 'Solte o arquivo aqui'
-            : 'ou arraste um arquivo .md aqui'}
+            : 'Markdown ou zip do Notion'}
       </p>
 
       <span aria-live="polite" className="sr-only">
         {pending ? 'Importando o arquivo' : ''}
       </span>
+
+      <NotionImportDialog
+        file={zipFile}
+        onOpenChange={(open) => {
+          if (!open) {
+            setZipFile(null)
+          }
+        }}
+      />
     </div>
   )
 }

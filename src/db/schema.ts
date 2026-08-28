@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm'
 import {
+  type AnySQLiteColumn,
   index,
   integer,
   sqliteTable,
@@ -79,6 +80,10 @@ export const documents = sqliteTable(
     ownerId: text('owner_id')
       .notNull()
       .references(() => user.id, { onDelete: 'cascade' }),
+    parentId: text('parent_id').references(
+      (): AnySQLiteColumn => documents.id,
+      { onDelete: 'set null' },
+    ),
     title: text('title').notNull().default('Sem título'),
     content: text('content'),
     publicToken: text('public_token').unique(),
@@ -90,7 +95,10 @@ export const documents = sqliteTable(
       .default(sql`(unixepoch())`),
     deletedAt: integer('deleted_at', { mode: 'timestamp' }),
   },
-  (table) => [index('documents_owner_id_idx').on(table.ownerId)],
+  (table) => [
+    index('documents_owner_id_idx').on(table.ownerId),
+    index('documents_parent_id_idx').on(table.parentId),
+  ],
 )
 
 export const documentShares = sqliteTable(

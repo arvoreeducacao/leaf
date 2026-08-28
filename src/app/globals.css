@@ -1,3 +1,4 @@
+@layer theme, base, components, blocknote, utilities;
 @import "tailwindcss";
 @import "tw-animate-css";
 

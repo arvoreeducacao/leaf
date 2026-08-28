@@ -23,10 +23,19 @@ export async function GET(
     ? new Uint8Array(object.body)
     : object.body
 
+  const isImage = object.contentType.startsWith('image/')
+  const fileName = objectKey.split('/').pop() ?? 'arquivo'
+
   return new NextResponse(body as BodyInit, {
     headers: {
-      'Content-Type': object.contentType,
       'Cache-Control': 'public, max-age=31536000, immutable',
+      'Content-Disposition': isImage
+        ? 'inline'
+        : `attachment; filename="${fileName}"`,
+      'Content-Security-Policy':
+        "default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'; sandbox",
+      'Content-Type': object.contentType,
+      'X-Content-Type-Options': 'nosniff',
     },
   })
 }
