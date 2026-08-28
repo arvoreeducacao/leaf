@@ -40,7 +40,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# folhas
+# leaf
 /data/
 .env.local
 /.s3rver/
+!.env.example
+/tsconfig.tsbuildinfo
