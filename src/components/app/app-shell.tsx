@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 
 import { DocumentList } from '@/components/app/document-list'
+import { DocumentTree } from '@/components/app/document-tree'
 import { ImportButton } from '@/components/app/import-button'
 import { NewDocumentButton } from '@/components/app/new-document-button'
 import { TrashSection } from '@/components/app/trash-section'
@@ -24,12 +25,12 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
-import type { DocumentSummary } from '@/lib/documents'
+import type { DocumentNode, DocumentSummary } from '@/lib/documents'
 import { cn } from '@/shared/utils'
 
 type Props = Readonly<{
   user: { name: string; email: string }
-  owned: Array<DocumentSummary>
+  owned: Array<DocumentNode>
   shared: Array<DocumentSummary>
   trashed: Array<DocumentSummary>
   children: React.ReactNode
@@ -42,7 +43,7 @@ function NavContent({
   user,
   onNavigate,
 }: Readonly<{
-  owned: Array<DocumentSummary>
+  owned: Array<DocumentNode>
   shared: Array<DocumentSummary>
   trashed: Array<DocumentSummary>
   user: { name: string; email: string }
@@ -65,9 +66,9 @@ function NavContent({
           <h2 className="px-3 py-2 font-bold text-caption text-gray-700 uppercase tracking-wide">
             Meus documentos
           </h2>
-          <DocumentList
-            documents={owned}
+          <DocumentTree
             emptyLabel="Nenhum documento ainda"
+            nodes={owned}
             onNavigate={onNavigate}
           />
         </section>

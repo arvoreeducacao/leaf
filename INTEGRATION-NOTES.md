@@ -340,6 +340,114 @@ necessidade entre agents: registre aqui em vez de editar arquivo de outro dono.
   `.bn-block-content:has(.ProseMirror-trailingBreak:only-child)::after`;
   `[data-placeholder]::before` é morto (só existe no popup de código-fonte).
 
+## Onda 4 — Hierarquia de páginas e import do Notion (entregue)
+
+- Schema: `documents.parent_id` (self-reference, nullable) + índice, migração
+  `drizzle/0001_loving_zeigeist.sql`. **O drizzle-kit gerou o `ALTER TABLE ... ADD
+  parent_id text REFERENCES documents(id)` sem `ON DELETE SET NULL`**, então com
+  `foreign_keys = ON` apagar um pai com filhos daria erro de FK. Por isso
+  `deleteForever` zera o `parent_id` da subárvore antes de apagar. Se um dia a
+  tabela for recriada, o `onDelete: 'set null'` do `schema.ts` volta a valer.
+- `src/lib/documents.ts` ganhou `parentId` no `DocumentSummary`, mais
+  `buildDocumentTree`, `listAncestors` e `listSubtreeIds`. A lista
+  "Compartilhados comigo" continua **plana** de propósito (o pai pode não ser
+  acessível para quem recebeu o compartilhamento).
+- `src/lib/document-actions.ts`: `moveDocument(id, parentId)` (bloqueia mover
+  para si mesmo ou para descendente, e exige `owner` na origem **e** no destino),
+  `listMoveTargets(id)` para alimentar o dialog, e cascata na lixeira
+  (`moveToTrash`/`restoreDocument`/`deleteForever` operam na subárvore inteira).
+  Restaurar um filho com o pai ainda na lixeira o devolve para a raiz.
+- **Autorização continua por documento.** Compartilhar um pai NÃO compartilha os
+  filhos, e o link público de um pai não expõe a subárvore. Herança de permissão
+  ficou fora do MVP de propósito.
+- UI nova: `document-tree.tsx` (sidebar em árvore, expand/collapse por item,
+  indentação até 4 níveis e tooltip com o caminho a partir do 5º),
+  `document-breadcrumb.tsx` (ancestrais acima do título),
+  `move-document-dialog.tsx` (Dialog no desktop, Sheet no mobile, busca +
+  radiogroup de destinos) e `notion-import-dialog.tsx` (progresso e resumo).
+  O item do menu ⋯ se chama **"Mover para outra página"** para não colidir com
+  "Mover para a lixeira" (dois itens com nome parecido confundiam leitor de tela
+  e o próprio teste).
+- Import do Notion: `POST /api/import/notion` (multipart, campo `file`) responde
+  **NDJSON em streaming** com eventos `progress` / `done` / `error`; o cliente lê
+  com `response.body.getReader()`. Rota em vez de server action por causa do
+  limite de corpo das server actions.
+- `src/lib/notion/`: `zip.ts` (fflate `unzipSync` com filtro que rejeita
+  zip-slip e caminho absoluto, e corta por número de arquivos e tamanho
+  declarado), `paths.ts`, `plan.ts` (monta a hierarquia), `markdown.ts`
+  (transformações), `csv.ts`, `import.ts` (orquestra) e `fixture.ts` (export
+  sintético usado nos testes). Limites em `limits.ts`: 100 MB de zip, 300 MB
+  descompactado, 2000 arquivos, 20 MB por anexo.
+- Decisões do mapeamento (defaults seguros, usuário estava ausente):
+  - **Database `.csv` vira uma página própria** com a tabela dentro, e as linhas
+    que têm `.md` viram subpáginas dela. A spec falava em "tabela no doc pai",
+    mas a pasta da database precisa de um documento para pendurar as linhas, e
+    esse documento é o natural. Tabela cortada em 12 colunas e 200 linhas, com
+    aviso no fim do documento.
+  - Pasta sem `.md` nem `.csv` correspondente vira **documento de agrupamento**
+    vazio. A pasta raiz do zip é achatada só quando o nome **não** tem hash de 32
+    hex (isto é, quando é um wrapper tipo `Export-8f3a/`); pasta com hash é
+    página de verdade e continua na árvore.
+  - `<aside>` do Notion e citação começando com emoji viram bloco `callout`; o
+    emoji é removido do texto. O `<aside>` é marcado com um separador invisível
+    (`⁣`) antes da conversão para o markdown, e o marcador é retirado ao
+    promover o bloco.
+  - **Toggle list degrada**: `<summary>` vira parágrafo em negrito e o conteúdo
+    fica sempre aberto (o BlockNote tem `toggleListItem`, mas não há sintaxe
+    markdown que o gere). O import avisa quantos toggles foram degradados.
+  - Anexo que não é imagem vira link para `/api/uploads/...`; imagem vira bloco
+    de imagem. Link interno para `.md`/`.csv` é reescrito para `/doc/{id}` numa
+    segunda passada (as linhas são criadas antes do conteúdo). Link sem destino
+    no zip vira texto puro e entra na contagem de avisos.
+  - Erro em uma página não aborta o zip: vira aviso e o import continua.
+- Sanitização: o import passa pelo `markdownToBlocks` (novo export de
+  `src/lib/markdown/convert.ts`), que é `sanitizeMarkdown` + `sanitizeBlocks`
+  como antes. `promoteCallouts` só troca `type` e texto, não introduz URL.
+- **Bug de CSS que existia desde a onda 2 e foi corrigido aqui:** o
+  `editor.css` importava as utilities do Tailwind na layer `utilities`, e como
+  esse arquivo entra depois do `globals.css`, o `.hidden` gerado para o
+  `@blocknote/shadcn` vencia o `.tablet:block` do app. Resultado: **a sidebar do
+  desktop sumia em toda página que carrega o editor** (`/doc/[id]` e
+  `/share/[token]`). Correção: `globals.css` declara
+  `@layer theme, base, components, blocknote, utilities;` na primeira linha e o
+  `editor.css` importa as utilities do BlockNote em `layer(blocknote)`. Validado
+  no navegador (sidebar volta, menu de barra do BlockNote continua estilizado) e
+  no bundle de produção (`@layer components,blocknote;@layer utilities{`).
+- **Hardening do proxy de uploads** (`/api/uploads/[...key]`), porque o import
+  passou a ingerir arquivo arbitrário de dentro de um zip: `X-Content-Type-Options:
+  nosniff`, `Content-Security-Policy: default-src 'none'; ...; sandbox` (mata SVG
+  com script servido do nosso domínio) e `Content-Disposition: attachment` para
+  tudo que não é `image/*`.
+- Testes: `src/lib/notion/import.test.ts` (21 casos: hierarquia de 3 níveis,
+  título sem hash, csv como página, imagem no storage, link interno reescrito,
+  callout, título não duplicado, zip-slip, caminho absoluto, limite de tamanho e
+  de arquivos, lixo de sistema operacional) e `src/lib/documents.test.ts` (5
+  casos de árvore/ancestrais/subárvore). Suíte: 6 arquivos, 88 testes verdes.
+- Ajustes vindos do `design-review` (todos os 🔴 e a maior parte dos 🟡):
+  `src/components/ui/radio-group.tsx` foi copiado do `arvore-design-system` (com
+  `border-gray-600` no repouso, como o `border-strong` corrigido do DS) e a dep
+  `@radix-ui/react-radio-group` entrou; o dialog de mover usa o rádio de verdade
+  em vez de `input` `sr-only`. O chevron da árvore virou `ButtonIcon size="medium"`
+  (área de toque de 44px pelo `before:-inset`), a indentação voltou para a escala
+  (`pl-3 / pl-6 / pl-10 / pl-14`), a barra de progresso usa `bg-primary-800`
+  (3,32:1 contra `gray-200`; `primary-500` dava 1,48:1) e o item do menu passou a
+  ser gateado por `isOwner` (o `DocumentMenu` trocou a prop `canDelete` por
+  `isOwner`, que é a permissão real da ação no servidor).
+- O import agora aceita cancelamento de verdade: o cliente aborta o `fetch` e a
+  rota repassa `request.signal` para o gerador, que para entre páginas. As
+  páginas já criadas ficam (a mensagem diz isso). No erro há "Tentar de novo".
+- Nos níveis achatados (5º em diante) a árvore mostra o caminho **também** como
+  segunda linha, além do tooltip que a spec pedia: tooltip não abre em toque e
+  metade do tráfego da Árvore é mobile.
+- Label da sidebar mudou de "Importar markdown" para "Importar arquivo" porque o
+  botão passou a aceitar zip. Mudança de label de navegação registrada aqui
+  porque o protocolo de redesign do Bonsai pede confirmação de produto.
+- E2E manual com Playwright (fora do repo, scratchpad): 14 checagens do fluxo de
+  import (modal, resumo, avisos, árvore, breadcrumb, imagem renderizada, callout,
+  terceiro nível, mover para a raiz, mobile sem overflow) e 6 de hierarquia
+  (slash menu do editor ainda estilizado, lixeira em cascata, restaurar filho vai
+  para a raiz, restaurar pai reconstrói a árvore). 20/20.
+
 ## Pendências conhecidas
 
 - Export de markdown/HTML não passa pela rota pública `/share/[token]`, só pelo
@@ -362,3 +470,19 @@ necessidade entre agents: registre aqui em vez de editar arquivo de outro dono.
   visual à mão; o DS tem um `alert.tsx` que não foi copiado para o Leaf.
 - O `blocksToHTMLLossy` do BlockNote emite `classname="..."` (minúsculo, atributo
   inválido) nos links do HTML exportado. É do pacote, não do Leaf.
+- O import do Notion lê o zip inteiro em memória (`unzipSync`), então um zip de
+  100 MB usa memória proporcional no servidor. Para arquivo maior seria preciso
+  extração em streaming por entrada.
+- Fechar o modal de importação não cancela o trabalho: o servidor termina a
+  importação mesmo assim (não há `AbortController` no cliente nem cancelamento no
+  servidor).
+- Colunas de database do Notion que passam de 12, linhas que passam de 200 e
+  toggles do Notion (que perdem o abrir/fechar) são perdas assumidas, sinalizadas
+  no resumo da importação.
+- A árvore da sidebar guarda o estado de expandido só no cliente (`useState`),
+  então recolher/expandir volta ao padrão a cada recarga; só os ancestrais do
+  documento aberto são expandidos automaticamente.
+- Import não deduplica: importar o mesmo zip duas vezes cria duas árvores.
+- A lixeira continua sendo uma lista plana: ao mandar um pai para a lixeira, os
+  filhos aparecem lá como itens soltos (restaurar o pai traz todos de volta com a
+  hierarquia intacta).

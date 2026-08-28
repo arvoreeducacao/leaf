@@ -89,7 +89,7 @@ export function DocumentHeader({
 
       <div className="flex items-center gap-2">
         <ShareButton canShare={isOwner} documentId={documentId} />
-        <DocumentMenu canDelete={isOwner} documentId={documentId} />
+        <DocumentMenu documentId={documentId} isOwner={isOwner} />
       </div>
     </div>
   )

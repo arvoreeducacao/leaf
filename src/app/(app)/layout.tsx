@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { AppShell } from '@/components/app/app-shell'
 import { getSession } from '@/lib/auth'
 import {
+  buildDocumentTree,
   listOwnedDocuments,
   listSharedDocuments,
   listTrashedDocuments,
@@ -25,7 +26,7 @@ export default async function AppLayout({
 
   return (
     <AppShell
-      owned={owned}
+      owned={buildDocumentTree(owned)}
       shared={shared}
       trashed={trashed}
       user={{ name: session.user.name, email: session.user.email }}

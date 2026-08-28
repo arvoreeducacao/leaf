@@ -36,12 +36,18 @@ export function parseContentBlocks(content: string | null): Array<PartialBlock> 
   }
 }
 
-export async function markdownToContent(markdown: string): Promise<string> {
+export async function markdownToBlocks(
+  markdown: string,
+): Promise<Array<PartialBlock>> {
   const blocks = await getServerEditor().tryParseMarkdownToBlocks(
     sanitizeMarkdown(markdown),
   )
 
-  return JSON.stringify(sanitizeBlocks(blocks))
+  return sanitizeBlocks(blocks) as Array<PartialBlock>
+}
+
+export async function markdownToContent(markdown: string): Promise<string> {
+  return JSON.stringify(await markdownToBlocks(markdown))
 }
 
 export async function contentToMarkdown(content: string | null): Promise<string> {

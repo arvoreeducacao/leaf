@@ -1,5 +1,5 @@
 @reference "../../app/globals.css";
-@import "tailwindcss/utilities.css" layer(utilities) source(none);
+@import "tailwindcss/utilities.css" layer(blocknote) source(none);
 @source "../../../node_modules/@blocknote/shadcn";
 
 .leaf-editor.bn-root {

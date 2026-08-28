@@ -8,6 +8,13 @@
       "when": 1787946546747,
       "tag": "0000_blue_maginty",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1787953318903,
+      "tag": "0001_loving_zeigeist",
+      "breakpoints": true
     }
   ]
 }
