@@ -1,13 +1,18 @@
 import type { PartialBlock } from '@blocknote/core'
 import { ServerBlockNoteEditor } from '@blocknote/server-util'
 
+import { leafServerSchema } from '@/components/editor/server-schema'
 import { sanitizeBlocks, sanitizeMarkdown } from '@/lib/markdown/sanitize'
 
-let serverEditor: ServerBlockNoteEditor | null = null
+let serverEditor: ServerBlockNoteEditor<
+  typeof leafServerSchema.blockSchema,
+  typeof leafServerSchema.inlineContentSchema,
+  typeof leafServerSchema.styleSchema
+> | null = null
 
 function getServerEditor() {
   if (!serverEditor) {
-    serverEditor = ServerBlockNoteEditor.create()
+    serverEditor = ServerBlockNoteEditor.create({ schema: leafServerSchema })
   }
 
   return serverEditor

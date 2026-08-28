@@ -19,7 +19,7 @@
   --bn-colors-disabled-background: var(--muted);
   --bn-colors-border: var(--border);
   --bn-colors-side-menu: var(--muted-foreground);
-  --bn-colors-shadow: var(--border);
+  --bn-colors-shadow: var(--editor-shadow);
   --bn-colors-highlights-gray-background: var(--muted);
   --bn-colors-highlights-gray-text: var(--muted-foreground);
 }
@@ -55,7 +55,15 @@
 }
 
 .leaf-editor .bn-block-content[data-content-type="quote"] {
-  @apply border-l-4 border-gray-300 pl-4 text-gray-700 italic;
+  @apply border-l-4 border-alpha-300 pl-4 text-gray-700 italic;
+}
+
+.leaf-editor .bn-block-content[data-content-type="quote"] blockquote {
+  @apply border-none pl-0 text-gray-700;
+}
+
+.leaf-editor .bn-block-content[data-content-type="divider"] hr {
+  @apply border-alpha-300;
 }
 
 .leaf-editor .bn-block-content[data-content-type="codeBlock"] {
@@ -74,16 +82,27 @@
   @apply max-w-full rounded-large;
 }
 
-.leaf-editor .bn-editor:focus-visible {
+.leaf-editor .bn-editor[contenteditable="true"]:focus-visible {
   @apply outline-none;
 }
 
-.leaf-editor [data-placeholder]::before {
-  @apply text-gray-600;
+.leaf-editor .bn-block-content:has(.ProseMirror-trailingBreak:only-child)::after {
+  @apply text-gray-700 not-italic;
+}
+
+.leaf-editor .bn-block-content.ProseMirror-selectednode > *::after,
+.leaf-editor .ProseMirror-selectednode > .bn-block-content > *::after,
+.leaf-editor .bn-block-content .ProseMirror-selectednode::after,
+.leaf-editor .bn-inline-content .ProseMirror-selectednode::after {
+  @apply bg-primary-500/10 inset-ring-2 inset-ring-primary-500;
 }
 
 .bn-container .bg-neutral-400 {
   @apply bg-gray-300;
+}
+
+.bn-container .font-medium {
+  @apply font-bold;
 }
 
 @media (prefers-reduced-motion: reduce) {

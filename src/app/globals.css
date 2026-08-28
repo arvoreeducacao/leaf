@@ -216,10 +216,12 @@
   --breakpoint-desktop-xlarge: 1440px;
 
   --container-content: 1080px;
+  --container-prose-leaf: 720px;
 }
 
 :root {
   --radius: 8px;
+  --editor-shadow: var(--color-alpha-50);
   --background: var(--color-white);
   --foreground: var(--color-gray-700);
   --card: var(--color-white);

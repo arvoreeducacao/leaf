@@ -257,6 +257,34 @@ describe('sanitização do import', () => {
   })
 })
 
+describe('bloco de destaque', () => {
+  const callout = JSON.stringify([
+    {
+      type: 'callout',
+      content: [{ type: 'text', text: 'Leia com atenção', styles: {} }],
+    },
+  ])
+
+  it('mantém o bloco callout depois de passar pelo parser', () => {
+    const blocks = parseContentBlocks(callout)
+
+    expect(blocks[0].type).toBe('callout')
+  })
+
+  it('degrada o destaque para citação no markdown exportado', async () => {
+    const result = await contentToMarkdown(callout)
+
+    expect(result.trim()).toBe('> Leia com atenção')
+  })
+
+  it('degrada o destaque para blockquote no HTML exportado', async () => {
+    const html = await contentToHTML(callout, 'Documento')
+
+    expect(html).toContain('<blockquote>')
+    expect(html).toContain('Leia com atenção')
+  })
+})
+
 describe('conteúdo vazio', () => {
   it('devolve markdown vazio quando não há conteúdo', async () => {
     expect(await contentToMarkdown(null)).toBe('')

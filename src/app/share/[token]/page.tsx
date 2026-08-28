@@ -36,10 +36,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 function ShareHeader() {
   return (
     <header className="sticky top-0 z-10 flex items-center justify-between gap-3 border-alpha-200 border-b bg-white px-4 py-3 tablet:px-8">
-      <div className="flex items-center gap-2">
+      <Link
+        aria-label="Ir para o Leaf"
+        className="flex items-center gap-2 rounded-large outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        href="/"
+      >
         <LeafIcon aria-hidden="true" className="size-5 text-primary-700" />
         <span className="font-bold text-body-medium text-gray-900">Leaf</span>
-      </div>
+      </Link>
       <Badge variant="info">Somente leitura</Badge>
     </header>
   )
@@ -79,7 +83,7 @@ export default async function SharedDocumentPage({ params }: Props) {
     <div className="flex min-h-dvh flex-col bg-white">
       <ShareHeader />
       <main className="mx-auto w-full max-w-content flex-1 px-4 py-8 tablet:px-8 tablet:py-10">
-        <article className="mx-auto flex w-full max-w-[720px] flex-col gap-6">
+        <article className="mx-auto flex w-full max-w-prose-leaf flex-col gap-6">
           <h1 className="font-bold text-heading-large text-gray-900 tablet:text-display-small">
             {document.title}
           </h1>

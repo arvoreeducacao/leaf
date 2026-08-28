@@ -268,17 +268,97 @@ necessidade entre agents: registre aqui em vez de editar arquivo de outro dono.
   usuário e o Bonsai não tem equivalente para marrom/rosa. Só o cinza foi
   remapeado para `--muted`.
 
+## Onda 3 — Integração e QA (entregue)
+
+- `next.config.ts` ganhou `serverExternalPackages: ['@blocknote/server-util',
+  'jsdom']`. Sem isso o `next build` morre em
+  `Failed to collect configuration for /api/documents/[id]/export` com
+  `TypeError: v4.createContext is not a function`. Confirmado nos dois sentidos.
+- Deps: `yjs`, `y-prosemirror` e `y-protocols` já estavam em `dependencies`.
+  `@blocknote/{core,react,shadcn,server-util}` resolvem para **uma única**
+  instância de `core` (a `..._y-prosemirror@1.3.7_...df1f0992`). Sobraram
+  diretórios órfãos de instalações antigas em `node_modules/.pnpm` (uma segunda
+  cópia `@blocknote+core@0.54.0_@types+hast@3.0.5_yjs@13.6.32`) que **não** estão
+  no lockfile nem linkados; somem num `pnpm install --force`.
+- **Callout ⇄ markdown resolvido com dois schemas.** O `leafSchema` (React, via
+  `createReactBlockSpec`) continua no cliente. Passá-lo ao
+  `ServerBlockNoteEditor` reproduzia o erro de teardown que a onda do editor
+  tinha registrado: `_withJSDOM` do `server-util` põe `globalThis.window` só
+  durante a chamada e o `createRoot` do `@blocknote/react` agenda um callback de
+  passive effects que roda depois, quando `window` já voltou a ser `undefined`
+  (`schedulerEvent = window.event` → `TypeError: Cannot read properties of
+  undefined (reading 'event')`). Isso é **uncaught exception no processo do
+  servidor**, não só ruído de teste.
+  Solução: `src/components/editor/callout-config.ts` guarda o config
+  compartilhado (type/content/propSchema) e existe uma segunda implementação
+  **sem React** em `src/components/editor/server-schema.ts` (`leafServerSchema`,
+  via `createBlockSpec` com DOM puro). `src/lib/markdown/convert.ts` usa o schema
+  do servidor. Resultado medido: `vitest run` sem nenhum unhandled error e
+  export real pela rota devolvendo `> Leia com atenção` no markdown e
+  `<blockquote>` no HTML. `schema.test.ts` tem um teste que trava a paridade de
+  tipos entre os dois schemas.
+- **Color picker: botão removido, não remapeado.** A `FormattingToolbar` virou
+  custom em `src/components/editor/formatting-toolbar.tsx` (tudo do default menos
+  o `ColorStyleButton`). Motivo: as cores aplicadas do BlockNote **não** vêm das
+  `--bn-colors-highlights-*` (essas só pintam os swatches do menu); os valores
+  reais são ~18 regras com hex cru dentro do `style.css` do pacote
+  (`[data-text-color=red]{color:#e03e3e}` etc.). Um mapeamento fiel precisaria
+  sobrescrever picker + texto + fundo num arquivo onde `var(--color-*)` não
+  resolve, e ainda assim entregaria os slots `brown` e `pink`, que não existem no
+  Bonsai. Os blocos e o schema seguem aceitando cor vinda de import; só não dá
+  mais para autorar.
+- **Conteúdo corrompido não é mais sobrescrito.** `content.ts` agora expõe
+  `readDocumentContent` com `{ status: 'ok' | 'unreadable' }`;
+  `block-note-editor.tsx` renderiza estado de erro (`role="alert"`) e nem monta o
+  editor quando o JSON não parseia. Validado gravando `{isto nao e json valido`
+  direto no SQLite: a tela mostra o erro, zero `[contenteditable]` e o conteúdo
+  original continua no banco.
+- **Desativar link público pede confirmação.** `confirm-disable-public-link.tsx`
+  usa `AlertDialog` no desktop e `Sheet` com `role="alertdialog"` no mobile; o
+  Switch só desliga depois do confirm. Entrou
+  `src/components/ui/alert-dialog.tsx` (cópia do DS adaptada aos tokens Bonsai) e
+  a dep `@radix-ui/react-alert-dialog`. O CTA destrutivo usa
+  `bg-error-700 hover:bg-error-800` porque o `--destructive` (`error-500`) com
+  texto branco dá 3,21:1 e reprova AA. Label do switch: "Ativar link público" →
+  "Link público", e o campo do link virou "Endereço do link" (dois controles com
+  o mesmo nome acessível).
+- **Token de largura de leitura:** `--container-prose-leaf: 720px` no `@theme` e
+  `max-w-prose-leaf` nas três telas. `--container-prose` **não** funciona: o
+  `max-w-prose` do Tailwind v4 é utility estática (65ch) e ignora o tema.
+  `--editor-shadow: var(--color-alpha-50)` foi declarado no `:root` do
+  `globals.css` porque o `editor.css` usa `@reference` e lá `var(--color-*)` não
+  resolve (o `@theme inline` inlina e faz tree-shaking).
+- **Contraste e a11y:** `save-indicator` foi para `text-gray-700`/`text-error-700`
+  (`gray-600` dava 3,44:1 em 14px), a live region virou um `<span role="status"
+  aria-live="polite">` permanente preenchido só em `saved`/`error` (trocar
+  `aria-live` junto com o texto perde o anúncio), e o erro ganhou "Tentar de
+  novo" chamando o `flush`. O `aria-readonly` que a spec pedia no wrapper foi
+  **descartado**: é ARIA inválida num `div` de role genérica. No lugar, o
+  elemento do editor recebe `aria-describedby` (via `domAttributes.editor`)
+  apontando para o texto "Somente leitura".
+- **Placeholder do BlockNote 0.54:** o seletor certo é
+  `.bn-block-content:has(.ProseMirror-trailingBreak:only-child)::after`;
+  `[data-placeholder]::before` é morto (só existe no popup de código-fonte).
+
 ## Pendências conhecidas
 
-- `src/lib/markdown/convert.ts` cria o `ServerBlockNoteEditor` sem
-  `schema: leafSchema`; enquanto isso, callout não sobrevive ao import/export
-  (ver a seção do editor acima).
-- `next.config.ts` pode precisar de `serverExternalPackages` por causa do JSDOM
-  do `@blocknote/server-util`; não validado porque `pnpm build` não foi rodado.
 - Export de markdown/HTML não passa pela rota pública `/share/[token]`, só pelo
   app autenticado.
 - O rate limit do link público é por processo e sem persistência; em produção
   com mais de uma instância precisa migrar para um store compartilhado.
 - Não há e-mail de convite: convidar só grava a linha em `document_shares`, e o
   acesso resolve quando a pessoa loga com aquele email.
-- Fora `src/lib/authz.test.ts`, o resto do app segue sem testes automatizados.
+- Não há suíte de testes de componente/E2E versionada. O roteiro E2E da onda 3
+  foi rodado com Playwright a partir de um scratchpad, fora do repo.
+- `src/components/ui/select.tsx` (cópia local do Bonsai) usa `border-gray-400`
+  na borda de repouso, 1,9:1 contra o branco; o DS já corrigiu isso para
+  `gray-600` no commit do `border-strong` (WCAG 1.4.11). Vale um passe de
+  sincronização de todas as cópias de `src/components/ui/*`.
+- Sobraram valores arbitrários em px fora da escala em
+  `src/app/(app)/loading.tsx` (`max-w-[360px]`, `[520px]`, `[440px]`),
+  `src/app/share/[token]/page.tsx` (`max-w-[440px]`) e
+  `src/components/sharing/share-panel.tsx` (`tablet:w-[180px]`, `w-[160px]`).
+- O painel de erro de conteúdo ilegível em `block-note-editor.tsx` monta o
+  visual à mão; o DS tem um `alert.tsx` que não foi copiado para o Leaf.
+- O `blocksToHTMLLossy` do BlockNote emite `classname="..."` (minúsculo, atributo
+  inválido) nos links do HTML exportado. É do pacote, não do Leaf.
