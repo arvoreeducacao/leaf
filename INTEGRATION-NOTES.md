@@ -66,8 +66,107 @@ necessidade entre agents: registre aqui em vez de editar arquivo de outro dono.
   sidebar (`app-shell.tsx`). Não mude o nome do export.
 - A rota de export não existe ainda; `getDocumentAccess` deve ser aplicado nela.
 
+## Onda 2 — Sharing (entregue)
+
+- Arquivos criados/alterados: `src/lib/share-actions.ts`,
+  `src/components/sharing/share-button.tsx` (placeholder substituído),
+  `src/components/sharing/share-panel.tsx`, `src/app/share/layout.tsx`,
+  `src/app/share/[token]/page.tsx`, `src/app/share/not-found.tsx`,
+  `src/lib/authz.ts` (estendido) e `src/lib/authz.test.ts`.
+- `src/app/share/[token]/page.tsx` importa `DocumentRenderer` de
+  `@/components/editor/document-renderer` (contrato `{ content: string | null }`).
+  O arquivo não existia no meio desta onda e o typecheck acusava TS2307; o agent
+  do editor entregou o componente antes do fim e `pnpm exec tsc --noEmit` fecha
+  limpo (zero erros).
+- `ShareButton` mantém a assinatura `{ documentId, canShare }` e continua sendo
+  chamado como está em `src/components/app/document-header.tsx` (nenhuma mudança
+  necessária lá). Ele agora renderiza **também** para editor/viewer, que veem o
+  modal em modo leitura (só a lista de quem tem acesso). `canShare` deixou de
+  esconder o botão: virou só uma dica de layout repassada ao `SharePanel` como
+  `canManage` (formato do skeleton de carregamento). Quem manda de verdade é o
+  papel devolvido pelo servidor em `loadShareState`.
+- Item "convidado vê o doc na sidebar" já estava atendido pela fundação
+  (`listSharedDocuments` por `grantee_email` + seção "Compartilhados comigo" no
+  `app-shell.tsx`). Nada foi alterado nesses arquivos.
+- `authz.ts` ganhou `canManageShares`, `isPublicTokenShaped`,
+  `registerPublicLookupAttempt`, `resetPublicLookupLimiter` e
+  `lookupPublicDocument`. O rate limit é in-memory (30 lookups por chave a cada
+  60s, chave = primeiro IP de `x-forwarded-for` ou `x-real-ip`), por processo:
+  não sobrevive a restart nem escala para múltiplas instâncias. `getPublicDocument`
+  continua existindo e não mudou de assinatura.
+- `enablePublicLink` sempre gera um token novo (`nanoid(24)`); desativar grava
+  `null`, ou seja, reativar **revoga** o link anterior de propósito.
+- `vitest.config.mts` foi criado na raiz (alias `@` → `src`, `include`
+  `src/**/*.test.ts`, `environment: 'node'`). O `vitest` em si já tinha sido
+  adicionado ao `package.json` pela onda do markdown. `src/lib/authz.test.ts`
+  usa `vi.mock('@/db')` com SQLite `:memory:` migrado a partir dos `.sql` de
+  `drizzle/`, então não toca o `data/leaf.db`.
+
+## Onda 2 — Markdown (entregue)
+
+- Arquivos criados/alterados: `src/lib/markdown/convert.ts`,
+  `src/lib/markdown/sanitize.ts`, `src/lib/markdown/filename.ts`,
+  `src/lib/markdown/limits.ts`, `src/lib/markdown/import-action.ts`,
+  `src/lib/markdown/convert.test.ts`,
+  `src/app/api/documents/[id]/export/route.ts`,
+  `src/components/app/import-button.tsx` e
+  `src/components/app/document-menu.tsx` (placeholders substituídos, assinaturas
+  `ImportButton()` e `DocumentMenu({ documentId, canDelete })` preservadas).
+- Dependências adicionadas por esta onda: `@blocknote/core`,
+  `@blocknote/server-util` (0.54.0) e os peers opcionais `y-prosemirror` e
+  `y-protocols`, que o `dist/yjs.js` do core importa de forma incondicional (sem
+  eles o import do `ServerBlockNoteEditor` quebra com `ERR_MODULE_NOT_FOUND`).
+  **Atenção:** alguma outra onda moveu `y-prosemirror`, `y-protocols` e `yjs`
+  para `devDependencies`. Eles são usados em runtime no servidor (rota de export
+  e server action de import), então precisam voltar para `dependencies` antes de
+  qualquer build de produção.
+- A conversão roda toda no servidor via `ServerBlockNoteEditor.create()`
+  (`tryParseMarkdownToBlocks`, `blocksToMarkdownLossy`, `blocksToHTMLLossy`), com
+  uma instância única em módulo. O `server-util` sobe um JSDOM interno.
+  **Pendência que não posso resolver** (não sou dono do arquivo): se o
+  `next build` reclamar de `jsdom`, `next.config.ts` precisa de
+  `serverExternalPackages: ['@blocknote/server-util', 'jsdom']`. Não rodei build
+  nesta onda (proibido durante as ondas paralelas), então isso não foi validado.
+- API pública de `src/lib/markdown/convert.ts`: `markdownToContent(md)`,
+  `contentToMarkdown(content)`, `contentToHTML(content, title?)` e
+  `parseContentBlocks(content)` (esse último devolve blocos já sanitizados e é
+  útil para qualquer render server-side).
+- Sanitização (XSS) em `src/lib/markdown/sanitize.ts`, aplicada nos **dois**
+  sentidos: `sanitizeMarkdown` tira script/style/iframe/object/embed, handlers
+  `on*` e URLs de esquema perigoso do markdown cru (preservando o conteúdo de
+  code fences e code spans), e `sanitizeBlocks` percorre a árvore de blocos
+  zerando `url`/`href`/`src` fora de http/https/mailto/relativo. O BlockNote já
+  descarta link com `javascript:`, mas **não** descarta `url` de bloco de imagem:
+  esse era o furo real e é o que o `sanitizeBlocks` fecha.
+- Export: `GET /api/documents/[id]/export?format=md|html`, com
+  `getDocumentAccess` (qualquer papel com acesso serve; link público **não**
+  entra, por decisão do escopo) e `Content-Disposition: attachment`. No formato
+  `md` o título do documento é prefixado como `# Título`, já que no modelo de
+  dados o título vive fora do `content`.
+- `DocumentMenu` faz o download por `fetch` + blob em vez de
+  `window.location.href` (que a spec sugeria): com navegação direta, um 404 da
+  rota jogava o usuário numa página de texto puro fora do app. Agora há
+  `toast.promise` com loading e erro. O item "Mover para a lixeira" continua
+  intacto.
+- `ImportButton` aceita `.md`, `.markdown`, `.mdown` e `.mkd`, por file picker ou
+  arrastando o arquivo em cima do botão, com limite de 2 MB checado no cliente e
+  de novo no servidor (`MAX_MARKDOWN_BYTES` em `src/lib/markdown/limits.ts`).
+- Colar markdown dentro do editor é nativo do BlockNote; nada foi feito no editor
+  e nenhuma lacuna foi observada do lado do servidor.
+- `package.json` ganhou o script `"test": "vitest run"`. O `vitest.config.ts` que
+  eu tinha criado foi removido em favor do `vitest.config.mts` da onda de
+  sharing, que é equivalente.
+
 ## Pendências conhecidas
 
-- `/share/[token]` e `/api/documents/[id]/export` ainda não existem (ondas 3 e 4).
-- Sem testes automatizados. A onda 1 foi validada com `pnpm build` e um roteiro
-  manual em navegador.
+- `y-prosemirror`, `y-protocols` e `yjs` estão em `devDependencies` mas são
+  runtime do servidor (ver a seção do markdown acima).
+- `next.config.ts` pode precisar de `serverExternalPackages` por causa do JSDOM
+  do `@blocknote/server-util`; não validado porque `pnpm build` não foi rodado.
+- Export de markdown/HTML não passa pela rota pública `/share/[token]`, só pelo
+  app autenticado.
+- O rate limit do link público é por processo e sem persistência; em produção
+  com mais de uma instância precisa migrar para um store compartilhado.
+- Não há e-mail de convite: convidar só grava a linha em `document_shares`, e o
+  acesso resolve quando a pessoa loga com aquele email.
+- Fora `src/lib/authz.test.ts`, o resto do app segue sem testes automatizados.
