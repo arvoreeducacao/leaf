@@ -62,7 +62,7 @@ export default async function SharedDocumentPage({ params }: Props) {
           <h1 className="font-bold text-heading-large text-gray-900">
             Muitas tentativas
           </h1>
-          <p className="max-w-[440px] text-body-medium text-gray-700">
+          <p className="max-w-110 text-body-medium text-gray-700">
             Aguarde um minuto e abra o link novamente
           </p>
           <Button asChild>

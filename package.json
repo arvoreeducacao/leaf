@@ -11,7 +11,9 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate"
+    "db:migrate": "drizzle-kit migrate",
+    "test:e2e": "LEAF_DIST_DIR=.next-e2e next build && playwright test",
+    "test:e2e:ui": "LEAF_DIST_DIR=.next-e2e playwright test --ui"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1121.0",
@@ -50,6 +52,7 @@
     "yjs": "^13.6.32"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
     "@tailwindcss/postcss": "^4",
     "@types/better-sqlite3": "^9.6.0",
     "@types/node": "^20",

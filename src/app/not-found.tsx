@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 export default function NotFound() {
   return (
     <main className="flex min-h-dvh w-full items-center justify-center px-4 py-8">
-      <div className="flex w-full max-w-[440px] flex-col items-center gap-4 text-center">
+      <div className="flex w-full max-w-110 flex-col items-center gap-4 text-center">
         <LeafIcon aria-hidden="true" className="size-10 text-primary-700" />
         <h1 className="font-bold text-heading-large text-gray-900">
           Página não encontrada

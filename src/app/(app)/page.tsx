@@ -25,10 +25,10 @@ export default async function HomePage() {
         <h1 className="font-bold text-heading-large text-gray-900">
           Crie seu primeiro documento
         </h1>
-        <p className="max-w-[440px] text-body-medium text-gray-700">
+        <p className="max-w-110 text-body-medium text-gray-700">
           Escreva, formate e organize suas ideias em um só lugar
         </p>
-        <div className="w-full max-w-[280px]">
+        <div className="w-full max-w-70">
           <NewDocumentButton />
         </div>
       </section>

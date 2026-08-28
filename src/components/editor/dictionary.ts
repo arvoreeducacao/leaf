@@ -98,10 +98,17 @@ export const leafDictionary: Dictionary = {
     image: {
       ...pt.slash_menu.image,
       title: 'Imagem',
-      subtext: 'Envie uma imagem do seu computador',
+      subtext: 'Envie uma imagem do seu dispositivo',
       aliases: ['imagem', 'image', 'foto', 'figura'],
     },
   },
+}
+
+export const leafReadOnlyDictionary: Dictionary = {
+  ...leafDictionary,
+  placeholders: Object.fromEntries(
+    Object.keys(leafDictionary.placeholders).map((key) => [key, '']),
+  ) as Dictionary['placeholders'],
 }
 
 export const calloutSlashMenuItem = {

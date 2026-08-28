@@ -83,12 +83,60 @@ export async function updateDocumentContent(
     return notAllowed
   }
 
+  const current = await db.query.documents.findFirst({
+    where: eq(documents.id, id),
+  })
+
+  if (current?.content === contentJSON) {
+    return { ok: true }
+  }
+
   await db
     .update(documents)
     .set({ content: contentJSON, updatedAt: new Date() })
     .where(eq(documents.id, id))
 
   return { ok: true }
+}
+
+export type DuplicateResult =
+  | { ok: true; id: string }
+  | { ok: false; error: string }
+
+export async function duplicateDocument(
+  id: string,
+): Promise<DuplicateResult> {
+  const session = await requireSession()
+  const access = await getDocumentAccess(id, session)
+
+  if (access !== 'owner') {
+    return { ok: false, error: notAllowedMessage }
+  }
+
+  const source = await db.query.documents.findFirst({
+    where: and(eq(documents.id, id), isNull(documents.deletedAt)),
+  })
+
+  if (!source) {
+    return { ok: false, error: 'Documento não encontrado.' }
+  }
+
+  const copyId = nanoid(12)
+  const now = new Date()
+
+  await db.insert(documents).values({
+    id: copyId,
+    ownerId: session.user.id,
+    parentId: source.parentId,
+    title: `${source.title} (cópia)`.slice(0, 200),
+    content: source.content,
+    createdAt: now,
+    updatedAt: now,
+  })
+
+  revalidatePath('/', 'layout')
+
+  return { ok: true, id: copyId }
 }
 
 export type MoveTarget = Readonly<{

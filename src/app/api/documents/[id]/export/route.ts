@@ -1,7 +1,12 @@
 import { getSession } from '@/lib/auth'
 import { getDocumentAccess } from '@/lib/authz'
 import { getDocument } from '@/lib/documents'
-import { contentToHTML, contentToMarkdown } from '@/lib/markdown/convert'
+import {
+  contentToHTML,
+  contentToMarkdown,
+  documentToMarkdownFile,
+  parseContentBlocks,
+} from '@/lib/markdown/convert'
 import { toFileSlug } from '@/lib/markdown/filename'
 
 type Params = Readonly<{ params: Promise<{ id: string }> }>
@@ -21,13 +26,18 @@ export async function GET(request: Request, { params }: Params) {
     return new Response('Documento não encontrado', { status: 404 })
   }
 
-  const format =
-    new URL(request.url).searchParams.get('format') === 'html' ? 'html' : 'md'
+  const requestUrl = new URL(request.url)
+  const format = requestUrl.searchParams.get('format') === 'html' ? 'html' : 'md'
+  const origin = requestUrl.origin
 
   const body =
     format === 'html'
-      ? await contentToHTML(document.content, document.title)
-      : `# ${document.title}\n\n${await contentToMarkdown(document.content)}`
+      ? await contentToHTML(document.content, document.title, origin)
+      : documentToMarkdownFile(
+          document.title,
+          await contentToMarkdown(document.content, origin),
+          parseContentBlocks(document.content),
+        )
 
   return new Response(body, {
     headers: {

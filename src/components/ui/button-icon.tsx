@@ -12,7 +12,7 @@ const buttonIconVariants = cva(
         primary:
           'bg-primary text-primary-foreground hover:bg-primary-600 disabled:bg-muted disabled:text-gray-400',
         secondary:
-          'border-gray-400 bg-white text-gray-700 hover:border-gray-900 hover:text-gray-900 disabled:bg-muted disabled:text-gray-400',
+          'border-gray-600 bg-white text-gray-700 hover:border-gray-900 hover:text-gray-900 disabled:bg-muted disabled:text-gray-400',
         'secondary-reverse':
           'border-white bg-transparent text-white hover:border-white/80 disabled:bg-muted disabled:text-gray-400',
         caution:

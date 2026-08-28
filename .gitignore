@@ -46,3 +46,7 @@ next-env.d.ts
 /.s3rver/
 !.env.example
 /tsconfig.tsbuildinfo
+/.next-e2e/
+/.e2e/
+/test-results/
+/playwright-report/

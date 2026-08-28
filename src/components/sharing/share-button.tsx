@@ -70,7 +70,7 @@ export function ShareButton({ documentId, canShare }: Props) {
   return (
     <Dialog onOpenChange={setOpen} open={open}>
       <DialogTrigger asChild>{trigger}</DialogTrigger>
-      <DialogContent className="flex max-h-[85dvh] flex-col overflow-hidden sm:max-w-[540px]">
+      <DialogContent className="flex max-h-[85dvh] flex-col overflow-hidden tablet:max-w-135">
         <DialogHeader className="shrink-0">
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription className="text-gray-700">

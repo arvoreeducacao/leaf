@@ -6,16 +6,20 @@ import './editor.css'
 import { filterSuggestionItems } from '@blocknote/core'
 import { SuggestionMenuController, useCreateBlockNote } from '@blocknote/react'
 import { BlockNoteView } from '@blocknote/shadcn'
-import { useCallback, useId } from 'react'
+import { useCallback, useEffect, useId, useRef, useState } from 'react'
 
 import { EyeIcon, WarningIcon } from '@/components/icons'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 
 import { readDocumentContent } from './content'
-import { leafDictionary } from './dictionary'
+import { leafDictionary, leafReadOnlyDictionary } from './dictionary'
+import { DocumentStats } from './document-stats'
+import { focusDocumentTitle, onEditorFocusRequest } from './focus-bridge'
 import { LeafFormattingToolbarController } from './formatting-toolbar'
 import { SaveIndicator } from './save-indicator'
 import { leafSchema } from './schema'
 import { getLeafSlashMenuItems } from './slash-menu-items'
+import { statsFromBlocks } from './text-stats'
 import { uploadEditorFile } from './upload-file'
 import { useAutosave } from './use-autosave'
 
@@ -31,6 +35,7 @@ export default function BlockNoteEditor({
   readOnly,
 }: Props) {
   const readOnlyHintId = useId()
+  const containerRef = useRef<HTMLDivElement>(null)
   const parsed = readDocumentContent(initialContent)
   const isUnreadable = parsed.status === 'unreadable'
   const isEditable = !readOnly && !isUnreadable
@@ -39,7 +44,7 @@ export default function BlockNoteEditor({
 
   const editor = useCreateBlockNote({
     schema: leafSchema,
-    dictionary: leafDictionary,
+    dictionary: readOnly ? leafReadOnlyDictionary : leafDictionary,
     initialContent: parsed.status === 'ok' ? parsed.blocks : undefined,
     uploadFile: uploadEditorFile,
     domAttributes: readOnly
@@ -47,40 +52,92 @@ export default function BlockNoteEditor({
       : undefined,
   })
 
+  const [stats, setStats] = useState(() =>
+    statsFromBlocks(parsed.status === 'ok' ? parsed.blocks : []),
+  )
+
   const handleChange = useCallback(() => {
-    schedule(JSON.stringify(editor.document))
+    const blocks = editor.document
+
+    setStats(statsFromBlocks(blocks))
+    schedule(JSON.stringify(blocks))
   }, [editor, schedule])
 
   const handleBlur = useCallback(() => {
     void flush()
   }, [flush])
 
+  useEffect(() => {
+    const element = containerRef.current
+
+    if (!isEditable || !element) {
+      return
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key !== 'Backspace') {
+        return
+      }
+
+      const first = editor.document[0]
+      const cursor = editor.getTextCursorPosition()
+
+      if (!first || cursor.block.id !== first.id) {
+        return
+      }
+
+      if (statsFromBlocks([cursor.block]).characters > 0) {
+        return
+      }
+
+      if (focusDocumentTitle()) {
+        event.preventDefault()
+        event.stopPropagation()
+      }
+    }
+
+    element.addEventListener('keydown', handleKeyDown, true)
+
+    return () => {
+      element.removeEventListener('keydown', handleKeyDown, true)
+    }
+  }, [editor, isEditable])
+
+  useEffect(
+    () =>
+      onEditorFocusRequest(() => {
+        const first = editor.document[0]
+
+        if (!first) {
+          return
+        }
+
+        editor.setTextCursorPosition(first, 'start')
+        editor.focus()
+      }),
+    [editor],
+  )
+
   if (isUnreadable) {
     return (
-      <section
-        className="flex items-start gap-3 rounded-xlarge bg-error-50 p-6"
-        role="alert"
-      >
-        <WarningIcon
-          aria-hidden="true"
-          className="mt-1 size-5 shrink-0 text-error-700"
-        />
-        <div className="flex flex-col gap-2">
-          <h2 className="font-bold text-body-medium text-gray-900">
-            Não foi possível abrir este documento
-          </h2>
-          <p className="text-body-small text-gray-700">
+      <Alert variant="error">
+        <WarningIcon aria-hidden="true" />
+        <AlertTitle>
+          <h2>Não foi possível abrir este documento</h2>
+        </AlertTitle>
+        <AlertDescription>
+          <p>
             O conteúdo salvo está num formato que o editor não reconhece. A
             edição ficou bloqueada para não sobrescrever o original. Fale com o
             suporte antes de mexer neste documento.
           </p>
-        </div>
-      </section>
+        </AlertDescription>
+      </Alert>
     )
   }
 
   return (
-    <div className="flex w-full flex-col gap-2">
+    <div className="flex w-full flex-col gap-2" ref={containerRef}>
       <div className="flex min-h-6 items-center justify-end px-8 tablet:px-14">
         {readOnly ? (
           <p
@@ -112,6 +169,9 @@ export default function BlockNoteEditor({
           triggerCharacter="/"
         />
       </BlockNoteView>
+      <div className="flex justify-end px-8 tablet:px-14">
+        <DocumentStats stats={stats} />
+      </div>
     </div>
   )
 }
