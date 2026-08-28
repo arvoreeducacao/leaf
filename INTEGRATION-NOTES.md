@@ -448,6 +448,155 @@ necessidade entre agents: registre aqui em vez de editar arquivo de outro dono.
   (slash menu do editor ainda estilizado, lixeira em cascata, restaurar filho vai
   para a raiz, restaurar pai reconstrói a árvore). 20/20.
 
+## Onda 5 — Polimento das core features (entregue)
+
+### Editor
+- `Cmd/Ctrl+B/I/U` já eram nativos (vêm do `@tiptap/extension-bold|italic|underline`)
+  e `Cmd/Ctrl+K` também: o `CreateLinkButton` do `@blocknote/react` registra o
+  listener no elemento do editor, mas **só enquanto a formatting toolbar está
+  montada**, ou seja, com texto selecionado. Nada foi implementado à mão; o E2E
+  `editor.spec.ts` prova os dois caminhos.
+- Título ⇄ editor via `src/components/editor/focus-bridge.ts`: o input do título
+  passou a ter o id fixo `leaf-document-title` (no lugar do `useId`, que impedia
+  o editor de achá-lo) e `Enter` dispara um evento de janela que o editor escuta
+  para posicionar o cursor no primeiro bloco. O caminho de volta é um listener de
+  `keydown` em **fase de captura no container do editor** (`containerRef`), não
+  no `editor.domElement`: no primeiro efeito o `domElement` ainda pode ser
+  `undefined` e o listener nunca era registrado (bug real, pego no E2E).
+- Contadores de palavras/caracteres em `text-stats.ts` + `document-stats.tsx`,
+  recalculados no `onChange` do editor. A extração de texto entende conteúdo
+  inline, filhos e células de tabela (separadas por quebra de linha para não
+  colar duas palavras).
+- **Bug corrigido no `document-header.tsx`:** o `useEffect([title])` ressetava o
+  valor do input a cada re-render vindo de `revalidatePath`, então um
+  `router.refresh` no meio da digitação apagava o que a pessoa tinha escrito.
+  Agora o reset só acontece quando o `documentId` muda.
+- O renderer público (`/share/[token]`) usa `leafReadOnlyDictionary`, um clone do
+  dicionário com todos os placeholders vazios: quem abre o link não via mais
+  "Digite / para comandos" num bloco vazio.
+
+### Sidebar
+- Busca client-side com o `Search` do design system (cópia nova em
+  `src/components/ui/search.tsx`). Decisão de produto tomada sem o usuário: com
+  termo ativo a árvore é **substituída** por uma lista plana de resultados
+  (`document-search-results.tsx`) com o caminho dos ancestrais em cada item, em
+  vez de uma árvore parcialmente filtrada. A busca ignora acento e caixa
+  (`src/lib/document-search.ts`, testado).
+- `Cmd/Ctrl+P` foca o campo (expandindo a sidebar recolhida no desktop e abrindo
+  o Sheet no mobile). O atalho sequestra o "imprimir" do navegador; foi mantido
+  porque é a convenção do Notion e é o que a spec pediu. Se um dia incomodar, o
+  caminho é `Cmd/Ctrl+K`.
+- Estado de recolhido da sidebar e de expandido da árvore persistem em
+  `localStorage` (`leaf:sidebar-collapsed`, `leaf:tree-expanded`) via
+  `src/shared/storage.ts`, que engole exceção de navegador com storage bloqueado.
+  A leitura é feita em `useEffect` (não no `useState` inicial) para não quebrar a
+  hidratação; isso custa um flash da sidebar expandida no primeiro paint.
+- "Mover para a lixeira" ganhou "Desfazer" no toast (10s de duração, em vez dos
+  4s default do Sonner, por ser saída de emergência de ação destrutiva) e o menu
+  ⋯ ganhou "Duplicar documento" (`duplicateDocument`: copia título + conteúdo +
+  pai, **não** copia shares nem link público).
+
+### Robustez
+- `updateDocumentContent` lê o conteúdo atual e **não grava** quando o JSON é
+  idêntico, evitando `updated_at` fantasma mexendo na ordenação da sidebar.
+- Export de markdown/HTML reescreve URL interna (`/api/uploads/...`, `/doc/...`)
+  para absoluta usando a origem da requisição (`absolutizeBlocks`). A limitação
+  continua: o arquivo exportado só mostra a imagem em quem consegue alcançar
+  aquele host; com S3 real e URL pública o problema some.
+- `blocksToHTMLLossy` emite `classname=` (minúsculo, atributo inválido) nos
+  links; `fixExportedHTML` pós-processa o HTML corrigindo para `class=`.
+- O export não repete mais o título quando o conteúdo já começa com um `h1`
+  igual (`documentToMarkdownFile` / `contentToHTML`), coisa que acontecia em todo
+  round-trip de import de markdown.
+- Import de `.md`: mensagens de erro específicas para arquivo grande, arquivo
+  binário disfarçado de `.md` (`looksBinary`, em `src/lib/markdown/text.ts`) e
+  markdown que não produz nenhum bloco. Em todos os casos **nada é criado**.
+  `next.config.ts` ganhou `experimental.serverActions.bodySizeLimit: '4mb'`
+  porque o limite default de 1 MB rejeitava markdown perto do teto de 2 MB com
+  erro opaco.
+
+### Dívidas da onda 3/4 resolvidas
+- **Passe de sincronização de `src/components/ui/*` contra o
+  `arvore-design-system`:** o diff arquivo a arquivo mostrou que as cópias já
+  estavam idênticas ao canônico (inclusive `select.tsx`). A dívida registrada era
+  imprecisa: o DS corrigiu o **token** `--input` para `gray-600` (e o
+  `globals.css` do Leaf já tinha isso), mas os componentes continuam com
+  `border-gray-400` **literal** no canônico. `gray-400` (#B8CDD2) dá 1,9:1 contra
+  branco e reprova WCAG 1.4.11. Trocado para `border-gray-600` **só na cópia
+  local** de `button.tsx`, `button-icon.tsx`, `badge.tsx`, `select.tsx`,
+  `switch.tsx` e `tabs.tsx`. **Merece PR upstream no `arvore-design-system`** —
+  é divergência local até lá.
+- Valores `[NNNpx]` fora da escala trocados pela escala do Tailwind v4
+  (`max-w-[440px]` → `max-w-110`, `w-[280px]`/`w-[300px]` → `w-70`,
+  `max-w-[360px]` → `max-w-90`, `max-w-[520px]` → `max-w-130`,
+  `max-w-[540px]` → `max-w-135`, `w-[180px]` → `w-45`, `w-[160px]` → `w-40`).
+  A sidebar mobile passou a ter os mesmos 280px do aside do desktop.
+- Painel de conteúdo ilegível agora usa `Alert`/`AlertTitle`/`AlertDescription`
+  (`src/components/ui/alert.tsx`, cópia do DS). Divergência assumida: as cores
+  `success-medium`/`warning-medium`/`error-medium` do canônico não existem na
+  paleta do frontmatter do Bonsai, então viraram `success-200`/`warning-200`/
+  `error-200` (mesmos degraus que o `sonner.tsx` já usa). O `role` também passou
+  a ser derivado do variant (`alert` só em erro, `status` no resto).
+- Suíte E2E versionada: `e2e/` com Playwright, `pnpm test:e2e`.
+
+### Dialog vira bottom sheet no mobile
+- `src/components/ui/dialog.tsx` foi alterado **na cópia local**: até `tablet`
+  o `DialogContent` é folha ancorada na base (topo arredondado, grabber visual,
+  `max-h-[85dvh]`, `env(safe-area-inset-bottom)`, animação vindo de baixo) e a
+  partir de `tablet` volta ao modal centralizado. O `DialogFooter` stacka
+  vertical no mobile.
+- Consequência: a virada de breakpoint passou a ser `tablet:` (768px) e **não**
+  `sm:` (640px). Todos os consumidores do Leaf foram migrados de `sm:max-w-*`
+  para `tablet:max-w-*`. Um componente colado do showcase com `sm:max-w-lg` vai
+  aplicar largura num elemento `inset-x-0 bottom-0` entre 640 e 767px e colar na
+  esquerda. **Isto merece PR upstream no `arvore-design-system`**, junto com o
+  `border-gray-600`.
+- O `alert-dialog.tsx` **não** foi convertido: `confirm-disable-public-link.tsx`
+  já renderiza um Sheet próprio no mobile e o AlertDialog só aparece no desktop.
+  Se algum dia o AlertDialog for usado direto numa tela mobile, ele precisa do
+  mesmo tratamento.
+- O modal de "Excluir de vez" deixou de ser dismissível por `Esc` e clique fora
+  (regra do `components/modal.md` para confirmação destrutiva).
+
+### Ambiente de teste isolado (importante)
+- `next.config.ts` lê `distDir` de `LEAF_DIST_DIR` (default `.next`). Serve para
+  rodar `next build` sem derrubar o `next dev` que o usuário deixa de pé na 3000.
+- `scripts/e2e-server.mjs` cria a sandbox `.e2e/` (com `data/` e uma cópia de
+  `drizzle/`), sobe o `s3rver` na 4569 com bucket `leaf-e2e` e roda
+  `next start <projeto>` na 3100 **com `cwd` na sandbox**. Como o caminho do
+  SQLite é `join(process.cwd(), 'data', 'leaf.db')`, trocar o `cwd` isola o banco
+  do E2E sem reintroduzir `DATABASE_PATH` (que a onda 1 proibiu). O `.env.local`
+  do projeto continua sendo lido, mas as variáveis passadas explicitamente pelo
+  script (auth, S3) vencem, porque o `@next/env` não sobrescreve o que já está no
+  `process.env`.
+- `pnpm test:e2e` = `LEAF_DIST_DIR=.next-e2e next build && playwright test`.
+  O `next build` reescreve o `tsconfig.json` acrescentando `.next-e2e/types` ao
+  `include`; é ruído do Next, dá para reverter com `git checkout tsconfig.json`.
+- `.gitignore` ganhou `/.next-e2e/`, `/.e2e/`, `/test-results/` e
+  `/playwright-report/`.
+- Cobertura: 20 casos (18 desktop + 2 mobile em 375px) cobrindo o roteiro da
+  onda 3 (atalhos de markdown, slash menu pt-BR, negrito, link por Ctrl+K,
+  autosave + reload, upload de imagem ponta a ponta com s3rver, import/export de
+  markdown, convite viewer→editor com duas sessões, link público em contexto
+  anônimo e 404 depois de desativar, mobile sem overflow), o import do Notion
+  (zip da fixture virando árvore, e zip corrompido) e os fluxos novos desta onda.
+
+### Outros ajustes de design
+- Favicon: `src/app/favicon.ico` (default do Next) saiu, entrou
+  `src/app/icon.svg` com o `LeafIcon` em `primary-700` sobre branco. O
+  `<title>` por documento (`Título | Leaf`) já existia desde a onda 4.
+- `DialogDescription` foi de 14px para 16px. Continua como `text-[16px]` (e não
+  `text-body-medium`) de propósito: o `cn` do repo é `twMerge` sem
+  `extendTailwindMerge`, então `text-body-medium` briga com o `text-gray-700` que
+  os consumidores passam via `className` e perde o tamanho.
+- Signup: label "Nome" virou "Nome (opcional)" — o campo de fato não é
+  obrigatório. **Mudança de label de formulário registrada aqui** porque o
+  protocolo de redesign do Bonsai pede confirmação de produto.
+- Slash menu: "Envie uma imagem do seu computador" → "do seu dispositivo".
+- `nenhum leading-tight` sobrou no código; o item da dívida já estava resolvido.
+- Live region da busca fica **sempre montada** (fora do ternário), senão o leitor
+  de tela não anuncia o resultado.
+
 ## Pendências conhecidas
 
 - Export de markdown/HTML não passa pela rota pública `/share/[token]`, só pelo
@@ -456,33 +605,27 @@ necessidade entre agents: registre aqui em vez de editar arquivo de outro dono.
   com mais de uma instância precisa migrar para um store compartilhado.
 - Não há e-mail de convite: convidar só grava a linha em `document_shares`, e o
   acesso resolve quando a pessoa loga com aquele email.
-- Não há suíte de testes de componente/E2E versionada. O roteiro E2E da onda 3
-  foi rodado com Playwright a partir de um scratchpad, fora do repo.
-- `src/components/ui/select.tsx` (cópia local do Bonsai) usa `border-gray-400`
-  na borda de repouso, 1,9:1 contra o branco; o DS já corrigiu isso para
-  `gray-600` no commit do `border-strong` (WCAG 1.4.11). Vale um passe de
-  sincronização de todas as cópias de `src/components/ui/*`.
-- Sobraram valores arbitrários em px fora da escala em
-  `src/app/(app)/loading.tsx` (`max-w-[360px]`, `[520px]`, `[440px]`),
-  `src/app/share/[token]/page.tsx` (`max-w-[440px]`) e
-  `src/components/sharing/share-panel.tsx` (`tablet:w-[180px]`, `w-[160px]`).
-- O painel de erro de conteúdo ilegível em `block-note-editor.tsx` monta o
-  visual à mão; o DS tem um `alert.tsx` que não foi copiado para o Leaf.
-- O `blocksToHTMLLossy` do BlockNote emite `classname="..."` (minúsculo, atributo
-  inválido) nos links do HTML exportado. É do pacote, não do Leaf.
 - O import do Notion lê o zip inteiro em memória (`unzipSync`), então um zip de
   100 MB usa memória proporcional no servidor. Para arquivo maior seria preciso
   extração em streaming por entrada.
-- Fechar o modal de importação não cancela o trabalho: o servidor termina a
-  importação mesmo assim (não há `AbortController` no cliente nem cancelamento no
-  servidor).
 - Colunas de database do Notion que passam de 12, linhas que passam de 200 e
   toggles do Notion (que perdem o abrir/fechar) são perdas assumidas, sinalizadas
   no resumo da importação.
-- A árvore da sidebar guarda o estado de expandido só no cliente (`useState`),
-  então recolher/expandir volta ao padrão a cada recarga; só os ancestrais do
-  documento aberto são expandidos automaticamente.
 - Import não deduplica: importar o mesmo zip duas vezes cria duas árvores.
 - A lixeira continua sendo uma lista plana: ao mandar um pai para a lixeira, os
   filhos aparecem lá como itens soltos (restaurar o pai traz todos de volta com a
   hierarquia intacta).
+- O atalho `Cmd/Ctrl+P` da busca sobrescreve o "imprimir" do navegador dentro do
+  app. Foi decisão consciente (convenção do Notion e pedido da spec).
+- `src/components/ui/*` divergiu do `arvore-design-system` em dois pontos que
+  precisam de PR upstream: `border-gray-600` no lugar de `border-gray-400` nas
+  bordas de repouso e o `DialogContent` virando bottom sheet até `tablet`.
+- O `Search` do DS especifica 40px de altura; a cópia do Leaf usa `h-11` até
+  `tablet` para respeitar a área de toque de 44px em mobile. Divergência local.
+- `contentToHTML`/`contentToMarkdown` recebem a origem da requisição; se o app
+  rodar atrás de proxy sem `X-Forwarded-*` correto, a URL absoluta do export sai
+  com o host interno.
+- A leitura do `localStorage` acontece depois da hidratação, então a sidebar
+  aparece expandida por um frame antes de recolher.
+- O E2E não cobre: conflito de edição em duas abas, export pela rota pública e
+  o cancelamento do import do Notion no meio.

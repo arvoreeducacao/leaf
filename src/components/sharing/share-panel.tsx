@@ -235,7 +235,7 @@ export function SharePanel({ documentId, canManage }: Props) {
                 value={inviteEmail}
               />
             </div>
-            <div className="flex flex-col gap-2 tablet:w-[180px]">
+            <div className="flex flex-col gap-2 tablet:w-45">
               <Label htmlFor={roleFieldId}>Papel</Label>
               <Select
                 disabled={pending}
@@ -316,7 +316,7 @@ export function SharePanel({ documentId, canManage }: Props) {
                   >
                     <SelectTrigger
                       aria-label={`Papel de ${person.email}`}
-                      className="w-[160px] shrink-0"
+                      className="w-40 shrink-0"
                     >
                       <SelectValue />
                     </SelectTrigger>

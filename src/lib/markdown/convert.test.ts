@@ -2,8 +2,11 @@ import type { PartialBlock } from '@blocknote/core'
 import { describe, expect, it } from 'vitest'
 
 import {
+  absolutizeBlocks,
   contentToHTML,
   contentToMarkdown,
+  documentToMarkdownFile,
+  fixExportedHTML,
   markdownToContent,
   parseContentBlocks,
 } from '@/lib/markdown/convert'
@@ -303,5 +306,111 @@ describe('nome de arquivo', () => {
   it('gera slug sem acento nem espaço', () => {
     expect(toFileSlug('Relatório de leitura')).toBe('relatorio-de-leitura')
     expect(toFileSlug('   ')).toBe('documento')
+  })
+})
+
+describe('export com imagem interna', () => {
+  const content = JSON.stringify([
+    {
+      type: 'image',
+      props: { url: '/api/uploads/u/abc.png', caption: '', previewWidth: 400 },
+    },
+    {
+      type: 'paragraph',
+      content: [
+        {
+          type: 'link',
+          href: '/doc/xyz',
+          content: [{ type: 'text', text: 'outra página', styles: {} }],
+        },
+        {
+          type: 'link',
+          href: 'https://arvore.com.br',
+          content: [{ type: 'text', text: 'externo', styles: {} }],
+        },
+      ],
+    },
+  ])
+
+  it('reescreve url interna para absoluta no markdown', async () => {
+    const markdown = await contentToMarkdown(content, 'http://localhost:3000')
+
+    expect(markdown).toContain('http://localhost:3000/api/uploads/u/abc.png')
+    expect(markdown).toContain('http://localhost:3000/doc/xyz')
+    expect(markdown).toContain('https://arvore.com.br')
+  })
+
+  it('mantém a url relativa quando não há origem', async () => {
+    const markdown = await contentToMarkdown(content)
+
+    expect(markdown).toContain('/api/uploads/u/abc.png')
+    expect(markdown).not.toContain('http://localhost:3000')
+  })
+
+  it('não duplica a origem em url absoluta', async () => {
+    const html = await contentToHTML(content, 'Doc', 'http://localhost:3000')
+
+    expect(html).not.toContain('http://localhost:3000https://')
+  })
+})
+
+describe('html exportado', () => {
+  it('corrige o atributo classname do BlockNote', () => {
+    expect(fixExportedHTML('<a classname="bn-link" href="#">x</a>')).toBe(
+      '<a class="bn-link" href="#">x</a>',
+    )
+  })
+
+  it('não emite classname no html de um link', async () => {
+    const content = await markdownToContent(
+      'Veja o [guia](https://arvore.com.br).',
+    )
+    const html = await contentToHTML(content, 'Doc')
+
+    expect(html).not.toContain('classname=')
+    expect(html).toContain('href="https://arvore.com.br"')
+  })
+})
+
+describe('absolutizeBlocks', () => {
+  it('não altera nada quando a origem é vazia', () => {
+    const blocks = [{ type: 'image', props: { url: '/a.png' } }]
+
+    expect(absolutizeBlocks(blocks, '')).toBe(blocks)
+  })
+
+  it('ignora url protocolo relativo', () => {
+    const result = absolutizeBlocks(
+      [{ type: 'image', props: { url: '//cdn.example.com/a.png' } }],
+      'http://localhost:3000',
+    ) as Array<{ props: { url: string } }>
+
+    expect(result[0].props.url).toBe('//cdn.example.com/a.png')
+  })
+})
+
+describe('título no arquivo exportado', () => {
+  it('não repete o título quando o conteúdo já começa com o mesmo h1', async () => {
+    const content = await markdownToContent('# Plano de aula\n\nCorpo do texto.')
+    const blocks = parseContentBlocks(content)
+    const body = await contentToMarkdown(content)
+
+    const file = documentToMarkdownFile('Plano de aula', body, blocks)
+
+    expect(file.match(/# Plano de aula/g)).toHaveLength(1)
+
+    const html = await contentToHTML(content, 'Plano de aula')
+
+    expect(html.match(/Plano de aula<\/h1>/g)).toHaveLength(1)
+  })
+
+  it('prefixa o título quando o conteúdo começa com outra coisa', async () => {
+    const content = await markdownToContent('Só um parágrafo.')
+    const blocks = parseContentBlocks(content)
+    const body = await contentToMarkdown(content)
+
+    expect(documentToMarkdownFile('Plano de aula', body, blocks)).toContain(
+      '# Plano de aula',
+    )
   })
 })

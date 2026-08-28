@@ -6,11 +6,11 @@ export default function Loading() {
       <span className="sr-only" role="status">
         Carregando
       </span>
-      <Skeleton className="h-10 w-full max-w-[360px]" />
+      <Skeleton className="h-10 w-full max-w-90" />
       <div className="mx-auto flex w-full max-w-prose-leaf flex-col gap-3">
         <Skeleton className="h-4 w-full" />
-        <Skeleton className="h-4 w-full max-w-[520px]" />
-        <Skeleton className="h-4 w-full max-w-[440px]" />
+        <Skeleton className="h-4 w-full max-w-130" />
+        <Skeleton className="h-4 w-full max-w-110" />
       </div>
     </div>
   )

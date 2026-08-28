@@ -291,7 +291,7 @@ export function NotionImportDialog({ file, onOpenChange }: Props) {
 
   return (
     <Dialog onOpenChange={onOpenChange} open={file !== null}>
-      <DialogContent className="flex max-h-[85dvh] flex-col overflow-hidden sm:max-w-lg">
+      <DialogContent className="flex max-h-[85dvh] flex-col overflow-hidden tablet:max-w-lg">
         <DialogHeader className="shrink-0">
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription className="text-gray-700">

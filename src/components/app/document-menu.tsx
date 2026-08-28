@@ -10,6 +10,7 @@ import {
   FileCodeIcon,
   FileDownloadIcon,
   HierarchyIcon,
+  PagesIcon,
   TrashIcon,
 } from '@/components/icons'
 import { ButtonIcon } from '@/components/ui/button-icon'
@@ -20,7 +21,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { moveToTrash } from '@/lib/document-actions'
+import {
+  duplicateDocument,
+  moveToTrash,
+  restoreDocument,
+} from '@/lib/document-actions'
 
 type ExportFormat = 'md' | 'html'
 
@@ -74,16 +79,48 @@ export function DocumentMenu({ documentId, isOwner }: Props) {
     })
   }
 
+  function handleDuplicate() {
+    startTransition(async () => {
+      const result = await duplicateDocument(documentId)
+
+      if (result.ok) {
+        toast.success('Documento duplicado')
+        router.push(`/doc/${result.id}`)
+      } else {
+        toast.error(result.error)
+      }
+    })
+  }
+
   function handleTrash() {
     startTransition(async () => {
       const result = await moveToTrash(documentId)
 
-      if (result.ok) {
-        router.push('/')
-        toast.success('Documento movido para a lixeira')
-      } else {
+      if (!result.ok) {
         toast.error(result.error)
+
+        return
       }
+
+      router.push('/')
+      toast.success('Documento movido para a lixeira', {
+        duration: 10_000,
+        action: {
+          label: 'Desfazer',
+          onClick: () => {
+            startTransition(async () => {
+              const undone = await restoreDocument(documentId)
+
+              if (undone.ok) {
+                toast.success('Documento restaurado')
+                router.push(`/doc/${documentId}`)
+              } else {
+                toast.error(undone.error)
+              }
+            })
+          },
+        },
+      })
     })
   }
 
@@ -110,6 +147,12 @@ export function DocumentMenu({ documentId, isOwner }: Props) {
             >
               <HierarchyIcon aria-hidden="true" />
               Mover para outra página
+            </DropdownMenuItem>
+          ) : null}
+          {isOwner ? (
+            <DropdownMenuItem disabled={pending} onSelect={handleDuplicate}>
+              <PagesIcon aria-hidden="true" />
+              Duplicar documento
             </DropdownMenuItem>
           ) : null}
           <DropdownMenuItem

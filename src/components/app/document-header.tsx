@@ -1,9 +1,13 @@
 'use client'
 
-import { useEffect, useId, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 
 import { DocumentMenu } from '@/components/app/document-menu'
+import {
+  documentTitleInputId,
+  requestEditorFocus,
+} from '@/components/editor/focus-bridge'
 import { ShareButton } from '@/components/sharing/share-button'
 import { renameDocument } from '@/lib/document-actions'
 
@@ -20,15 +24,21 @@ export function DocumentHeader({
   canEdit,
   isOwner,
 }: Props) {
-  const titleId = useId()
+  const titleId = documentTitleInputId
   const [value, setValue] = useState(title)
   const [saving, setSaving] = useState(false)
   const lastSaved = useRef(title)
+  const loadedFor = useRef(documentId)
 
   useEffect(() => {
+    if (loadedFor.current === documentId) {
+      return
+    }
+
+    loadedFor.current = documentId
     setValue(title)
     lastSaved.current = title
-  }, [title])
+  }, [documentId, title])
 
   async function persist() {
     const next = value.trim()
@@ -66,7 +76,9 @@ export function DocumentHeader({
               onChange={(event) => setValue(event.target.value)}
               onKeyDown={(event) => {
                 if (event.key === 'Enter') {
+                  event.preventDefault()
                   event.currentTarget.blur()
+                  requestEditorFocus()
                 }
 
                 if (event.key === 'Escape') {

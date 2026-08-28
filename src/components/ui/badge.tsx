@@ -18,10 +18,10 @@ const badgeVariants = cva(
         default: 'border-gray-200 bg-gray-200 text-gray-900',
         secondary: 'border-gray-200 bg-muted text-gray-700',
         destructive: 'border-error-200 bg-error-200 text-gray-900',
-        outline: 'border-gray-400 bg-transparent text-gray-700',
+        outline: 'border-gray-600 bg-transparent text-gray-700',
         activity:
           'border-transparent bg-muted text-gray-700 [&>svg]:text-gray-600',
-        degree: 'border-gray-400 bg-transparent text-gray-700',
+        degree: 'border-gray-600 bg-transparent text-gray-700',
         status: 'border-transparent',
       },
     },
@@ -73,7 +73,7 @@ function EditableTag({
     <span
       className={cn(
         'inline-flex h-6 w-fit shrink-0 items-center gap-1 rounded-pill border px-2 py-1 font-bold text-[14px] leading-none',
-        isLight ? 'border-white text-white' : 'border-gray-400 text-gray-700',
+        isLight ? 'border-white text-white' : 'border-gray-600 text-gray-700',
         className
       )}
       data-slot="editable-tag"

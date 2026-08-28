@@ -7,9 +7,10 @@ import { redirect } from 'next/navigation'
 import { db } from '@/db'
 import { documents } from '@/db/schema'
 import { getSession } from '@/lib/auth'
-import { markdownToContent } from '@/lib/markdown/convert'
+import { markdownToBlocks } from '@/lib/markdown/convert'
 import { titleFromFileName } from '@/lib/markdown/filename'
 import { MAX_MARKDOWN_BYTES, MAX_MARKDOWN_LABEL } from '@/lib/markdown/limits'
+import { looksBinary } from '@/lib/markdown/text'
 
 export type ImportResult =
   | { ok: true; id: string }
@@ -32,16 +33,38 @@ export async function importMarkdown(
   if (Buffer.byteLength(mdText, 'utf8') > MAX_MARKDOWN_BYTES) {
     return {
       ok: false,
-      error: `O arquivo passa de ${MAX_MARKDOWN_LABEL}`,
+      error: `O arquivo passa de ${MAX_MARKDOWN_LABEL}. Divida o conteúdo em arquivos menores e importe um de cada vez.`,
+    }
+  }
+
+  if (looksBinary(mdText)) {
+    return {
+      ok: false,
+      error:
+        'Esse arquivo não parece ser um markdown de texto. Confira se você escolheu o arquivo certo.',
     }
   }
 
   let content: string
 
   try {
-    content = await markdownToContent(mdText)
+    const blocks = await markdownToBlocks(mdText)
+
+    if (blocks.length === 0) {
+      return {
+        ok: false,
+        error:
+          'Não encontramos conteúdo para importar nesse arquivo. Nada foi criado.',
+      }
+    }
+
+    content = JSON.stringify(blocks)
   } catch {
-    return { ok: false, error: 'Não foi possível ler esse markdown' }
+    return {
+      ok: false,
+      error:
+        'Não foi possível ler esse markdown. Nada foi criado, o arquivo continua intacto.',
+    }
   }
 
   const id = nanoid(12)

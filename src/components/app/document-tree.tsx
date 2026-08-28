@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { CaretDownIcon, CaretRightIcon, PageIcon } from '@/components/icons'
 import { ButtonIcon } from '@/components/ui/button-icon'
@@ -12,7 +12,10 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import type { DocumentNode } from '@/lib/documents'
+import { readStoredValue, writeStoredValue } from '@/shared/storage'
 import { cn } from '@/shared/utils'
+
+const expandedStorageKey = 'leaf:tree-expanded'
 
 type Props = Readonly<{
   nodes: Array<DocumentNode>
@@ -44,6 +47,25 @@ export function DocumentTree({ nodes, emptyLabel, onNavigate }: Props) {
   const activeId = pathname.startsWith('/doc/') ? pathname.slice(5) : null
   const parents = useMemo(() => parentsOf(nodes), [nodes])
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set())
+  const touched = useRef(false)
+
+  useEffect(() => {
+    const stored = readStoredValue<Array<string>>(expandedStorageKey, [])
+
+    if (stored.length === 0) {
+      return
+    }
+
+    setExpanded((current) => {
+      const next = new Set(current)
+
+      for (const id of stored) {
+        next.add(id)
+      }
+
+      return next.size === current.size ? current : next
+    })
+  }, [])
 
   useEffect(() => {
     if (!activeId) {
@@ -75,7 +97,17 @@ export function DocumentTree({ nodes, emptyLabel, onNavigate }: Props) {
 
       return next
     })
+
+    touched.current = true
   }
+
+  useEffect(() => {
+    if (!touched.current) {
+      return
+    }
+
+    writeStoredValue(expandedStorageKey, [...expanded])
+  }, [expanded])
 
   if (nodes.length === 0) {
     return <p className="px-3 py-2 text-body-small text-gray-700">{emptyLabel}</p>

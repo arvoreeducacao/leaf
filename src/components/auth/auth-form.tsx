@@ -89,7 +89,7 @@ export function AuthForm({ mode }: Props) {
 
   return (
     <main className="flex min-h-dvh w-full items-center justify-center bg-gray-100 px-4 py-8">
-      <div className="w-full max-w-[440px] rounded-xlarge border border-alpha-100 bg-white p-6 shadow-down-medium tablet:p-8">
+      <div className="w-full max-w-110 rounded-xlarge border border-alpha-100 bg-white p-6 shadow-down-medium tablet:p-8">
         <div className="flex items-center gap-2 text-primary-700">
           <LeafIcon aria-hidden="true" className="size-6" />
           <span className="font-bold text-heading-medium text-gray-900">
@@ -107,7 +107,7 @@ export function AuthForm({ mode }: Props) {
         <form className="mt-6 flex flex-col gap-4" onSubmit={handleSubmit}>
           {mode === 'signup' ? (
             <div className="flex flex-col gap-2">
-              <Label htmlFor={nameId}>Nome</Label>
+              <Label htmlFor={nameId}>Nome (opcional)</Label>
               <Input
                 autoComplete="name"
                 className="max-w-full"

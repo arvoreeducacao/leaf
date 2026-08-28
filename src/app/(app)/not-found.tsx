@@ -10,7 +10,7 @@ export default function AppNotFound() {
       <h1 className="font-bold text-heading-large text-gray-900">
         Documento não encontrado
       </h1>
-      <p className="max-w-[440px] text-body-medium text-gray-700">
+      <p className="max-w-110 text-body-medium text-gray-700">
         Ele não existe, está na lixeira ou você não tem acesso a ele
       </p>
       <Button asChild>

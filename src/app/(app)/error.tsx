@@ -15,7 +15,7 @@ export default function AppError({ reset }: Props) {
       <h1 className="font-bold text-heading-large text-gray-900">
         Algo deu errado
       </h1>
-      <p className="max-w-[440px] text-body-medium text-gray-700">
+      <p className="max-w-110 text-body-medium text-gray-700">
         Não conseguimos carregar esta parte do Leaf
       </p>
       <Button onClick={reset} type="button">

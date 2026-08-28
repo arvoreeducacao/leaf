@@ -143,7 +143,11 @@ export function TrashSection({ documents }: Props) {
       ) : null}
 
       <Dialog onOpenChange={(open) => !open && setTarget(null)} open={target !== null}>
-        <DialogContent className="tablet:max-w-[440px]">
+        <DialogContent
+          className="tablet:max-w-110"
+          onEscapeKeyDown={(event) => event.preventDefault()}
+          onPointerDownOutside={(event) => event.preventDefault()}
+        >
           <DialogHeader>
             <DialogTitle>Excluir de vez</DialogTitle>
             <DialogDescription className="text-gray-700">
