@@ -66,7 +66,7 @@ export async function waitForEditorReady(page: Page) {
   await expect(page.locator('.leaf-editor').first()).toBeVisible({
     timeout: 30_000,
   })
-  await expect(page.getByText(/palavras?$/).first()).toBeVisible()
+  await expect(page.getByText(/(palavras?|words?)$/).first()).toBeVisible()
 }
 
 export async function renameDocument(page: Page, title: string) {

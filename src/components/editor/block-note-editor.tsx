@@ -6,13 +6,14 @@ import './editor.css'
 import { filterSuggestionItems } from '@blocknote/core'
 import { SuggestionMenuController, useCreateBlockNote } from '@blocknote/react'
 import { BlockNoteView } from '@blocknote/shadcn'
+import { useTranslations } from 'next-intl'
+import { useTheme } from 'next-themes'
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
 
 import { EyeIcon, WarningIcon } from '@/components/icons'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 
 import { readDocumentContent } from './content'
-import { leafDictionary, leafReadOnlyDictionary } from './dictionary'
 import { DocumentStats } from './document-stats'
 import { focusDocumentTitle, onEditorFocusRequest } from './focus-bridge'
 import { LeafFormattingToolbarController } from './formatting-toolbar'
@@ -22,6 +23,7 @@ import { getLeafSlashMenuItems } from './slash-menu-items'
 import { statsFromBlocks } from './text-stats'
 import { uploadEditorFile } from './upload-file'
 import { useAutosave } from './use-autosave'
+import { useLeafDictionary } from './use-leaf-dictionary'
 
 type Props = Readonly<{
   documentId: string
@@ -34,6 +36,9 @@ export default function BlockNoteEditor({
   initialContent,
   readOnly,
 }: Props) {
+  const t = useTranslations('editor')
+  const { resolvedTheme } = useTheme()
+  const { calloutItem, dictionary } = useLeafDictionary(readOnly)
   const readOnlyHintId = useId()
   const containerRef = useRef<HTMLDivElement>(null)
   const parsed = readDocumentContent(initialContent)
@@ -44,9 +49,9 @@ export default function BlockNoteEditor({
 
   const editor = useCreateBlockNote({
     schema: leafSchema,
-    dictionary: readOnly ? leafReadOnlyDictionary : leafDictionary,
+    dictionary,
     initialContent: parsed.status === 'ok' ? parsed.blocks : undefined,
-    uploadFile: uploadEditorFile,
+    uploadFile: (file: File) => uploadEditorFile(file, t('uploadFailed')),
     domAttributes: readOnly
       ? { editor: { 'aria-describedby': readOnlyHintId } }
       : undefined,
@@ -123,14 +128,10 @@ export default function BlockNoteEditor({
       <Alert variant="error">
         <WarningIcon aria-hidden="true" />
         <AlertTitle>
-          <h2>Não foi possível abrir este documento</h2>
+          <h2>{t('unreadableTitle')}</h2>
         </AlertTitle>
         <AlertDescription>
-          <p>
-            O conteúdo salvo está num formato que o editor não reconhece. A
-            edição ficou bloqueada para não sobrescrever o original. Fale com o
-            suporte antes de mexer neste documento.
-          </p>
+          <p>{t('unreadableBody')}</p>
         </AlertDescription>
       </Alert>
     )
@@ -141,11 +142,11 @@ export default function BlockNoteEditor({
       <div className="flex min-h-6 items-center justify-end px-8 tablet:px-14">
         {readOnly ? (
           <p
-            className="flex items-center gap-2 text-body-small text-gray-700"
+            className="flex items-center gap-2 text-body-small text-content"
             id={readOnlyHintId}
           >
             <EyeIcon aria-hidden="true" className="size-4" />
-            Somente leitura
+            {t('readOnly')}
           </p>
         ) : (
           <SaveIndicator onRetry={() => void flush()} status={status} />
@@ -160,11 +161,15 @@ export default function BlockNoteEditor({
         onBlur={handleBlur}
         onChange={handleChange}
         slashMenu={false}
+        theme={resolvedTheme === 'dark' ? 'dark' : 'light'}
       >
         <LeafFormattingToolbarController />
         <SuggestionMenuController
           getItems={async (query) =>
-            filterSuggestionItems(getLeafSlashMenuItems(editor), query)
+            filterSuggestionItems(
+              getLeafSlashMenuItems(editor, calloutItem),
+              query,
+            )
           }
           triggerCharacter="/"
         />

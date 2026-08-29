@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
@@ -28,20 +29,16 @@ type Progress = Readonly<{
   total: number
 }>
 
-const title = 'Importar do Notion'
-
-const description = 'As páginas do zip viram documentos com a mesma hierarquia'
-
-function plural(total: number, one: string, many: string) {
-  return `${total} ${total === 1 ? one : many}`
-}
-
-const phaseLabels: Record<Progress['phase'], string> = {
-  assets: 'Enviando imagens e anexos',
-  pages: 'Criando páginas',
+const phaseKeys: Record<Progress['phase'], 'phaseAssets' | 'phasePages'> = {
+  assets: 'phaseAssets',
+  pages: 'phasePages',
 }
 
 export function NotionImportDialog({ file, onOpenChange }: Props) {
+  const t = useTranslations('notionImport')
+  const tCommon = useTranslations('common')
+  const title = t('title')
+  const description = t('description')
   const router = useRouter()
   const isMobile = useIsMobile()
   const startedFor = useRef<File | null>(null)
@@ -77,7 +74,7 @@ export function NotionImportDialog({ file, onOpenChange }: Props) {
           const message =
             payload && typeof payload === 'object' && 'error' in payload
               ? String((payload as { error: unknown }).error)
-              : 'Não foi possível importar o arquivo'
+              : t('failed')
 
           setError(message)
           setRunning(false)
@@ -126,17 +123,13 @@ export function NotionImportDialog({ file, onOpenChange }: Props) {
           }
         }
       } catch {
-        setError(
-          controller.signal.aborted
-            ? 'Importação cancelada. As páginas criadas até aqui continuam na sua lista.'
-            : 'Não foi possível importar o arquivo',
-        )
+        setError(controller.signal.aborted ? t('cancelled') : t('failed'))
       } finally {
         setRunning(false)
         router.refresh()
       }
     },
-    [router],
+    [router, t],
   )
 
   useEffect(() => {
@@ -158,25 +151,28 @@ export function NotionImportDialog({ file, onOpenChange }: Props) {
       {running || (!summary && !error) ? (
         <div className="flex flex-col gap-2">
           <div className="flex items-baseline justify-between gap-2">
-            <span className="text-body-small text-gray-900">
-              {progress ? phaseLabels[progress.phase] : 'Lendo o arquivo'}
+            <span className="text-body-small text-content-strong">
+              {progress ? t(phaseKeys[progress.phase]) : t('reading')}
             </span>
             {progress ? (
-              <span className="text-caption text-gray-700">
-                {progress.done} de {progress.total}
+              <span className="text-caption text-content">
+                {t('progressCount', {
+                  done: progress.done,
+                  total: progress.total,
+                })}
               </span>
             ) : null}
           </div>
           <div
-            aria-label="Progresso da importação"
+            aria-label={t('progressLabel')}
             aria-valuemax={100}
             aria-valuemin={0}
             aria-valuenow={percent}
-            className="h-2 w-full overflow-hidden rounded-pill bg-gray-200"
+            className="h-2 w-full overflow-hidden rounded-pill bg-surface-hover"
             role="progressbar"
           >
             <div
-              className="h-full rounded-pill bg-primary-800 transition-all duration-200 motion-reduce:transition-none"
+              className="h-full rounded-pill bg-brand-strong transition-all duration-200 motion-reduce:transition-none"
               style={{ width: `${percent}%` }}
             />
           </div>
@@ -185,27 +181,26 @@ export function NotionImportDialog({ file, onOpenChange }: Props) {
 
       {summary ? (
         <div className="flex flex-col gap-3">
-          <p className="flex items-center gap-2 text-body-small text-gray-900">
+          <p className="flex items-center gap-2 text-body-small text-content-strong">
             <CheckCircleIcon
               aria-hidden="true"
-              className="size-4 shrink-0 text-success-600"
+              className="size-4 shrink-0 text-positive"
             />
-            {plural(summary.pages, 'página criada', 'páginas criadas')} e{' '}
-            {plural(summary.assets, 'arquivo enviado', 'arquivos enviados')}
+            {t('summary', { assets: summary.assets, pages: summary.pages })}
           </p>
 
           {summary.warnings.length > 0 ? (
-            <div className="flex flex-col gap-2 rounded-large bg-warning-50 p-4">
-              <p className="flex items-center gap-2 font-bold text-body-small text-gray-900">
+            <div className="flex flex-col gap-2 rounded-large bg-warn-surface p-4">
+              <p className="flex items-center gap-2 font-bold text-body-small text-content-strong">
                 <AlertIcon
                   aria-hidden="true"
-                  className="size-4 shrink-0 text-warning-800"
+                  className="size-4 shrink-0 text-warn"
                 />
-                Avisos da importação
+                {t('warningsTitle')}
               </p>
               <ul className="flex list-disc flex-col gap-1 ps-4">
                 {summary.warnings.map((warning) => (
-                  <li className="text-body-small text-gray-700" key={warning}>
+                  <li className="text-body-small text-content" key={warning}>
                     {warning}
                   </li>
                 ))}
@@ -217,7 +212,7 @@ export function NotionImportDialog({ file, onOpenChange }: Props) {
 
       {error ? (
         <p
-          className="flex items-start gap-2 text-body-small text-error-700"
+          className="flex items-start gap-2 text-body-small text-danger"
           role="alert"
         >
           <AlertIcon aria-hidden="true" className="mt-1 size-4 shrink-0" />
@@ -227,9 +222,9 @@ export function NotionImportDialog({ file, onOpenChange }: Props) {
 
       <span aria-live="polite" className="sr-only">
         {summary
-          ? `Importação concluída com ${summary.pages} páginas`
+          ? t('doneAnnounce', { count: summary.pages })
           : error
-            ? `Erro na importação: ${error}`
+            ? t('errorAnnounce', { error })
             : ''}
       </span>
     </div>
@@ -244,7 +239,7 @@ export function NotionImportDialog({ file, onOpenChange }: Props) {
       }}
       type="button"
     >
-      Abrir documento
+      {t('openDocument')}
     </Button>
   ) : running ? (
     <Button
@@ -253,7 +248,7 @@ export function NotionImportDialog({ file, onOpenChange }: Props) {
       type="button"
       variant="secondary"
     >
-      Cancelar importação
+      {t('cancelImport')}
     </Button>
   ) : error && file ? (
     <Button
@@ -262,7 +257,7 @@ export function NotionImportDialog({ file, onOpenChange }: Props) {
       type="button"
       variant="secondary"
     >
-      Tentar de novo
+      {tCommon('tryAgain')}
     </Button>
   ) : null
 
@@ -294,7 +289,7 @@ export function NotionImportDialog({ file, onOpenChange }: Props) {
       <DialogContent className="flex max-h-[85dvh] flex-col overflow-hidden tablet:max-w-lg">
         <DialogHeader className="shrink-0">
           <DialogTitle>{title}</DialogTitle>
-          <DialogDescription className="text-gray-700">
+          <DialogDescription className="text-content">
             {description}
           </DialogDescription>
         </DialogHeader>

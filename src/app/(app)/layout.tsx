@@ -1,3 +1,4 @@
+import { getLocale } from 'next-intl/server'
 import { redirect } from 'next/navigation'
 
 import { AppShell } from '@/components/app/app-shell'
@@ -24,8 +25,11 @@ export default async function AppLayout({
     listTrashedDocuments(session.user.id),
   ])
 
+  const locale = await getLocale()
+
   return (
     <AppShell
+      locale={locale}
       owned={buildDocumentTree(owned)}
       shared={shared}
       trashed={trashed}

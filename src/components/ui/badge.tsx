@@ -10,18 +10,18 @@ const badgeVariants = cva(
   {
     variants: {
       variant: {
-        more: 'border-gray-200 bg-gray-200 text-gray-900',
-        info: 'border-gray-200 bg-muted text-gray-700',
-        warning: 'border-warning-200 bg-warning-200 text-gray-900',
-        caution: 'border-error-200 bg-error-200 text-gray-900',
-        success: 'border-success-200 bg-success-200 text-gray-900',
-        default: 'border-gray-200 bg-gray-200 text-gray-900',
-        secondary: 'border-gray-200 bg-muted text-gray-700',
-        destructive: 'border-error-200 bg-error-200 text-gray-900',
-        outline: 'border-gray-600 bg-transparent text-gray-700',
+        more: 'border-line-soft bg-surface-hover text-content-strong',
+        info: 'border-line-soft bg-muted text-content',
+        warning: 'border-warn-surface-strong bg-warn-surface-strong text-content-strong',
+        caution: 'border-danger-surface-strong bg-danger-surface-strong text-content-strong',
+        success: 'border-positive-surface-strong bg-positive-surface-strong text-content-strong',
+        default: 'border-line-soft bg-surface-hover text-content-strong',
+        secondary: 'border-line-soft bg-muted text-content',
+        destructive: 'border-danger-surface-strong bg-danger-surface-strong text-content-strong',
+        outline: 'border-line-strong bg-transparent text-content',
         activity:
-          'border-transparent bg-muted text-gray-700 [&>svg]:text-gray-600',
-        degree: 'border-gray-600 bg-transparent text-gray-700',
+          'border-transparent bg-muted text-content [&>svg]:text-content-muted',
+        degree: 'border-line-strong bg-transparent text-content',
         status: 'border-transparent',
       },
     },
@@ -73,7 +73,7 @@ function EditableTag({
     <span
       className={cn(
         'inline-flex h-6 w-fit shrink-0 items-center gap-1 rounded-pill border px-2 py-1 font-bold text-[14px] leading-none',
-        isLight ? 'border-white text-white' : 'border-gray-600 text-gray-700',
+        isLight ? 'border-content-inverse text-content-inverse' : 'border-line-strong text-content',
         className
       )}
       data-slot="editable-tag"

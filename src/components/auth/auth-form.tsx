@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useId, useState } from 'react'
@@ -14,32 +15,18 @@ type Mode = 'login' | 'signup'
 
 type Props = Readonly<{ mode: Mode }>
 
-const copy = {
-  login: {
-    title: 'Entrar na sua conta',
-    subtitle: 'Use o email e a senha da sua conta',
-    submit: 'Entrar',
-    submitting: 'Entrando',
-    switchText: 'Ainda não tem conta?',
-    switchLabel: 'Criar conta',
-    switchHref: '/signup',
-  },
-  signup: {
-    title: 'Criar sua conta',
-    subtitle: 'Comece a escrever seus documentos',
-    submit: 'Criar conta',
-    submitting: 'Criando conta',
-    switchText: 'Já tem conta?',
-    switchLabel: 'Entrar',
-    switchHref: '/login',
-  },
+const switchHref = {
+  login: '/signup',
+  signup: '/login',
 } as const
 
 export function AuthForm({ mode }: Props) {
+  const t = useTranslations('auth')
   const router = useRouter()
   const nameId = useId()
   const emailId = useId()
   const passwordId = useId()
+  const passwordHintId = useId()
   const errorId = useId()
 
   const [name, setName] = useState('')
@@ -48,14 +35,12 @@ export function AuthForm({ mode }: Props) {
   const [error, setError] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
 
-  const texts = copy[mode]
-
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setError(null)
 
     if (mode === 'signup' && password.length < 8) {
-      setError('A senha precisa de pelo menos 8 caracteres.')
+      setError(t('passwordTooShort'))
       return
     }
 
@@ -75,11 +60,7 @@ export function AuthForm({ mode }: Props) {
 
     if (result.error) {
       setPending(false)
-      setError(
-        mode === 'signup'
-          ? 'Não foi possível criar a conta. Confira os dados e tente de novo.'
-          : 'Email ou senha incorretos.',
-      )
+      setError(t(mode === 'signup' ? 'signupFailed' : 'loginFailed'))
       return
     }
 
@@ -88,26 +69,26 @@ export function AuthForm({ mode }: Props) {
   }
 
   return (
-    <main className="flex min-h-dvh w-full items-center justify-center bg-gray-100 px-4 py-8">
-      <div className="w-full max-w-110 rounded-xlarge border border-alpha-100 bg-white p-6 shadow-down-medium tablet:p-8">
-        <div className="flex items-center gap-2 text-primary-700">
+    <main className="flex min-h-dvh w-full items-center justify-center bg-surface-sunken px-4 py-8">
+      <div className="w-full max-w-110 rounded-xlarge border border-line-subtle bg-surface-card p-6 shadow-down-medium tablet:p-8">
+        <div className="flex items-center gap-2 text-brand">
           <LeafIcon aria-hidden="true" className="size-6" />
-          <span className="font-bold text-heading-medium text-gray-900">
+          <span className="font-bold text-heading-medium text-content-strong">
             Leaf
           </span>
         </div>
 
-        <h1 className="mt-6 font-bold text-heading-large text-gray-900">
-          {texts.title}
+        <h1 className="mt-6 font-bold text-heading-large text-content-strong">
+          {t(mode === 'signup' ? 'signupTitle' : 'loginTitle')}
         </h1>
-        <p className="mt-2 text-body-small text-gray-700">
-          {texts.subtitle}
+        <p className="mt-2 text-body-small text-content">
+          {t(mode === 'signup' ? 'signupSubtitle' : 'loginSubtitle')}
         </p>
 
         <form className="mt-6 flex flex-col gap-4" onSubmit={handleSubmit}>
           {mode === 'signup' ? (
             <div className="flex flex-col gap-2">
-              <Label htmlFor={nameId}>Nome (opcional)</Label>
+              <Label htmlFor={nameId}>{t('nameLabel')}</Label>
               <Input
                 autoComplete="name"
                 className="max-w-full"
@@ -122,8 +103,10 @@ export function AuthForm({ mode }: Props) {
           ) : null}
 
           <div className="flex flex-col gap-2">
-            <Label htmlFor={emailId}>Email</Label>
+            <Label htmlFor={emailId}>{t('emailLabel')}</Label>
             <Input
+              aria-describedby={error ? errorId : undefined}
+              aria-invalid={error ? true : undefined}
               autoComplete="email"
               className="max-w-full"
               disabled={pending}
@@ -137,8 +120,14 @@ export function AuthForm({ mode }: Props) {
           </div>
 
           <div className="flex flex-col gap-2">
-            <Label htmlFor={passwordId}>Senha</Label>
+            <Label htmlFor={passwordId}>{t('passwordLabel')}</Label>
             <Input
+              aria-describedby={
+                [mode === 'signup' ? passwordHintId : null, error ? errorId : null]
+                  .filter(Boolean)
+                  .join(' ') || undefined
+              }
+              aria-invalid={error ? true : undefined}
               autoComplete={
                 mode === 'signup' ? 'new-password' : 'current-password'
               }
@@ -153,15 +142,15 @@ export function AuthForm({ mode }: Props) {
               value={password}
             />
             {mode === 'signup' ? (
-              <p className="text-caption text-gray-700">
-                Mínimo de 8 caracteres
+              <p className="text-body-small text-content" id={passwordHintId}>
+                {t('passwordHint')}
               </p>
             ) : null}
           </div>
 
           {error ? (
             <p
-              className="flex items-start gap-2 rounded-large bg-error-50 p-3 text-body-small text-error-700"
+              className="flex items-start gap-2 rounded-large bg-danger-surface p-3 text-body-small text-danger"
               id={errorId}
               role="alert"
             >
@@ -176,17 +165,17 @@ export function AuthForm({ mode }: Props) {
             disabled={pending}
             type="submit"
           >
-            {texts.submit}
+            {t(mode === 'signup' ? 'signupSubmit' : 'loginSubmit')}
           </Button>
         </form>
 
-        <p className="mt-6 text-body-small text-gray-700">
-          {texts.switchText}{' '}
+        <p className="mt-6 text-body-small text-content">
+          {t(mode === 'signup' ? 'signupSwitchText' : 'loginSwitchText')}{' '}
           <Link
-            className="font-bold text-primary-900 underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-gray-900 focus-visible:outline-offset-2"
-            href={texts.switchHref}
+            className="font-bold text-link underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-2"
+            href={switchHref[mode]}
           >
-            {texts.switchLabel}
+            {t(mode === 'signup' ? 'signupSwitchLabel' : 'loginSwitchLabel')}
           </Link>
         </p>
       </div>

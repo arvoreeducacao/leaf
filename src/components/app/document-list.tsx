@@ -18,7 +18,7 @@ export function DocumentList({ documents, emptyLabel, onNavigate }: Props) {
 
   if (documents.length === 0) {
     return (
-      <p className="px-3 py-2 text-body-small text-gray-700">
+      <p className="px-3 py-2 text-body-small text-content">
         {emptyLabel}
       </p>
     )
@@ -35,10 +35,10 @@ export function DocumentList({ documents, emptyLabel, onNavigate }: Props) {
               aria-current={active ? 'page' : undefined}
               className={cn(
                 'flex min-h-11 items-center gap-2 rounded-large px-3 py-2 text-body-small  transition-colors',
-                'focus-visible:outline-2 focus-visible:outline-gray-900 focus-visible:outline-offset-2',
+                'focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-2',
                 active
-                  ? 'bg-primary-100 font-bold text-gray-900'
-                  : 'text-gray-700 hover:bg-gray-200 hover:text-gray-900',
+                  ? 'bg-brand-surface font-bold text-content-strong'
+                  : 'text-content hover:bg-surface-hover hover:text-content-strong',
               )}
               href={`/doc/${document.id}`}
               onClick={onNavigate}

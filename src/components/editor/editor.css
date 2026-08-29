@@ -29,7 +29,7 @@
 }
 
 .leaf-editor .bn-editor {
-  @apply px-8 text-body-medium text-gray-900 tablet:px-14;
+  @apply px-8 text-body-medium text-content-strong tablet:px-14;
 }
 
 .leaf-editor .bn-block-outer {
@@ -37,7 +37,7 @@
 }
 
 .leaf-editor.bn-container .bn-editor .bn-block-content[data-content-type="heading"] {
-  @apply pt-6 font-bold text-display-small leading-medium text-gray-900;
+  @apply pt-6 font-bold text-display-small leading-medium text-content-strong;
 }
 
 .leaf-editor.bn-container .bn-editor .bn-block-content[data-content-type="heading"][data-level="2"] {
@@ -55,19 +55,19 @@
 }
 
 .leaf-editor .bn-block-content[data-content-type="quote"] {
-  @apply border-l-4 border-alpha-300 pl-4 text-gray-700 italic;
+  @apply border-l-4 border-line-strong pl-4 text-content italic;
 }
 
 .leaf-editor .bn-block-content[data-content-type="quote"] blockquote {
-  @apply border-none pl-0 text-gray-700;
+  @apply border-none pl-0 text-content;
 }
 
 .leaf-editor .bn-block-content[data-content-type="divider"] hr {
-  @apply border-alpha-300;
+  @apply border-line-strong;
 }
 
 .leaf-editor .bn-block-content[data-content-type="codeBlock"] {
-  @apply rounded-large bg-gray-100 text-body-small leading-medium;
+  @apply rounded-large bg-code-surface text-body-small text-code-content leading-medium;
 }
 
 .leaf-editor .bn-block-content[data-content-type="table"] {
@@ -75,7 +75,7 @@
 }
 
 .leaf-editor .bn-inline-content a {
-  @apply text-primary-900 underline underline-offset-2 hover:text-primary-950;
+  @apply text-link underline underline-offset-2 hover:text-link-hover;
 }
 
 .leaf-editor img {
@@ -87,7 +87,7 @@
 }
 
 .leaf-editor .bn-block-content:has(.ProseMirror-trailingBreak:only-child)::after {
-  @apply text-gray-700 not-italic;
+  @apply text-content not-italic;
 }
 
 .leaf-editor .bn-block-content.ProseMirror-selectednode > *::after,
@@ -98,11 +98,24 @@
 }
 
 .bn-container .bg-neutral-400 {
-  @apply bg-gray-300;
+  @apply bg-surface-grabber;
 }
 
 .bn-container .font-medium {
   @apply font-bold;
+}
+
+.leaf-editor .bn-editor [data-content-type="table"] th,
+.leaf-editor .bn-editor [data-content-type="table"] td {
+  @apply border border-line-soft;
+}
+
+.leaf-editor .bn-editor [data-content-type="table"] th {
+  @apply bg-surface-subtle;
+}
+
+.dark .leaf-editor [data-background-color]:not([data-background-color="default"]) {
+  @apply text-gray-900;
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -1,5 +1,7 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
+
 import { AlertIcon } from '@/components/icons'
 import { Button } from '@/components/ui/button'
 
@@ -9,17 +11,20 @@ type Props = Readonly<{
 }>
 
 export default function AppError({ reset }: Props) {
+  const t = useTranslations('errors')
+  const tCommon = useTranslations('common')
+
   return (
     <div className="mx-auto flex w-full max-w-content flex-col items-center gap-4 px-4 py-10 text-center tablet:px-8">
-      <AlertIcon aria-hidden="true" className="size-10 text-error-700" />
-      <h1 className="font-bold text-heading-large text-gray-900">
-        Algo deu errado
+      <AlertIcon aria-hidden="true" className="size-10 text-danger" />
+      <h1 className="font-bold text-heading-large text-content-strong">
+        {t('appTitle')}
       </h1>
-      <p className="max-w-110 text-body-medium text-gray-700">
-        Não conseguimos carregar esta parte do Leaf
+      <p className="max-w-110 text-body-medium text-content">
+        {t('appBody')}
       </p>
       <Button onClick={reset} type="button">
-        Tentar de novo
+        {tCommon('tryAgain')}
       </Button>
     </div>
   )

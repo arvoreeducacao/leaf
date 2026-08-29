@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { useCallback, useEffect, useId, useState } from 'react'
 import { toast } from 'sonner'
 
@@ -40,11 +41,6 @@ type Props = Readonly<{
   canManage: boolean
 }>
 
-const roleLabels: Record<ShareRole, string> = {
-  viewer: 'Pode ver',
-  editor: 'Pode editar',
-}
-
 function publicUrlFor(token: string) {
   if (typeof window === 'undefined') {
     return `/share/${token}`
@@ -54,6 +50,13 @@ function publicUrlFor(token: string) {
 }
 
 export function SharePanel({ documentId, canManage }: Props) {
+  const t = useTranslations('share')
+  const tCommon = useTranslations('common')
+  const tErrors = useTranslations('errors')
+  const roleLabels: Record<ShareRole, string> = {
+    viewer: t('roleViewer'),
+    editor: t('roleEditor'),
+  }
   const emailFieldId = useId()
   const roleFieldId = useId()
   const inviteErrorId = useId()
@@ -113,7 +116,7 @@ export function SharePanel({ documentId, canManage }: Props) {
     const email = inviteEmail.trim()
 
     if (email.length === 0) {
-      setInviteError('Digite um email válido.')
+      setInviteError(tErrors('invalidEmail'))
 
       return
     }
@@ -130,27 +133,27 @@ export function SharePanel({ documentId, canManage }: Props) {
 
     setState(result.state)
     setInviteEmail('')
-    setStatus('Convite enviado')
-    toast.success('Convite enviado')
+    setStatus(t('invited'))
+    toast.success(t('invited'))
   }
 
   async function removePerson(person: SharePerson) {
     const result = await run(
       () => removeShare(documentId, person.id),
-      'Acesso removido',
+      t('accessRemoved'),
     )
 
     if (!result.ok) {
       return
     }
 
-    toast.success('Acesso removido', {
+    toast.success(t('accessRemoved'), {
       action: {
-        label: 'Desfazer',
+        label: tCommon('undo'),
         onClick: () => {
           void run(
             () => inviteToDocument(documentId, person.email, person.role),
-            'Acesso restaurado',
+            t('accessRestored'),
           )
         },
       },
@@ -160,22 +163,22 @@ export function SharePanel({ documentId, canManage }: Props) {
   async function confirmDisable() {
     const result = await run(
       () => disablePublicLink(documentId),
-      'Link público desativado',
+      t('publicLinkDisabled'),
     )
 
     setConfirmingDisable(false)
 
     if (result.ok) {
-      toast.success('Link público desativado')
+      toast.success(t('publicLinkDisabled'))
     }
   }
 
   async function copyLink(url: string) {
     try {
       await navigator.clipboard.writeText(url)
-      toast.success('Link copiado')
+      toast.success(t('linkCopied'))
     } catch {
-      toast.error('Não foi possível copiar o link')
+      toast.error(t('copyFailed'))
     }
   }
 
@@ -190,7 +193,7 @@ export function SharePanel({ documentId, canManage }: Props) {
         {canManage ? <Skeleton className="h-12 w-full" /> : null}
         <Skeleton className="h-12 w-full" />
         <Skeleton className="h-10 w-2/3" />
-        <span className="sr-only">Carregando compartilhamento</span>
+        <span className="sr-only">{t('loading')}</span>
       </div>
     )
   }
@@ -198,11 +201,11 @@ export function SharePanel({ documentId, canManage }: Props) {
   if (loadError || !state) {
     return (
       <div className="flex flex-col items-start gap-3">
-        <p className="text-body-small text-gray-700" role="alert">
-          {loadError ?? 'Não foi possível carregar o compartilhamento.'}
+        <p className="text-body-small text-content" role="alert">
+          {loadError ?? t('loadFailed')}
         </p>
         <Button onClick={() => void load()} type="button" variant="secondary">
-          Tentar de novo
+          {tCommon('tryAgain')}
         </Button>
       </div>
     )
@@ -221,7 +224,7 @@ export function SharePanel({ documentId, canManage }: Props) {
         <form className="flex flex-col gap-3" onSubmit={submitInvite}>
           <div className="flex flex-col gap-3 tablet:flex-row tablet:items-end">
             <div className="flex min-w-0 flex-1 flex-col gap-2">
-              <Label htmlFor={emailFieldId}>Email</Label>
+              <Label htmlFor={emailFieldId}>{t('emailLabel')}</Label>
               <Input
                 aria-describedby={inviteError ? inviteErrorId : undefined}
                 aria-invalid={inviteError ? true : undefined}
@@ -230,13 +233,13 @@ export function SharePanel({ documentId, canManage }: Props) {
                 disabled={pending}
                 id={emailFieldId}
                 onChange={(event) => setInviteEmail(event.target.value)}
-                placeholder="nome@escola.com.br"
+                placeholder={t('emailPlaceholder')}
                 type="email"
                 value={inviteEmail}
               />
             </div>
             <div className="flex flex-col gap-2 tablet:w-45">
-              <Label htmlFor={roleFieldId}>Papel</Label>
+              <Label htmlFor={roleFieldId}>{t('roleLabel')}</Label>
               <Select
                 disabled={pending}
                 onValueChange={(value) => setInviteRole(value as ShareRole)}
@@ -255,7 +258,7 @@ export function SharePanel({ documentId, canManage }: Props) {
 
           {inviteError ? (
             <p
-              className="rounded-large bg-error-50 p-3 text-body-small text-error-700"
+              className="rounded-large bg-danger-surface p-3 text-body-small text-danger"
               id={inviteErrorId}
               role="alert"
             >
@@ -269,7 +272,7 @@ export function SharePanel({ documentId, canManage }: Props) {
             disabled={pending}
             type="submit"
           >
-            Convidar
+            {t('invite')}
           </Button>
         </form>
       ) : null}
@@ -277,17 +280,17 @@ export function SharePanel({ documentId, canManage }: Props) {
       {isOwner ? <Separator /> : null}
 
       <section className="flex flex-col gap-3">
-        <h3 className="font-bold text-body-small text-gray-700">Com acesso</h3>
+        <h3 className="font-bold text-body-small text-content">{t('withAccess')}</h3>
 
         <ul className="flex flex-col gap-2">
           <li className="flex min-w-0 items-center gap-2 py-1">
             <span
-              className="min-w-0 flex-1 truncate text-body-small text-gray-900"
+              className="min-w-0 flex-1 truncate text-body-small text-content-strong"
               title={state.ownerEmail}
             >
               {state.ownerEmail}
             </span>
-            <Badge variant="info">Dono</Badge>
+            <Badge variant="info">{t('owner')}</Badge>
           </li>
 
           {state.people.map((person) => (
@@ -296,7 +299,7 @@ export function SharePanel({ documentId, canManage }: Props) {
               key={person.id}
             >
               <span
-                className="min-w-0 flex-1 truncate text-body-small text-gray-900"
+                className="min-w-0 flex-1 truncate text-body-small text-content-strong"
                 title={person.email}
               >
                 {person.email}
@@ -309,13 +312,13 @@ export function SharePanel({ documentId, canManage }: Props) {
                     onValueChange={(value) =>
                       void run(
                         () => updateShareRole(documentId, person.id, value),
-                        'Papel atualizado',
+                        t('roleUpdated'),
                       )
                     }
                     value={person.role}
                   >
                     <SelectTrigger
-                      aria-label={`Papel de ${person.email}`}
+                      aria-label={t('roleOf', { email: person.email })}
                       className="w-40 shrink-0"
                     >
                       <SelectValue />
@@ -331,7 +334,7 @@ export function SharePanel({ documentId, canManage }: Props) {
                   </Select>
 
                   <ButtonIcon
-                    aria-label={`Remover acesso de ${person.email}`}
+                    aria-label={t('removeAccess', { email: person.email })}
                     disabled={pending}
                     onClick={() => void removePerson(person)}
                     size="large"
@@ -348,14 +351,14 @@ export function SharePanel({ documentId, canManage }: Props) {
         </ul>
 
         {state.people.length === 0 ? (
-          <p className="text-body-small text-gray-700">
-            Ninguém foi convidado ainda
+          <p className="text-body-small text-content">
+            {t('noPeople')}
           </p>
         ) : null}
 
         {isOwner ? null : (
-          <p className="text-body-small text-gray-700">
-            Só o dono pode alterar o compartilhamento
+          <p className="text-body-small text-content">
+            {t('ownerOnly')}
           </p>
         )}
       </section>
@@ -369,13 +372,13 @@ export function SharePanel({ documentId, canManage }: Props) {
               <div className="flex min-w-0 items-center gap-2">
                 <GlobeIcon
                   aria-hidden="true"
-                  className="size-4 shrink-0 text-gray-600"
+                  className="size-4 shrink-0 text-content-muted"
                 />
                 <Label
-                  className="font-bold text-body-small text-gray-900"
+                  className="font-bold text-body-small text-content-strong"
                   htmlFor={publicSwitchId}
                 >
-                  Link público
+                  {t('publicLink')}
                 </Label>
               </div>
               <Switch
@@ -391,7 +394,7 @@ export function SharePanel({ documentId, canManage }: Props) {
 
                   void run(
                     () => enablePublicLink(documentId),
-                    'Link público ativado',
+                    t('publicLinkEnabled'),
                   )
                 }}
               />
@@ -404,15 +407,14 @@ export function SharePanel({ documentId, canManage }: Props) {
               pending={pending}
             />
 
-            <p className="text-body-small text-gray-700">
-              Qualquer pessoa com o link pode ver este documento. Desativar
-              invalida o link atual para sempre
+            <p className="text-body-small text-content">
+              {t('publicLinkHelp')}
             </p>
 
             {publicUrl ? (
               <div className="flex flex-col gap-2 tablet:flex-row tablet:items-end">
                 <div className="flex min-w-0 flex-1 flex-col gap-2">
-                  <Label htmlFor={publicLinkId}>Endereço do link</Label>
+                  <Label htmlFor={publicLinkId}>{t('linkAddress')}</Label>
                   <Input
                     className="max-w-full"
                     id={publicLinkId}
@@ -428,7 +430,7 @@ export function SharePanel({ documentId, canManage }: Props) {
                   variant="secondary"
                 >
                   <ClipboardIcon aria-hidden="true" />
-                  Copiar
+                  {t('copy')}
                 </Button>
               </div>
             ) : null}

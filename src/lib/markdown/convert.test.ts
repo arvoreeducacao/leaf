@@ -298,9 +298,11 @@ describe('conteúdo vazio', () => {
 
 describe('nome de arquivo', () => {
   it('usa o nome do arquivo sem extensão como título', () => {
-    expect(titleFromFileName('Plano de aula.md')).toBe('Plano de aula')
-    expect(titleFromFileName('notas.markdown')).toBe('notas')
-    expect(titleFromFileName('.md')).toBe('Sem título')
+    expect(titleFromFileName('Plano de aula.md', 'Sem título')).toBe(
+      'Plano de aula',
+    )
+    expect(titleFromFileName('notas.markdown', 'Sem título')).toBe('notas')
+    expect(titleFromFileName('.md', 'Sem título')).toBe('Sem título')
   })
 
   it('gera slug sem acento nem espaço', () => {

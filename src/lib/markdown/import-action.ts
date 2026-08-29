@@ -1,6 +1,7 @@
 'use server'
 
 import { nanoid } from 'nanoid'
+import { getTranslations } from 'next-intl/server'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 
@@ -26,23 +27,21 @@ export async function importMarkdown(
     redirect('/login')
   }
 
+  const t = await getTranslations('importFile')
+
   if (typeof mdText !== 'string' || mdText.trim().length === 0) {
-    return { ok: false, error: 'O arquivo está vazio' }
+    return { ok: false, error: t('empty') }
   }
 
   if (Buffer.byteLength(mdText, 'utf8') > MAX_MARKDOWN_BYTES) {
     return {
       ok: false,
-      error: `O arquivo passa de ${MAX_MARKDOWN_LABEL}. Divida o conteúdo em arquivos menores e importe um de cada vez.`,
+      error: t('markdownTooLarge', { limit: MAX_MARKDOWN_LABEL }),
     }
   }
 
   if (looksBinary(mdText)) {
-    return {
-      ok: false,
-      error:
-        'Esse arquivo não parece ser um markdown de texto. Confira se você escolheu o arquivo certo.',
-    }
+    return { ok: false, error: t('binary') }
   }
 
   let content: string
@@ -51,20 +50,12 @@ export async function importMarkdown(
     const blocks = await markdownToBlocks(mdText)
 
     if (blocks.length === 0) {
-      return {
-        ok: false,
-        error:
-          'Não encontramos conteúdo para importar nesse arquivo. Nada foi criado.',
-      }
+      return { ok: false, error: t('noContent') }
     }
 
     content = JSON.stringify(blocks)
   } catch {
-    return {
-      ok: false,
-      error:
-        'Não foi possível ler esse markdown. Nada foi criado, o arquivo continua intacto.',
-    }
+    return { ok: false, error: t('unreadable') }
   }
 
   const id = nanoid(12)
@@ -73,7 +64,10 @@ export async function importMarkdown(
   await db.insert(documents).values({
     id,
     ownerId: session.user.id,
-    title: titleFromFileName(fileName),
+    title: titleFromFileName(
+      fileName,
+      (await getTranslations('document'))('untitled'),
+    ),
     content,
     createdAt: now,
     updatedAt: now,

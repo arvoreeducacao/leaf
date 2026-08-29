@@ -1,10 +1,16 @@
+'use client'
+
+import { useTranslations } from 'next-intl'
+
 import { Skeleton } from '@/components/ui/skeleton'
 
 export default function Loading() {
+  const t = useTranslations('common')
+
   return (
     <div className="mx-auto flex w-full max-w-content flex-col gap-6 px-4 py-8 tablet:px-8 tablet:py-10">
       <span className="sr-only" role="status">
-        Carregando
+        {t('loading')}
       </span>
       <Skeleton className="h-10 w-full max-w-90" />
       <div className="mx-auto flex w-full max-w-prose-leaf flex-col gap-3">

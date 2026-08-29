@@ -1,3 +1,5 @@
+import { useTranslations } from 'next-intl'
+
 import { cn } from '@/shared/utils'
 
 type StepProgressProps = {
@@ -11,9 +13,11 @@ function StepProgress({
   current,
   className,
 }: Readonly<StepProgressProps>) {
+  const t = useTranslations('common')
+
   return (
     <div
-      aria-label={`Etapa ${current + 1} de ${total}`}
+      aria-label={t('step', { current: current + 1, total })}
       aria-valuemax={total}
       aria-valuemin={1}
       aria-valuenow={current + 1}
@@ -29,7 +33,7 @@ function StepProgress({
               className={cn(
                 'h-2 rounded-pill transition-all duration-200',
                 isActive ? 'w-5 bg-primary' : 'w-2',
-                isPast ? 'bg-primary' : !isActive && 'bg-gray-200'
+                isPast ? 'bg-primary' : !isActive && 'bg-surface-hover'
               )}
               key={stepKey}
             />

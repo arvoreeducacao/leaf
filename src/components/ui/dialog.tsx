@@ -1,6 +1,7 @@
 'use client'
 
 import * as DialogPrimitive from '@radix-ui/react-dialog'
+import { useTranslations } from 'next-intl'
 import { CancelIcon } from '@/components/icons'
 import type * as React from 'react'
 
@@ -37,7 +38,7 @@ function DialogOverlay({
   return (
     <DialogPrimitive.Overlay
       className={cn(
-        'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-alpha-800 data-[state=closed]:animate-out data-[state=open]:animate-in',
+        'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-overlay data-[state=closed]:animate-out data-[state=open]:animate-in',
         className
       )}
       data-slot="dialog-overlay"
@@ -56,12 +57,14 @@ function DialogContent({
     showCloseButton?: boolean
   }
 >) {
+  const t = useTranslations('common')
+
   return (
     <DialogPortal data-slot="dialog-portal">
       <DialogOverlay />
       <DialogPrimitive.Content
         className={cn(
-          'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom fixed inset-x-0 bottom-0 z-50 grid max-h-[85dvh] w-full gap-4 overflow-y-auto rounded-t-xlarge rounded-b-none border bg-white p-6 pb-[max(calc(var(--spacing)*6),env(safe-area-inset-bottom))] shadow-center-xlarge duration-200 data-[state=closed]:animate-out data-[state=open]:animate-in',
+          'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom fixed inset-x-0 bottom-0 z-50 grid max-h-[85dvh] w-full gap-4 overflow-y-auto rounded-t-xlarge rounded-b-none border bg-surface-card p-6 pb-[max(calc(var(--spacing)*6),env(safe-area-inset-bottom))] shadow-center-xlarge duration-200 data-[state=closed]:animate-out data-[state=open]:animate-in',
           'tablet:data-[state=closed]:zoom-out-95 tablet:data-[state=open]:zoom-in-95 tablet:data-[state=closed]:slide-out-to-bottom-0 tablet:data-[state=open]:slide-in-from-bottom-0 tablet:inset-x-auto tablet:top-[50%] tablet:bottom-auto tablet:left-[50%] tablet:w-[calc(100%-2rem)] tablet:max-w-lg tablet:translate-x-[-50%] tablet:translate-y-[-50%] tablet:rounded-b-xlarge tablet:pb-6',
           className
         )}
@@ -70,7 +73,7 @@ function DialogContent({
       >
         <div
           aria-hidden="true"
-          className="mx-auto -mt-2 h-1 w-10 shrink-0 rounded-pill bg-gray-300 tablet:hidden"
+          className="mx-auto -mt-2 h-1 w-10 shrink-0 rounded-pill bg-surface-grabber tablet:hidden"
         />
         {children}
         {showCloseButton && (
@@ -79,7 +82,7 @@ function DialogContent({
             data-slot="dialog-close"
           >
             <CancelIcon />
-            <span className="sr-only">Fechar</span>
+            <span className="sr-only">{t('close')}</span>
           </DialogPrimitive.Close>
         )}
       </DialogPrimitive.Content>
@@ -122,7 +125,7 @@ function DialogTitle({
 }: Readonly<React.ComponentProps<typeof DialogPrimitive.Title>>) {
   return (
     <DialogPrimitive.Title
-      className={cn('font-bold text-[20px] leading-[1.3]', className)}
+      className={cn('font-bold text-content-strong text-[20px] leading-[1.3]', className)}
       data-slot="dialog-title"
       {...props}
     />
@@ -135,7 +138,7 @@ function DialogDescription({
 }: Readonly<React.ComponentProps<typeof DialogPrimitive.Description>>) {
   return (
     <DialogPrimitive.Description
-      className={cn('text-[16px] text-gray-700 leading-medium', className)}
+      className={cn('text-[16px] text-content leading-medium', className)}
       data-slot="dialog-description"
       {...props}
     />

@@ -1,5 +1,7 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
+
 import {
   AlertDialog,
   AlertDialogAction,
@@ -28,10 +30,7 @@ type Props = Readonly<{
   onConfirm: () => void
 }>
 
-const title = 'Desativar o link público?'
-const description =
-  'Quem tiver o link atual perde o acesso na hora. Se você ativar de novo, o Leaf gera um link diferente.'
-const destructiveClassName = 'bg-error-700 text-white hover:bg-error-800'
+const destructiveClassName = 'bg-danger-solid text-content-inverse hover:bg-danger-solid-hover'
 
 export function ConfirmDisablePublicLink({
   open,
@@ -39,6 +38,9 @@ export function ConfirmDisablePublicLink({
   onOpenChange,
   onConfirm,
 }: Props) {
+  const t = useTranslations('share')
+  const title = t('confirmDisableTitle')
+  const description = t('confirmDisableDescription')
   const isMobile = useIsMobile()
 
   if (isMobile) {
@@ -51,10 +53,10 @@ export function ConfirmDisablePublicLink({
           side="bottom"
         >
           <SheetHeader className="gap-2 px-4 pt-4">
-            <SheetTitle className="font-bold text-heading-medium text-gray-900">
+            <SheetTitle className="font-bold text-heading-medium text-content-strong">
               {title}
             </SheetTitle>
-            <SheetDescription className="text-body-small text-gray-700">
+            <SheetDescription className="text-body-small text-content">
               {description}
             </SheetDescription>
           </SheetHeader>
@@ -67,7 +69,7 @@ export function ConfirmDisablePublicLink({
               type="button"
               variant="destructive"
             >
-              Desativar link
+              {t('confirmDisableAction')}
             </Button>
             <Button
               disabled={pending}
@@ -75,7 +77,7 @@ export function ConfirmDisablePublicLink({
               type="button"
               variant="secondary"
             >
-              Manter ativo
+              {t('confirmDisableCancel')}
             </Button>
           </SheetFooter>
         </SheetContent>
@@ -91,14 +93,16 @@ export function ConfirmDisablePublicLink({
           <AlertDialogDescription>{description}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={pending}>Manter ativo</AlertDialogCancel>
+          <AlertDialogCancel disabled={pending}>
+            {t('confirmDisableCancel')}
+          </AlertDialogCancel>
           <AlertDialogAction
             aria-busy={pending}
             className={destructiveClassName}
             disabled={pending}
             onClick={onConfirm}
           >
-            Desativar link
+            {t('confirmDisableAction')}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

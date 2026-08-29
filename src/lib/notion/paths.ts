@@ -25,7 +25,7 @@ export function withoutExtension(path: string): string {
   return extension.length === 0 ? path : path.slice(0, -extension.length)
 }
 
-export function notionTitle(path: string): string {
+export function notionTitle(path: string, fallbackTitle: string): string {
   const name = withoutExtension(baseNameOf(path))
   const withoutHash = name.replace(notionHashPattern, '')
   const cleaned = (
@@ -35,7 +35,7 @@ export function notionTitle(path: string): string {
     .trim()
     .slice(0, 200)
 
-  return cleaned.length > 0 ? cleaned : 'Sem título'
+  return cleaned.length > 0 ? cleaned : fallbackTitle
 }
 
 export function resolveRelativePath(fromDirectory: string, target: string) {

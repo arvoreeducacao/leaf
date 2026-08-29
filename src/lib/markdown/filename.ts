@@ -1,6 +1,9 @@
 import { MARKDOWN_EXTENSIONS } from '@/lib/markdown/limits'
 
-export function titleFromFileName(fileName: string): string {
+export function titleFromFileName(
+  fileName: string,
+  fallbackTitle: string,
+): string {
   const base = fileName.split(/[\\/]/).pop() ?? ''
   const lowered = base.toLowerCase()
   const extension = MARKDOWN_EXTENSIONS.find((item) => lowered.endsWith(item))
@@ -9,7 +12,7 @@ export function titleFromFileName(fileName: string): string {
     : base
   const title = withoutExtension.trim().slice(0, 200)
 
-  return title.length > 0 ? title : 'Sem título'
+  return title.length > 0 ? title : fallbackTitle
 }
 
 export function toFileSlug(title: string): string {

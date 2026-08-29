@@ -1,19 +1,19 @@
+import { useTranslations } from 'next-intl'
+
 import type { TextStats } from './text-stats'
 
 type Props = Readonly<{ stats: TextStats }>
 
-function plural(count: number, singular: string, many: string) {
-  return `${count} ${count === 1 ? singular : many}`
-}
-
 export function DocumentStats({ stats }: Props) {
+  const t = useTranslations('editor')
+
   return (
-    <p className="flex flex-wrap items-center gap-2 text-caption text-gray-700">
-      <span>{plural(stats.words, 'palavra', 'palavras')}</span>
-      <span aria-hidden="true" className="text-gray-600">
+    <p className="flex flex-wrap items-center gap-2 text-caption text-content">
+      <span>{t('words', { count: stats.words })}</span>
+      <span aria-hidden="true" className="text-content-muted">
         ·
       </span>
-      <span>{plural(stats.characters, 'caractere', 'caracteres')}</span>
+      <span>{t('characters', { count: stats.characters })}</span>
     </p>
   )
 }

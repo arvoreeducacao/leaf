@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
@@ -13,12 +14,13 @@ type Props = Readonly<{
 }>
 
 export function DocumentSearchResults({ matches, onNavigate }: Props) {
+  const t = useTranslations('nav')
   const pathname = usePathname()
 
   if (matches.length === 0) {
     return (
-      <p className="px-3 py-2 text-body-small text-gray-700">
-        Nenhum documento com esse nome
+      <p className="px-3 py-2 text-body-small text-content">
+        {t('searchEmpty')}
       </p>
     )
   }
@@ -34,10 +36,10 @@ export function DocumentSearchResults({ matches, onNavigate }: Props) {
               aria-current={active ? 'page' : undefined}
               className={cn(
                 'flex min-h-11 items-center gap-2 rounded-large px-3 py-2 text-body-small transition-colors',
-                'focus-visible:outline-2 focus-visible:outline-gray-900 focus-visible:outline-offset-2',
+                'focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-2',
                 active
-                  ? 'bg-primary-100 font-bold text-gray-900'
-                  : 'text-gray-700 hover:bg-gray-200 hover:text-gray-900',
+                  ? 'bg-brand-surface font-bold text-content-strong'
+                  : 'text-content hover:bg-surface-hover hover:text-content-strong',
               )}
               href={`/doc/${match.id}`}
               onClick={onNavigate}
@@ -46,13 +48,13 @@ export function DocumentSearchResults({ matches, onNavigate }: Props) {
               <span className="flex min-w-0 flex-1 flex-col">
                 <span className="truncate">{match.title}</span>
                 {match.path ? (
-                  <span className="truncate text-caption text-gray-700">
+                  <span className="truncate text-caption text-content">
                     {match.path}
                   </span>
                 ) : null}
                 {match.shared ? (
-                  <span className="truncate text-caption text-gray-700">
-                    Compartilhado comigo
+                  <span className="truncate text-caption text-content">
+                    {t('sharedBadge')}
                   </span>
                 ) : null}
               </span>

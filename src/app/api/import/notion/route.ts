@@ -1,3 +1,4 @@
+import { getTranslations } from 'next-intl/server'
 import { revalidatePath } from 'next/cache'
 import { NextResponse } from 'next/server'
 
@@ -5,23 +6,33 @@ import { getSession } from '@/lib/auth'
 import { importNotionZip } from '@/lib/notion/import'
 import type { ImportEvent } from '@/lib/notion/import'
 import { MAX_ZIP_BYTES, MAX_ZIP_LABEL, ZIP_EXTENSIONS } from '@/lib/notion/limits'
+import { buildNotionImportMessages } from '@/lib/notion/messages'
 
 export const runtime = 'nodejs'
 
 export const maxDuration = 300
 
-function tooLarge() {
-  return NextResponse.json(
-    { error: `O arquivo passa de ${MAX_ZIP_LABEL}` },
-    { status: 413 },
-  )
-}
-
 export async function POST(request: Request) {
+  const t = await getTranslations('notionImport')
+  const messages = buildNotionImportMessages(
+    t,
+    (await getTranslations('document'))('untitled'),
+  )
+
+  function tooLarge() {
+    return NextResponse.json(
+      { error: t('tooLargeZip', { limit: MAX_ZIP_LABEL }) },
+      { status: 413 },
+    )
+  }
+
   const session = await getSession()
 
   if (!session) {
-    return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
+    return NextResponse.json(
+      { error: t('notAuthenticated') },
+      { status: 401 },
+    )
   }
 
   const declaredLength = Number(request.headers.get('content-length') ?? '0')
@@ -35,7 +46,7 @@ export async function POST(request: Request) {
 
   if (!(file instanceof File)) {
     return NextResponse.json(
-      { error: 'Envie um arquivo no campo file' },
+      { error: t('missingFile') },
       { status: 400 },
     )
   }
@@ -44,7 +55,7 @@ export async function POST(request: Request) {
 
   if (!ZIP_EXTENSIONS.some((extension) => name.endsWith(extension))) {
     return NextResponse.json(
-      { error: 'Escolha um arquivo .zip exportado do Notion' },
+      { error: t('wrongExtension') },
       { status: 415 },
     )
   }
@@ -64,7 +75,12 @@ export async function POST(request: Request) {
       }
 
       try {
-        for await (const event of importNotionZip(data, owner, request.signal)) {
+        for await (const event of importNotionZip(
+          data,
+          owner,
+          messages,
+          request.signal,
+        )) {
           send(event)
 
           if (event.type === 'done') {
@@ -72,7 +88,7 @@ export async function POST(request: Request) {
           }
         }
       } catch {
-        send({ type: 'error', error: 'Não foi possível concluir a importação' })
+        send({ type: 'error', error: t('unfinished') })
       } finally {
         controller.close()
       }

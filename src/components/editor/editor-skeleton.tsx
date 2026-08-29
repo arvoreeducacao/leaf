@@ -1,10 +1,14 @@
+import { useTranslations } from 'next-intl'
+
 import { Skeleton } from '@/components/ui/skeleton'
 
 export function EditorSkeleton() {
+  const t = useTranslations('editor')
+
   return (
     <div
       aria-busy="true"
-      aria-label="Carregando o editor"
+      aria-label={t('loading')}
       className="flex w-full flex-col gap-3 px-8 py-4 tablet:px-14"
       role="status"
     >
