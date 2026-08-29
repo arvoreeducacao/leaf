@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
 import { useRef, useState, useTransition } from 'react'
 import { toast } from 'sonner'
@@ -23,6 +24,7 @@ import { cn } from '@/shared/utils'
 const acceptedExtensions = [...MARKDOWN_EXTENSIONS, ...ZIP_EXTENSIONS]
 
 export function ImportButton() {
+  const t = useTranslations('importFile')
   const router = useRouter()
   const inputRef = useRef<HTMLInputElement>(null)
   const [dragging, setDragging] = useState(false)
@@ -31,7 +33,7 @@ export function ImportButton() {
 
   function handleMarkdown(file: File) {
     if (file.size > MAX_MARKDOWN_BYTES) {
-      toast.error(`O arquivo passa de ${MAX_MARKDOWN_LABEL}`)
+      toast.error(t('tooLarge', { limit: MAX_MARKDOWN_LABEL }))
 
       return
     }
@@ -42,7 +44,7 @@ export function ImportButton() {
         const result = await importMarkdown(file.name, text)
 
         if (result.ok) {
-          toast.success('Markdown importado')
+          toast.success(t('markdownImported'))
           router.push(`/doc/${result.id}`)
 
           return
@@ -54,7 +56,7 @@ export function ImportButton() {
           throw error
         }
 
-        toast.error('Não foi possível importar o arquivo')
+        toast.error(t('failed'))
       }
     })
   }
@@ -68,7 +70,7 @@ export function ImportButton() {
 
     if (ZIP_EXTENSIONS.some((extension) => name.endsWith(extension))) {
       if (file.size > MAX_ZIP_BYTES) {
-        toast.error(`O arquivo passa de ${MAX_ZIP_LABEL}`)
+        toast.error(t('tooLarge', { limit: MAX_ZIP_LABEL }))
 
         return
       }
@@ -84,7 +86,7 @@ export function ImportButton() {
       return
     }
 
-    toast.error('Escolha um arquivo markdown ou um zip exportado do Notion')
+    toast.error(t('wrongType'))
   }
 
   return (
@@ -127,9 +129,9 @@ export function ImportButton() {
         aria-disabled={pending}
         className={cn(
           'w-full',
-          dragging && 'border-primary-800 bg-primary-100 text-gray-900',
+          dragging && 'border-brand-strong bg-brand-surface text-content-strong',
           pending &&
-            'cursor-not-allowed bg-muted text-gray-600 hover:border-gray-600 hover:text-gray-600',
+            'cursor-not-allowed bg-muted text-content-muted hover:border-line-strong hover:text-content-muted',
         )}
         onClick={() => {
           if (pending) {
@@ -142,19 +144,19 @@ export function ImportButton() {
         variant="secondary"
       >
         <FileUploadIcon aria-hidden="true" />
-        Importar arquivo
+        {t('button')}
       </Button>
 
-      <p className="min-h-6 px-3 text-body-small text-gray-700">
+      <p className="min-h-6 px-3 text-body-small text-content">
         {pending
-          ? 'Importando o arquivo'
+          ? t('importing')
           : dragging
-            ? 'Solte o arquivo aqui'
-            : 'Markdown ou zip do Notion'}
+            ? t('dragging')
+            : t('hint')}
       </p>
 
       <span aria-live="polite" className="sr-only">
-        {pending ? 'Importando o arquivo' : ''}
+        {pending ? t('importing') : ''}
       </span>
 
       <NotionImportDialog

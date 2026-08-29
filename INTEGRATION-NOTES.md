@@ -597,6 +597,213 @@ necessidade entre agents: registre aqui em vez de editar arquivo de outro dono.
 - Live region da busca fica **sempre montada** (fora do ternário), senão o leitor
   de tela não anuncia o resultado.
 
+## Onda 6 — Tema escuro/claro e i18n pt-BR/en-US (entregue)
+
+### Camada de tokens semânticos (o que mudou no `globals.css`)
+
+- O `.dark` só funciona se a UI consumir **vars semânticas**, e a UI do Leaf usava
+  classe de paleta literal (`text-gray-900`, `bg-white`, `border-alpha-200`,
+  `bg-error-50`...) em ~380 lugares. Por isso o `globals.css` ganhou uma camada
+  semântica declarada no `:root` e **remapeada inteira no bloco `.dark`**, e
+  todas as classes literais de `src/components/**` e `src/app/**` foram trocadas
+  pelas utilities dessa camada. Nenhum valor novo foi inventado: cada var aponta
+  para um degrau das escalas do frontmatter do Bonsai.
+- Grupos: `content-strong | content | content-muted | content-subtle |
+  content-disabled | content-inverse`; `surface-app | surface-nav |
+  surface-card | surface-sunken | surface-subtle | surface-hover |
+  surface-grabber | overlay`; `line | line-subtle | line-divider | line-soft |
+  line-muted | line-strong | line-stronger | line-contrast | focus`;
+  `brand | brand-strong | brand-surface | brand-surface-strong | link |
+  link-hover`; `danger | danger-surface | danger-surface-strong | danger-solid |
+  danger-solid-hover | warn | warn-surface | warn-surface-strong | positive |
+  positive-surface-strong`; `tooltip | tooltip-foreground`;
+  `code-surface | code-content`.
+- **Os nomes do shadcn viraram alias dessa camada** (`--background:
+  var(--surface-app)`, `--card: var(--surface-card)`, `--muted:
+  var(--surface-subtle)`, `--border: var(--line)`, `--input: var(--line-strong)`,
+  `--sidebar: var(--surface-nav)`...). Consequência prática: o `.dark` **não**
+  redefine os nomes shadcn, só a camada base — e o BlockNote, que consome
+  `--popover`/`--muted`/`--border`/`--accent`, acompanha de graça.
+  `--primary` continua `primary-500` e `--primary-foreground` continua
+  `gray-900` nos **dois** temas (texto claro sobre o teal reprova AA: 1,55:1).
+- **Token novo proposto para o design system:** `alpha-inverse-50/100/200/300`
+  (`rgba(255,255,255,0.06/0.08/0.12/0.16)`). A escala `alpha` do Bonsai é ink
+  `#053B4B` com opacidade e some por completo sobre `gray-950`, então não existe
+  equivalente para borda decorativa no escuro. Está declarada só no
+  `globals.css` do Leaf e **merece PR no `arvore-design-system`** junto com as
+  outras divergências já listadas.
+- Sombras: os tokens de elevation (ink alpha) ficaram como estão. No escuro eles
+  praticamente somem, e quem separa as superfícies é a escada
+  `surface-app (gray-950) < surface-card/nav (gray-900) < surface-subtle/hover
+  (gray-800)` mais as bordas (`line` = alpha-inverse-200, `line-muted` =
+  gray-600 no escuro).
+
+### Tema
+
+- `next-themes` reinstalado. Provider em
+  `src/components/app/theme-provider.tsx` (`attribute="class"`,
+  `defaultTheme="system"`, `enableSystem`, `disableTransitionOnChange`,
+  `storageKey="leaf:theme"`), montado no `src/app/layout.tsx` com
+  `suppressHydrationWarning` no `<html>`. Sem flash: o script inline é o padrão
+  da lib.
+- Seletor no menu do usuário (`user-menu.tsx`) como `DropdownMenuRadioGroup`
+  (Claro / Escuro / Sistema, ícones `Sun3Icon`, `MoonIcon`,
+  `MoonFirstQuarterIcon`). O valor só é lido depois do `mounted` para não
+  quebrar a hidratação.
+- `sonner.tsx` passou a receber `theme={resolvedTheme}` e as cores dele agora
+  vêm das vars semânticas (antes era `theme="light"` fixo com
+  `var(--color-gray-100)`).
+- `BlockNoteView` (editor e renderer) recebe `theme={resolvedTheme}`, que só
+  controla o `data-color-scheme` usado pelas cores do shiki; o resto do visual
+  já vem das vars.
+- **`editor.css`:** as regras passaram todas para utilities semânticas. Duas
+  correções específicas do BlockNote: as bordas de tabela do pacote são `#ddd`
+  cru (agora `border-line-soft` com cabeçalho em `surface-subtle`), e no `.dark`
+  um bloco com `data-background-color` (pastel claro escolhido pelo usuário)
+  força `text-gray-900`, senão o texto claro do tema some no pastel.
+- **Bug antigo corrigido de quebra:** o bloco de código estava ilegível no tema
+  claro desde a onda 2. O `style.css` do `@blocknote/core` define
+  `codeBlock { color: #fff; background: #161616 }` e o shiki pinta os tokens com
+  `var(--shiki-dark)` (cores claras); a onda 2 trocou só o fundo por
+  `bg-gray-100` e deixou o texto branco sobre cinza claro. Agora o bloco usa
+  `code-surface`/`code-content` (gray-900 + gray-50) nos **dois** temas, que é o
+  pareamento que o shiki-dark espera.
+- `src/components/ui/input.tsx` perdeu o `dark:bg-input/30` que vinha da base do
+  shadcn: o frontmatter do Bonsai diz `input-default.backgroundColor:
+  transparent`, e o preenchimento deixava a borda com 2,43:1 contra o próprio
+  interior. Divergência a menos em relação ao canônico.
+
+### i18n
+
+- `next-intl@4` **sem roteamento por URL**. `src/i18n/config.ts` (lista de
+  locales, `matchLocale` de `Accept-Language`), `src/i18n/request.ts`
+  (`getRequestConfig` lendo o cookie `locale` e caindo no `Accept-Language`) e
+  `src/i18n/locale-action.ts` (server action que grava o cookie, `maxAge` de um
+  ano, `sameSite: 'lax'`). O plugin entra em `next.config.ts` via
+  `createNextIntlPlugin('./src/i18n/request.ts')`.
+- Isso faz a página pública `/share/[token]` seguir o locale do **visitante**
+  (cookie dele ou `Accept-Language`), não o do dono, que era o pedido da spec.
+- `<html lang>` é dinâmico (`getLocale()`), a `metadata` virou
+  `generateMetadata` em `layout.tsx`, `/login`, `/signup`, `/doc/[id]` e
+  `/share/[token]`.
+- Catálogos em `messages/pt-BR.json` e `messages/en-US.json`, por namespace:
+  `common, metadata, auth, settings, nav, home, document, move, trash, share,
+  publicShare, editor, blocknote, importFile, notionImport, uploads, errors`.
+  Plurais em ICU. **Atenção ao pt-BR:** o CLDR classifica `0` como `one` em
+  português, então as mensagens contáveis têm `=0` explícito para não sair
+  "0 palavra".
+- Server actions e route handlers usam `getTranslations()` (rodam em contexto de
+  request): `document-actions.ts`, `share-actions.ts`,
+  `markdown/import-action.ts`, `/api/uploads`, `/api/uploads/[...key]`,
+  `/api/documents/[id]/export`, `/api/import/notion`.
+- **Bibliotecas puras não importam next-intl.** `src/lib/notion/import.ts` e
+  `zip.ts` recebem um objeto `NotionImportMessages`
+  (`src/lib/notion/messages.ts`), montado pela rota a partir do
+  `getTranslations('notionImport')`. `import.test.ts` monta o mesmo objeto com
+  `createTranslator` da própria lib sobre `messages/pt-BR.json`, então os testes
+  continuam conferindo as strings pt de verdade. Assinaturas que mudaram:
+  `readZipEntries(data, messages, limits?)`, `buildImportPlan(entries,
+  fallbackTitle)`, `notionTitle(path, fallbackTitle)` e
+  `titleFromFileName(fileName, fallbackTitle)`.
+- **Título default é conteúdo, não UI:** "Sem título" / "Untitled" é gravado no
+  banco no idioma de quem criou o documento. Documento antigo mantém o título
+  que já tinha; trocar de idioma não renomeia nada.
+- **Dicionário do BlockNote acompanha o locale.** `dictionary.ts` virou
+  `createLeafDictionary(locale, texts)`: em pt continua o `pt` da lib com o
+  polimento de sentence case da onda 2; em en usa o `en` **nativo da lib** (que
+  é Title Case, divergente do Bonsai, decisão consciente por ser copy de
+  terceiro), com só os placeholders e o item "Destaque"/"Callout" vindos das
+  nossas mensagens. `slash-menu-items.tsx` deixou de comparar strings fixas
+  ("Mídia", "Outros", "Imagem", "Citação") e passou a derivar tudo de
+  `editor.dictionary.slash_menu`.
+- `DocumentEditor`/`DocumentRenderer` usam `key={locale}`, então trocar de
+  idioma remonta o editor com o dicionário novo (o `useCreateBlockNote` não
+  recria a instância sozinho). O autosave já gravou antes da troca.
+- `src/components/ui/{dialog,sheet,search,step-progress}.tsx` passaram a usar
+  `useTranslations('common')` para "Fechar", "Limpar busca" e "Etapa X de Y",
+  que eram literais pt dentro de cópias do design system. **Mais uma divergência
+  local em relação ao `arvore-design-system`.**
+
+### Ajustes vindos do `design-review`
+
+Todos os 🔴 foram corrigidos, mais a maior parte dos 🟡. O que mudou depois da
+auditoria:
+
+- **Contraste de foco:** `--ring` deixou de ser `primary-500` (1,60:1 sobre
+  branco) e passou a apontar para `--focus` (gray-900 no claro, gray-50 no
+  escuro), que já era o valor usado nos `outline-focus` espalhados pelo app.
+  Isso **diverge do `border-focus: primary-500` do frontmatter do Bonsai**, que
+  reprova WCAG 2.4.11; entra na lista de PR upstream.
+- **Hierarquia de texto no claro colapsou de propósito:** `--content-muted`
+  (gray-600, 3,43:1) e `--content-subtle` (gray-500, 2,12:1) reprovavam AA em
+  texto pequeno (label do menu, placeholder do select, descrição do Sheet).
+  Os dois viraram `gray-700` no `:root`. A escala gray do Bonsai não tem degrau
+  que passe 4,5:1 entre gray-700 e branco, então no tema claro os três níveis de
+  texto ficam iguais. No escuro a hierarquia continua (gray-300 / gray-400 /
+  gray-500).
+- **Botão destrutivo:** a variante `destructive` do `button`/`button-icon` usava
+  `bg-destructive` (error-500, 3,21:1 com branco) e `hover:bg-error-600`. Agora
+  usa `bg-danger-solid` + `hover:bg-danger-solid-hover` (error-700 → 6,07:1),
+  e o `--destructive` virou `--danger-solid` no claro e `--danger` no escuro,
+  ficando só como cor de borda/anel de `aria-invalid`. O `className` redundante
+  do `trash-section` saiu; o do `confirm-disable-public-link` ficou porque o
+  `AlertDialogAction` usa `buttonVariants()` default.
+- **Item destrutivo do dropdown** ("Mover para a lixeira") passou de
+  `text-destructive` (3,21:1 claro / 3,03:1 escuro) para `text-danger`
+  (6,07:1 / 5,89:1).
+- **Indicador de seleção** do `DropdownMenuRadioItem`/`CheckboxItem` e do
+  `SelectItem` foi de `brand` (primary-700, 2,69:1) para `brand-strong`
+  (primary-800, 3,72:1). No menu de tema/idioma o ponto é o **único** sinal de
+  estado, então precisava dos 3:1.
+- **Campo de busca** (`search.tsx`) tinha `border-transparent` nas variantes
+  `secondary-desktop` e `mobile`: o campo não tinha limite visível (1,05:1 no
+  claro, 1,26:1 no escuro). Agora usa `border-line-strong`, como manda
+  `input-default.borderColor` do frontmatter.
+- **Formulário de auth:** os inputs de email e senha ganharam `aria-invalid` e
+  `aria-describedby` apontando para a mensagem de erro (WCAG 3.3.1), a dica de
+  senha ganhou `id` + `aria-describedby` e subiu de 12px para 14px (mínimo de
+  corpo do Bonsai).
+- **String que tinha escapado:** "Resultados da busca" continuava hardcoded no
+  `app-shell.tsx` (não tem acento, então o grep por literal pt não pegou). Agora
+  usa `nav.searchResults`, que já existia nos dois catálogos.
+- `--content-subtle` no escuro voltou para gray-500 (5,70:1 sobre o card) para
+  não colapsar com `--content-muted`; `--brand-surface` no escuro subiu de
+  primary-950 para primary-900, senão o item ativo da árvore sumia.
+- Outros: separador do dropdown com `bg-line` em vez de `bg-surface-hover`,
+  `DialogTitle` com `text-content-strong` (igual ao `SheetTitle`), trilho da
+  barra de progresso do import com `bg-line-muted`, borda do toast com
+  `--line-muted`, `input.tsx` sem o `shadow-xs` (sombra preta pura do shadcn) e
+  com `rounded-large` (o frontmatter pede 8px, não os 6px do `rounded-md`),
+  borda de repouso do título do documento em `border-line-muted`, variante
+  `link` do botão com `text-link`, `viewport.colorScheme: 'light dark'`.
+- **Dicionário en-US do BlockNote virou custom** (`enSlashMenu`), em sentence
+  case, espelhando o polimento que o pt já tinha ("Code block", "Numbered list",
+  "Task list"...). O `en` cru da lib é Title Case e reprovava o gate de copy.
+- **Copy en-US revisada:** "canceled" no lugar de "cancelled", "Back home",
+  "Read-only", vírgula de série, e contrações ("Don't", "We couldn't", "You
+  don't") para o inglês ter o mesmo tom conversacional do pt-BR.
+- O override do escuro para bloco com cor de fundo ficou mais estreito
+  (`:not([data-text-color])`), para não matar a cor de texto escolhida pelo
+  autor.
+- **Não corrigido de propósito:** `--surface-subtle` e `--surface-hover` são o
+  mesmo gray-800 no escuro; subir o hover para gray-700 derruba o texto para
+  4,11:1, e não existe nenhum elemento no app que combine `bg-surface-subtle`
+  com `hover:bg-surface-hover`.
+- **Não corrigido, fica para o PR do design system:** as 12 sombras de elevation
+  continuam com ink `rgba(5,59,75,0.06)` e somem no escuro. Quem separa as
+  camadas hoje é a escada de superfícies mais as bordas. Um `--shadow-*` escuro
+  é spec nova e precisa entrar no `foundations/elevation.md`.
+
+### Verificação
+
+- `pnpm build` verde, `vitest run` 113 testes verdes,
+  `pnpm test:e2e` 25 testes verdes (23 desktop + 2 mobile), incluindo o novo
+  `e2e/preferences.spec.ts`: troca de tema com persistência depois do reload,
+  `system` seguindo `prefers-color-scheme`, editor legível no escuro, troca de
+  idioma persistida com `<html lang>` correto e slash menu do editor mudando
+  junto.
+- `e2e/helpers.ts`: `waitForEditorReady` agora aceita o contador em pt **ou** en.
+
 ## Pendências conhecidas
 
 - Export de markdown/HTML não passa pela rota pública `/share/[token]`, só pelo
@@ -629,3 +836,25 @@ necessidade entre agents: registre aqui em vez de editar arquivo de outro dono.
   aparece expandida por um frame antes de recolher.
 - O E2E não cobre: conflito de edição em duas abas, export pela rota pública e
   o cancelamento do import do Notion no meio.
+- **PR pendente no design system (nenhum foi aberto nesta onda, o push está
+  proibido):** a escala `alpha-inverse-*`, o mapeamento semântico do tema escuro,
+  as sombras de elevation para fundo escuro e o `border-focus` (o `primary-500`
+  do frontmatter dá 1,60:1 sobre branco e o Leaf usa `--focus` no lugar).
+- `src/components/ui/{dialog,sheet,search,step-progress}.tsx` agora dependem de
+  `next-intl`. Sincronizar essas cópias com o registry `@bonsai` vai desfazer
+  isso; a divergência é intencional enquanto o DS não tiver i18n.
+- O dicionário do BlockNote em en-US é o nativo da lib, em Title Case
+  ("Code Block", "Bulleted List"), fora do sentence case do Bonsai. Traduzir
+  esse dicionário à mão fica para depois.
+- As cores de conteúdo do BlockNote (`[data-text-color=red]` etc.) continuam com
+  os hex do pacote. No escuro elas ficam entre 3:1 e 4:1 contra o fundo; como o
+  color picker foi removido na onda 3, isso só aparece em conteúdo importado.
+- `text-content-muted` (gray-600) sobre fundo claro dá 3,43:1: serve para ícone
+  e texto grande, não para corpo de 14px. É o valor do `text-muted` do
+  frontmatter, então a limitação é do design system, não do Leaf.
+- O logo (`text-brand`, primary-700) dá 2,69:1 sobre branco. É gráfico
+  decorativo com `aria-hidden` ao lado do wordmark, mas se algum dia virar
+  elemento informativo precisa de outro degrau.
+- `--line` (borda decorativa) é alpha-200 no claro e alpha-inverse-200 no
+  escuro, os dois abaixo de 3:1 de propósito, como manda o `border-default` do
+  Bonsai. Onde a borda delimita controle interativo o token é `line-strong`.

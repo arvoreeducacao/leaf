@@ -1,3 +1,5 @@
+import { getTranslations } from 'next-intl/server'
+
 import { getSession } from '@/lib/auth'
 import { getDocumentAccess } from '@/lib/authz'
 import { getDocument } from '@/lib/documents'
@@ -13,17 +15,18 @@ type Params = Readonly<{ params: Promise<{ id: string }> }>
 
 export async function GET(request: Request, { params }: Params) {
   const { id } = await params
+  const t = await getTranslations('uploads')
   const session = await getSession()
   const access = await getDocumentAccess(id, session)
 
   if (!access) {
-    return new Response('Documento não encontrado', { status: 404 })
+    return new Response(t('documentNotFound'), { status: 404 })
   }
 
   const document = await getDocument(id)
 
   if (!document) {
-    return new Response('Documento não encontrado', { status: 404 })
+    return new Response(t('documentNotFound'), { status: 404 })
   }
 
   const requestUrl = new URL(request.url)

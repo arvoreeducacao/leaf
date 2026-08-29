@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { useState, useTransition } from 'react'
 import { toast } from 'sonner'
 
@@ -34,6 +35,8 @@ type Props = Readonly<{
 }>
 
 export function TrashSection({ documents }: Props) {
+  const t = useTranslations('trash')
+  const tCommon = useTranslations('common')
   const [expanded, setExpanded] = useState(false)
   const [target, setTarget] = useState<DocumentSummary | null>(null)
   const [pending, startTransition] = useTransition()
@@ -43,7 +46,7 @@ export function TrashSection({ documents }: Props) {
       const result = await restoreDocument(id)
 
       if (result.ok) {
-        toast.success('Documento restaurado')
+        toast.success(t('restored'))
       } else {
         toast.error(result.error)
       }
@@ -61,7 +64,7 @@ export function TrashSection({ documents }: Props) {
       const result = await deleteForever(id)
 
       if (result.ok) {
-        toast.success('Documento excluído')
+        toast.success(t('deleted'))
         setTarget(null)
       } else {
         toast.error(result.error)
@@ -74,7 +77,7 @@ export function TrashSection({ documents }: Props) {
       <h2>
         <button
           aria-expanded={expanded}
-          className="flex min-h-11 w-full items-center gap-2 rounded-large px-3 py-2 text-left font-bold text-caption text-gray-700 uppercase tracking-wide transition-colors hover:bg-gray-200 hover:text-gray-900 focus-visible:outline-2 focus-visible:outline-gray-900 focus-visible:outline-offset-2"
+          className="flex min-h-11 w-full items-center gap-2 rounded-large px-3 py-2 text-left font-bold text-caption text-content uppercase tracking-wide transition-colors hover:bg-surface-hover hover:text-content-strong focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-2"
           onClick={() => setExpanded((value) => !value)}
           type="button"
         >
@@ -84,15 +87,15 @@ export function TrashSection({ documents }: Props) {
             <CaretRightIcon aria-hidden="true" className="size-4 shrink-0" />
           )}
           <TrashIcon aria-hidden="true" className="size-4 shrink-0" />
-          <span className="flex-1">Lixeira</span>
+          <span className="flex-1">{t('title')}</span>
           <span className="font-normal normal-case">{documents.length}</span>
         </button>
       </h2>
 
       {expanded ? (
         documents.length === 0 ? (
-          <p className="px-3 py-2 text-body-small text-gray-700">
-            A lixeira está vazia
+          <p className="px-3 py-2 text-body-small text-content">
+            {t('empty')}
           </p>
         ) : (
           <ul className="flex flex-col gap-1">
@@ -103,15 +106,15 @@ export function TrashSection({ documents }: Props) {
               >
                 <PageIcon
                   aria-hidden="true"
-                  className="size-4 shrink-0 text-gray-600"
+                  className="size-4 shrink-0 text-content-muted"
                 />
-                <span className="min-w-0 flex-1 truncate text-body-small text-gray-700">
+                <span className="min-w-0 flex-1 truncate text-body-small text-content">
                   {document.title}
                 </span>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <ButtonIcon
-                      aria-label={`Restaurar ${document.title}`}
+                      aria-label={t('restoreItem', { title: document.title })}
                       disabled={pending}
                       onClick={() => handleRestore(document.id)}
                       size="medium"
@@ -120,12 +123,12 @@ export function TrashSection({ documents }: Props) {
                       <RotateIcon aria-hidden="true" />
                     </ButtonIcon>
                   </TooltipTrigger>
-                  <TooltipContent>Restaurar</TooltipContent>
+                  <TooltipContent>{t('restore')}</TooltipContent>
                 </Tooltip>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <ButtonIcon
-                      aria-label={`Excluir ${document.title} de vez`}
+                      aria-label={t('deleteItem', { title: document.title })}
                       disabled={pending}
                       onClick={() => setTarget(document)}
                       size="medium"
@@ -134,7 +137,7 @@ export function TrashSection({ documents }: Props) {
                       <DeleteIcon aria-hidden="true" />
                     </ButtonIcon>
                   </TooltipTrigger>
-                  <TooltipContent>Excluir de vez</TooltipContent>
+                  <TooltipContent>{t('deleteForever')}</TooltipContent>
                 </Tooltip>
               </li>
             ))}
@@ -149,10 +152,9 @@ export function TrashSection({ documents }: Props) {
           onPointerDownOutside={(event) => event.preventDefault()}
         >
           <DialogHeader>
-            <DialogTitle>Excluir de vez</DialogTitle>
-            <DialogDescription className="text-gray-700">
-              O documento {target?.title} será apagado sem possibilidade de
-              recuperação.
+            <DialogTitle>{t('deleteForever')}</DialogTitle>
+            <DialogDescription className="text-content">
+              {t('confirmDescription', { title: target?.title ?? '' })}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -163,17 +165,17 @@ export function TrashSection({ documents }: Props) {
               type="button"
               variant="secondary"
             >
-              Cancelar
+              {tCommon('cancel')}
             </Button>
             <Button
               aria-busy={pending}
-              className="w-full bg-error-700 hover:bg-error-800 tablet:w-auto"
+              className="w-full tablet:w-auto"
               disabled={pending}
               onClick={handleDelete}
               type="button"
               variant="destructive"
             >
-              Excluir de vez
+              {t('deleteForever')}
             </Button>
           </DialogFooter>
         </DialogContent>

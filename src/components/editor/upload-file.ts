@@ -1,18 +1,19 @@
 import { toast } from 'sonner'
 
-const fallbackMessage = 'Não foi possível enviar a imagem. Tente de novo.'
-
-async function readErrorMessage(response: Response) {
+async function readErrorMessage(response: Response, fallback: string) {
   try {
     const data = (await response.json()) as { error?: unknown }
 
-    return typeof data.error === 'string' ? data.error : fallbackMessage
+    return typeof data.error === 'string' ? data.error : fallback
   } catch {
-    return fallbackMessage
+    return fallback
   }
 }
 
-export async function uploadEditorFile(file: File): Promise<string> {
+export async function uploadEditorFile(
+  file: File,
+  fallbackMessage: string,
+): Promise<string> {
   const body = new FormData()
   body.append('file', file)
 
@@ -26,7 +27,7 @@ export async function uploadEditorFile(file: File): Promise<string> {
   }
 
   if (!response.ok) {
-    const message = await readErrorMessage(response)
+    const message = await readErrorMessage(response, fallbackMessage)
     toast.error(message)
     throw new Error(message)
   }

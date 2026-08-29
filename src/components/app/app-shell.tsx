@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
@@ -36,6 +37,7 @@ const collapsedStorageKey = 'leaf:sidebar-collapsed'
 
 type Props = Readonly<{
   user: { name: string; email: string }
+  locale: string
   owned: Array<DocumentNode>
   shared: Array<DocumentSummary>
   trashed: Array<DocumentSummary>
@@ -47,6 +49,7 @@ function NavContent({
   shared,
   trashed,
   user,
+  locale,
   onNavigate,
   searchRef,
 }: Readonly<{
@@ -54,9 +57,11 @@ function NavContent({
   shared: Array<DocumentSummary>
   trashed: Array<DocumentSummary>
   user: { name: string; email: string }
+  locale: string
   onNavigate?: () => void
   searchRef?: React.RefObject<HTMLInputElement | null>
 }>) {
+  const t = useTranslations('nav')
   const searchId = useId()
   const [query, setQuery] = useState('')
   const term = query.trim()
@@ -76,8 +81,8 @@ function NavContent({
     term.length === 0
       ? ''
       : matches.length === 0
-        ? 'Nenhum documento com esse nome'
-        : `${matches.length} ${matches.length === 1 ? 'documento encontrado' : 'documentos encontrados'}`
+        ? t('searchEmpty')
+        : t('searchCount', { count: matches.length })
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-4 p-4">
@@ -90,7 +95,7 @@ function NavContent({
 
       <div>
         <label className="sr-only" htmlFor={searchId}>
-          Buscar documento pelo título
+          {t('searchLabel')}
         </label>
         <Search
           aria-keyshortcuts="Meta+P Control+P"
@@ -108,7 +113,7 @@ function NavContent({
             event.stopPropagation()
             setQuery('')
           }}
-          placeholder="Buscar documento"
+          placeholder={t('searchPlaceholder')}
           ref={searchRef}
           value={query}
         />
@@ -119,24 +124,24 @@ function NavContent({
       </span>
 
       <nav
-        aria-label="Documentos"
+        aria-label={t('documents')}
         className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto"
       >
         {term.length > 0 ? (
           <section className="flex flex-col gap-1">
-            <h2 className="px-3 py-2 font-bold text-caption text-gray-700 uppercase tracking-wide">
-              Resultados da busca
+            <h2 className="px-3 py-2 font-bold text-caption text-content uppercase tracking-wide">
+              {t('searchResults')}
             </h2>
             <DocumentSearchResults matches={matches} onNavigate={onNavigate} />
           </section>
         ) : (
           <>
             <section className="flex flex-col gap-1">
-              <h2 className="px-3 py-2 font-bold text-caption text-gray-700 uppercase tracking-wide">
-                Meus documentos
+              <h2 className="px-3 py-2 font-bold text-caption text-content uppercase tracking-wide">
+                {t('myDocuments')}
               </h2>
               <DocumentTree
-                emptyLabel="Nenhum documento ainda"
+                emptyLabel={t('emptyOwned')}
                 nodes={owned}
                 onNavigate={onNavigate}
               />
@@ -144,12 +149,12 @@ function NavContent({
 
             {shared.length > 0 ? (
               <section className="flex flex-col gap-1">
-                <h2 className="px-3 py-2 font-bold text-caption text-gray-700 uppercase tracking-wide">
-                  Compartilhados comigo
+                <h2 className="px-3 py-2 font-bold text-caption text-content uppercase tracking-wide">
+                  {t('sharedWithMe')}
                 </h2>
                 <DocumentList
                   documents={shared}
-                  emptyLabel="Nada compartilhado com você"
+                  emptyLabel={t('emptyShared')}
                   onNavigate={onNavigate}
                 />
               </section>
@@ -162,12 +167,20 @@ function NavContent({
 
       <Separator />
 
-      <UserMenu email={user.email} name={user.name} />
+      <UserMenu email={user.email} locale={locale} name={user.name} />
     </div>
   )
 }
 
-export function AppShell({ user, owned, shared, trashed, children }: Props) {
+export function AppShell({
+  user,
+  locale,
+  owned,
+  shared,
+  trashed,
+  children,
+}: Props) {
+  const t = useTranslations('nav')
   const pathname = usePathname()
   const [collapsed, setCollapsed] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
@@ -243,27 +256,27 @@ export function AppShell({ user, owned, shared, trashed, children }: Props) {
   }
 
   return (
-    <div className="flex min-h-dvh w-full bg-white">
+    <div className="flex min-h-dvh w-full bg-surface-app">
       {collapsed ? null : (
         <aside
-          aria-label="Navegação"
-          className="hidden w-70 shrink-0 border-alpha-200 border-r bg-gray-50 tablet:block"
+          aria-label={t('navigation')}
+          className="hidden w-70 shrink-0 border-line border-r bg-surface-nav tablet:block"
         >
           <div className="sticky top-0 flex h-dvh flex-col">
             <div className="flex items-center justify-between gap-2 px-4 pt-4">
               <Link
-                className="flex items-center gap-2 rounded-large focus-visible:outline-2 focus-visible:outline-gray-900 focus-visible:outline-offset-2"
+                className="flex items-center gap-2 rounded-large focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-2"
                 href="/"
               >
-                <LeafIcon aria-hidden="true" className="size-5 text-primary-700" />
-                <span className="font-bold text-body-medium text-gray-900">
+                <LeafIcon aria-hidden="true" className="size-5 text-brand" />
+                <span className="font-bold text-body-medium text-content-strong">
                   Leaf
                 </span>
               </Link>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <ButtonIcon
-                    aria-label="Recolher navegação"
+                    aria-label={t('collapseNavigation')}
                     onClick={() => toggleCollapsed(true)}
                     ref={collapseRef}
                     size="medium"
@@ -272,10 +285,11 @@ export function AppShell({ user, owned, shared, trashed, children }: Props) {
                     <CaretLeftIcon aria-hidden="true" />
                   </ButtonIcon>
                 </TooltipTrigger>
-                <TooltipContent>Recolher</TooltipContent>
+                <TooltipContent>{t('collapse')}</TooltipContent>
               </Tooltip>
             </div>
             <NavContent
+              locale={locale}
               owned={owned}
               searchRef={desktopSearchRef}
               shared={shared}
@@ -289,13 +303,13 @@ export function AppShell({ user, owned, shared, trashed, children }: Props) {
       <div className="flex min-w-0 flex-1 flex-col">
         <header
           className={cn(
-            'sticky top-0 z-10 flex items-center gap-2 border-alpha-200 border-b bg-white px-4 py-3',
+            'sticky top-0 z-10 flex items-center gap-2 border-line border-b bg-surface-app px-4 py-3',
             collapsed ? '' : 'tablet:hidden',
           )}
         >
           <div className="tablet:hidden">
             <ButtonIcon
-              aria-label="Abrir navegação"
+              aria-label={t('openNavigation')}
               onClick={() => setMobileOpen(true)}
               size="large"
               variant="ghost"
@@ -309,7 +323,7 @@ export function AppShell({ user, owned, shared, trashed, children }: Props) {
               <Tooltip>
                 <TooltipTrigger asChild>
                   <ButtonIcon
-                    aria-label="Expandir navegação"
+                    aria-label={t('expandNavigation')}
                     onClick={() => toggleCollapsed(false)}
                     ref={expandRef}
                     size="large"
@@ -318,17 +332,17 @@ export function AppShell({ user, owned, shared, trashed, children }: Props) {
                     <CaretRightIcon aria-hidden="true" />
                   </ButtonIcon>
                 </TooltipTrigger>
-                <TooltipContent>Expandir</TooltipContent>
+                <TooltipContent>{t('expand')}</TooltipContent>
               </Tooltip>
             </div>
           ) : null}
 
           <Link
-            className="flex items-center gap-2 rounded-large focus-visible:outline-2 focus-visible:outline-gray-900 focus-visible:outline-offset-2"
+            className="flex items-center gap-2 rounded-large focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-2"
             href="/"
           >
-            <LeafIcon aria-hidden="true" className="size-5 text-primary-700" />
-            <span className="font-bold text-body-medium text-gray-900">
+            <LeafIcon aria-hidden="true" className="size-5 text-brand" />
+            <span className="font-bold text-body-medium text-content-strong">
               Leaf
             </span>
           </Link>
@@ -338,17 +352,18 @@ export function AppShell({ user, owned, shared, trashed, children }: Props) {
       </div>
 
       <Sheet onOpenChange={setMobileOpen} open={mobileOpen}>
-        <SheetContent className="w-70 bg-gray-50 p-0" side="left">
+        <SheetContent className="w-70 bg-surface-nav p-0" side="left">
           <SheetHeader className="px-4 pt-4 pb-0">
             <SheetTitle className="flex items-center gap-2">
-              <LeafIcon aria-hidden="true" className="size-5 text-primary-700" />
+              <LeafIcon aria-hidden="true" className="size-5 text-brand" />
               Leaf
             </SheetTitle>
             <SheetDescription className="sr-only">
-              Lista de documentos, lixeira e conta
+              {t('mobileDescription')}
             </SheetDescription>
           </SheetHeader>
           <NavContent
+            locale={locale}
             onNavigate={() => setMobileOpen(false)}
             owned={owned}
             searchRef={mobileSearchRef}

@@ -25,7 +25,7 @@ function TabsList({
   return (
     <TabsPrimitive.List
       className={cn(
-        'inline-flex h-[49px] w-full items-center justify-start gap-6 border-gray-200 border-b text-gray-700',
+        'inline-flex h-[49px] w-full items-center justify-start gap-6 border-line-soft border-b text-content',
         className
       )}
       data-slot="tabs-list"
@@ -41,7 +41,7 @@ function TabsTrigger({
   return (
     <TabsPrimitive.Trigger
       className={cn(
-        "relative inline-flex h-full items-center justify-center gap-1 whitespace-nowrap border-transparent border-b-2 py-[15px] font-bold text-base text-gray-700 transition-colors focus-visible:outline-none disabled:pointer-events-none disabled:text-gray-400 data-[state=active]:border-primary-600 data-[state=active]:text-gray-900 data-[state=inactive]:hover:border-gray-600 data-[state=inactive]:hover:text-gray-900 [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+        "relative inline-flex h-full items-center justify-center gap-1 whitespace-nowrap border-transparent border-b-2 py-[15px] font-bold text-base text-content transition-colors focus-visible:outline-none disabled:pointer-events-none disabled:text-content-disabled data-[state=active]:border-primary-600 data-[state=active]:text-content-strong data-[state=inactive]:hover:border-line-strong data-[state=inactive]:hover:text-content-strong [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0",
         className
       )}
       data-slot="tabs-trigger"

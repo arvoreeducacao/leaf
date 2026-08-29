@@ -80,7 +80,10 @@ function shouldStripRoot(prefix: string) {
   return !/[0-9a-f]{32}/i.test(prefix)
 }
 
-export function buildImportPlan(entries: Array<ZipEntry>): NotionPlan {
+export function buildImportPlan(
+  entries: Array<ZipEntry>,
+  fallbackTitle: string,
+): NotionPlan {
   const prefix = stripCommonRoot(entries.map((entry) => entry.path))
   const strip = shouldStripRoot(prefix)
 
@@ -174,7 +177,7 @@ export function buildImportPlan(entries: Array<ZipEntry>): NotionPlan {
 
     const key = addPage({
       key: `${directory}/`,
-      title: notionTitle(directory),
+      title: notionTitle(directory, fallbackTitle),
       parentKey: keyForDirectory(directoryOf(directory)),
       kind: 'folder',
       sourcePath: null,
@@ -188,7 +191,7 @@ export function buildImportPlan(entries: Array<ZipEntry>): NotionPlan {
   function keyForMarkdown(path: string): string {
     return addPage({
       key: path,
-      title: notionTitle(path),
+      title: notionTitle(path, fallbackTitle),
       parentKey: keyForDirectory(directoryOf(path)),
       kind: 'markdown',
       sourcePath: path,
@@ -198,7 +201,7 @@ export function buildImportPlan(entries: Array<ZipEntry>): NotionPlan {
   function keyForCsv(path: string): string {
     return addPage({
       key: path,
-      title: notionTitle(path),
+      title: notionTitle(path, fallbackTitle),
       parentKey: keyForDirectory(directoryOf(path)),
       kind: 'csv',
       sourcePath: path,

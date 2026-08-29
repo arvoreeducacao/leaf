@@ -2,6 +2,7 @@
 
 import { and, asc, eq } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
+import { getTranslations } from 'next-intl/server'
 import { revalidatePath } from 'next/cache'
 
 import { db } from '@/db'
@@ -33,18 +34,21 @@ const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
 const maxEmailLength = 254
 const publicTokenLength = 24
 
-const messages = {
-  denied: 'Você não tem permissão para esta ação.',
-  notFound: 'Documento não encontrado.',
-  signedOut: 'Faça login para continuar.',
-  invalidEmail: 'Digite um email válido.',
-  ownerEmail: 'Este email já é o dono do documento.',
-  invalidRole: 'Escolha um papel válido.',
-  shareNotFound: 'Este convite não existe mais.',
+type ShareMessageKey =
+  | 'notAllowed'
+  | 'documentNotFound'
+  | 'signedOut'
+  | 'invalidEmail'
+  | 'ownerEmail'
+  | 'invalidRole'
+  | 'shareNotFound'
+
+async function message(key: ShareMessageKey) {
+  return (await getTranslations('errors'))(key)
 }
 
-function denied(): ShareResult {
-  return { ok: false, error: messages.denied }
+async function denied(): Promise<ShareResult> {
+  return { ok: false, error: await message('notAllowed') }
 }
 
 function isShareRole(value: string): value is ShareRole {
@@ -69,7 +73,7 @@ async function readState(
   const row = rows[0]
 
   if (!row) {
-    return { ok: false, error: messages.notFound }
+    return { ok: false, error: await message('documentNotFound') }
   }
 
   const people = await db
@@ -110,7 +114,7 @@ export async function loadShareState(documentId: string): Promise<ShareResult> {
   const { session, access } = await resolveAccess(documentId)
 
   if (!session) {
-    return { ok: false, error: messages.signedOut }
+    return { ok: false, error: await message('signedOut') }
   }
 
   if (!access) {
@@ -124,11 +128,11 @@ async function requireOwner(documentId: string) {
   const { session, access } = await resolveAccess(documentId)
 
   if (!session) {
-    return { ok: false as const, error: messages.signedOut }
+    return { ok: false as const, error: await message('signedOut') }
   }
 
   if (!canManageShares(access)) {
-    return { ok: false as const, error: messages.denied }
+    return { ok: false as const, error: await message('notAllowed') }
   }
 
   return { ok: true as const, session }
@@ -146,17 +150,17 @@ export async function inviteToDocument(
   }
 
   if (!isShareRole(role)) {
-    return { ok: false, error: messages.invalidRole }
+    return { ok: false, error: await message('invalidRole') }
   }
 
   const normalized = email.trim().toLowerCase()
 
   if (normalized.length > maxEmailLength || !emailPattern.test(normalized)) {
-    return { ok: false, error: messages.invalidEmail }
+    return { ok: false, error: await message('invalidEmail') }
   }
 
   if (normalized === guard.session.user.email.toLowerCase()) {
-    return { ok: false, error: messages.ownerEmail }
+    return { ok: false, error: await message('ownerEmail') }
   }
 
   const existing = await db.query.documentShares.findFirst({
@@ -197,7 +201,7 @@ export async function updateShareRole(
   }
 
   if (!isShareRole(role)) {
-    return { ok: false, error: messages.invalidRole }
+    return { ok: false, error: await message('invalidRole') }
   }
 
   const updated = await db
@@ -212,7 +216,7 @@ export async function updateShareRole(
     .returning({ id: documentShares.id })
 
   if (updated.length === 0) {
-    return { ok: false, error: messages.shareNotFound }
+    return { ok: false, error: await message('shareNotFound') }
   }
 
   revalidatePath('/', 'layout')

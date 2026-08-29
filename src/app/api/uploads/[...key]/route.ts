@@ -1,3 +1,4 @@
+import { getTranslations } from 'next-intl/server'
 import { NextResponse } from 'next/server'
 
 import { storage } from '@/lib/storage'
@@ -6,17 +7,18 @@ export async function GET(
   request: Request,
   { params }: { params: Promise<{ key: Array<string> }> },
 ) {
+  const t = await getTranslations('uploads')
   const { key } = await params
   const objectKey = key.join('/')
 
   if (objectKey.includes('..')) {
-    return NextResponse.json({ error: 'Chave inválida' }, { status: 400 })
+    return NextResponse.json({ error: t('invalidKey') }, { status: 400 })
   }
 
   const object = await storage.get(objectKey)
 
   if (!object) {
-    return NextResponse.json({ error: 'Imagem não encontrada' }, { status: 404 })
+    return NextResponse.json({ error: t('imageNotFound') }, { status: 404 })
   }
 
   const body = Buffer.isBuffer(object.body)

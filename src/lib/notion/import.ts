@@ -6,6 +6,7 @@ import { documents } from '@/db/schema'
 import { markdownToBlocks } from '@/lib/markdown/convert'
 import { csvToMarkdownTable } from '@/lib/notion/csv'
 import { MAX_ASSET_BYTES, MAX_ASSET_LABEL } from '@/lib/notion/limits'
+import type { NotionImportMessages } from '@/lib/notion/messages'
 import {
   convertAsides,
   convertToggles,
@@ -54,6 +55,7 @@ function assetKeyFor(path: string) {
 export async function* importNotionZip(
   data: Uint8Array,
   owner: ImportOwner,
+  messages: NotionImportMessages,
   signal?: AbortSignal,
 ): AsyncGenerator<ImportEvent> {
   const warnings: Array<string> = []
@@ -67,14 +69,17 @@ export async function* importNotionZip(
   let plan: NotionPlan
 
   try {
-    plan = buildImportPlan(readZipEntries(data))
+    plan = buildImportPlan(
+      readZipEntries(data, messages),
+      messages.untitled,
+    )
   } catch (error) {
     yield {
       type: 'error',
       error:
         error instanceof NotionImportError
           ? error.message
-          : 'Não foi possível ler esse arquivo zip.',
+          : messages.unreadableZip,
     }
 
     return
@@ -83,7 +88,7 @@ export async function* importNotionZip(
   if (plan.pages.length === 0) {
     yield {
       type: 'error',
-      error: 'Não encontramos páginas do Notion nesse arquivo.',
+      error: messages.noPages,
     }
 
     return
@@ -98,7 +103,7 @@ export async function* importNotionZip(
     }
 
     if (asset.bytes.byteLength > MAX_ASSET_BYTES) {
-      warn(`${asset.fileName} passa de ${MAX_ASSET_LABEL} e ficou de fora.`)
+      warn(messages.assetTooLarge(asset.fileName, MAX_ASSET_LABEL))
     } else {
       const key = assetKeyFor(asset.path)
 
@@ -107,7 +112,7 @@ export async function* importNotionZip(
         assetUrls.set(asset.path, `/api/uploads/${key}`)
         uploaded += 1
       } catch {
-        warn(`Não foi possível enviar o arquivo ${asset.fileName}.`)
+        warn(messages.assetFailed(asset.fileName))
       }
     }
 
@@ -180,9 +185,7 @@ export async function* importNotionZip(
       const notes: Array<string> = []
 
       if (table.truncatedColumns || table.truncatedRows) {
-        notes.push(
-          `Tabela truncada na importação: ${table.columns} colunas e ${table.rows} linhas.`,
-        )
+        notes.push(messages.tableTruncated(table.columns, table.rows))
       }
 
       return [table.markdown, ...notes].join('\n\n')
@@ -223,7 +226,7 @@ export async function* importNotionZip(
 
       created += 1
     } catch {
-      warn(`Não foi possível converter a página ${page.title}.`)
+      warn(messages.pageFailed(page.title))
     }
 
     yield {
@@ -236,13 +239,11 @@ export async function* importNotionZip(
   }
 
   if (toggles > 0) {
-    warn(
-      `${toggles} listas de alternância viraram título em negrito com o conteúdo aberto.`,
-    )
+    warn(messages.togglesDegraded(toggles))
   }
 
   if (missingLinks > 0) {
-    warn(`${missingLinks} links internos não tinham destino no arquivo e viraram texto.`)
+    warn(messages.missingLinks(missingLinks))
   }
 
   const root = plan.pages[0]

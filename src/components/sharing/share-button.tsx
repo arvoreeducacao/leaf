@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { useState } from 'react'
 
 import { ShareIcon } from '@/components/icons'
@@ -26,17 +27,17 @@ type Props = Readonly<{
   canShare: boolean
 }>
 
-const title = 'Compartilhar documento'
-const description = 'Convide pessoas por email ou gere um link público'
-
 export function ShareButton({ documentId, canShare }: Props) {
+  const t = useTranslations('share')
+  const title = t('title')
+  const description = t('description')
   const [open, setOpen] = useState(false)
   const isMobile = useIsMobile()
 
   const trigger = (
     <Button type="button" variant="secondary">
       <ShareIcon aria-hidden="true" />
-      Compartilhar
+      {t('open')}
     </Button>
   )
 
@@ -73,7 +74,7 @@ export function ShareButton({ documentId, canShare }: Props) {
       <DialogContent className="flex max-h-[85dvh] flex-col overflow-hidden tablet:max-w-135">
         <DialogHeader className="shrink-0">
           <DialogTitle>{title}</DialogTitle>
-          <DialogDescription className="text-gray-700">
+          <DialogDescription className="text-content">
             {description}
           </DialogDescription>
         </DialogHeader>

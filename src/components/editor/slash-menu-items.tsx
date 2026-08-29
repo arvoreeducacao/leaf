@@ -4,15 +4,17 @@ import { getDefaultReactSlashMenuItems } from '@blocknote/react'
 
 import { IdeaIcon } from '@/components/icons'
 
-import { calloutSlashMenuItem } from './dictionary'
+import type { CalloutMenuItem } from './dictionary'
 import type { LeafEditor } from './types'
 
-const hiddenGroups = new Set(['Mídia', 'Outros'])
-const allowedMediaTitles = new Set(['Imagem'])
-
 export function getLeafSlashMenuItems(
-  editor: LeafEditor
+  editor: LeafEditor,
+  calloutItem: CalloutMenuItem,
 ): DefaultReactSuggestionItem[] {
+  const menu = editor.dictionary.slash_menu
+  const hiddenGroups = new Set([menu.video.group, menu.emoji.group])
+  const allowedMediaTitles = new Set([menu.image.title])
+
   const defaults = getDefaultReactSlashMenuItems(editor).filter((item) => {
     if (!item.group || !hiddenGroups.has(item.group)) {
       return true
@@ -22,14 +24,16 @@ export function getLeafSlashMenuItems(
   })
 
   const callout: DefaultReactSuggestionItem = {
-    ...calloutSlashMenuItem,
+    ...calloutItem,
     icon: <IdeaIcon aria-hidden="true" className="size-4" />,
     onItemClick: () => {
       insertOrUpdateBlockForSlashMenu(editor, { type: 'callout' })
     },
   }
 
-  const quoteIndex = defaults.findIndex((item) => item.title === 'Citação')
+  const quoteIndex = defaults.findIndex(
+    (item) => item.title === menu.quote.title,
+  )
   const insertAt = quoteIndex === -1 ? defaults.length : quoteIndex + 1
 
   return [

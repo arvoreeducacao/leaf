@@ -1,14 +1,15 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import type * as React from 'react'
 
 import { CancelIcon, SearchIcon } from '@/components/icons'
 import { cn } from '@/shared/utils'
 
 const searchVariants = {
-  'primary-desktop': 'rounded-xlarge border border-gray-200',
-  'secondary-desktop': 'rounded-large border border-transparent',
-  mobile: 'rounded-large border border-transparent',
+  'primary-desktop': 'rounded-xlarge border border-line-soft',
+  'secondary-desktop': 'rounded-large border border-line-strong',
+  mobile: 'rounded-large border border-line-strong',
 } as const
 
 type SearchVariant = keyof typeof searchVariants
@@ -27,6 +28,7 @@ function Search({
   showClear,
   ...props
 }: Readonly<SearchProps>) {
+  const tCommon = useTranslations('common')
   const iconRight = variant === 'primary-desktop'
   const hasValue = value !== undefined && value !== null && value !== ''
   const displayClear = (showClear ?? hasValue) && Boolean(onClear)
@@ -34,7 +36,7 @@ function Search({
   return (
     <div
       className={cn(
-        'flex h-11 w-full items-center gap-2 bg-muted px-4 text-base text-gray-700 transition-colors focus-within:outline-2 focus-within:outline-gray-900 focus-within:outline-offset-2 tablet:h-10',
+        'flex h-11 w-full items-center gap-2 bg-muted px-4 text-base text-content transition-colors focus-within:outline-2 focus-within:outline-focus focus-within:outline-offset-2 tablet:h-10',
         searchVariants[variant],
         className
       )}
@@ -42,11 +44,11 @@ function Search({
       {!iconRight && (
         <SearchIcon
           aria-hidden="true"
-          className="size-5 shrink-0 text-gray-600"
+          className="size-5 shrink-0 text-content-muted"
         />
       )}
       <input
-        className="h-full w-full bg-transparent outline-none placeholder:text-gray-700 [&::-webkit-search-cancel-button]:appearance-none"
+        className="h-full w-full bg-transparent outline-none placeholder:text-content [&::-webkit-search-cancel-button]:appearance-none"
         type="search"
         value={value}
         {...props}
@@ -54,13 +56,13 @@ function Search({
       {iconRight && (
         <SearchIcon
           aria-hidden="true"
-          className="size-5 shrink-0 text-gray-600"
+          className="size-5 shrink-0 text-content-muted"
         />
       )}
       {displayClear && (
         <button
-          aria-label="Limpar busca"
-          className="-mr-3 flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-large text-gray-600 hover:text-gray-900 focus-visible:outline-2 focus-visible:outline-gray-900 focus-visible:outline-offset-2"
+          aria-label={tCommon('clearSearch')}
+          className="-mr-3 flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-large text-content-muted hover:text-content-strong focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-2"
           onClick={onClear}
           type="button"
         >

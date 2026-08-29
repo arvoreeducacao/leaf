@@ -55,6 +55,23 @@ import { notionTitle } from '@/lib/notion/paths'
 import { buildImportPlan } from '@/lib/notion/plan'
 import { NotionImportError, readZipEntries } from '@/lib/notion/zip'
 
+import { createTranslator } from 'next-intl'
+
+import ptBR from '../../../messages/pt-BR.json'
+import { buildNotionImportMessages } from '@/lib/notion/messages'
+
+const messages = buildNotionImportMessages(
+  createTranslator({
+    locale: 'pt-BR',
+    messages: ptBR,
+    namespace: 'notionImport',
+  }) as (
+    key: string,
+    values?: Record<string, string | number | Date>,
+  ) => string,
+  ptBR.document.untitled,
+)
+
 const owner = { id: 'user-owner', email: 'dono@arvore.com.br' }
 
 async function runImport(data: Uint8Array) {
@@ -62,7 +79,7 @@ async function runImport(data: Uint8Array) {
   let summary: ImportSummary | null = null
   let error: string | null = null
 
-  for await (const event of importNotionZip(data, owner)) {
+  for await (const event of importNotionZip(data, owner, messages)) {
     events.push(event)
 
     if (event.type === 'done') {
@@ -241,7 +258,7 @@ describe('segurança do zip', () => {
       '../fora.md': new TextEncoder().encode('# fora'),
     })
 
-    expect(() => readZipEntries(data)).toThrow(NotionImportError)
+    expect(() => readZipEntries(data, messages)).toThrow(NotionImportError)
   })
 
   it('rejeita caminho absoluto', () => {
@@ -249,7 +266,7 @@ describe('segurança do zip', () => {
       '/etc/passwd': new TextEncoder().encode('root'),
     })
 
-    expect(() => readZipEntries(data)).toThrow(NotionImportError)
+    expect(() => readZipEntries(data, messages)).toThrow(NotionImportError)
   })
 
   it('rejeita quando o tamanho descompactado declarado passa do limite', () => {
@@ -257,7 +274,7 @@ describe('segurança do zip', () => {
       'bomba.md': new Uint8Array(64 * 1024),
     })
 
-    expect(() => readZipEntries(data, { maxBytes: 1024 })).toThrow(
+    expect(() => readZipEntries(data, messages, { maxBytes: 1024 })).toThrow(
       NotionImportError,
     )
   })
@@ -269,7 +286,7 @@ describe('segurança do zip', () => {
       files[`p${index}.md`] = new TextEncoder().encode('# x')
     }
 
-    expect(() => readZipEntries(data(files), { maxEntries: 10 })).toThrow(
+    expect(() => readZipEntries(data(files), messages, { maxEntries: 10 })).toThrow(
       NotionImportError,
     )
   })
@@ -281,6 +298,7 @@ describe('segurança do zip', () => {
         'pagina.md': new TextEncoder().encode('# ok'),
         '.DS_Store': new TextEncoder().encode('lixo'),
       }),
+      messages,
     )
 
     expect(entries.map((entry) => entry.path)).toEqual(['pagina.md'])
@@ -304,11 +322,14 @@ function data(files: Record<string, Uint8Array>) {
 
 describe('nome de página do Notion', () => {
   it('remove o hash de 32 caracteres do título', () => {
-    expect(notionTitle('Plano de aula 1111111111111111111111111111aaaa.md')).toBe(
+    expect(notionTitle(
+      'Plano de aula 1111111111111111111111111111aaaa.md',
+      'Sem título',
+    )).toBe(
       'Plano de aula',
     )
-    expect(notionTitle('Base 4444444444444444444444444444dddd.csv')).toBe('Base')
-    expect(notionTitle('Sem hash.md')).toBe('Sem hash')
+    expect(notionTitle('Base 4444444444444444444444444444dddd.csv', 'Sem título')).toBe('Base')
+    expect(notionTitle('Sem hash.md', 'Sem título')).toBe('Sem hash')
   })
 })
 
@@ -345,7 +366,9 @@ describe('plano de importação', () => {
           'Caderno/Aula 1111111111111111111111111111aaaa.md':
             new TextEncoder().encode('# Aula'),
         }),
+        messages,
       ),
+      messages.untitled,
     )
 
     expect(plan.pages.map((page) => page.title)).toEqual(['Aula'])
@@ -358,7 +381,9 @@ describe('plano de importação', () => {
           'Caderno 1111111111111111111111111111aaaa/Aula 2222222222222222222222222222bbbb.md':
             new TextEncoder().encode('# Aula'),
         }),
+        messages,
       ),
+      messages.untitled,
     )
 
     expect(plan.pages.map((page) => page.title)).toEqual(['Caderno', 'Aula'])

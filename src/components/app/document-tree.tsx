@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useMemo, useRef, useState } from 'react'
@@ -110,7 +111,7 @@ export function DocumentTree({ nodes, emptyLabel, onNavigate }: Props) {
   }, [expanded])
 
   if (nodes.length === 0) {
-    return <p className="px-3 py-2 text-body-small text-gray-700">{emptyLabel}</p>
+    return <p className="px-3 py-2 text-body-small text-content">{emptyLabel}</p>
   }
 
   return (
@@ -143,6 +144,7 @@ function TreeLevel({
   onToggle: (id: string) => void
   onNavigate?: () => void
 }>) {
+  const t = useTranslations('nav')
   const visualDepth = Math.min(depth, maxVisualDepth)
 
   return (
@@ -158,10 +160,10 @@ function TreeLevel({
             aria-current={active ? 'page' : undefined}
             className={cn(
               'flex min-h-11 min-w-0 flex-1 items-center gap-2 rounded-large py-2 text-body-small transition-colors',
-              'focus-visible:outline-2 focus-visible:outline-gray-900 focus-visible:outline-offset-2',
+              'focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-2',
               active
-                ? 'font-bold text-gray-900'
-                : 'text-gray-700 hover:text-gray-900',
+                ? 'font-bold text-content-strong'
+                : 'text-content hover:text-content-strong',
             )}
             href={`/doc/${node.id}`}
             onClick={onNavigate}
@@ -170,7 +172,7 @@ function TreeLevel({
             <span className="flex min-w-0 flex-1 flex-col">
               <span className="truncate">{node.title}</span>
               {deep ? (
-                <span className="truncate text-gray-700">
+                <span className="truncate text-content">
                   {ancestors.join(' / ')}
                 </span>
               ) : null}
@@ -184,14 +186,16 @@ function TreeLevel({
               className={cn(
                 'flex min-h-11 items-center gap-1 rounded-large pr-1 transition-colors',
                 indentByDepth[visualDepth],
-                active ? 'bg-primary-100' : 'hover:bg-gray-200',
+                active ? 'bg-brand-surface' : 'hover:bg-surface-hover',
               )}
             >
               {hasChildren ? (
                 <ButtonIcon
                   aria-expanded={open}
                   aria-label={
-                    open ? `Recolher ${node.title}` : `Expandir ${node.title}`
+                    open
+                      ? t('collapseNode', { title: node.title })
+                      : t('expandNode', { title: node.title })
                   }
                   onClick={() => onToggle(node.id)}
                   size="medium"

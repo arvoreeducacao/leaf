@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 
@@ -24,6 +25,7 @@ export function DocumentHeader({
   canEdit,
   isOwner,
 }: Props) {
+  const t = useTranslations('document')
   const titleId = documentTitleInputId
   const [value, setValue] = useState(title)
   const [saving, setSaving] = useState(false)
@@ -52,7 +54,7 @@ export function DocumentHeader({
     setSaving(false)
 
     if (result.ok) {
-      lastSaved.current = next.length > 0 ? next : 'Sem título'
+      lastSaved.current = next.length > 0 ? next : t('untitled')
       setValue(lastSaved.current)
     } else {
       setValue(lastSaved.current)
@@ -66,10 +68,10 @@ export function DocumentHeader({
         {canEdit ? (
           <h1 className="min-w-0">
             <label className="sr-only" htmlFor={titleId}>
-              Título do documento
+              {t('titleLabel')}
             </label>
             <input
-              className="w-full rounded-large border border-alpha-200 bg-transparent px-2 py-1 font-bold text-display-small text-gray-900 outline-none transition-colors hover:border-gray-600 focus-visible:border-gray-900 focus-visible:outline-2 focus-visible:outline-gray-900 focus-visible:outline-offset-2"
+              className="w-full rounded-large border border-line bg-transparent px-2 py-1 font-bold text-display-small text-content-strong outline-none transition-colors hover:border-line-strong focus-visible:border-line-contrast focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-2"
               disabled={saving}
               id={titleId}
               onBlur={persist}
@@ -89,11 +91,11 @@ export function DocumentHeader({
               value={value}
             />
             <span aria-live="polite" className="sr-only">
-              {saving ? 'Salvando título' : ''}
+              {saving ? t('savingTitle') : ''}
             </span>
           </h1>
         ) : (
-          <h1 className="px-2 py-1 font-bold text-display-small text-gray-900">
+          <h1 className="px-2 py-1 font-bold text-display-small text-content-strong">
             {title}
           </h1>
         )}

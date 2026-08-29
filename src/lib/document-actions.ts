@@ -2,6 +2,7 @@
 
 import { and, eq, inArray, isNull } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
+import { getTranslations } from 'next-intl/server'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 
@@ -17,9 +18,15 @@ import { listOwnedDocuments, listSubtreeIds } from '@/lib/documents'
 
 export type ActionResult = { ok: true } | { ok: false; error: string }
 
-const notAllowedMessage = 'Você não tem permissão para esta ação.'
+async function errorMessages() {
+  return getTranslations('errors')
+}
 
-const notAllowed: ActionResult = { ok: false, error: notAllowedMessage }
+async function notAllowedResult(): Promise<{ ok: false; error: string }> {
+  const t = await errorMessages()
+
+  return { ok: false, error: t('notAllowed') }
+}
 
 async function requireSession() {
   const session = await getSession()
@@ -39,7 +46,7 @@ export async function createDocument() {
   await db.insert(documents).values({
     id,
     ownerId: session.user.id,
-    title: 'Sem título',
+    title: (await getTranslations('document'))('untitled'),
     createdAt: now,
     updatedAt: now,
   })
@@ -56,14 +63,20 @@ export async function renameDocument(
   const access = await getDocumentAccess(id, session)
 
   if (!canEdit(access)) {
-    return notAllowed
+    return notAllowedResult()
   }
 
   const trimmed = title.trim().slice(0, 200)
 
   await db
     .update(documents)
-    .set({ title: trimmed.length > 0 ? trimmed : 'Sem título', updatedAt: new Date() })
+    .set({
+      title:
+        trimmed.length > 0
+          ? trimmed
+          : (await getTranslations('document'))('untitled'),
+      updatedAt: new Date(),
+    })
     .where(eq(documents.id, id))
 
   revalidatePath('/', 'layout')
@@ -80,7 +93,7 @@ export async function updateDocumentContent(
   const access = await getDocumentAccess(id, session)
 
   if (!canEdit(access)) {
-    return notAllowed
+    return notAllowedResult()
   }
 
   const current = await db.query.documents.findFirst({
@@ -110,7 +123,7 @@ export async function duplicateDocument(
   const access = await getDocumentAccess(id, session)
 
   if (access !== 'owner') {
-    return { ok: false, error: notAllowedMessage }
+    return notAllowedResult()
   }
 
   const source = await db.query.documents.findFirst({
@@ -118,7 +131,7 @@ export async function duplicateDocument(
   })
 
   if (!source) {
-    return { ok: false, error: 'Documento não encontrado.' }
+    return { ok: false, error: (await errorMessages())('documentNotFound') }
   }
 
   const copyId = nanoid(12)
@@ -128,7 +141,9 @@ export async function duplicateDocument(
     id: copyId,
     ownerId: session.user.id,
     parentId: source.parentId,
-    title: `${source.title} (cópia)`.slice(0, 200),
+    title: (await getTranslations('document'))('copyTitle', {
+      title: source.title,
+    }).slice(0, 200),
     content: source.content,
     createdAt: now,
     updatedAt: now,
@@ -156,7 +171,7 @@ export async function listMoveTargets(
   const access = await getDocumentAccess(documentId, session)
 
   if (access !== 'owner') {
-    return { ok: false, error: notAllowedMessage }
+    return notAllowedResult()
   }
 
   const owned = await listOwnedDocuments(session.user.id)
@@ -197,27 +212,24 @@ export async function moveDocument(
   const access = await getDocumentAccess(id, session)
 
   if (access !== 'owner') {
-    return notAllowed
+    return notAllowedResult()
   }
 
   if (parentId === id) {
-    return { ok: false, error: 'Um documento não pode ficar dentro de si mesmo.' }
+    return { ok: false, error: (await errorMessages())('selfParent') }
   }
 
   if (parentId) {
     const targetAccess = await getDocumentAccess(parentId, session)
 
     if (targetAccess !== 'owner') {
-      return notAllowed
+      return notAllowedResult()
     }
 
     const subtree = await listSubtreeIds(id, session.user.id)
 
     if (subtree.includes(parentId)) {
-      return {
-        ok: false,
-        error: 'Não dá para mover um documento para dentro de uma subpágina dele.',
-      }
+      return { ok: false, error: (await errorMessages())('descendantParent') }
     }
   }
 
@@ -237,7 +249,7 @@ export async function moveToTrash(id: string): Promise<ActionResult> {
   const access = await getDocumentAccess(id, session)
 
   if (access !== 'owner') {
-    return notAllowed
+    return notAllowedResult()
   }
 
   const subtree = await listSubtreeIds(id, session.user.id)
@@ -257,7 +269,7 @@ export async function restoreDocument(id: string): Promise<ActionResult> {
   const access = await getTrashedDocumentAccess(id, session)
 
   if (access !== 'owner') {
-    return notAllowed
+    return notAllowedResult()
   }
 
   const document = await db.query.documents.findFirst({
@@ -265,7 +277,7 @@ export async function restoreDocument(id: string): Promise<ActionResult> {
   })
 
   if (!document) {
-    return notAllowed
+    return notAllowedResult()
   }
 
   const subtree = await listSubtreeIds(id, session.user.id)
@@ -299,7 +311,7 @@ export async function deleteForever(id: string): Promise<ActionResult> {
   const access = await getTrashedDocumentAccess(id, session)
 
   if (access !== 'owner') {
-    return notAllowed
+    return notAllowedResult()
   }
 
   const subtree = await listSubtreeIds(id, session.user.id)

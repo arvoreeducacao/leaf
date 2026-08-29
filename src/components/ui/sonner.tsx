@@ -1,29 +1,32 @@
 'use client'
 
+import { useTheme } from 'next-themes'
 import { Toaster as Sonner, type ToasterProps } from 'sonner'
 
 const Toaster = ({ ...props }: ToasterProps) => {
+  const { resolvedTheme } = useTheme()
+
   return (
     <Sonner
       className="toaster group"
       style={
         {
-          '--normal-bg': 'var(--color-gray-100)',
-          '--normal-text': 'var(--color-gray-900)',
-          '--normal-border': 'var(--color-gray-100)',
+          '--normal-bg': 'var(--surface-subtle)',
+          '--normal-text': 'var(--content-strong)',
+          '--normal-border': 'var(--line-muted)',
           '--border-radius': 'var(--radius-xlarge)',
-          '--success-bg': 'var(--color-success-200)',
-          '--success-text': 'var(--color-gray-900)',
-          '--success-border': 'var(--color-success-200)',
-          '--error-bg': 'var(--color-error-200)',
-          '--error-text': 'var(--color-gray-900)',
-          '--error-border': 'var(--color-error-200)',
-          '--warning-bg': 'var(--color-warning-200)',
-          '--warning-text': 'var(--color-gray-900)',
-          '--warning-border': 'var(--color-warning-200)',
+          '--success-bg': 'var(--positive-surface-strong)',
+          '--success-text': 'var(--content-strong)',
+          '--success-border': 'var(--positive-surface-strong)',
+          '--error-bg': 'var(--danger-surface-strong)',
+          '--error-text': 'var(--content-strong)',
+          '--error-border': 'var(--danger-surface-strong)',
+          '--warning-bg': 'var(--warn-surface-strong)',
+          '--warning-text': 'var(--content-strong)',
+          '--warning-border': 'var(--warn-surface-strong)',
         } as React.CSSProperties
       }
-      theme="light"
+      theme={resolvedTheme === 'dark' ? 'dark' : 'light'}
       toastOptions={{
         style: {
           borderRadius: 'var(--radius-xlarge)',

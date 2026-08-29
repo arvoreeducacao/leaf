@@ -1,3 +1,5 @@
+import { useTranslations } from 'next-intl'
+
 import { CheckCircleIcon, SyncIcon, WarningIcon } from '@/components/icons'
 import { Button } from '@/components/ui/button'
 
@@ -8,15 +10,17 @@ type Props = Readonly<{
   onRetry?: () => void
 }>
 
-const labels: Record<Exclude<SaveStatus, 'idle'>, string> = {
-  pending: 'Alterações não salvas',
-  saving: 'Salvando',
-  saved: 'Salvo',
-  error: 'Não foi possível salvar',
+const labelKeys: Record<Exclude<SaveStatus, 'idle'>, string> = {
+  pending: 'savePending',
+  saving: 'saveSaving',
+  saved: 'saveSaved',
+  error: 'saveError',
 }
 
 export function SaveIndicator({ status, onRetry }: Props) {
-  const label = status === 'idle' ? '' : labels[status]
+  const t = useTranslations('editor')
+  const tCommon = useTranslations('common')
+  const label = status === 'idle' ? '' : t(labelKeys[status])
   const isError = status === 'error'
   const isSettled = status === 'saved' || isError
 
@@ -30,7 +34,7 @@ export function SaveIndicator({ status, onRetry }: Props) {
         <p
           aria-hidden="true"
           className={`flex items-center gap-2 text-body-small ${
-            isError ? 'text-error-700' : 'text-gray-700'
+            isError ? 'text-danger' : 'text-content'
           }`}
         >
           {status === 'saved' ? (
@@ -52,7 +56,7 @@ export function SaveIndicator({ status, onRetry }: Props) {
 
       {isError && onRetry ? (
         <Button onClick={onRetry} size="sm" type="button" variant="secondary">
-          Tentar de novo
+          {tCommon('tryAgain')}
         </Button>
       ) : null}
     </div>

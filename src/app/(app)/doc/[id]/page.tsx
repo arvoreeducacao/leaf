@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { getTranslations } from 'next-intl/server'
 import { notFound, redirect } from 'next/navigation'
 
 import { DocumentBreadcrumb } from '@/components/app/document-breadcrumb'
@@ -13,8 +14,11 @@ type Props = Readonly<{ params: Promise<{ id: string }> }>
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params
   const document = await getDocument(id)
+  const t = await getTranslations('metadata')
 
-  return { title: document ? `${document.title} | Leaf` : 'Leaf' }
+  return {
+    title: document ? t('document', { title: document.title }) : t('title'),
+  }
 }
 
 export default async function DocumentPage({ params }: Props) {

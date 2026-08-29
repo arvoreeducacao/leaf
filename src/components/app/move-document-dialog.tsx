@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useId, useMemo, useState } from 'react'
 import { toast } from 'sonner'
@@ -30,11 +31,7 @@ type Props = Readonly<{
   onOpenChange: (open: boolean) => void
 }>
 
-const title = 'Mover para outra página'
-
-const description = 'Escolha em qual página este documento vai ficar'
-
-const rootValue = 'raiz'
+const rootValue = 'root'
 
 function normalize(value: string) {
   return value
@@ -44,6 +41,10 @@ function normalize(value: string) {
 }
 
 export function MoveDocumentDialog({ documentId, open, onOpenChange }: Props) {
+  const t = useTranslations('move')
+  const tCommon = useTranslations('common')
+  const title = t('title')
+  const description = t('description')
   const router = useRouter()
   const isMobile = useIsMobile()
   const searchId = useId()
@@ -108,7 +109,7 @@ export function MoveDocumentDialog({ documentId, open, onOpenChange }: Props) {
       return
     }
 
-    toast.success('Documento movido')
+    toast.success(t('moved'))
     onOpenChange(false)
     router.refresh()
   }
@@ -116,12 +117,12 @@ export function MoveDocumentDialog({ documentId, open, onOpenChange }: Props) {
   const body = (
     <div className="flex min-h-0 flex-1 flex-col gap-4">
       <div className="flex flex-col gap-2">
-        <Label htmlFor={searchId}>Buscar página de destino</Label>
+        <Label htmlFor={searchId}>{t('searchLabel')}</Label>
         <Input
           autoComplete="off"
           id={searchId}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder="Digite parte do nome"
+          placeholder={t('searchPlaceholder')}
           type="search"
           value={query}
         />
@@ -137,25 +138,25 @@ export function MoveDocumentDialog({ documentId, open, onOpenChange }: Props) {
 
       {loadError ? (
         <div className="flex flex-col items-start gap-2" role="alert">
-          <p className="text-body-small text-error-700">{loadError}</p>
+          <p className="text-body-small text-danger">{loadError}</p>
           <Button onClick={() => void load()} type="button" variant="secondary">
-            Tentar de novo
+            {tCommon('tryAgain')}
           </Button>
         </div>
       ) : null}
 
       {!loading && !loadError ? (
         <RadioGroup
-          aria-label="Destino do documento"
+          aria-label={t('groupLabel')}
           className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto"
           onValueChange={setSelected}
           value={selected}
         >
           <MoveOption
             checked={selected === rootValue}
-            hint="Fora de qualquer página"
+            hint={t('rootHint')}
             icon={<HierarchyIcon aria-hidden="true" className="size-4 shrink-0" />}
-            label="Raiz"
+            label={t('root')}
             value={rootValue}
           />
 
@@ -171,14 +172,14 @@ export function MoveDocumentDialog({ documentId, open, onOpenChange }: Props) {
           ))}
 
           {targets?.length === 0 ? (
-            <p className="px-3 py-2 text-body-small text-gray-700">
-              Você ainda não tem outra página para receber este documento
+            <p className="px-3 py-2 text-body-small text-content">
+              {t('noTargets')}
             </p>
           ) : null}
 
           {filtered.length === 0 && query.trim().length > 0 ? (
-            <p className="px-3 py-2 text-body-small text-gray-700">
-              Nenhuma página com esse nome
+            <p className="px-3 py-2 text-body-small text-content">
+              {t('noMatches')}
             </p>
           ) : null}
         </RadioGroup>
@@ -195,7 +196,7 @@ export function MoveDocumentDialog({ documentId, open, onOpenChange }: Props) {
         type="button"
         variant="secondary"
       >
-        Cancelar
+        {tCommon('cancel')}
       </Button>
       <Button
         aria-busy={pending}
@@ -204,7 +205,7 @@ export function MoveDocumentDialog({ documentId, open, onOpenChange }: Props) {
         onClick={() => void submit()}
         type="button"
       >
-        Mover
+        {t('submit')}
       </Button>
     </>
   )
@@ -237,7 +238,7 @@ export function MoveDocumentDialog({ documentId, open, onOpenChange }: Props) {
       <DialogContent className="flex max-h-[85dvh] flex-col overflow-hidden tablet:max-w-lg">
         <DialogHeader className="shrink-0">
           <DialogTitle>{title}</DialogTitle>
-          <DialogDescription className="text-gray-700">
+          <DialogDescription className="text-content">
             {description}
           </DialogDescription>
         </DialogHeader>
@@ -265,8 +266,8 @@ function MoveOption({
     <label
       className={cn(
         'flex min-h-11 cursor-pointer items-center gap-3 rounded-large px-3 py-2 transition-colors',
-        'has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-gray-900 has-[:focus-visible]:outline-offset-2',
-        checked ? 'bg-primary-100' : 'hover:bg-gray-100',
+        'has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-focus has-[:focus-visible]:outline-offset-2',
+        checked ? 'bg-brand-surface' : 'hover:bg-surface-hover',
       )}
     >
       <RadioGroupItem value={value} />
@@ -274,14 +275,14 @@ function MoveOption({
       <span className="flex min-w-0 flex-1 flex-col">
         <span
           className={cn(
-            'truncate text-body-small text-gray-900',
+            'truncate text-body-small text-content-strong',
             checked ? 'font-bold' : '',
           )}
         >
           {label}
         </span>
         {hint === label ? null : (
-          <span className="truncate text-body-small text-gray-700">{hint}</span>
+          <span className="truncate text-body-small text-content">{hint}</span>
         )}
       </span>
     </label>

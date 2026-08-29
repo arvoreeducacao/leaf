@@ -35,7 +35,7 @@ function AlertDialogOverlay({
   return (
     <AlertDialogPrimitive.Overlay
       className={cn(
-        'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-alpha-800 data-[state=closed]:animate-out data-[state=open]:animate-in',
+        'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-overlay data-[state=closed]:animate-out data-[state=open]:animate-in',
         className
       )}
       data-slot="alert-dialog-overlay"
@@ -53,7 +53,7 @@ function AlertDialogContent({
       <AlertDialogOverlay />
       <AlertDialogPrimitive.Content
         className={cn(
-          'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-xlarge border bg-white p-6 shadow-center-xlarge duration-200 data-[state=closed]:animate-out data-[state=open]:animate-in sm:max-w-lg',
+          'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-xlarge border bg-surface-card p-6 shadow-center-xlarge duration-200 data-[state=closed]:animate-out data-[state=open]:animate-in sm:max-w-lg',
           className
         )}
         data-slot="alert-dialog-content"
@@ -98,7 +98,7 @@ function AlertDialogTitle({
 }: Readonly<React.ComponentProps<typeof AlertDialogPrimitive.Title>>) {
   return (
     <AlertDialogPrimitive.Title
-      className={cn('font-bold text-heading-medium text-gray-900', className)}
+      className={cn('font-bold text-heading-medium text-content-strong', className)}
       data-slot="alert-dialog-title"
       {...props}
     />
@@ -111,7 +111,7 @@ function AlertDialogDescription({
 }: Readonly<React.ComponentProps<typeof AlertDialogPrimitive.Description>>) {
   return (
     <AlertDialogPrimitive.Description
-      className={cn('text-body-small text-gray-700', className)}
+      className={cn('text-body-small text-content', className)}
       data-slot="alert-dialog-description"
       {...props}
     />

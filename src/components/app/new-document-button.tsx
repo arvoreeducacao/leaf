@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { useTransition } from 'react'
 import { toast } from 'sonner'
 
@@ -8,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { createDocument } from '@/lib/document-actions'
 
 export function NewDocumentButton() {
+  const t = useTranslations('nav')
   const [pending, startTransition] = useTransition()
 
   function handleClick() {
@@ -19,7 +21,7 @@ export function NewDocumentButton() {
           throw error
         }
 
-        toast.error('Não foi possível criar o documento')
+        toast.error(t('newDocumentFailed'))
       }
     })
   }
@@ -33,7 +35,7 @@ export function NewDocumentButton() {
       type="button"
     >
       <AddIcon aria-hidden="true" />
-      Novo documento
+      {t('newDocument')}
     </Button>
   )
 }

@@ -1,4 +1,5 @@
 import { nanoid } from 'nanoid'
+import { getTranslations } from 'next-intl/server'
 import { NextResponse } from 'next/server'
 
 import { getSession } from '@/lib/auth'
@@ -16,10 +17,11 @@ const extensionByType: Record<string, string> = {
 }
 
 export async function POST(request: Request) {
+  const t = await getTranslations('uploads')
   const session = await getSession()
 
   if (!session) {
-    return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
+    return NextResponse.json({ error: t('notAuthenticated') }, { status: 401 })
   }
 
   const formData = await request.formData()
@@ -27,21 +29,21 @@ export async function POST(request: Request) {
 
   if (!(file instanceof File)) {
     return NextResponse.json(
-      { error: 'Envie um arquivo no campo file' },
+      { error: t('missingFile') },
       { status: 400 },
     )
   }
 
   if (!file.type.startsWith('image/')) {
     return NextResponse.json(
-      { error: 'Só é possível enviar imagens' },
+      { error: t('imagesOnly') },
       { status: 415 },
     )
   }
 
   if (file.size > MAX_BYTES) {
     return NextResponse.json(
-      { error: 'A imagem passa do limite de 5 MB' },
+      { error: t('tooLarge', { limit: '5 MB' }) },
       { status: 413 },
     )
   }
@@ -54,7 +56,7 @@ export async function POST(request: Request) {
     await storage.put(key, buffer, file.type)
   } catch {
     return NextResponse.json(
-      { error: 'Não foi possível salvar a imagem' },
+      { error: t('saveFailed') },
       { status: 502 },
     )
   }

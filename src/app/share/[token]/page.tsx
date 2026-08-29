@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { getTranslations } from 'next-intl/server'
 import { headers } from 'next/headers'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
@@ -26,25 +27,31 @@ const lookup = cache(async (token: string) =>
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { token } = await params
   const result = await lookup(token)
+  const t = await getTranslations('metadata')
 
   return {
     title:
-      result.status === 'ok' ? `${result.document.title} | Leaf` : 'Leaf',
+      result.status === 'ok'
+        ? t('document', { title: result.document.title })
+        : t('title'),
   }
 }
 
-function ShareHeader() {
+async function ShareHeader() {
+  const t = await getTranslations('publicShare')
+  const tCommon = await getTranslations('common')
+
   return (
-    <header className="sticky top-0 z-10 flex items-center justify-between gap-3 border-alpha-200 border-b bg-white px-4 py-3 tablet:px-8">
+    <header className="sticky top-0 z-10 flex items-center justify-between gap-3 border-line border-b bg-surface-app px-4 py-3 tablet:px-8">
       <Link
-        aria-label="Ir para o Leaf"
+        aria-label={tCommon('goToLeaf')}
         className="flex items-center gap-2 rounded-large outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         href="/"
       >
-        <LeafIcon aria-hidden="true" className="size-5 text-primary-700" />
-        <span className="font-bold text-body-medium text-gray-900">Leaf</span>
+        <LeafIcon aria-hidden="true" className="size-5 text-brand" />
+        <span className="font-bold text-body-medium text-content-strong">Leaf</span>
       </Link>
-      <Badge variant="info">Somente leitura</Badge>
+      <Badge variant="info">{t('readOnly')}</Badge>
     </header>
   )
 }
@@ -52,21 +59,23 @@ function ShareHeader() {
 export default async function SharedDocumentPage({ params }: Props) {
   const { token } = await params
   const result = await lookup(token)
+  const t = await getTranslations('publicShare')
+  const tCommon = await getTranslations('common')
 
   if (result.status === 'rate-limited') {
     return (
-      <div className="flex min-h-dvh flex-col bg-white">
+      <div className="flex min-h-dvh flex-col bg-surface-app">
         <ShareHeader />
         <main className="mx-auto flex w-full max-w-content flex-1 flex-col items-center justify-center gap-4 px-4 py-10 text-center tablet:px-8">
-          <LockIcon aria-hidden="true" className="size-10 text-gray-600" />
-          <h1 className="font-bold text-heading-large text-gray-900">
-            Muitas tentativas
+          <LockIcon aria-hidden="true" className="size-10 text-content-muted" />
+          <h1 className="font-bold text-heading-large text-content-strong">
+            {t('rateLimitedTitle')}
           </h1>
-          <p className="max-w-110 text-body-medium text-gray-700">
-            Aguarde um minuto e abra o link novamente
+          <p className="max-w-110 text-body-medium text-content">
+            {t('rateLimitedBody')}
           </p>
           <Button asChild>
-            <Link href="/">Ir para o Leaf</Link>
+            <Link href="/">{tCommon('goToLeaf')}</Link>
           </Button>
         </main>
       </div>
@@ -80,11 +89,11 @@ export default async function SharedDocumentPage({ params }: Props) {
   const document = result.document
 
   return (
-    <div className="flex min-h-dvh flex-col bg-white">
+    <div className="flex min-h-dvh flex-col bg-surface-app">
       <ShareHeader />
       <main className="mx-auto w-full max-w-content flex-1 px-4 py-8 tablet:px-8 tablet:py-10">
         <article className="mx-auto flex w-full max-w-prose-leaf flex-col gap-6">
-          <h1 className="font-bold text-heading-large text-gray-900 tablet:text-display-small">
+          <h1 className="font-bold text-heading-large text-content-strong tablet:text-display-small">
             {document.title}
           </h1>
           <DocumentRenderer content={document.content} />

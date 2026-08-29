@@ -1,3 +1,4 @@
+import { getTranslations } from 'next-intl/server'
 import { redirect } from 'next/navigation'
 
 import { NewDocumentButton } from '@/components/app/new-document-button'
@@ -6,6 +7,7 @@ import { getSession } from '@/lib/auth'
 import { listOwnedDocuments } from '@/lib/documents'
 
 export default async function HomePage() {
+  const t = await getTranslations('home')
   const session = await getSession()
 
   if (!session) {
@@ -20,13 +22,13 @@ export default async function HomePage() {
 
   return (
     <div className="mx-auto w-full max-w-content px-4 py-8 tablet:px-8 tablet:py-10">
-      <section className="flex flex-col items-center gap-4 rounded-xlarge border border-alpha-100 bg-gray-50 px-4 py-10 text-center tablet:px-8">
-        <LeafIcon aria-hidden="true" className="size-10 text-primary-700" />
-        <h1 className="font-bold text-heading-large text-gray-900">
-          Crie seu primeiro documento
+      <section className="flex flex-col items-center gap-4 rounded-xlarge border border-line-subtle bg-surface-nav px-4 py-10 text-center tablet:px-8">
+        <LeafIcon aria-hidden="true" className="size-10 text-brand" />
+        <h1 className="font-bold text-heading-large text-content-strong">
+          {t('title')}
         </h1>
-        <p className="max-w-110 text-body-medium text-gray-700">
-          Escreva, formate e organize suas ideias em um só lugar
+        <p className="max-w-110 text-body-medium text-content">
+          {t('subtitle')}
         </p>
         <div className="w-full max-w-70">
           <NewDocumentButton />

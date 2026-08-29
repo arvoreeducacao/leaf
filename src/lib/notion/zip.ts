@@ -5,6 +5,7 @@ import {
   MAX_UNZIPPED_LABEL,
   MAX_ZIP_ENTRIES,
 } from '@/lib/notion/limits'
+import type { NotionImportMessages } from '@/lib/notion/messages'
 
 export class NotionImportError extends Error {
   constructor(message: string) {
@@ -55,6 +56,7 @@ export type ZipLimits = Readonly<{
 
 export function readZipEntries(
   data: Uint8Array,
+  messages: NotionImportMessages,
   limits: ZipLimits = {},
 ): Array<ZipEntry> {
   const maxEntries = limits.maxEntries ?? MAX_ZIP_ENTRIES
@@ -72,9 +74,7 @@ export function readZipEntries(
       const path = normalizeZipPath(file.name)
 
       if (!isSafeZipPath(path)) {
-        throw new NotionImportError(
-          'O arquivo tem caminhos inválidos e não pôde ser importado.',
-        )
+        throw new NotionImportError(messages.unsafePaths)
       }
 
       if (path.endsWith('/') || isIgnored(path)) {
@@ -84,14 +84,14 @@ export function readZipEntries(
       entryCount += 1
 
       if (entryCount > maxEntries) {
-        throw new NotionImportError(`O arquivo tem mais de ${maxEntries} itens.`)
+        throw new NotionImportError(messages.tooManyEntries(maxEntries))
       }
 
       declaredBytes += file.originalSize
 
       if (declaredBytes > maxBytes) {
         throw new NotionImportError(
-          `O conteúdo descompactado passa de ${maxBytesLabel}.`,
+          messages.unzippedTooLarge(maxBytesLabel),
         )
       }
 
@@ -105,9 +105,7 @@ export function readZipEntries(
     extractedBytes += bytes.byteLength
 
     if (extractedBytes > maxBytes) {
-      throw new NotionImportError(
-        `O conteúdo descompactado passa de ${maxBytesLabel}.`,
-      )
+      throw new NotionImportError(messages.unzippedTooLarge(maxBytesLabel))
     }
 
     return { path: normalizeZipPath(rawPath), bytes }

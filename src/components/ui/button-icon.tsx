@@ -5,22 +5,22 @@ import type * as React from 'react'
 import { cn } from '@/shared/utils'
 
 const buttonIconVariants = cva(
-  "relative inline-flex shrink-0 cursor-pointer items-center justify-center whitespace-nowrap border border-transparent outline-none transition-all before:absolute before:content-[''] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-white disabled:pointer-events-none disabled:cursor-not-allowed disabled:border-transparent [&_svg]:pointer-events-none [&_svg]:shrink-0",
+  "relative inline-flex shrink-0 cursor-pointer items-center justify-center whitespace-nowrap border border-transparent outline-none transition-all before:absolute before:content-[''] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-surface-card disabled:pointer-events-none disabled:cursor-not-allowed disabled:border-transparent [&_svg]:pointer-events-none [&_svg]:shrink-0",
   {
     variants: {
       variant: {
         primary:
-          'bg-primary text-primary-foreground hover:bg-primary-600 disabled:bg-muted disabled:text-gray-400',
+          'bg-primary text-primary-foreground hover:bg-primary-600 disabled:bg-muted disabled:text-content-disabled',
         secondary:
-          'border-gray-600 bg-white text-gray-700 hover:border-gray-900 hover:text-gray-900 disabled:bg-muted disabled:text-gray-400',
+          'border-line-strong bg-surface-card text-content hover:border-line-contrast hover:text-content-strong disabled:bg-muted disabled:text-content-disabled',
         'secondary-reverse':
-          'border-white bg-transparent text-white hover:border-white/80 disabled:bg-muted disabled:text-gray-400',
+          'border-content-inverse bg-transparent text-content-inverse hover:border-content-inverse/80 disabled:bg-muted disabled:text-content-disabled',
         caution:
-          'bg-destructive text-white hover:bg-error-600 disabled:bg-muted disabled:text-gray-400',
+          'bg-danger-solid text-content-inverse hover:bg-danger-solid-hover disabled:bg-muted disabled:text-content-disabled',
         ghost:
-          'text-gray-700 hover:bg-muted hover:text-gray-900 disabled:bg-transparent disabled:text-gray-400',
+          'text-content hover:bg-muted hover:text-content-strong disabled:bg-transparent disabled:text-content-disabled',
         'filter-active':
-          'border-2 border-gray-700 bg-white text-gray-900 hover:border-gray-900 disabled:border-transparent disabled:bg-muted disabled:text-gray-400',
+          'border-2 border-line-stronger bg-surface-card text-content-strong hover:border-line-contrast disabled:border-transparent disabled:bg-muted disabled:text-content-disabled',
       },
       size: {
         small:

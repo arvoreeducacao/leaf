@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
 import { useState, useTransition } from 'react'
 import { toast } from 'sonner'
@@ -34,14 +35,20 @@ type Props = Readonly<{
   isOwner: boolean
 }>
 
-function fileNameFromResponse(response: Response, format: ExportFormat) {
+function fileNameFromResponse(
+  response: Response,
+  format: ExportFormat,
+  fallback: string,
+) {
   const disposition = response.headers.get('Content-Disposition') ?? ''
   const match = /filename="([^"]+)"/.exec(disposition)
 
-  return match ? match[1] : `documento.${format}`
+  return match ? match[1] : `${fallback}.${format}`
 }
 
 export function DocumentMenu({ documentId, isOwner }: Props) {
+  const t = useTranslations('document')
+  const tCommon = useTranslations('common')
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [moving, setMoving] = useState(false)
@@ -62,7 +69,7 @@ export function DocumentMenu({ documentId, isOwner }: Props) {
     const link = window.document.createElement('a')
 
     link.href = url
-    link.download = fileNameFromResponse(response, format)
+    link.download = fileNameFromResponse(response, format, t('exportFileName'))
     window.document.body.appendChild(link)
     link.click()
     link.remove()
@@ -73,9 +80,9 @@ export function DocumentMenu({ documentId, isOwner }: Props) {
     setExporting(true)
 
     toast.promise(downloadExport(format).finally(() => setExporting(false)), {
-      error: 'Não foi possível exportar o documento',
-      loading: 'Preparando o arquivo',
-      success: 'Download iniciado',
+      error: t('exportFailed'),
+      loading: t('exportLoading'),
+      success: t('exportSuccess'),
     })
   }
 
@@ -84,7 +91,7 @@ export function DocumentMenu({ documentId, isOwner }: Props) {
       const result = await duplicateDocument(documentId)
 
       if (result.ok) {
-        toast.success('Documento duplicado')
+        toast.success(t('duplicated'))
         router.push(`/doc/${result.id}`)
       } else {
         toast.error(result.error)
@@ -103,16 +110,16 @@ export function DocumentMenu({ documentId, isOwner }: Props) {
       }
 
       router.push('/')
-      toast.success('Documento movido para a lixeira', {
+      toast.success(t('trashed'), {
         duration: 10_000,
         action: {
-          label: 'Desfazer',
+          label: tCommon('undo'),
           onClick: () => {
             startTransition(async () => {
               const undone = await restoreDocument(documentId)
 
               if (undone.ok) {
-                toast.success('Documento restaurado')
+                toast.success(t('restored'))
                 router.push(`/doc/${documentId}`)
               } else {
                 toast.error(undone.error)
@@ -129,7 +136,7 @@ export function DocumentMenu({ documentId, isOwner }: Props) {
       <DropdownMenu onOpenChange={setOpen} open={open}>
         <DropdownMenuTrigger asChild>
           <ButtonIcon
-            aria-label="Ações do documento"
+            aria-label={t('menuLabel')}
             size="xlarge"
             variant="secondary"
           >
@@ -146,13 +153,13 @@ export function DocumentMenu({ documentId, isOwner }: Props) {
               }}
             >
               <HierarchyIcon aria-hidden="true" />
-              Mover para outra página
+              {t('moveToPage')}
             </DropdownMenuItem>
           ) : null}
           {isOwner ? (
             <DropdownMenuItem disabled={pending} onSelect={handleDuplicate}>
               <PagesIcon aria-hidden="true" />
-              Duplicar documento
+              {t('duplicate')}
             </DropdownMenuItem>
           ) : null}
           <DropdownMenuItem
@@ -160,14 +167,14 @@ export function DocumentMenu({ documentId, isOwner }: Props) {
             onSelect={() => handleExport('md')}
           >
             <FileDownloadIcon aria-hidden="true" />
-            Exportar como Markdown
+            {t('exportMarkdown')}
           </DropdownMenuItem>
           <DropdownMenuItem
             disabled={exporting}
             onSelect={() => handleExport('html')}
           >
             <FileCodeIcon aria-hidden="true" />
-            Exportar como HTML
+            {t('exportHtml')}
           </DropdownMenuItem>
           {isOwner ? (
             <>
@@ -178,7 +185,7 @@ export function DocumentMenu({ documentId, isOwner }: Props) {
                 variant="destructive"
               >
                 <TrashIcon aria-hidden="true" />
-                Mover para a lixeira
+                {t('moveToTrash')}
               </DropdownMenuItem>
             </>
           ) : null}

@@ -26,8 +26,8 @@ function PlainTextarea({
     <textarea
       aria-invalid={error}
       className={cn(
-        'flex min-h-16 w-full min-w-[180px] max-w-[500px] rounded-large border bg-transparent px-3 py-2 text-base text-gray-700 outline-none transition-colors placeholder:text-gray-600 focus-visible:border-2 focus-visible:border-gray-700 disabled:cursor-not-allowed disabled:bg-gray-100',
-        error ? 'border-destructive' : 'border-gray-700',
+        'flex min-h-16 w-full min-w-[180px] max-w-[500px] rounded-large border bg-transparent px-3 py-2 text-base text-content outline-none transition-colors placeholder:text-content-muted focus-visible:border-2 focus-visible:border-line-stronger disabled:cursor-not-allowed disabled:bg-surface-subtle',
+        error ? 'border-destructive' : 'border-line-stronger',
         resizable ? 'resize-y' : 'resize-none',
         className
       )}
@@ -78,8 +78,8 @@ function Textarea({
         className={cn(
           'relative m-0 min-w-0 rounded-large border px-0 pt-1 transition-colors',
           isFocused && 'border-2',
-          error ? 'border-destructive' : 'border-gray-700',
-          disabled && 'cursor-not-allowed bg-gray-100'
+          error ? 'border-destructive' : 'border-line-stronger',
+          disabled && 'cursor-not-allowed bg-surface-subtle'
         )}
       >
         <legend
@@ -98,7 +98,7 @@ function Textarea({
           aria-describedby={helperId}
           aria-invalid={error}
           className={cn(
-            'min-h-20 w-full bg-transparent px-4 pb-2 text-base text-gray-700 outline-none placeholder-transparent',
+            'min-h-20 w-full bg-transparent px-4 pb-2 text-base text-content outline-none placeholder-transparent',
             resizable ? 'resize-y' : 'resize-none',
             disabled && 'cursor-not-allowed'
           )}
@@ -117,7 +117,7 @@ function Textarea({
         <label
           className={cn(
             'pointer-events-none absolute left-4 origin-left transition-all duration-150',
-            error ? 'text-destructive' : 'text-gray-700',
+            error ? 'text-destructive' : 'text-content',
             isFloating
               ? '-translate-y-1/2 top-0 left-3 px-1 text-sm'
               : 'top-3 text-base'
@@ -131,7 +131,7 @@ function Textarea({
         <p
           className={cn(
             'mt-1 px-1 text-sm',
-            error ? 'text-destructive' : 'text-gray-600'
+            error ? 'text-destructive' : 'text-content-muted'
           )}
           id={helperId}
         >
