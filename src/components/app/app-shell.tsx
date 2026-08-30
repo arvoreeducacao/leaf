@@ -147,9 +147,15 @@ function NavContent({
           <>
             {organizationName ? (
               <section className="flex flex-col gap-1">
-                <h2 className="flex items-center gap-2 px-3 py-2 font-bold text-caption text-content uppercase tracking-wide">
-                  <TeamIcon aria-hidden="true" className="size-4 shrink-0" />
-                  {t('organizationSection')}
+                <h2 className="font-bold text-caption text-content uppercase tracking-wide">
+                  <Link
+                    className="flex items-center gap-2 rounded-large px-3 py-2 transition-colors hover:bg-surface-hover hover:text-content-strong focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-2"
+                    href="/org"
+                    onClick={onNavigate}
+                  >
+                    <TeamIcon aria-hidden="true" className="size-4 shrink-0" />
+                    {t('organizationSection')}
+                  </Link>
                 </h2>
                 <DocumentTree
                   emptyLabel={t('emptyOrganization')}

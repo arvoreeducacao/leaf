@@ -49,6 +49,7 @@ export function OrganizationManager({
   invites,
 }: Props) {
   const t = useTranslations('org')
+  const tCommon = useTranslations('common')
   const router = useRouter()
   const nameId = useId()
   const emailId = useId()
@@ -64,6 +65,7 @@ export function OrganizationManager({
   const [nameError, setNameError] = useState<string | null>(null)
   const [leaving, setLeaving] = useState(false)
   const [removing, setRemoving] = useState<OrganizationPerson | null>(null)
+  const [removingName, setRemovingName] = useState('')
 
   const canManage = role === 'owner' || role === 'admin'
   const canLeave = role !== 'owner'
@@ -137,6 +139,33 @@ export function OrganizationManager({
 
     await run(() => removeMember(target.memberId), t('removed'))
     setRemoving(null)
+  }
+
+  async function cancelInvite(invite: PendingInvite) {
+    setPending(true)
+    const result = await cancelOrganizationInvite(invite.id)
+    setPending(false)
+
+    if (!result.ok) {
+      toast.error(result.error)
+
+      return
+    }
+
+    router.refresh()
+
+    toast.success(t('inviteCanceled'), {
+      action: {
+        label: tCommon('undo'),
+        onClick: () => {
+          void run(
+            () => inviteToOrganization(invite.email, invite.role),
+            t('invited'),
+          )
+        },
+      },
+      duration: 10_000,
+    })
   }
 
   async function confirmLeave() {
@@ -234,13 +263,19 @@ export function OrganizationManager({
                 className="flex min-w-0 flex-wrap items-center gap-2 rounded-large border border-line-subtle px-3 py-2"
                 key={person.memberId}
               >
-                <span className="flex min-w-0 flex-1 flex-col">
-                  <span className="truncate font-bold text-body-small text-content-strong">
+                <span className="flex min-w-0 flex-1 basis-full flex-col tablet:basis-0">
+                  <span
+                    className="truncate font-bold text-body-small text-content-strong"
+                    title={person.name || person.email}
+                  >
                     {person.name || person.email}
                     {isSelf ? ` (${t('you')})` : ''}
                   </span>
                   {person.name ? (
-                    <span className="truncate text-body-small text-content">
+                    <span
+                      className="truncate text-body-small text-content"
+                      title={person.email}
+                    >
                       {person.email}
                     </span>
                   ) : null}
@@ -281,7 +316,10 @@ export function OrganizationManager({
                         name: person.name || person.email,
                       })}
                       disabled={pending}
-                      onClick={() => setRemoving(person)}
+                      onClick={() => {
+                        setRemovingName(person.name || person.email)
+                        setRemoving(person)
+                      }}
                       size="large"
                       variant="ghost"
                     >
@@ -391,12 +429,7 @@ export function OrganizationManager({
                     <ButtonIcon
                       aria-label={t('cancelInvite', { email: invite.email })}
                       disabled={pending}
-                      onClick={() =>
-                        void run(
-                          () => cancelOrganizationInvite(invite.id),
-                          t('inviteCanceled'),
-                        )
-                      }
+                      onClick={() => void cancelInvite(invite)}
                       size="large"
                       variant="ghost"
                     >
@@ -438,7 +471,7 @@ export function OrganizationManager({
       </section>
 
       <ConfirmRemoveMember
-        name={removing ? removing.name || removing.email : ''}
+        name={removingName}
         onConfirm={() => void confirmRemove()}
         onOpenChange={(open) => {
           if (!open) {

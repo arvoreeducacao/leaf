@@ -50,6 +50,17 @@ export function ArchiveImportDialog({ file, parentId, onOpenChange }: Props) {
   const [summary, setSummary] = useState<ImportSummary | null>(null)
   const [error, setError] = useState<string | null>(null)
 
+  const closeOrAbort = useCallback(
+    (open: boolean) => {
+      if (!open && abortRef.current && running) {
+        abortRef.current.abort()
+      }
+
+      onOpenChange(open)
+    },
+    [onOpenChange, running],
+  )
+
   const run = useCallback(
     async (target: File) => {
       const controller = new AbortController()
@@ -157,7 +168,7 @@ export function ArchiveImportDialog({ file, parentId, onOpenChange }: Props) {
               {progress ? t(phaseKeys[progress.phase]) : t('reading')}
             </span>
             {progress ? (
-              <span className="text-caption text-content">
+              <span className="text-body-small text-content">
                 {t('progressCount', {
                   done: progress.done,
                   total: progress.total,
@@ -265,7 +276,7 @@ export function ArchiveImportDialog({ file, parentId, onOpenChange }: Props) {
 
   if (isMobile) {
     return (
-      <Sheet onOpenChange={onOpenChange} open={file !== null}>
+      <Sheet onOpenChange={closeOrAbort} open={file !== null}>
         <SheetContent
           className="max-h-[85dvh] overflow-hidden"
           showClose={false}
@@ -287,7 +298,7 @@ export function ArchiveImportDialog({ file, parentId, onOpenChange }: Props) {
   }
 
   return (
-    <Dialog onOpenChange={onOpenChange} open={file !== null}>
+    <Dialog onOpenChange={closeOrAbort} open={file !== null}>
       <DialogContent className="flex max-h-[85dvh] flex-col overflow-hidden tablet:max-w-lg">
         <DialogHeader className="shrink-0">
           <DialogTitle>{title}</DialogTitle>

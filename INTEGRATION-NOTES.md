@@ -1024,3 +1024,52 @@ sidebar que a spec 06 previa.
   qualquer organização** são apagados junto. Como só dá para pertencer a uma org,
   os outros nunca resolveriam e ficariam pendentes para sempre. O efeito
   colateral é que o admin da outra organização vê o convite sumir sem aviso.
+
+### Ajustes do design-review da onda 7
+
+- **🔴 corrigido:** o Badge "Organização" somado a "Compartilhar" e ao menu ⋯
+  dava ~341px de conteúdo que não encolhe no header do documento. Em telas de
+  320 a 430px isso esmagava o input do título (5px de largura em 390px) e
+  chegava a estourar a linha em 320px. O container do título ganhou
+  `basis-full tablet:basis-0` e o cluster de ações ganhou `shrink-0`: até
+  767px o título ocupa a linha inteira e as ações caem para a segunda.
+- Confirmações destrutivas de organização (remover membro, sair) deixaram de ser
+  dismissíveis por `Esc` e clique fora, como manda o `components/modal.md`. O
+  `confirm-disable-public-link` da onda 3 continua dismissível; é a mesma dívida
+  e ficou registrada aqui.
+- `text-body-small`/`text-heading-medium` foram removidos dos `SheetTitle`/
+  `SheetDescription` dos dois dialogs novos: o `cn` é `twMerge` sem
+  `extendTailwindMerge` e essas classes eram silenciosamente descartadas pela cor
+  passada no mesmo `className`. O tamanho correto já vem da base do componente.
+- Cancelar convite ganhou "Desfazer" no toast (10s), igual a remover acesso e à
+  lixeira.
+- O nome no dialog de remoção passou a viver num estado próprio
+  (`removingName`), senão o título ficava "Remover  da organização?" durante os
+  200ms da animação de saída.
+- Linha de membro: nome e email quebram para a linha inteira até `tablet` (o
+  select de papel mais o remover comiam 216px dos 343px do mobile) e ganharam
+  `title`, como no painel de compartilhar.
+- O cartão de "Criar organização" era `bg-surface-nav` sobre `bg-surface-app`
+  (1,02:1 no tema claro, invisível). Virou `bg-surface-card` com
+  `shadow-down-small`, que é o que o `card-standard` do frontmatter pede.
+- Fechar o modal de progresso da importação durante a execução agora **aborta** o
+  fetch em vez de deixar a importação rodando sem nenhum indicador na tela.
+- O contador "N de M" do progresso subiu de `text-caption` (12px) para
+  `text-body-small` (14px), o mínimo de corpo do Bonsai.
+- O cabeçalho "Organização" da sidebar virou link para `/org`. Antes o único
+  caminho para a gestão era o menu do usuário atrás do avatar.
+- **Mudança de label de navegação (pendente de confirmação de produto):** a seção
+  "Meus documentos" virou "Privado" e a seção "Organização" foi criada acima
+  dela. O protocolo de redesign do Bonsai pede confirmação para label de
+  navegação; fica registrado aqui como as ondas 4 e 5 fizeram. A remoção do botão
+  "Importar arquivo" da sidebar já é decisão explícita do usuário.
+- **Não corrigido (fora do escopo, dono é `src/components/ui/**`):** o
+  `input.tsx` ainda tem `rounded-md` (6px onde o frontmatter pede 8px),
+  `shadow-xs` (sombra preta pura do shadcn) e `md:text-sm` (14px em desktop
+  contra os 16px de `input-default`). A nota da onda 6 dizia que isso tinha sido
+  corrigido, mas o `git log` mostra que o arquivo não mudou desde `a36b70b`: a
+  nota estava errada. Afeta todos os formulários de `/org` e do compartilhar.
+- Também ficaram para depois, sem impacto funcional: devolver o foco a um heading
+  depois de remover membro/cancelar convite (hoje o foco cai no `body` quando o
+  `router.refresh` desmonta o botão) e a entrada de importação na tela vazia de
+  quem ainda não tem nenhum documento.
