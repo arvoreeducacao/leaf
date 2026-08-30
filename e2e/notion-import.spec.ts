@@ -1,23 +1,24 @@
 import { expect, test } from '@playwright/test'
 
 import { buildNotionFixtureZip, fixtureTitles } from '../src/lib/notion/fixture'
-import { editorBody, signUp, uniqueEmail } from './helpers'
+import { createDocument, editorBody, signUp, uniqueEmail } from './helpers'
 
-test.describe('import do Notion', () => {
-  test('zip vira árvore de páginas com imagem, callout e database', async ({
+const archiveInput = '[data-testid="import-archive-input"]'
+
+test.describe('importar exportação', () => {
+  test('zip vira subpáginas com imagem, callout e database', async ({
     page,
   }) => {
-    await signUp(page, uniqueEmail('notion'))
+    await signUp(page, uniqueEmail('zip'))
+    await createDocument(page, 'Migração')
 
-    await page.setInputFiles('input[type="file"]', {
-      name: 'notion-export.zip',
+    await page.setInputFiles(archiveInput, {
+      name: 'exportacao.zip',
       mimeType: 'application/zip',
       buffer: Buffer.from(buildNotionFixtureZip()),
     })
 
-    await expect(
-      page.getByText('Importar do Notion').first(),
-    ).toBeVisible()
+    await expect(page.getByText('Importar exportação').first()).toBeVisible()
 
     await expect(page.getByText(/páginas criadas/)).toBeVisible({
       timeout: 60_000,
@@ -33,6 +34,10 @@ test.describe('import do Notion', () => {
 
     await expect(body).toContainText('Roteiro do trimestre')
     await expect(body).toContainText('Combine as datas com a coordenação')
+
+    await expect(
+      page.getByRole('navigation', { name: 'Caminho do documento' }),
+    ).toContainText('Migração')
 
     const nav = page.getByRole('navigation', { name: 'Documentos' })
 
@@ -51,9 +56,10 @@ test.describe('import do Notion', () => {
   })
 
   test('zip corrompido devolve erro sem quebrar o app', async ({ page }) => {
-    await signUp(page, uniqueEmail('notion-erro'))
+    await signUp(page, uniqueEmail('zip-erro'))
+    await createDocument(page, 'Documento intacto')
 
-    await page.setInputFiles('input[type="file"]', {
+    await page.setInputFiles(archiveInput, {
       name: 'quebrado.zip',
       mimeType: 'application/zip',
       buffer: Buffer.from('PK isso nao e um zip de verdade', 'utf8'),
@@ -69,6 +75,6 @@ test.describe('import do Notion', () => {
 
     const nav = page.getByRole('navigation', { name: 'Documentos' })
 
-    await expect(nav.getByText('Nenhum documento ainda')).toBeVisible()
+    await expect(nav.getByRole('link')).toHaveCount(1)
   })
 })

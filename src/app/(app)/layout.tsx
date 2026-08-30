@@ -5,10 +5,14 @@ import { AppShell } from '@/components/app/app-shell'
 import { getSession } from '@/lib/auth'
 import {
   buildDocumentTree,
-  listOwnedDocuments,
+  listPrivateDocuments,
   listSharedDocuments,
   listTrashedDocuments,
 } from '@/lib/documents'
+import {
+  acceptPendingInvites,
+  listOrganizationDocuments,
+} from '@/lib/organizations'
 
 export default async function AppLayout({
   children,
@@ -19,18 +23,29 @@ export default async function AppLayout({
     redirect('/login')
   }
 
-  const [owned, shared, trashed] = await Promise.all([
-    listOwnedDocuments(session.user.id),
-    listSharedDocuments(session.user.email),
-    listTrashedDocuments(session.user.id),
-  ])
+  const membership = await acceptPendingInvites(
+    session.user.id,
+    session.user.email,
+  )
+
+  const [privateDocuments, shared, trashed, organizationDocuments] =
+    await Promise.all([
+      listPrivateDocuments(session.user.id),
+      listSharedDocuments(session.user.email),
+      listTrashedDocuments(session.user.id),
+      membership
+        ? listOrganizationDocuments(membership.orgId)
+        : Promise.resolve([]),
+    ])
 
   const locale = await getLocale()
 
   return (
     <AppShell
       locale={locale}
-      owned={buildDocumentTree(owned)}
+      organizationDocuments={buildDocumentTree(organizationDocuments)}
+      organizationName={membership?.orgName ?? null}
+      owned={buildDocumentTree(privateDocuments)}
       shared={shared}
       trashed={trashed}
       user={{ name: session.user.name, email: session.user.email }}

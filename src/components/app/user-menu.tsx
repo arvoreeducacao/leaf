@@ -2,6 +2,7 @@
 
 import { useTranslations } from 'next-intl'
 import { useTheme } from 'next-themes'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState, useTransition } from 'react'
 import { toast } from 'sonner'
@@ -13,6 +14,7 @@ import {
   MoonIcon,
   Sun3Icon,
   SyncIcon,
+  TeamIcon,
 } from '@/components/icons'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import {
@@ -64,6 +66,7 @@ function initials(name: string, email: string) {
 export function UserMenu({ name, email, locale }: Props) {
   const t = useTranslations('settings')
   const tAuth = useTranslations('auth')
+  const tNav = useTranslations('nav')
   const router = useRouter()
   const { theme, setTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
@@ -127,6 +130,12 @@ export function UserMenu({ name, email, locale }: Props) {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-64">
         <DropdownMenuLabel>{t('account')}</DropdownMenuLabel>
+        <DropdownMenuItem asChild>
+          <Link href="/org">
+            <TeamIcon aria-hidden="true" />
+            {tNav('organizationLink')}
+          </Link>
+        </DropdownMenuItem>
         <DropdownMenuItem disabled={pending} onSelect={handleSignOut}>
           <ArrowRightIcon aria-hidden="true" />
           {t('signOut')}

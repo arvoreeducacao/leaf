@@ -50,12 +50,14 @@ export default async function DocumentPage({ params }: Props) {
         canEdit={canEdit(access)}
         documentId={document.id}
         isOwner={access === 'owner'}
+        sharedWithOrganization={document.orgAccess !== null}
         title={document.title}
       />
       <div className="mx-auto w-full max-w-prose-leaf">
         <DocumentEditor
           documentId={document.id}
           initialContent={document.content}
+          isOwner={access === 'owner'}
           readOnly={!canEdit(access)}
         />
       </div>

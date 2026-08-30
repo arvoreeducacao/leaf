@@ -15,6 +15,7 @@ import {
   getTrashedDocumentAccess,
 } from '@/lib/authz'
 import { listOwnedDocuments, listSubtreeIds } from '@/lib/documents'
+import { getMembership } from '@/lib/organizations'
 
 export type ActionResult = { ok: true } | { ok: false; error: string }
 
@@ -42,10 +43,12 @@ export async function createDocument() {
   const session = await requireSession()
   const id = nanoid(12)
   const now = new Date()
+  const membership = await getMembership(session.user.id)
 
   await db.insert(documents).values({
     id,
     ownerId: session.user.id,
+    orgId: membership?.orgId ?? null,
     title: (await getTranslations('document'))('untitled'),
     createdAt: now,
     updatedAt: now,
@@ -141,6 +144,7 @@ export async function duplicateDocument(
     id: copyId,
     ownerId: session.user.id,
     parentId: source.parentId,
+    orgId: source.orgId,
     title: (await getTranslations('document'))('copyTitle', {
       title: source.title,
     }).slice(0, 200),

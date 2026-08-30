@@ -20,6 +20,7 @@ import { useIsMobile } from '@/shared/hooks/use-mobile'
 
 type Props = Readonly<{
   file: File | null
+  parentId: string
   onOpenChange: (open: boolean) => void
 }>
 
@@ -34,8 +35,8 @@ const phaseKeys: Record<Progress['phase'], 'phaseAssets' | 'phasePages'> = {
   pages: 'phasePages',
 }
 
-export function NotionImportDialog({ file, onOpenChange }: Props) {
-  const t = useTranslations('notionImport')
+export function ArchiveImportDialog({ file, parentId, onOpenChange }: Props) {
+  const t = useTranslations('archiveImport')
   const tCommon = useTranslations('common')
   const title = t('title')
   const description = t('description')
@@ -61,6 +62,7 @@ export function NotionImportDialog({ file, onOpenChange }: Props) {
 
       const body = new FormData()
       body.append('file', target)
+      body.append('parentId', parentId)
 
       try {
         const response = await fetch('/api/import/notion', {
@@ -129,7 +131,7 @@ export function NotionImportDialog({ file, onOpenChange }: Props) {
         router.refresh()
       }
     },
-    [router, t],
+    [parentId, router, t],
   )
 
   useEffect(() => {

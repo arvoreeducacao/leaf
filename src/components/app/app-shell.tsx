@@ -8,11 +8,16 @@ import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { DocumentList } from '@/components/app/document-list'
 import { DocumentSearchResults } from '@/components/app/document-search-results'
 import { DocumentTree } from '@/components/app/document-tree'
-import { ImportButton } from '@/components/app/import-button'
 import { NewDocumentButton } from '@/components/app/new-document-button'
 import { TrashSection } from '@/components/app/trash-section'
 import { UserMenu } from '@/components/app/user-menu'
-import { CaretLeftIcon, CaretRightIcon, LeafIcon, MenuIcon } from '@/components/icons'
+import {
+  CaretLeftIcon,
+  CaretRightIcon,
+  LeafIcon,
+  MenuIcon,
+  TeamIcon,
+} from '@/components/icons'
 import { ButtonIcon } from '@/components/ui/button-icon'
 import { Search } from '@/components/ui/search'
 import { Separator } from '@/components/ui/separator'
@@ -39,6 +44,8 @@ type Props = Readonly<{
   user: { name: string; email: string }
   locale: string
   owned: Array<DocumentNode>
+  organizationDocuments: Array<DocumentNode>
+  organizationName: string | null
   shared: Array<DocumentSummary>
   trashed: Array<DocumentSummary>
   children: React.ReactNode
@@ -46,6 +53,8 @@ type Props = Readonly<{
 
 function NavContent({
   owned,
+  organizationDocuments,
+  organizationName,
   shared,
   trashed,
   user,
@@ -54,6 +63,8 @@ function NavContent({
   searchRef,
 }: Readonly<{
   owned: Array<DocumentNode>
+  organizationDocuments: Array<DocumentNode>
+  organizationName: string | null
   shared: Array<DocumentSummary>
   trashed: Array<DocumentSummary>
   user: { name: string; email: string }
@@ -72,10 +83,11 @@ function NavContent({
     }
 
     return [
+      ...searchDocumentTree(organizationDocuments, term),
       ...searchDocumentTree(owned, term),
       ...searchDocumentList(shared, term),
     ]
-  }, [owned, shared, term])
+  }, [organizationDocuments, owned, shared, term])
 
   const searchStatus =
     term.length === 0
@@ -86,10 +98,7 @@ function NavContent({
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-4 p-4">
-      <div className="flex flex-col gap-2">
-        <NewDocumentButton />
-        <ImportButton />
-      </div>
+      <NewDocumentButton />
 
       <Separator />
 
@@ -136,16 +145,19 @@ function NavContent({
           </section>
         ) : (
           <>
-            <section className="flex flex-col gap-1">
-              <h2 className="px-3 py-2 font-bold text-caption text-content uppercase tracking-wide">
-                {t('myDocuments')}
-              </h2>
-              <DocumentTree
-                emptyLabel={t('emptyOwned')}
-                nodes={owned}
-                onNavigate={onNavigate}
-              />
-            </section>
+            {organizationName ? (
+              <section className="flex flex-col gap-1">
+                <h2 className="flex items-center gap-2 px-3 py-2 font-bold text-caption text-content uppercase tracking-wide">
+                  <TeamIcon aria-hidden="true" className="size-4 shrink-0" />
+                  {t('organizationSection')}
+                </h2>
+                <DocumentTree
+                  emptyLabel={t('emptyOrganization')}
+                  nodes={organizationDocuments}
+                  onNavigate={onNavigate}
+                />
+              </section>
+            ) : null}
 
             {shared.length > 0 ? (
               <section className="flex flex-col gap-1">
@@ -159,6 +171,17 @@ function NavContent({
                 />
               </section>
             ) : null}
+
+            <section className="flex flex-col gap-1">
+              <h2 className="px-3 py-2 font-bold text-caption text-content uppercase tracking-wide">
+                {t('privateSection')}
+              </h2>
+              <DocumentTree
+                emptyLabel={t('emptyPrivate')}
+                nodes={owned}
+                onNavigate={onNavigate}
+              />
+            </section>
 
             <TrashSection documents={trashed} />
           </>
@@ -176,6 +199,8 @@ export function AppShell({
   user,
   locale,
   owned,
+  organizationDocuments,
+  organizationName,
   shared,
   trashed,
   children,
@@ -290,6 +315,8 @@ export function AppShell({
             </div>
             <NavContent
               locale={locale}
+              organizationDocuments={organizationDocuments}
+              organizationName={organizationName}
               owned={owned}
               searchRef={desktopSearchRef}
               shared={shared}
@@ -365,6 +392,8 @@ export function AppShell({
           <NavContent
             locale={locale}
             onNavigate={() => setMobileOpen(false)}
+            organizationDocuments={organizationDocuments}
+            organizationName={organizationName}
             owned={owned}
             searchRef={mobileSearchRef}
             shared={shared}

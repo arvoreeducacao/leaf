@@ -6,16 +6,27 @@ import { getTranslations } from 'next-intl/server'
 import { revalidatePath } from 'next/cache'
 
 import { db } from '@/db'
-import { documentShares, documents, user } from '@/db/schema'
-import type { ShareRole } from '@/db/schema'
+import {
+  documentShares,
+  documents,
+  organizations,
+  user,
+} from '@/db/schema'
+import type { OrgAccess, ShareRole } from '@/db/schema'
 import { getSession } from '@/lib/auth'
 import type { AccessLevel } from '@/lib/authz'
 import { canManageShares, getDocumentAccess } from '@/lib/authz'
+import {
+  getMembership,
+  isMemberOf,
+  listOrganizationEmails,
+} from '@/lib/organizations'
 
 export type SharePerson = Readonly<{
   id: string
   email: string
   role: ShareRole
+  external: boolean
 }>
 
 export type ShareState = Readonly<{
@@ -24,6 +35,8 @@ export type ShareState = Readonly<{
   ownerName: string
   people: ReadonlyArray<SharePerson>
   publicToken: string | null
+  orgName: string | null
+  orgAccess: OrgAccess | null
 }>
 
 export type ShareResult =
@@ -58,10 +71,13 @@ function isShareRole(value: string): value is ShareRole {
 async function readState(
   documentId: string,
   role: AccessLevel,
+  userId: string,
 ): Promise<ShareResult> {
   const rows = await db
     .select({
       publicToken: documents.publicToken,
+      orgId: documents.orgId,
+      orgAccess: documents.orgAccess,
       ownerEmail: user.email,
       ownerName: user.name,
     })
@@ -76,7 +92,7 @@ async function readState(
     return { ok: false, error: await message('documentNotFound') }
   }
 
-  const people = await db
+  const shares = await db
     .select({
       id: documentShares.id,
       email: documentShares.granteeEmail,
@@ -86,6 +102,26 @@ async function readState(
     .where(eq(documentShares.documentId, documentId))
     .orderBy(asc(documentShares.createdAt))
 
+  const visibleOrgId =
+    row.orgId && (role === 'owner' || (await isMemberOf(row.orgId, userId)))
+      ? row.orgId
+      : null
+
+  const organization = visibleOrgId
+    ? ((await db.query.organizations.findFirst({
+        where: eq(organizations.id, visibleOrgId),
+      })) ?? null)
+    : null
+
+  const memberEmails = visibleOrgId
+    ? new Set(await listOrganizationEmails(visibleOrgId))
+    : new Set<string>()
+
+  const people = shares.map((share) => ({
+    ...share,
+    external: organization !== null && !memberEmails.has(share.email),
+  }))
+
   return {
     ok: true,
     state: {
@@ -94,6 +130,8 @@ async function readState(
       ownerName: row.ownerName,
       people,
       publicToken: role === 'owner' ? row.publicToken : null,
+      orgName: organization?.name ?? null,
+      orgAccess: organization ? row.orgAccess : null,
     },
   }
 }
@@ -121,7 +159,7 @@ export async function loadShareState(documentId: string): Promise<ShareResult> {
     return denied()
   }
 
-  return readState(documentId, access)
+  return readState(documentId, access, session.user.id)
 }
 
 async function requireOwner(documentId: string) {
@@ -186,7 +224,7 @@ export async function inviteToDocument(
 
   revalidatePath('/', 'layout')
 
-  return readState(documentId, 'owner')
+  return readState(documentId, 'owner', guard.session.user.id)
 }
 
 export async function updateShareRole(
@@ -221,7 +259,7 @@ export async function updateShareRole(
 
   revalidatePath('/', 'layout')
 
-  return readState(documentId, 'owner')
+  return readState(documentId, 'owner', guard.session.user.id)
 }
 
 export async function removeShare(
@@ -245,7 +283,43 @@ export async function removeShare(
 
   revalidatePath('/', 'layout')
 
-  return readState(documentId, 'owner')
+  return readState(documentId, 'owner', guard.session.user.id)
+}
+
+export async function setOrganizationAccess(
+  documentId: string,
+  access: string,
+): Promise<ShareResult> {
+  const guard = await requireOwner(documentId)
+
+  if (!guard.ok) {
+    return { ok: false, error: guard.error }
+  }
+
+  if (access !== 'none' && access !== 'viewer' && access !== 'editor') {
+    return { ok: false, error: await message('invalidRole') }
+  }
+
+  const membership = await getMembership(guard.session.user.id)
+  const document = await db.query.documents.findFirst({
+    where: eq(documents.id, documentId),
+  })
+
+  if (!document || !membership || document.orgId !== membership.orgId) {
+    return denied()
+  }
+
+  const next: OrgAccess | null = access === 'none' ? null : access
+
+  await db
+    .update(documents)
+    .set({ orgAccess: next })
+    .where(eq(documents.id, documentId))
+
+  revalidatePath('/', 'layout')
+  revalidatePath(`/doc/${documentId}`)
+
+  return readState(documentId, 'owner', guard.session.user.id)
 }
 
 export async function enablePublicLink(
@@ -262,7 +336,7 @@ export async function enablePublicLink(
     .set({ publicToken: nanoid(publicTokenLength) })
     .where(eq(documents.id, documentId))
 
-  return readState(documentId, 'owner')
+  return readState(documentId, 'owner', guard.session.user.id)
 }
 
 export async function disablePublicLink(
@@ -279,5 +353,5 @@ export async function disablePublicLink(
     .set({ publicToken: null })
     .where(eq(documents.id, documentId))
 
-  return readState(documentId, 'owner')
+  return readState(documentId, 'owner', guard.session.user.id)
 }

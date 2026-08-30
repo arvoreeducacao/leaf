@@ -36,6 +36,30 @@ export async function listOwnedDocuments(
   return rows.map((row) => ({ ...row, shared: false }))
 }
 
+export async function listPrivateDocuments(
+  userId: string,
+): Promise<Array<DocumentSummary>> {
+  const rows = await db
+    .select({
+      id: documents.id,
+      title: documents.title,
+      updatedAt: documents.updatedAt,
+      deletedAt: documents.deletedAt,
+      parentId: documents.parentId,
+    })
+    .from(documents)
+    .where(
+      and(
+        eq(documents.ownerId, userId),
+        isNull(documents.deletedAt),
+        isNull(documents.orgAccess),
+      ),
+    )
+    .orderBy(desc(documents.updatedAt))
+
+  return rows.map((row) => ({ ...row, shared: false }))
+}
+
 export async function listSharedDocuments(
   email: string,
 ): Promise<Array<DocumentSummary>> {
