@@ -45,7 +45,7 @@ export function CreateOrganizationForm() {
   }
 
   return (
-    <section className="mx-auto flex max-w-130 flex-col gap-6 rounded-xlarge border border-line-subtle bg-surface-nav px-4 py-8 tablet:px-8">
+    <section className="mx-auto flex max-w-130 flex-col gap-6 rounded-xlarge border border-line-subtle bg-surface-card px-4 py-8 shadow-down-small tablet:px-8">
       <div className="flex flex-col items-center gap-3 text-center">
         <TeamIcon aria-hidden="true" className="size-10 text-brand" />
         <h1 className="font-bold text-heading-large text-content-strong">

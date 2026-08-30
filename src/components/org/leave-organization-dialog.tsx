@@ -49,15 +49,18 @@ export function LeaveOrganizationDialog({
       <Sheet onOpenChange={onOpenChange} open={open}>
         <SheetContent
           className="max-h-[85dvh]"
+          onEscapeKeyDown={(event) => event.preventDefault()}
+          onInteractOutside={(event) => event.preventDefault()}
+          onPointerDownOutside={(event) => event.preventDefault()}
           role="alertdialog"
           showClose={false}
           side="bottom"
         >
           <SheetHeader className="gap-2 px-4 pt-4">
-            <SheetTitle className="font-bold text-heading-medium text-content-strong">
+            <SheetTitle className="font-bold text-content-strong">
               {title}
             </SheetTitle>
-            <SheetDescription className="text-body-small text-content">
+            <SheetDescription className="text-content">
               {description}
             </SheetDescription>
           </SheetHeader>
@@ -88,7 +91,9 @@ export function LeaveOrganizationDialog({
 
   return (
     <AlertDialog onOpenChange={onOpenChange} open={open}>
-      <AlertDialogContent>
+      <AlertDialogContent
+        onEscapeKeyDown={(event) => event.preventDefault()}
+      >
         <AlertDialogHeader>
           <AlertDialogTitle>{title}</AlertDialogTitle>
           <AlertDialogDescription>{description}</AlertDialogDescription>
