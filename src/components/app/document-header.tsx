@@ -9,7 +9,9 @@ import {
   documentTitleInputId,
   requestEditorFocus,
 } from '@/components/editor/focus-bridge'
+import { TeamIcon } from '@/components/icons'
 import { ShareButton } from '@/components/sharing/share-button'
+import { Badge } from '@/components/ui/badge'
 import { renameDocument } from '@/lib/document-actions'
 
 type Props = Readonly<{
@@ -17,6 +19,7 @@ type Props = Readonly<{
   title: string
   canEdit: boolean
   isOwner: boolean
+  sharedWithOrganization: boolean
 }>
 
 export function DocumentHeader({
@@ -24,6 +27,7 @@ export function DocumentHeader({
   title,
   canEdit,
   isOwner,
+  sharedWithOrganization,
 }: Props) {
   const t = useTranslations('document')
   const titleId = documentTitleInputId
@@ -102,6 +106,18 @@ export function DocumentHeader({
       </div>
 
       <div className="flex items-center gap-2">
+        {sharedWithOrganization ? (
+          <Badge
+            className="gap-1"
+            data-testid="document-org-tag"
+            title={t('orgTagHint')}
+            variant="info"
+          >
+            <TeamIcon aria-hidden="true" className="size-4 shrink-0" />
+            {t('orgTag')}
+            <span className="sr-only">{t('orgTagHint')}</span>
+          </Badge>
+        ) : null}
         <ShareButton canShare={isOwner} documentId={documentId} />
         <DocumentMenu documentId={documentId} isOwner={isOwner} />
       </div>

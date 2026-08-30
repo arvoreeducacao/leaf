@@ -14,6 +14,8 @@ import { EyeIcon, WarningIcon } from '@/components/icons'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 
 import { readDocumentContent } from './content'
+import { DocumentImport } from './document-import'
+import type { DocumentImportHandle } from './document-import'
 import { DocumentStats } from './document-stats'
 import { focusDocumentTitle, onEditorFocusRequest } from './focus-bridge'
 import { LeafFormattingToolbarController } from './formatting-toolbar'
@@ -29,18 +31,22 @@ type Props = Readonly<{
   documentId: string
   initialContent: string | null
   readOnly: boolean
+  isOwner: boolean
 }>
 
 export default function BlockNoteEditor({
   documentId,
   initialContent,
   readOnly,
+  isOwner,
 }: Props) {
   const t = useTranslations('editor')
+  const tImport = useTranslations('importFile')
   const { resolvedTheme } = useTheme()
   const { calloutItem, dictionary } = useLeafDictionary(readOnly)
   const readOnlyHintId = useId()
   const containerRef = useRef<HTMLDivElement>(null)
+  const importRef = useRef<DocumentImportHandle>(null)
   const parsed = readDocumentContent(initialContent)
   const isUnreadable = parsed.status === 'unreadable'
   const isEditable = !readOnly && !isUnreadable
@@ -71,6 +77,19 @@ export default function BlockNoteEditor({
   const handleBlur = useCallback(() => {
     void flush()
   }, [flush])
+
+  const insertImportedBlocks = useCallback(
+    (serialized: string) => {
+      const blocks = JSON.parse(serialized) as Parameters<
+        typeof editor.insertBlocks
+      >[0]
+      const reference = editor.getTextCursorPosition().block
+
+      editor.insertBlocks(blocks, reference, 'after')
+      handleChange()
+    },
+    [editor, handleChange],
+  )
 
   useEffect(() => {
     const element = containerRef.current
@@ -167,7 +186,23 @@ export default function BlockNoteEditor({
         <SuggestionMenuController
           getItems={async (query) =>
             filterSuggestionItems(
-              getLeafSlashMenuItems(editor, calloutItem),
+              getLeafSlashMenuItems(
+                editor,
+                calloutItem,
+                {
+                  group: tImport('slashGroup'),
+                  markdown: tImport('slashMarkdown'),
+                  markdownHint: tImport('slashMarkdownHint'),
+                  archive: tImport('slashArchive'),
+                  archiveHint: tImport('slashArchiveHint'),
+                },
+                {
+                  onArchive: isOwner
+                    ? () => importRef.current?.pickArchive()
+                    : undefined,
+                  onMarkdown: () => importRef.current?.pickMarkdown(),
+                },
+              ),
               query,
             )
           }
@@ -177,6 +212,14 @@ export default function BlockNoteEditor({
       <div className="flex justify-end px-8 tablet:px-14">
         <DocumentStats stats={stats} />
       </div>
+      {isEditable ? (
+        <DocumentImport
+          canImportArchive={isOwner}
+          documentId={documentId}
+          onBlocks={insertImportedBlocks}
+          ref={importRef}
+        />
+      ) : null}
     </div>
   )
 }

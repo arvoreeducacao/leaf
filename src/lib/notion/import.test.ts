@@ -64,7 +64,7 @@ const messages = buildNotionImportMessages(
   createTranslator({
     locale: 'pt-BR',
     messages: ptBR,
-    namespace: 'notionImport',
+    namespace: 'archiveImport',
   }) as (
     key: string,
     values?: Record<string, string | number | Date>,

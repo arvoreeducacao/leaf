@@ -4,7 +4,12 @@ import { useTranslations } from 'next-intl'
 import { useCallback, useEffect, useId, useState } from 'react'
 import { toast } from 'sonner'
 
-import { ClipboardIcon, GlobeIcon, TrashIcon } from '@/components/icons'
+import {
+  ClipboardIcon,
+  GlobeIcon,
+  TeamIcon,
+  TrashIcon,
+} from '@/components/icons'
 import { ConfirmDisablePublicLink } from '@/components/sharing/confirm-disable-public-link'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -28,6 +33,7 @@ import {
   inviteToDocument,
   loadShareState,
   removeShare,
+  setOrganizationAccess,
   updateShareRole,
 } from '@/lib/share-actions'
 import type {
@@ -220,6 +226,65 @@ export function SharePanel({ documentId, canManage }: Props) {
         {status}
       </span>
 
+      {state.orgName ? (
+        <section className="flex flex-col gap-3">
+          <h3 className="font-bold text-body-small text-content">
+            {t('orgSection')}
+          </h3>
+
+          <div className="flex flex-col gap-3 tablet:flex-row tablet:items-center tablet:justify-between">
+            <div className="flex min-w-0 items-center gap-2">
+              <TeamIcon
+                aria-hidden="true"
+                className="size-4 shrink-0 text-content-muted"
+              />
+              <span className="min-w-0 truncate text-body-small text-content-strong">
+                {t('orgEveryone', { name: state.orgName })}
+              </span>
+            </div>
+
+            {isOwner ? (
+              <Select
+                disabled={pending}
+                onValueChange={(value) =>
+                  void run(
+                    () => setOrganizationAccess(documentId, value),
+                    t('orgAccessUpdated'),
+                  )
+                }
+                value={state.orgAccess ?? 'none'}
+              >
+                <SelectTrigger
+                  aria-label={t('orgAccessLabel')}
+                  className="w-full shrink-0 tablet:w-45"
+                  data-testid="org-access-select"
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">{t('orgNone')}</SelectItem>
+                  <SelectItem value="viewer">{roleLabels.viewer}</SelectItem>
+                  <SelectItem value="editor">{roleLabels.editor}</SelectItem>
+                </SelectContent>
+              </Select>
+            ) : (
+              <Badge variant="info">
+                {state.orgAccess ? roleLabels[state.orgAccess] : t('orgNone')}
+              </Badge>
+            )}
+          </div>
+
+          <p className="text-body-small text-content">{t('orgHelp')}</p>
+        </section>
+      ) : null}
+
+      {state.orgName ? <Separator /> : null}
+
+      <section className="flex flex-col gap-4">
+        <h3 className="font-bold text-body-small text-content">
+          {t('peopleSection')}
+        </h3>
+
       {isOwner ? (
         <form className="flex flex-col gap-3" onSubmit={submitInvite}>
           <div className="flex flex-col gap-3 tablet:flex-row tablet:items-end">
@@ -277,10 +342,10 @@ export function SharePanel({ documentId, canManage }: Props) {
         </form>
       ) : null}
 
-      {isOwner ? <Separator /> : null}
-
-      <section className="flex flex-col gap-3">
-        <h3 className="font-bold text-body-small text-content">{t('withAccess')}</h3>
+      <div className="flex flex-col gap-3">
+        <h4 className="font-bold text-body-small text-content">
+          {t('withAccess')}
+        </h4>
 
         <ul className="flex flex-col gap-2">
           <li className="flex min-w-0 items-center gap-2 py-1">
@@ -298,11 +363,19 @@ export function SharePanel({ documentId, canManage }: Props) {
               className="flex min-w-0 flex-wrap items-center gap-2 py-1"
               key={person.id}
             >
-              <span
-                className="min-w-0 flex-1 truncate text-body-small text-content-strong"
-                title={person.email}
-              >
-                {person.email}
+              <span className="flex min-w-0 flex-1 flex-col gap-1">
+                <span
+                  className="truncate text-body-small text-content-strong"
+                  title={person.email}
+                >
+                  {person.email}
+                </span>
+                {person.external ? (
+                  <span className="flex items-center gap-2">
+                    <Badge variant="warning">{t('externalGuest')}</Badge>
+                    <span className="sr-only">{t('externalGuestHint')}</span>
+                  </span>
+                ) : null}
               </span>
 
               {isOwner ? (
@@ -361,6 +434,7 @@ export function SharePanel({ documentId, canManage }: Props) {
             {t('ownerOnly')}
           </p>
         )}
+        </div>
       </section>
 
       {isOwner ? (

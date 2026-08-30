@@ -1,7 +1,11 @@
 import { and, eq, isNull } from 'drizzle-orm'
 
 import { db } from '@/db'
-import { documentShares, documents } from '@/db/schema'
+import {
+  documentShares,
+  documents,
+  organizationMembers,
+} from '@/db/schema'
 import type { Document } from '@/db/schema'
 
 export type AccessLevel = 'owner' | 'editor' | 'viewer'
@@ -51,11 +55,26 @@ export async function getDocumentAccess(
     ),
   })
 
-  if (!share) {
+  if (share) {
+    return share.role
+  }
+
+  if (!document.orgId || !document.orgAccess) {
     return null
   }
 
-  return share.role
+  const membership = await db.query.organizationMembers.findFirst({
+    where: and(
+      eq(organizationMembers.orgId, document.orgId),
+      eq(organizationMembers.userId, session.user.id),
+    ),
+  })
+
+  if (!membership) {
+    return null
+  }
+
+  return document.orgAccess
 }
 
 export async function getTrashedDocumentAccess(
@@ -95,62 +114,83 @@ export function isPublicTokenShaped(token: string) {
   return publicTokenPattern.test(token)
 }
 
-const lookupWindowMs = 60_000
-const lookupMaxAttempts = 30
-const lookupMaxKeys = 5_000
-const lookupHits = new Map<string, Array<number>>()
+const maxLimiterKeys = 5_000
 
 export type RateLimitDecision = Readonly<{
   allowed: boolean
   retryAfterSeconds: number
 }>
 
-function pruneLookupHits(now: number) {
-  for (const [key, hits] of lookupHits) {
-    const last = hits.at(-1)
+function createRateLimiter(windowMs: number, maxAttempts: number) {
+  const hits = new Map<string, Array<number>>()
 
-    if (last === undefined || now - last >= lookupWindowMs) {
-      lookupHits.delete(key)
+  function prune(now: number) {
+    for (const [key, entries] of hits) {
+      const last = entries.at(-1)
+
+      if (last === undefined || now - last >= windowMs) {
+        hits.delete(key)
+      }
+    }
+
+    if (hits.size >= maxLimiterKeys) {
+      hits.clear()
     }
   }
 
-  if (lookupHits.size >= lookupMaxKeys) {
-    lookupHits.clear()
+  function register(key: string, now: number = Date.now()): RateLimitDecision {
+    const previous = hits.get(key) ?? []
+    const recent = previous.filter((hit) => now - hit < windowMs)
+
+    if (recent.length >= maxAttempts) {
+      hits.set(key, recent)
+      const oldest = recent[0] ?? now
+
+      return {
+        allowed: false,
+        retryAfterSeconds: Math.max(
+          1,
+          Math.ceil((windowMs - (now - oldest)) / 1000),
+        ),
+      }
+    }
+
+    if (!hits.has(key) && hits.size >= maxLimiterKeys) {
+      prune(now)
+    }
+
+    recent.push(now)
+    hits.set(key, recent)
+
+    return { allowed: true, retryAfterSeconds: 0 }
   }
+
+  return { register, reset: () => hits.clear() }
 }
+
+const publicLookupLimiter = createRateLimiter(60_000, 30)
+const inviteLimiter = createRateLimiter(60_000, 20)
 
 export function registerPublicLookupAttempt(
   key: string,
   now: number = Date.now(),
 ): RateLimitDecision {
-  const previous = lookupHits.get(key) ?? []
-  const recent = previous.filter((hit) => now - hit < lookupWindowMs)
-
-  if (recent.length >= lookupMaxAttempts) {
-    lookupHits.set(key, recent)
-    const oldest = recent[0] ?? now
-
-    return {
-      allowed: false,
-      retryAfterSeconds: Math.max(
-        1,
-        Math.ceil((lookupWindowMs - (now - oldest)) / 1000),
-      ),
-    }
-  }
-
-  if (!lookupHits.has(key) && lookupHits.size >= lookupMaxKeys) {
-    pruneLookupHits(now)
-  }
-
-  recent.push(now)
-  lookupHits.set(key, recent)
-
-  return { allowed: true, retryAfterSeconds: 0 }
+  return publicLookupLimiter.register(key, now)
 }
 
 export function resetPublicLookupLimiter() {
-  lookupHits.clear()
+  publicLookupLimiter.reset()
+}
+
+export function registerInviteAttempt(
+  key: string,
+  now: number = Date.now(),
+): RateLimitDecision {
+  return inviteLimiter.register(key, now)
+}
+
+export function resetInviteLimiter() {
+  inviteLimiter.reset()
 }
 
 export type PublicLookupResult =

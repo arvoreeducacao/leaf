@@ -1,26 +1,22 @@
 'use server'
 
-import { nanoid } from 'nanoid'
 import { getTranslations } from 'next-intl/server'
-import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 
-import { db } from '@/db'
-import { documents } from '@/db/schema'
 import { getSession } from '@/lib/auth'
+import { canEdit, getDocumentAccess } from '@/lib/authz'
 import { markdownToBlocks } from '@/lib/markdown/convert'
-import { titleFromFileName } from '@/lib/markdown/filename'
 import { MAX_MARKDOWN_BYTES, MAX_MARKDOWN_LABEL } from '@/lib/markdown/limits'
 import { looksBinary } from '@/lib/markdown/text'
 
-export type ImportResult =
-  | { ok: true; id: string }
+export type ImportBlocksResult =
+  | { ok: true; blocks: string }
   | { ok: false; error: string }
 
-export async function importMarkdown(
-  fileName: string,
+export async function importMarkdownBlocks(
+  documentId: string,
   mdText: string,
-): Promise<ImportResult> {
+): Promise<ImportBlocksResult> {
   const session = await getSession()
 
   if (!session) {
@@ -28,6 +24,10 @@ export async function importMarkdown(
   }
 
   const t = await getTranslations('importFile')
+
+  if (!canEdit(await getDocumentAccess(documentId, session))) {
+    return { ok: false, error: (await getTranslations('errors'))('notAllowed') }
+  }
 
   if (typeof mdText !== 'string' || mdText.trim().length === 0) {
     return { ok: false, error: t('empty') }
@@ -44,8 +44,6 @@ export async function importMarkdown(
     return { ok: false, error: t('binary') }
   }
 
-  let content: string
-
   try {
     const blocks = await markdownToBlocks(mdText)
 
@@ -53,27 +51,8 @@ export async function importMarkdown(
       return { ok: false, error: t('noContent') }
     }
 
-    content = JSON.stringify(blocks)
+    return { ok: true, blocks: JSON.stringify(blocks) }
   } catch {
     return { ok: false, error: t('unreadable') }
   }
-
-  const id = nanoid(12)
-  const now = new Date()
-
-  await db.insert(documents).values({
-    id,
-    ownerId: session.user.id,
-    title: titleFromFileName(
-      fileName,
-      (await getTranslations('document'))('untitled'),
-    ),
-    content,
-    createdAt: now,
-    updatedAt: now,
-  })
-
-  revalidatePath('/', 'layout')
-
-  return { ok: true, id }
 }

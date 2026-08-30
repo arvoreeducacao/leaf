@@ -73,6 +73,64 @@ export const verification = sqliteTable('verification', {
     .notNull(),
 })
 
+export const organizations = sqliteTable('organizations', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp' })
+    .notNull()
+    .default(sql`(unixepoch())`),
+})
+
+export const organizationMembers = sqliteTable(
+  'organization_members',
+  {
+    id: text('id').primaryKey(),
+    orgId: text('org_id')
+      .notNull()
+      .references(() => organizations.id, { onDelete: 'cascade' }),
+    userId: text('user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    role: text('role', { enum: ['owner', 'admin', 'member'] })
+      .notNull()
+      .default('member'),
+    createdAt: integer('created_at', { mode: 'timestamp' })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (table) => [
+    uniqueIndex('organization_members_org_user_unq').on(
+      table.orgId,
+      table.userId,
+    ),
+    index('organization_members_user_id_idx').on(table.userId),
+  ],
+)
+
+export const organizationInvites = sqliteTable(
+  'organization_invites',
+  {
+    id: text('id').primaryKey(),
+    orgId: text('org_id')
+      .notNull()
+      .references(() => organizations.id, { onDelete: 'cascade' }),
+    email: text('email').notNull(),
+    role: text('role', { enum: ['admin', 'member'] })
+      .notNull()
+      .default('member'),
+    createdAt: integer('created_at', { mode: 'timestamp' })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (table) => [
+    uniqueIndex('organization_invites_org_email_unq').on(
+      table.orgId,
+      table.email,
+    ),
+    index('organization_invites_email_idx').on(table.email),
+  ],
+)
+
 export const documents = sqliteTable(
   'documents',
   {
@@ -84,6 +142,10 @@ export const documents = sqliteTable(
       (): AnySQLiteColumn => documents.id,
       { onDelete: 'set null' },
     ),
+    orgId: text('org_id').references(() => organizations.id, {
+      onDelete: 'set null',
+    }),
+    orgAccess: text('org_access', { enum: ['viewer', 'editor'] }),
     title: text('title').notNull().default('Sem título'),
     content: text('content'),
     publicToken: text('public_token').unique(),
@@ -98,6 +160,7 @@ export const documents = sqliteTable(
   (table) => [
     index('documents_owner_id_idx').on(table.ownerId),
     index('documents_parent_id_idx').on(table.parentId),
+    index('documents_org_id_idx').on(table.orgId),
   ],
 )
 
@@ -128,3 +191,9 @@ export const documentShares = sqliteTable(
 export type Document = typeof documents.$inferSelect
 export type DocumentShare = typeof documentShares.$inferSelect
 export type ShareRole = DocumentShare['role']
+export type Organization = typeof organizations.$inferSelect
+export type OrganizationMember = typeof organizationMembers.$inferSelect
+export type OrganizationRole = OrganizationMember['role']
+export type OrganizationInvite = typeof organizationInvites.$inferSelect
+export type InviteRole = OrganizationInvite['role']
+export type OrgAccess = NonNullable<Document['orgAccess']>

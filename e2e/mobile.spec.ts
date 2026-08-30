@@ -33,6 +33,23 @@ test.describe('mobile 375px', () => {
     await expect(editorBody(page)).toContainText('texto escrito no celular')
   })
 
+  test('criar e gerir a organização cabe na tela', async ({ page }) => {
+    await signUp(page, uniqueEmail('mobile-org'))
+
+    await page.goto('/org')
+    await page.getByLabel('Nome da organização').fill('Escola no celular')
+    await page.getByRole('button', { name: 'Criar organização' }).click()
+
+    await expect(page.getByRole('heading', { name: 'Membros' })).toBeVisible()
+    await expectNoHorizontalOverflow(page)
+
+    await page.getByLabel('Email', { exact: true }).fill('convidada@exemplo.test')
+    await page.getByRole('button', { name: 'Convidar', exact: true }).click()
+
+    await expect(page.getByText('convidada@exemplo.test')).toBeVisible()
+    await expectNoHorizontalOverflow(page)
+  })
+
   test('compartilhar abre como Sheet e o diálogo de excluir vira folha de baixo', async ({
     page,
   }) => {

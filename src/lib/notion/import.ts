@@ -44,7 +44,11 @@ export type ImportEvent =
   | Readonly<{ type: 'done'; summary: ImportSummary }>
   | Readonly<{ type: 'error'; error: string }>
 
-export type ImportOwner = Readonly<{ id: string }>
+export type ImportOwner = Readonly<{
+  id: string
+  orgId?: string | null
+  parentId?: string | null
+}>
 
 function assetKeyFor(path: string) {
   const extension = extensionOf(path)
@@ -135,7 +139,10 @@ export async function* importNotionZip(
   const rows = plan.pages.map((page) => ({
     id: idByKey.get(page.key) as string,
     ownerId: owner.id,
-    parentId: page.parentKey ? (idByKey.get(page.parentKey) ?? null) : null,
+    orgId: owner.orgId ?? null,
+    parentId: page.parentKey
+      ? (idByKey.get(page.parentKey) ?? owner.parentId ?? null)
+      : (owner.parentId ?? null),
     title: page.title,
     createdAt: now,
     updatedAt: now,

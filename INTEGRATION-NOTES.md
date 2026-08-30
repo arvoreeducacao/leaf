@@ -858,3 +858,169 @@ auditoria:
 - `--line` (borda decorativa) é alpha-200 no claro e alpha-inverse-200 no
   escuro, os dois abaixo de 3:1 de propósito, como manda o `border-default` do
   Bonsai. Onde a borda delimita controle interativo o token é `line-strong`.
+
+## Onda 7 — Organizações e importação no slash menu (entregue)
+
+### Modelo de dados
+
+- Migração `drizzle/0002_simple_shinko_yamashiro.sql`: tabelas `organizations`,
+  `organization_members` (unique `org_id,user_id`) e `organization_invites`
+  (unique `org_id,email`), mais `documents.org_id` e `documents.org_access` com
+  índice em `org_id`.
+- O `ALTER TABLE ... ADD org_id` gerado pelo drizzle-kit veio **sem** o
+  `ON DELETE SET NULL` (mesmo defeito que a onda 4 pegou no `parent_id`). O `.sql`
+  foi editado à mão para incluir a cláusula. Se a migração for regerada, confira
+  isso de novo.
+- **Um usuário pertence a no máximo uma organização.** Não há constraint no banco
+  para isso: quem garante é `getMembership` (pega a participação mais antiga) e a
+  checagem em `createOrganization` / `acceptPendingInvites`.
+- Documento criado por membro de org nasce com `org_id` preenchido e
+  `org_access` **null** (privado, como no Notion). Vale para as quatro portas de
+  criação: `createDocument`, `duplicateDocument` (copia o `org_id` da origem e
+  força `org_access` null), o import de markdown e o import de zip.
+
+### Autorização
+
+- `getDocumentAccess` implementa a precedência da spec, nesta ordem:
+  dono → share explícito em `document_shares` → `org_access` (se quem pede é
+  membro da MESMA org do doc) → nada. O link público continua num caminho
+  separado (`lookupPublicDocument`).
+- **Share explícito vence `org_access` nos dois sentidos.** Um share `viewer`
+  rebaixa quem teria `editor` pela organização. É o que a spec pede ("share
+  explícito > org_access") e tem teste.
+- **Admin e dona da org não enxergam documento privado de membro.** Não existe
+  nenhum caminho de escalação por papel de organização: o papel da org só decide
+  quem administra a org, nunca quem lê documento.
+- O limitador in-memory do link público virou uma fábrica
+  (`createRateLimiter(windowMs, maxAttempts)`) em `authz.ts`. O lookup público
+  segue com 30/60s e os convites de organização ganharam um limitador próprio de
+  20/60s por chave `orgId:userId`. Continua por processo, sem persistência.
+
+### Entrar e sair da organização
+
+- Não há email de convite (mesma limitação do compartilhamento por email): o
+  convite é uma linha em `organization_invites` e resolve quando a pessoa acessa
+  o app logada com aquele email. A resolução acontece em
+  `acceptPendingInvites`, chamada no `src/app/(app)/layout.tsx` antes de listar
+  os documentos. Rodar isso no layout é idempotente (só age quando a pessoa não
+  tem org e existe convite) e cobre login, signup e qualquer navegação.
+- Ao virar membro, os documentos que a pessoa já tinha recebem o `org_id`
+  (`attachOwnerDocuments`), mantendo `org_access` null. Sem isso, documento
+  criado antes de entrar na org nunca poderia ser compartilhado com ela.
+- Ao sair ou ser removida, `detachMemberDocuments` zera `org_id` e `org_access`
+  dos documentos daquela pessoa: eles voltam a ser privados em vez de continuarem
+  visíveis para a org que ela deixou. Shares explícitos que ela já tinha dado
+  **não** são tocados.
+- A pessoa dona não pode sair enquanto for a única dona, e o papel `owner` não é
+  atribuível pela UI (o select só oferece Admin e Membro). Transferência de
+  propriedade e exclusão de organização ficaram fora do MVP.
+
+### UI
+
+- Sidebar em três seções: "Organização" (só quando existe org; lista
+  `listOrganizationDocuments`, ou seja, docs da org com `org_access` não nulo),
+  "Compartilhados comigo" (shares diretos, lista plana como antes) e "Privado"
+  (`listPrivateDocuments`, os meus com `org_access` null). A seção
+  "Meus documentos" deixou de existir; as chaves `nav.myDocuments` e
+  `nav.emptyOwned` foram removidas dos catálogos.
+- Cada seção monta a própria árvore. Se um documento privado tem pai
+  compartilhado com a org (ou o contrário), ele aparece como raiz na seção dele.
+  É consequência de `buildDocumentTree` receber listas já particionadas, e é o
+  comportamento desejado: a seção diz o nível de acesso, não a hierarquia.
+- `/org` (`src/app/(app)/org/page.tsx`): sem org renderiza
+  `CreateOrganizationForm`; com org renderiza `OrganizationManager` (nome,
+  membros, convites, sair). Confirmação de saída em
+  `leave-organization-dialog.tsx`, AlertDialog no desktop e Sheet no mobile,
+  igual ao padrão do `confirm-disable-public-link`.
+- O `OrganizationManager` **não** tem live region própria: todo retorno de ação
+  passa por `toast`, e o Sonner já mantém a própria região ARIA. Ter as duas
+  coisas fazia o leitor de tela anunciar duas vezes (e quebrava o E2E por strict
+  mode).
+- Modal Compartilhar na ordem da spec: "Organização" (select Sem acesso / Pode
+  ver / Pode editar, com o nome da org) → "Pessoas" (convite individual, lista de
+  quem tem acesso, badge `warning` "Convidado externo" para email fora da org) →
+  link público. Quem não é dono vê o acesso da org como Badge, não como select.
+- `org_access` só o dono do documento muda. A ação vive em
+  `setOrganizationAccess` (`share-actions.ts`, atrás do mesmo `requireOwner` das
+  outras ações do painel) e ainda confere que o doc pertence à org de quem pede.
+- Header do documento ganhou o Badge "Organização"
+  (`data-testid="document-org-tag"`) quando `org_access` não é null.
+- A seção do link público **não** ganhou um `h3` "Link público": a `Label` do
+  switch já tem esse nome acessível, e duplicar criaria dois elementos com o
+  mesmo nome (foi o que a onda 3 corrigiu ali).
+
+### Importação saiu da sidebar e foi para o slash menu
+
+Decisão de produto do usuário durante a onda 7: **o produto é agnóstico de
+origem, a marca Notion não aparece na interface.** Isso supersede o botão na
+sidebar que a spec 06 previa.
+
+- `src/components/app/import-button.tsx` foi **removido** e o `NewDocumentButton`
+  ficou sozinho no topo da sidebar.
+- `notion-import-dialog.tsx` virou
+  `src/components/editor/archive-import-dialog.tsx` (`ArchiveImportDialog`), com
+  a prop nova `parentId`.
+- `src/components/editor/document-import.tsx` é o dono dos dois inputs de arquivo
+  escondidos (`data-testid="import-markdown-input"` e `"import-archive-input"`) e
+  do modal de progresso. O `BlockNoteEditor` fala com ele por `ref`
+  (`DocumentImportHandle`) e só o monta quando o editor é editável.
+- Dois itens novos no slash menu, em grupo próprio "Importar":
+  - "Importar arquivo .md" insere o markdown convertido **no ponto do cursor**
+    (`editor.insertBlocks(blocks, cursor, 'after')`), no documento atual.
+  - "Importar exportação .zip" mantém o fluxo de migração: cria as páginas do zip
+    como **subpáginas do documento atual** e mostra o modal de progresso.
+- `importMarkdown` (que criava um documento novo a partir do .md) foi substituída
+  por `importMarkdownBlocks(documentId, mdText)`, que exige `canEdit` no
+  documento e **devolve os blocos já sanitizados** em vez de gravar. A gravação
+  fica com o autosave do editor. A conversão e a sanitização continuam 100% no
+  servidor.
+- `POST /api/import/notion` aceita o campo `parentId` no multipart e valida que
+  quem pede é `owner` do documento destino (403 caso contrário). O caminho da
+  rota continua `/api/import/notion` (não vale quebrar URL por causa de nome);
+  o que mudou foi só o rótulo na interface.
+- Namespace i18n `notionImport` renomeado para `archiveImport`, e as strings
+  visíveis perderam a marca ("Importar exportação", "Escolha um arquivo .zip de
+  exportação", "Não encontramos páginas nesse arquivo"). As heurísticas do
+  formato do Notion (hash de 32 hex, `<aside>` virando callout, database em csv)
+  continuam idênticas em `src/lib/notion/**`.
+- Chaves mortas removidas do catálogo: `importFile.button`, `.hint`,
+  `.dragging`, `.importing`, `.markdownImported`. O drag and drop de arquivo em
+  cima do botão da sidebar morreu junto com o botão; hoje só o file picker.
+
+### Verificação
+
+- `pnpm exec tsc --noEmit` limpo, `pnpm exec vitest run` 136 testes verdes
+  (9 arquivos), `next build` verde com a rota `/org` no manifesto,
+  `pnpm test:e2e` 28 testes verdes (26 desktop + 2 mobile).
+- `e2e/organizations.spec.ts` cobre o roteiro da spec: criar org, convidar,
+  documento privado invisível para o membro, "Pode ver" abrindo leitura na seção
+  Organização, "Pode editar" liberando a edição, e a terceira conta sem org
+  vendo só o documento compartilhado com ela; mais gestão de papel, remoção e
+  saída da org.
+- `e2e/import-export.spec.ts` e `e2e/notion-import.spec.ts` foram reescritos para
+  o fluxo novo (importação dentro de um documento aberto) e há um caso que prova
+  que os dois itens estão no slash menu, que a sidebar não tem mais o botão e que
+  a palavra "Notion" não aparece na tela.
+
+### Pendências desta onda
+
+- **`notFound()` em `/doc/[id]` responde 200, não 404.** O layout do app já
+  começou a streamar quando o `notFound()` acontece, então o status não muda mais
+  (em `/share/[token]` o layout é leve e o 404 sai certo). A tela de "Documento
+  não encontrado" aparece normalmente e o acesso continua barrado; é só o código
+  HTTP. Por isso o E2E de organização confere o conteúdo, não o status.
+- Sem transferência de propriedade da org, sem exclusão de organização e sem
+  segunda organização por pessoa.
+- O convite não valida se o email existe (de propósito, para não vazar a
+  existência de conta), então convite para email errado fica pendente para
+  sempre até alguém cancelar.
+- A rota de import continua se chamando `/api/import/notion` e o módulo
+  `src/lib/notion/**` mantém o nome. Só a interface é agnóstica.
+- O painel de compartilhamento só devolve `orgName`/`orgAccess` para o dono do
+  documento ou para quem é membro daquela organização. Convidado externo não
+  descobre o nome da org nem quem faz parte dela (o badge "Convidado externo"
+  também não aparece para ele, só para o dono).
+- Quando alguém aceita um convite, os convites pendentes para **aquele email em
+  qualquer organização** são apagados junto. Como só dá para pertencer a uma org,
+  os outros nunca resolveriam e ficariam pendentes para sempre. O efeito
+  colateral é que o admin da outra organização vê o convite sumir sem aviso.

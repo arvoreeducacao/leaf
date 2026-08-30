@@ -15,6 +15,13 @@
       "when": 1787953318903,
       "tag": "0001_loving_zeigeist",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1787964450755,
+      "tag": "0002_simple_shinko_yamashiro",
+      "breakpoints": true
     }
   ]
 }
