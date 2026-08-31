@@ -92,6 +92,11 @@ variável.
 - Detalhes, limites e o que sobra para o Guilherme (entre eles: `.env.example`
   não foi atualizado porque este ambiente bloqueia arquivos `.env*`) no
   `INTEGRATION-NOTES.md`.
+- Números: `tsc --noEmit` limpo; `vitest run` **270 verdes em 19 arquivos**
+  (eram 242 em 16); `LEAF_DIST_DIR=.next-build pnpm build` verde;
+  `pnpm exec playwright test` **51 verdes / 1 vermelho (52)** em 14,5 min — o
+  vermelho é a mesma asserção de foco do `versions.spec.ts` já registrada como
+  pendência do Guilherme, não regressão desta onda.
 
 ## Validação consolidada (2026-08-31) — números finais
 

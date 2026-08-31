@@ -83,7 +83,7 @@ lista. Em produção (`leaf.arvore.com.br`) a variável deve valer `arvore.com.b
 
 ## Qualidade
 
-Construído em 12 ondas com fechamento validado: **239 testes unitários**, **51 cenários E2E** (desktop, mobile e colaboração em dois navegadores), build de produção verde e design review do Bonsai com bloqueantes zerados nos dois temas.
+Construído em 12 ondas com fechamento validado, mais o port para MySQL e a onda de autenticação restrita: **270 testes unitários**, **52 cenários E2E** (desktop, mobile, colaboração em dois navegadores e domínio restrito), build de produção verde e design review do Bonsai com bloqueantes zerados nos dois temas.
 
 ---
 

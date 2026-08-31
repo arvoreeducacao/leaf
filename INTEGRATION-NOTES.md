@@ -2396,6 +2396,14 @@ com um separador "ou" acima. Se o Guilherme quiser o `G` colorido oficial, é um
   recusado com a mensagem certa, o signup `@arvore.com.br` entra, o convite de
   org de fora do domínio é recusado e o de dentro passa.
 
+Números da onda: `pnpm exec tsc --noEmit` **limpo**; `pnpm exec vitest run`
+**270 verdes em 19 arquivos** (eram 242 em 16); `LEAF_DIST_DIR=.next-build pnpm
+build` **verde**; `pnpm exec playwright test` **51 verdes / 1 vermelho (52)** em
+14,5 min. O vermelho é a asserção `toBeFocused()` do `versions.spec.ts` — a
+mesma que já estava registrada como pendência do Guilherme desde o port de
+MySQL, e que não tem relação com autenticação. O cenário novo (`[restricted] ›
+restrição de domínio`) passou.
+
 O servidor E2E restrito (`scripts/e2e-restricted-server.mjs`) **reaproveita o
 banco `leaf_e2e`** em vez de criar um `leaf_e2e_restricted`: o usuário `leaf` só
 tem grant nos bancos que já existem, e criar um novo exigiria de novo o master
