@@ -27,6 +27,12 @@ async function selectLastWord(page: Page, length: number) {
   }
 }
 
+function blockShadow(page: Page, blockId: string) {
+  return editorBody(page)
+    .locator(`.bn-block-outer[data-id="${blockId}"]`)
+    .evaluate((element) => window.getComputedStyle(element).boxShadow)
+}
+
 async function openPanel(page: Page) {
   await page.getByTestId('comments-button').click()
   await expect(page.getByTestId('comments-panel')).toBeVisible()
@@ -62,8 +68,11 @@ test.describe('comentários', () => {
     await page.keyboard.type('segundo paragrafo')
     await waitForSaved(page)
 
-    const blocks = editorBody(page).locator('[data-id]')
-    const firstBlockId = await blocks.first().getAttribute('data-id')
+    const blockIds = await editorBody(page)
+      .locator('.bn-block-outer[data-id]')
+      .evaluateAll((elements) =>
+        elements.map((element) => element.getAttribute('data-id') ?? ''),
+      )
 
     await selectLastWord(page, 'segundo paragrafo'.length)
     await commentFromToolbar(page, 'Este trecho precisa de fonte')
@@ -80,12 +89,10 @@ test.describe('comentários', () => {
     await openPanel(page)
     await page.getByTestId('comment-anchor').first().click()
 
-    await expect(
-      editorBody(page).locator('.leaf-comment-target'),
-    ).toHaveCount(1)
-    await expect(
-      editorBody(page).locator(`[data-id="${firstBlockId}"]`),
-    ).not.toHaveClass(/leaf-comment-target/)
+    await expect
+      .poll(() => blockShadow(page, blockIds[1]))
+      .not.toBe('none')
+    expect(await blockShadow(page, blockIds[0])).toBe('none')
   })
 
   test('responder, resolver, reabrir e filtrar resolvidos', async ({ page }) => {

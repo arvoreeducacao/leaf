@@ -128,13 +128,3 @@
   }
 }
 
-.leaf-editor .leaf-comment-target {
-  @apply rounded-medium bg-warn-surface ring-2 ring-warn;
-  transition: background-color 300ms ease-out;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .leaf-editor .leaf-comment-target {
-    transition: none;
-  }
-}
