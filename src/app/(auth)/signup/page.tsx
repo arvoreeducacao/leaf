@@ -20,11 +20,9 @@ export default async function SignupPage() {
 
   const { googleEnabled, restrictedDomain } = authAccessConfig()
 
-  return (
-    <AuthForm
-      googleEnabled={googleEnabled}
-      mode="signup"
-      restrictedDomain={restrictedDomain}
-    />
-  )
+  if (googleEnabled) {
+    redirect('/login')
+  }
+
+  return <AuthForm mode="signup" restrictedDomain={restrictedDomain} />
 }

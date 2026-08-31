@@ -40,7 +40,9 @@
     "signOutFailed": "We couldn't sign you out",
     "domainHint": "Use your @{domain} email",
     "domainRestricted": "Use your @{domain} email to sign in to Leaf.",
-    "orSeparator": "or",
+    "googleOnlyTitle": "Welcome to Leaf",
+    "googleOnlySubtitle": "Sign in with your Google account to write and share documents.",
+    "googleDomainHint": "Use your @{domain} account",
     "googleSubmit": "Sign in with Google",
     "googleFailed": "We couldn't sign you in with Google. Try again."
   },

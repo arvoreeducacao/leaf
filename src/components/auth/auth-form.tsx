@@ -9,7 +9,6 @@ import { AlertIcon, LeafIcon } from '@/components/icons'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Separator } from '@/components/ui/separator'
 import { authClient } from '@/lib/auth-client'
 import { emailDomainErrorCode } from '@/lib/email-domain'
 
@@ -18,7 +17,6 @@ type Mode = 'login' | 'signup'
 type Props = Readonly<{
   mode: Mode
   restrictedDomain: string | null
-  googleEnabled: boolean
 }>
 
 const switchHref = {
@@ -26,7 +24,7 @@ const switchHref = {
   signup: '/login',
 } as const
 
-export function AuthForm({ googleEnabled, mode, restrictedDomain }: Props) {
+export function AuthForm({ mode, restrictedDomain }: Props) {
   const t = useTranslations('auth')
   const router = useRouter()
   const nameId = useId()
@@ -77,25 +75,6 @@ export function AuthForm({ googleEnabled, mode, restrictedDomain }: Props) {
 
     router.push('/')
     router.refresh()
-  }
-
-  async function handleGoogle() {
-    setError(null)
-    setPending(true)
-
-    const result = await authClient.signIn.social({
-      callbackURL: '/',
-      provider: 'google',
-    })
-
-    if (result.error) {
-      setPending(false)
-      setError(
-        result.error.code === emailDomainErrorCode
-          ? t('domainRestricted', { domain: restrictedDomain ?? '' })
-          : t('googleFailed'),
-      )
-    }
   }
 
   return (
@@ -207,28 +186,6 @@ export function AuthForm({ googleEnabled, mode, restrictedDomain }: Props) {
             {t(mode === 'signup' ? 'signupSubmit' : 'loginSubmit')}
           </Button>
         </form>
-
-        {googleEnabled ? (
-          <div className="mt-6 flex flex-col gap-4">
-            <div aria-hidden="true" className="flex items-center gap-3">
-              <Separator className="flex-1" />
-              <span className="text-body-small text-content">
-                {t('orSeparator')}
-              </span>
-              <Separator className="flex-1" />
-            </div>
-            <Button
-              aria-busy={pending}
-              className="w-full"
-              disabled={pending}
-              onClick={handleGoogle}
-              type="button"
-              variant="secondary"
-            >
-              {t('googleSubmit')}
-            </Button>
-          </div>
-        ) : null}
 
         <p className="mt-6 text-body-small text-content">
           {t(mode === 'signup' ? 'signupSwitchText' : 'loginSwitchText')}{' '}
