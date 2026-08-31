@@ -3,9 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "concurrently -n next,s3 -c cyan,magenta \"next dev\" \"node scripts/dev-s3.mjs\"",
+    "dev": "concurrently -n next,s3,ws -c cyan,magenta,green \"next dev\" \"node scripts/dev-s3.mjs\" \"node scripts/dev-realtime.mjs\"",
     "dev:next": "next dev",
     "dev:s3": "node scripts/dev-s3.mjs",
+    "dev:realtime": "node scripts/dev-realtime.mjs",
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
@@ -41,6 +42,7 @@
     "clsx": "^2.1.1",
     "drizzle-orm": "^0.45.2",
     "fflate": "^0.8.3",
+    "lib0": "^0.2.117",
     "nanoid": "^6.0.1",
     "next": "16.3.3",
     "next-intl": "^4.14.1",
@@ -49,8 +51,10 @@
     "react-dom": "19.2.8",
     "sonner": "^2.0.8",
     "tailwind-merge": "^3.6.0",
+    "ws": "^8.21.3",
     "y-prosemirror": "^1.3.7",
     "y-protocols": "^1.0.7",
+    "y-websocket": "^3.1.0",
     "yjs": "^13.6.32"
   },
   "devDependencies": {
