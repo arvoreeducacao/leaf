@@ -1397,3 +1397,169 @@ Todos os 🔴 corrigidos e a maior parte dos 🟡:
   reabrir o painel, e o contador do header só no reload da página.
 - O select de papel não explica o que cada opção libera (heurística 10).
 - Sem paginação: documento com muitas conversas carrega todas de uma vez.
+
+## Onda 10 — Busca full-text e command palette (entregue)
+
+### Índice FTS5
+
+- Migração `drizzle/0005_search_index.sql`, gerada com
+  `drizzle-kit generate --custom --name search_index` (o drizzle-kit não modela
+  tabela virtual). Ela cria `documents_fts` como FTS5 comum, colunas
+  `document_id UNINDEXED, title, body, indexed_at UNINDEXED` e
+  `tokenize = 'unicode61 remove_diacritics 2'` (é o que faz "relatorio" achar
+  "relatório", mesma tolerância a acento do filtro client-side da onda 5).
+- **A tabela não entra no `src/db/schema.ts`.** O drizzle-kit compara o schema
+  com o snapshot em `drizzle/meta/*.json`, e o `0005_snapshot.json` é uma cópia
+  do 0004, então uma `pnpm db:generate` futura não tenta dropar `documents_fts`.
+  Todo acesso ao índice é `sql` cru em `src/lib/search-index.ts`.
+- O texto indexado vem de `blocksToPlainText` (`src/components/editor/text-stats.ts`,
+  da onda 5) — o arquivo é server-safe (sem `'use client'`, sem React), então foi
+  reusado em vez de duplicar a extração. Conteúdo ilegível vira string vazia em
+  vez de estourar. Corpo cortado em 200 mil caracteres.
+- **Duas rotas de sincronização, de propósito:**
+  - `indexDocument(id)` no save: `renameDocument` e `updateDocumentContent`;
+    `removeDocumentFromIndex` no `deleteForever`.
+  - `reconcileSearchIndex()` roda **antes de cada busca**: apaga linhas de
+    documento que não existe mais e reindexa todo documento cujo `indexed_at`
+    difere do `updated_at`. É o que cobre backfill do banco que já existia,
+    `createDocument`, `duplicateDocument`, restauração de versão e os imports,
+    sem espalhar chamada de índice por seis arquivos. O diff é um LEFT JOIN e no
+    caso normal devolve zero linhas.
+- Lixeira **não** mexe no índice: quem filtra `deleted_at` é a consulta.
+
+### Autorização da busca (no servidor, sempre)
+
+- `searchAccessibleDocuments(viewer, query)` e
+  `listRecentAccessibleDocuments(viewer)` embutem no `where` a mesma precedência
+  de leitura do `getDocumentAccess`: dono, ou share explícito por email, ou
+  `org_access` não nulo com participação na org do documento. Nada é filtrado no
+  cliente, e a server action `searchWorkspace` (`src/lib/search-actions.ts`) só
+  passa o `userId`/`email` da sessão — a query nunca vem do cliente.
+- `src/lib/search-index.test.ts` (24 casos) trava isso: documento privado de
+  terceiro não aparece nem por título nem por corpo, documento compartilhado
+  aparece só para quem recebeu, `org_access` aparece só para membro da org,
+  lixeira não aparece.
+- A consulta do usuário nunca vira sintaxe FTS: `buildMatchExpression` quebra em
+  tokens de letra/número, joga fora o resto (`NEAR`, `OR`, `-`, aspas viram
+  tokens comuns) e monta `"tok"* "tok2"*`, ou seja, AND implícito com prefixo.
+  Sem isso, um `"` solto derruba a query com erro de sintaxe do FTS5.
+- Ranking: `bm25(documents_fts, 0.0, 10.0, 1.0, 0.0)` — título pesa 10x o corpo.
+
+### Trecho destacado sem HTML
+
+- O `snippet()` do FTS5 marca o termo com `char(2)`/`char(3)` (STX/ETX), e
+  `parseSnippet` transforma isso em `[{ text, highlight }]`. O destaque é
+  renderizado como `<span>` a partir desse array, então **nada de
+  `dangerouslySetInnerHTML`** e conteúdo do documento nunca vira markup.
+
+### Command palette
+
+- `src/components/app/command-palette.tsx` monta uma vez, no `AppShell`;
+  `command-palette-trigger.tsx` é o botão "Buscar em tudo" e vive dentro do
+  `NavContent`, que renderiza **duas vezes** (aside do desktop e Sheet do
+  mobile). Por isso a palette e o gatilho são componentes separados: dois
+  listeners globais de teclado dariam toggle duplo. O gatilho fala com a palette
+  pelo evento `leaf:palette-open` (`palette-bridge.ts`).
+- Não existe componente `command` na cópia local do design system e o repo não
+  tem `cmdk`. A palette é `@radix-ui/react-dialog` cru (Portal + `DialogOverlay`
+  do `ui/dialog`) com `DialogPrimitive.Content` próprio: o `DialogContent` da
+  cópia local é bottom sheet até `tablet` com posicionamento fixo, e brigar com
+  aquelas classes no twMerge sairia pior. Padrão ARIA: input
+  `role="combobox"` + `aria-activedescendant`, lista `role="listbox"`, seções
+  `role="group"`, itens `role="option"` — o foco fica no input o tempo todo,
+  que é o que faz setas e Enter funcionarem sem roubar foco.
+- Seções: **Recentes** com a query vazia (7 itens, `updated_at desc`),
+  **Documentos** com os hits do FTS (8 itens) e **Ações rápidas**
+  (Novo documento, Ir para Organização quando existe org, Importar arquivo),
+  que também são filtradas pelo texto digitado.
+- Debounce de 200 ms na busca; a lista de recentes carrega sem espera. Resposta
+  fora de ordem é descartada por um contador de requisição.
+
+### Precedência do Cmd/Ctrl+K com o link do BlockNote
+
+- O `CreateLinkButton` do `@blocknote/react` registra o listener **no elemento do
+  editor** e chama `preventDefault()` (confirmado no bundle:
+  `(e.ctrlKey || e.metaKey) && e.key === "k" && (l(!0), e.preventDefault())`).
+  Ele só existe enquanto a formatting toolbar está montada, ou seja, com texto
+  selecionado.
+- `shouldTogglePalette` (`palette-shortcut.ts`, testado em vitest) decide no
+  listener de janela, em fase de bolha: com Meta/Ctrl+K ignora quando
+  `event.defaultPrevented` (o BlockNote já tratou) **ou** quando há seleção não
+  colapsada dentro de `.bn-editor`; **Alt/Option+K abre sempre**, mesmo com
+  seleção. Os dois sinais são redundantes de propósito — `defaultPrevented` é o
+  preciso, a checagem de seleção é a rede de segurança.
+- **Alt+K precisa do `event.code`:** no macOS Option+K produz `key === '˚'`.
+  Por isso o sinal carrega `key` e `code` e casa `KeyK` em qualquer um dos dois.
+- `Cmd/Ctrl+P` da sidebar continua sendo o filtro rápido da árvore, como o
+  roadmap pediu. São dois campos de busca com propósitos diferentes: o da
+  sidebar filtra títulos da árvore no cliente, a palette busca o conteúdo no
+  servidor. Os rótulos separam ("Buscar documento" x "Buscar em tudo").
+
+### Ação "Importar arquivo"
+
+- Com um editor editável na tela, a ação dispara `leaf:palette-import` e o
+  `BlockNoteEditor` abre o seletor de arquivo do `DocumentImport` (o mesmo do
+  slash menu). Fora de um documento, grava o flag de sessão
+  `leaf:palette-import-pending` e cria um documento novo; o editor consome o
+  flag no mount e abre o seletor. **O caminho do documento novo foi verificado no
+  E2E?** Não: o E2E cobre o caminho do documento aberto (com
+  `page.waitForEvent('filechooser')`). No documento novo o `input.click()`
+  acontece depois da navegação, e navegador que exija ativação transitória do
+  usuário pode engolir o clique. Se isso aparecer, a correção é trocar a abertura
+  automática por um toast com ação.
+- `setImportAvailability` é um store de módulo com `useSyncExternalStore`, mesma
+  família do `comments-bridge.ts` da onda 9.
+
+### Destaque do bloco comentado (bug da onda 9 corrigido aqui)
+
+- **`e2e/comments.spec.ts` já estava vermelho antes desta onda.** Confirmado
+  rodando o teste em `bfc3338` (commit anterior à onda 10): falha igual.
+- Causa raiz medida com sonda no navegador: `target.classList.add(...)` era
+  aplicado num nó **dentro do contenteditable**, e o `DOMObserver` do ProseMirror
+  reverte mudança de atributo em nó que ele gerencia. A classe existia
+  sincronamente durante o evento e sumia antes do próximo macrotask — ou seja, o
+  destaque nunca apareceu para ninguém, nem em teste nem em uso real.
+- Correção: o realce virou uma regra de estilo gerada fora da árvore do editor
+  (`<style>` com `.leaf-editor .bn-block-outer[data-id="..."]`), guardada por
+  `blockIdPattern` para o id nunca virar injeção de CSS. As regras
+  `.leaf-comment-target` saíram do `editor.css`. Perdeu-se a transição de
+  300 ms na saída (regra que aparece e some não transiciona); o realce continua
+  2,2 s com `bg-warn-surface` + anel `warn`.
+- O teste passou a conferir o `box-shadow` computado do bloco ancorado (e a
+  ausência dele no outro bloco), que é a prova de que o destaque está visível,
+  não só de que uma classe existe.
+
+### Verificação
+
+- `pnpm exec tsc --noEmit` limpo, `pnpm exec vitest run` **207 testes verdes**
+  (13 arquivos; 33 novos: 24 em `src/lib/search-index.test.ts` e 9 em
+  `src/components/app/palette-shortcut.test.ts`).
+- `LEAF_DIST_DIR=.next-e2e next build` verde.
+- `pnpm test:e2e` **47 testes verdes** (41 desktop + 6 mobile), com
+  `e2e/search.spec.ts` (6 casos) e um caso novo em `e2e/mobile.spec.ts`.
+
+### Pendências desta onda
+
+- `reconcileSearchIndex` roda a cada busca e faz um LEFT JOIN na tabela inteira
+  de documentos mais um scan do FTS (coluna `UNINDEXED` não tem índice). Para o
+  MVP local, com dezenas ou centenas de documentos, é barato; num banco grande
+  isso vira caso de sincronizar só no save e mover o backfill para um script.
+- O índice guarda o texto plano inteiro do documento, ou seja, duplica o
+  conteúdo no SQLite.
+- A busca não cobre comentários, títulos de versão, nem o nome de quem escreveu.
+  Também não busca documento na lixeira.
+- O item de resultado mostra título e trecho, **não** o caminho dos ancestrais
+  (o filtro da sidebar mostra). Faltou espaço e a consulta pediria CTE recursiva.
+- Sem paginação e sem "ver todos os resultados": o teto é 8 documentos.
+- A palette não tem histórico de buscas recentes nem ações de documento
+  (renomear, mover, compartilhar) — só as três ações do roadmap.
+- `e2e/comments.spec.ts:280` ("bloco apagado ... sem âncora") falhou uma vez
+  numa rodada e passou em `--repeat-each=2` isolado e na rodada completa
+  seguinte: é flake de timing de teclado (`Control+a` + `Backspace`), não
+  regressão. Fica registrado para não assustar quem pegar a próxima onda.
+- Esta onda **não passou pelo design-review**, conforme a decisão registrada no
+  topo do `docs/ROADMAP.md`: o review consolidado roda ao final da onda 12. O
+  que foi medido no navegador, para adiantar caminho: a palette resolve os dois
+  temas (fundo branco / gray-900 no escuro) e o texto do item selecionado dá
+  4,83:1 no claro (gray-700 sobre gray-200) e 7,44:1 no escuro (gray-300 sobre
+  gray-800). O resto da tela não foi auditado.

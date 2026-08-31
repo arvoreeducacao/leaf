@@ -1,6 +1,6 @@
 # Leaf — Roadmap das ondas restantes
 
-Estado: ondas 1-9 entregues (fundação, editor BlockNote, sharing, markdown, QA, import do Notion + hierarquia, polimento + E2E versionado, dark/claro + i18n pt-BR/en-US, organizações + import agnóstico via slash menu, histórico de versões, comentários + papel "Pode comentar"). Detalhes e decisões acumuladas em `INTEGRATION-NOTES.md`.
+Estado: ondas 1-10 entregues (fundação, editor BlockNote, sharing, markdown, QA, import do Notion + hierarquia, polimento + E2E versionado, dark/claro + i18n pt-BR/en-US, organizações + import agnóstico via slash menu, histórico de versões, comentários + papel "Pode comentar", busca full-text + command palette). Detalhes e decisões acumuladas em `INTEGRATION-NOTES.md`.
 
 Regras de toda onda: i18n pt-BR/en-US com paridade de chaves; dark/claro AA; tokens semânticos (nunca classe de paleta literal); ícones de `@/components/icons`; sem comentários no código; build + vitest + `pnpm test:e2e` (cap de 15 min) + commit local por onda; feature só entra íntegra.
 
@@ -16,7 +16,7 @@ DECISÃO DO GUILHERME (2026-08-31): design-review POR ONDA está suspenso a part
 - Papel 'commenter' em document_shares.role e org_access: viewer < commenter < editor; authz + testes; opção nos selects do modal Compartilhar.
 - Painel lateral (Sheet mobile): threads, resolver/reabrir, responder; âncora em bloco a partir da seleção (botão na toolbar), clique rola e destaca; bloco apagado vira "sem âncora". Comentar exige commenter+; editar/excluir só autor; resolver: autor ou editor+.
 
-## Onda 10 — Busca full-text (requisito direto do Guilherme)
+## Onda 10 — Busca full-text (entregue)
 - SQLite FTS5 (title + texto plano do content, sync no save; extração de texto testada).
 - **Atalhos: Cmd/Ctrl+K E Alt/Option+K** abrem a command palette (toggle; Esc fecha). Cmd+P da sidebar continua como filtro rápido.
 - UX de referência (pedido do usuário): a barra de comando estilo Arc/Notion e a busca do backoffice — LER `frontend-arvore-nextjs/src/app/[locale]/(authenticated)/backoffice-v2/_components/command-palette.tsx` como referência de estrutura (overlay centrado no topo, input grande, resultados em seções, itens com ícone + título + trecho/caminho, navegação por setas + Enter, detecção de Mac pra exibir ⌘K vs Ctrl+K, documentos recentes quando a query está vazia). Reimplementar com componente command do DS e tokens semânticos do Leaf — sem copiar lucide/estilos de lá.
