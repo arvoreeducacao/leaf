@@ -52,6 +52,6 @@ next-env.d.ts
 /.e2e/
 /.e2e-realtime/
 /.e2e-restricted/
-/.e2e-google/
+/.e2e-sso/
 /test-results/
 /playwright-report/

@@ -2,6 +2,7 @@ import { betterAuth } from 'better-auth'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
 import { APIError, createAuthMiddleware } from 'better-auth/api'
 import { nextCookies } from 'better-auth/next-js'
+import { genericOAuth } from 'better-auth/plugins'
 import { eq } from 'drizzle-orm'
 import { headers } from 'next/headers'
 
@@ -51,20 +52,25 @@ async function guardUserId(userId: string) {
   guardEmail(owner?.email)
 }
 
-export function googleCredentials() {
-  const clientId = process.env.GOOGLE_CLIENT_ID?.trim()
-  const clientSecret = process.env.GOOGLE_CLIENT_SECRET?.trim()
+export const arvoreSsoProviderId = 'arvore'
 
-  if (!clientId || !clientSecret) {
+const defaultSsoIssuer = 'https://auth.arvore.com.br/api-arvore'
+
+export function arvoreSsoCredentials() {
+  const clientId = process.env.ARVORE_SSO_CLIENT_ID?.trim()
+
+  if (!clientId) {
     return null
   }
 
-  const { domains } = emailDomainPolicy()
+  const clientSecret = process.env.ARVORE_SSO_CLIENT_SECRET?.trim()
+  const issuer = (process.env.ARVORE_SSO_ISSUER?.trim() || defaultSsoIssuer)
+    .replace(/\/+$/, '')
 
   return {
     clientId,
-    clientSecret,
-    ...(domains.length === 1 ? { hd: domains[0] } : {}),
+    clientSecret: clientSecret || undefined,
+    issuer,
   }
 }
 
@@ -73,11 +79,39 @@ export function authAccessConfig() {
 
   return {
     restrictedDomain: active ? primaryDomain : null,
-    googleEnabled: googleCredentials() !== null,
+    ssoEnabled: arvoreSsoCredentials() !== null,
   }
 }
 
-const google = googleCredentials()
+function ssoUserName(profile: { email?: string | null; name?: unknown }) {
+  if (typeof profile.name === 'string' && profile.name.trim()) {
+    return profile.name.trim()
+  }
+
+  return profile.email?.split('@')[0] ?? arvoreSsoProviderId
+}
+
+const sso = arvoreSsoCredentials()
+
+const ssoPlugin = sso
+  ? genericOAuth({
+      config: [
+        {
+          accountIssuer: sso.issuer,
+          authorizationUrl: `${sso.issuer}/oauth2/authorize`,
+          clientId: sso.clientId,
+          clientSecret: sso.clientSecret,
+          mapProfileToUser: (profile) => ({
+            emailVerified: true,
+            name: ssoUserName(profile),
+          }),
+          providerId: arvoreSsoProviderId,
+          scopes: ['openid', 'profile', 'email'],
+          tokenUrl: `${sso.issuer}/oauth2/token`,
+        },
+      ],
+    })
+  : null
 
 export const auth = betterAuth({
   appName: 'Leaf',
@@ -98,10 +132,9 @@ export const auth = betterAuth({
     accountLinking: {
       enabled: true,
       requireLocalEmailVerified: false,
-      trustedProviders: ['google'],
+      trustedProviders: [arvoreSsoProviderId],
     },
   },
-  socialProviders: google ? { google } : {},
   hooks: {
     before: createAuthMiddleware(async (ctx) => {
       if (!guardedPaths.has(ctx.path)) {
@@ -131,7 +164,7 @@ export const auth = betterAuth({
       },
     },
   },
-  plugins: [nextCookies()],
+  plugins: ssoPlugin ? [ssoPlugin, nextCookies()] : [nextCookies()],
 })
 
 export type Session = typeof auth.$Infer.Session

@@ -3,12 +3,12 @@ import { defineConfig, devices } from '@playwright/test'
 const port = Number(process.env.E2E_PORT ?? 3100)
 const realtimePort = Number(process.env.E2E_REALTIME_APP_PORT ?? 3200)
 const restrictedPort = Number(process.env.E2E_RESTRICTED_PORT ?? 3300)
-const googlePort = Number(process.env.E2E_GOOGLE_PORT ?? 3400)
+const ssoPort = Number(process.env.E2E_SSO_PORT ?? 3400)
 
 const baseURL = `http://127.0.0.1:${port}`
 const realtimeBaseURL = `http://127.0.0.1:${realtimePort}`
 const restrictedBaseURL = `http://127.0.0.1:${restrictedPort}`
-const googleBaseURL = `http://127.0.0.1:${googlePort}`
+const ssoBaseURL = `http://127.0.0.1:${ssoPort}`
 
 export default defineConfig({
   testDir: './e2e',
@@ -27,7 +27,7 @@ export default defineConfig({
     {
       name: 'desktop',
       use: { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 900 } },
-      testIgnore: /(mobile|realtime|restricted-auth|google-auth)\.spec\.ts/,
+      testIgnore: /(mobile|realtime|restricted-auth|sso-auth)\.spec\.ts/,
     },
     {
       name: 'mobile',
@@ -53,13 +53,13 @@ export default defineConfig({
       testMatch: /restricted-auth\.spec\.ts/,
     },
     {
-      name: 'google',
+      name: 'sso',
       use: {
         ...devices['Desktop Chrome'],
         viewport: { width: 1280, height: 900 },
-        baseURL: googleBaseURL,
+        baseURL: ssoBaseURL,
       },
-      testMatch: /google-auth\.spec\.ts/,
+      testMatch: /sso-auth\.spec\.ts/,
     },
   ],
   webServer: [
@@ -88,8 +88,8 @@ export default defineConfig({
       stderr: 'pipe',
     },
     {
-      command: 'node scripts/e2e-google-server.mjs',
-      url: googleBaseURL,
+      command: 'node scripts/e2e-sso-server.mjs',
+      url: ssoBaseURL,
       reuseExistingServer: false,
       timeout: 180_000,
       stdout: 'pipe',

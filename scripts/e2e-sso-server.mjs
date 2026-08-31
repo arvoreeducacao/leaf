@@ -6,8 +6,8 @@ import { fileURLToPath } from 'node:url'
 import { loadLocalEnv, sandboxDatabaseUrl } from './e2e-database.mjs'
 
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..')
-const sandbox = join(projectRoot, '.e2e-google')
-const port = Number(process.env.E2E_GOOGLE_PORT ?? 3400)
+const sandbox = join(projectRoot, '.e2e-sso')
+const port = Number(process.env.E2E_SSO_PORT ?? 3400)
 const s3Port = Number(process.env.E2E_S3_PORT ?? 4569)
 const bucket = 'leaf-e2e'
 
@@ -52,8 +52,9 @@ const next = spawn(
       DATABASE_URL: databaseUrl,
       LEAF_DIST_DIR: process.env.LEAF_DIST_DIR ?? '.next-e2e',
       LEAF_ALLOWED_EMAIL_DOMAINS: 'arvore.com.br',
-      GOOGLE_CLIENT_ID: 'leaf-e2e-google-client-id.apps.googleusercontent.com',
-      GOOGLE_CLIENT_SECRET: 'leaf-e2e-google-client-secret',
+      ARVORE_SSO_CLIENT_ID: 'leaf-e2e',
+      ARVORE_SSO_CLIENT_SECRET: 'leaf-e2e-sso-client-secret',
+      ARVORE_SSO_ISSUER: 'https://auth.e2e.invalid/api-arvore',
       BETTER_AUTH_SECRET:
         process.env.E2E_AUTH_SECRET ?? 'leaf-e2e-secret-nao-use-em-producao',
       BETTER_AUTH_URL: `http://127.0.0.1:${port}`,

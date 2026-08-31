@@ -28,24 +28,24 @@ async function endpointContext() {
     body: {},
     redirect: (url: string) => new Response(null, { status: 302 }),
     json: (value: unknown) => value,
-    path: '/callback/google',
+    path: '/callback/arvore',
     method: 'GET',
   }
 }
 
-async function googleSignIn() {
+async function ssoSignIn() {
   const context = await endpointContext()
 
   return handleOAuthUserInfo(context as never, {
     account: {
-      accountId: 'google-account-id',
-      issuer: 'https://accounts.google.com',
-      providerId: 'google',
+      accountId: 'arvore-identity-id',
+      issuer: 'https://auth.arvore.com.br/api-arvore',
+      providerId: 'arvore',
     },
     userInfo: {
       email,
       emailVerified: true,
-      id: 'google-account-id',
+      id: 'arvore-identity-id',
       name: 'Pessoa da Árvore',
     },
   })
@@ -58,7 +58,7 @@ beforeEach(async () => {
   process.env.BETTER_AUTH_URL ??= 'http://localhost:3000'
 })
 
-describe('vínculo da conta Google com a conta de email e senha', () => {
+describe('vínculo da conta do SSO da Árvore com a conta de email e senha', () => {
   it('mantém a mesma pessoa e os documentos dela', async () => {
     const created = await auth.api.signUpEmail({
       body: { email, name: 'Pessoa', password: 'senha-forte-123' },
@@ -70,7 +70,7 @@ describe('vínculo da conta Google com a conta de email e senha', () => {
       title: 'Documento antigo',
     })
 
-    const linked = await googleSignIn()
+    const linked = await ssoSignIn()
 
     expect(linked.error).toBeNull()
     expect(linked.data?.user.id).toBe(created.user.id)
@@ -82,8 +82,8 @@ describe('vínculo da conta Google com a conta de email e senha', () => {
       .where(eq(account.userId, created.user.id))
 
     expect(accounts.map((row) => row.providerId).sort()).toEqual([
+      'arvore',
       'credential',
-      'google',
     ])
 
     const owned = await db
@@ -95,8 +95,8 @@ describe('vínculo da conta Google com a conta de email e senha', () => {
     expect(owned[0]?.title).toBe('Documento antigo')
   })
 
-  it('cria a pessoa no primeiro login pelo Google', async () => {
-    const registered = await googleSignIn()
+  it('cria a pessoa no primeiro login pelo SSO', async () => {
+    const registered = await ssoSignIn()
 
     expect(registered.error).toBeNull()
     expect(registered.isRegister).toBe(true)
