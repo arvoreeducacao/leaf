@@ -29,8 +29,14 @@ export async function searchWorkspace(
   const term = query.trim()
 
   if (term.length === 0) {
-    return { documents: listRecentAccessibleDocuments(viewer), recent: true }
+    return {
+      documents: await listRecentAccessibleDocuments(viewer),
+      recent: true,
+    }
   }
 
-  return { documents: searchAccessibleDocuments(viewer, term), recent: false }
+  return {
+    documents: await searchAccessibleDocuments(viewer, term),
+    recent: false,
+  }
 }

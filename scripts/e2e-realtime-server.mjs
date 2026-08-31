@@ -3,6 +3,12 @@ import { cpSync, mkdirSync, rmSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
+import {
+  loadLocalEnv,
+  resetDatabase,
+  sandboxDatabaseUrl,
+} from './e2e-database.mjs'
+
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const sandbox = join(projectRoot, '.e2e-realtime')
 const port = Number(process.env.E2E_REALTIME_APP_PORT ?? 3200)
@@ -10,6 +16,15 @@ const wsPort = Number(process.env.E2E_REALTIME_WS_PORT ?? 1235)
 const s3Port = Number(process.env.E2E_S3_PORT ?? 4569)
 const secret = 'leaf-e2e-realtime'
 const bucket = 'leaf-e2e'
+
+loadLocalEnv(projectRoot)
+
+const databaseUrl = sandboxDatabaseUrl(
+  'LEAF_E2E_REALTIME_DATABASE_URL',
+  'leaf_e2e_realtime',
+)
+
+await resetDatabase(databaseUrl)
 
 rmSync(sandbox, { force: true, recursive: true })
 mkdirSync(join(sandbox, 'data'), { recursive: true })
@@ -45,6 +60,7 @@ const next = spawn(
     env: {
       ...process.env,
       NODE_ENV: 'production',
+      DATABASE_URL: databaseUrl,
       LEAF_DIST_DIR: process.env.LEAF_DIST_DIR ?? '.next-e2e',
       BETTER_AUTH_SECRET:
         process.env.E2E_AUTH_SECRET ?? 'leaf-e2e-secret-nao-use-em-producao',

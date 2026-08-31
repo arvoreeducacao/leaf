@@ -1,4 +1,4 @@
-import { and, asc, count, eq, isNull } from 'drizzle-orm'
+import { type SQL, and, asc, count, eq, isNull } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
 
 import { db } from '@/db'
@@ -34,6 +34,16 @@ export type CommentRecord = Readonly<{
 
 export function normalizeCommentBody(body: string) {
   return body.trim().slice(0, MAX_COMMENT_LENGTH)
+}
+
+async function commentExists(where: SQL | undefined): Promise<boolean> {
+  const rows = await db
+    .select({ id: comments.id })
+    .from(comments)
+    .where(where)
+    .limit(1)
+
+  return rows.length > 0
 }
 
 export async function getComment(
@@ -200,22 +210,26 @@ export async function updateCommentBody(
     return false
   }
 
-  const updated = await db
+  if (!(await commentExists(eq(comments.id, commentId)))) {
+    return false
+  }
+
+  await db
     .update(comments)
     .set({ body: normalized, updatedAt: now })
     .where(eq(comments.id, commentId))
-    .returning({ id: comments.id })
 
-  return updated.length > 0
+  return true
 }
 
 export async function deleteComment(commentId: string): Promise<boolean> {
-  const deleted = await db
-    .delete(comments)
-    .where(eq(comments.id, commentId))
-    .returning({ id: comments.id })
+  if (!(await commentExists(eq(comments.id, commentId)))) {
+    return false
+  }
 
-  return deleted.length > 0
+  await db.delete(comments).where(eq(comments.id, commentId))
+
+  return true
 }
 
 export async function setCommentResolved(
@@ -223,11 +237,16 @@ export async function setCommentResolved(
   resolved: boolean,
   now: Date = new Date(),
 ): Promise<boolean> {
-  const updated = await db
+  const target = and(eq(comments.id, commentId), isNull(comments.parentId))
+
+  if (!(await commentExists(target))) {
+    return false
+  }
+
+  await db
     .update(comments)
     .set({ resolvedAt: resolved ? now : null })
-    .where(and(eq(comments.id, commentId), isNull(comments.parentId)))
-    .returning({ id: comments.id })
+    .where(target)
 
-  return updated.length > 0
+  return true
 }

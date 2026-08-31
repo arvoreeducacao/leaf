@@ -1,38 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('@/db', async () => {
-  const { readFileSync, readdirSync } = await import('node:fs')
-  const { join } = await import('node:path')
-  const Database = (await import('better-sqlite3')).default
-  const { drizzle } = await import('drizzle-orm/better-sqlite3')
-  const schema = await import('@/db/schema')
+  const { createTestDb } = await import('@/db/testing')
 
-  const sqlite = new Database(':memory:')
-  sqlite.pragma('foreign_keys = ON')
-  const folder = join(process.cwd(), 'drizzle')
-  const files = readdirSync(folder)
-    .filter((name) => name.endsWith('.sql'))
-    .sort()
-
-  for (const file of files) {
-    const contents = readFileSync(join(folder, file), 'utf8')
-
-    for (const statement of contents.split('--> statement-breakpoint')) {
-      const trimmed = statement.trim()
-
-      if (trimmed.length > 0) {
-        sqlite.exec(trimmed)
-      }
-    }
-  }
-
-  return { db: drizzle(sqlite, { schema }), schema }
+  return createTestDb()
 })
 
 import { eq } from 'drizzle-orm'
 
 import { db } from '@/db'
 import { documents, user } from '@/db/schema'
+import { resetDatabase } from '@/db/testing'
 import {
   buildDocumentTree,
   listAncestors,
@@ -51,6 +29,7 @@ const tree = [
 ]
 
 beforeEach(async () => {
+  await resetDatabase()
   await db.delete(documents)
   await db.delete(user)
 
