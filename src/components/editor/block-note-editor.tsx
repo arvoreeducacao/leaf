@@ -9,10 +9,17 @@ import { BlockNoteView } from '@blocknote/shadcn'
 import { useTranslations } from 'next-intl'
 import { useTheme } from 'next-themes'
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
+import { toast } from 'sonner'
 
+import {
+  onCommentedBlockFocus,
+  publishBlockIds,
+  resetBlockIds,
+} from '@/components/comments/comments-bridge'
 import { EyeIcon, WarningIcon } from '@/components/icons'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 
+import { collectBlockIds } from './block-ids'
 import { readDocumentContent } from './content'
 import { DocumentImport } from './document-import'
 import type { DocumentImportHandle } from './document-import'
@@ -27,11 +34,15 @@ import { uploadEditorFile } from './upload-file'
 import { useAutosave } from './use-autosave'
 import { useLeafDictionary } from './use-leaf-dictionary'
 
+const highlightClass = 'leaf-comment-target'
+const highlightDuration = 2_200
+
 type Props = Readonly<{
   documentId: string
   initialContent: string | null
   readOnly: boolean
   isOwner: boolean
+  canComment: boolean
 }>
 
 export default function BlockNoteEditor({
@@ -39,8 +50,10 @@ export default function BlockNoteEditor({
   initialContent,
   readOnly,
   isOwner,
+  canComment,
 }: Props) {
   const t = useTranslations('editor')
+  const tComments = useTranslations('comments')
   const tImport = useTranslations('importFile')
   const { resolvedTheme } = useTheme()
   const { calloutItem, dictionary } = useLeafDictionary(readOnly)
@@ -71,6 +84,7 @@ export default function BlockNoteEditor({
     const blocks = editor.document
 
     setStats(statsFromBlocks(blocks))
+    publishBlockIds(collectBlockIds(blocks))
     schedule(JSON.stringify(blocks))
   }, [editor, schedule])
 
@@ -127,6 +141,59 @@ export default function BlockNoteEditor({
     }
   }, [editor, isEditable])
 
+  useEffect(() => {
+    publishBlockIds(collectBlockIds(editor.document))
+
+    return () => resetBlockIds()
+  }, [editor])
+
+  useEffect(() => {
+    let timeout = 0
+    let highlighted: HTMLElement | null = null
+
+    function clearHighlight() {
+      if (timeout !== 0) {
+        window.clearTimeout(timeout)
+        timeout = 0
+      }
+
+      highlighted?.classList.remove(highlightClass)
+      highlighted = null
+    }
+
+    const stop = onCommentedBlockFocus((blockId) => {
+      const target = containerRef.current?.querySelector<HTMLElement>(
+        `[data-id="${CSS.escape(blockId)}"]`,
+      )
+
+      if (!target) {
+        toast.error(tComments('blockGone'))
+
+        return
+      }
+
+      clearHighlight()
+
+      const reduced = window.matchMedia(
+        '(prefers-reduced-motion: reduce)',
+      ).matches
+
+      target.scrollIntoView({
+        behavior: reduced ? 'auto' : 'smooth',
+        block: 'center',
+      })
+
+      target.classList.add(highlightClass)
+      highlighted = target
+      timeout = window.setTimeout(clearHighlight, highlightDuration)
+    })
+
+    return () => {
+      stop()
+      clearHighlight()
+    }
+  }, [tComments])
+
   useEffect(
     () =>
       onEditorFocusRequest(() => {
@@ -182,7 +249,7 @@ export default function BlockNoteEditor({
         slashMenu={false}
         theme={resolvedTheme === 'dark' ? 'dark' : 'light'}
       >
-        <LeafFormattingToolbarController />
+        <LeafFormattingToolbarController canComment={canComment} />
         <SuggestionMenuController
           getItems={async (query) =>
             filterSuggestionItems(

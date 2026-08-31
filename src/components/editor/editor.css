@@ -127,3 +127,14 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+.leaf-editor .leaf-comment-target {
+  @apply rounded-medium bg-warn-surface;
+  transition: background-color 300ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .leaf-editor .leaf-comment-target {
+    transition: none;
+  }
+}

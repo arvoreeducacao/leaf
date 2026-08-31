@@ -145,7 +145,9 @@ export const documents = sqliteTable(
     orgId: text('org_id').references(() => organizations.id, {
       onDelete: 'set null',
     }),
-    orgAccess: text('org_access', { enum: ['viewer', 'editor'] }),
+    orgAccess: text('org_access', {
+      enum: ['viewer', 'commenter', 'editor'],
+    }),
     title: text('title').notNull().default('Sem título'),
     content: text('content'),
     publicToken: text('public_token').unique(),
@@ -172,7 +174,7 @@ export const documentShares = sqliteTable(
       .notNull()
       .references(() => documents.id, { onDelete: 'cascade' }),
     granteeEmail: text('grantee_email').notNull(),
-    role: text('role', { enum: ['viewer', 'editor'] })
+    role: text('role', { enum: ['viewer', 'commenter', 'editor'] })
       .notNull()
       .default('viewer'),
     createdAt: integer('created_at', { mode: 'timestamp' })
@@ -211,6 +213,36 @@ export const documentVersions = sqliteTable(
   ],
 )
 
+export const comments = sqliteTable(
+  'comments',
+  {
+    id: text('id').primaryKey(),
+    documentId: text('document_id')
+      .notNull()
+      .references(() => documents.id, { onDelete: 'cascade' }),
+    parentId: text('parent_id').references(
+      (): AnySQLiteColumn => comments.id,
+      { onDelete: 'cascade' },
+    ),
+    blockId: text('block_id'),
+    authorId: text('author_id').references(() => user.id, {
+      onDelete: 'set null',
+    }),
+    body: text('body').notNull(),
+    resolvedAt: integer('resolved_at', { mode: 'timestamp_ms' }),
+    createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
+    updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
+  },
+  (table) => [
+    index('comments_document_id_created_at_idx').on(
+      table.documentId,
+      table.createdAt,
+    ),
+    index('comments_parent_id_idx').on(table.parentId),
+    index('comments_author_id_idx').on(table.authorId),
+  ],
+)
+
 export type Document = typeof documents.$inferSelect
 export type DocumentShare = typeof documentShares.$inferSelect
 export type ShareRole = DocumentShare['role']
@@ -221,3 +253,4 @@ export type OrganizationInvite = typeof organizationInvites.$inferSelect
 export type InviteRole = OrganizationInvite['role']
 export type OrgAccess = NonNullable<Document['orgAccess']>
 export type DocumentVersion = typeof documentVersions.$inferSelect
+export type Comment = typeof comments.$inferSelect

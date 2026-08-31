@@ -6,7 +6,8 @@ import { DocumentBreadcrumb } from '@/components/app/document-breadcrumb'
 import { DocumentHeader } from '@/components/app/document-header'
 import { DocumentEditor } from '@/components/editor/document-editor'
 import { getSession } from '@/lib/auth'
-import { canEdit, getDocumentAccess } from '@/lib/authz'
+import { canComment, canEdit, getDocumentAccess } from '@/lib/authz'
+import { countOpenComments } from '@/lib/comments'
 import { getDocument, listAncestors } from '@/lib/documents'
 
 type Props = Readonly<{ params: Promise<{ id: string }> }>
@@ -42,6 +43,7 @@ export default async function DocumentPage({ params }: Props) {
   }
 
   const crumbs = await listAncestors(document.id)
+  const openComments = await countOpenComments(document.id)
 
   return (
     <article className="mx-auto flex w-full max-w-content flex-col gap-6 px-4 py-8 tablet:px-8 tablet:py-10">
@@ -50,11 +52,13 @@ export default async function DocumentPage({ params }: Props) {
         canEdit={canEdit(access)}
         documentId={document.id}
         isOwner={access === 'owner'}
+        openComments={openComments}
         sharedWithOrganization={document.orgAccess !== null}
         title={document.title}
       />
       <div className="mx-auto w-full max-w-prose-leaf">
         <DocumentEditor
+          canComment={canComment(access)}
           documentId={document.id}
           initialContent={document.content}
           isOwner={access === 'owner'}

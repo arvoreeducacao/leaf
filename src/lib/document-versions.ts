@@ -3,6 +3,7 @@ import { nanoid } from 'nanoid'
 
 import { db } from '@/db'
 import { documentVersions, documents, user } from '@/db/schema'
+import { authorNameOf } from '@/lib/author-name'
 import {
   MAX_VERSIONS_PER_DOCUMENT,
   VERSION_THROTTLE_MS,
@@ -132,16 +133,6 @@ export async function recordDocumentVersion(
   await pruneDocumentVersions(documentId)
 
   return true
-}
-
-function authorNameOf(name: string | null, email: string | null) {
-  const trimmed = name?.trim() ?? ''
-
-  if (trimmed.length > 0) {
-    return trimmed
-  }
-
-  return email && email.length > 0 ? email : null
 }
 
 export async function listDocumentVersions(
