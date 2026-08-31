@@ -40,7 +40,9 @@
     "signOutFailed": "Não foi possível sair da conta",
     "domainHint": "Use seu email @{domain}",
     "domainRestricted": "Use seu email @{domain} para entrar no Leaf.",
-    "orSeparator": "ou",
+    "googleOnlyTitle": "Bem-vindo ao Leaf",
+    "googleOnlySubtitle": "Entre com sua conta Google para escrever e compartilhar documentos.",
+    "googleDomainHint": "Use sua conta @{domain}",
     "googleSubmit": "Entrar com Google",
     "googleFailed": "Não foi possível entrar com o Google. Tente de novo."
   },

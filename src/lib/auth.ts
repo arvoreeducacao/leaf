@@ -94,6 +94,13 @@ export const auth = betterAuth({
     enabled: true,
     minPasswordLength: 8,
   },
+  account: {
+    accountLinking: {
+      enabled: true,
+      requireLocalEmailVerified: false,
+      trustedProviders: ['google'],
+    },
+  },
   socialProviders: google ? { google } : {},
   hooks: {
     before: createAuthMiddleware(async (ctx) => {

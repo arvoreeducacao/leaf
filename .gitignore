@@ -48,8 +48,10 @@ next-env.d.ts
 /tsconfig.tsbuildinfo
 /.next-e2e/
 /.next-build/
+/.next-check/
 /.e2e/
 /.e2e-realtime/
 /.e2e-restricted/
+/.e2e-google/
 /test-results/
 /playwright-report/
