@@ -15,6 +15,7 @@ import {
   useComponentsContext,
 } from '@blocknote/react'
 import { useTranslations } from 'next-intl'
+import { useMemo } from 'react'
 
 import { requestCommentOnBlock } from '@/components/comments/comments-bridge'
 import { ChatIcon } from '@/components/icons'
@@ -74,9 +75,13 @@ function LeafFormattingToolbar({ canComment }: Readonly<{ canComment: boolean }>
 export function LeafFormattingToolbarController({
   canComment,
 }: Readonly<{ canComment: boolean }>) {
-  return (
-    <FormattingToolbarController
-      formattingToolbar={() => <LeafFormattingToolbar canComment={canComment} />}
-    />
+  const toolbar = useMemo(
+    () =>
+      function BoundFormattingToolbar() {
+        return <LeafFormattingToolbar canComment={canComment} />
+      },
+    [canComment],
   )
+
+  return <FormattingToolbarController formattingToolbar={toolbar} />
 }
