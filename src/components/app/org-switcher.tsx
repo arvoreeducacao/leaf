@@ -130,11 +130,11 @@ export function OrgSwitcher({
             {t('create')}
           </Link>
         </DropdownMenuItem>
-
-        <span aria-live="polite" className="sr-only" role="status">
-          {pending ? t('switching') : ''}
-        </span>
       </DropdownMenuContent>
+
+      <span aria-live="polite" className="sr-only" role="status">
+        {pending ? t('switching') : ''}
+      </span>
     </DropdownMenu>
   )
 }

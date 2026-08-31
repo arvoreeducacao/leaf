@@ -53,6 +53,7 @@ export function TeamspaceManager({ teamspaces, orgPeople }: Props) {
   const [creating, setCreating] = useState(false)
   const [editing, setEditing] = useState<TeamspaceCard | null>(null)
   const [confirmingDelete, setConfirmingDelete] = useState<string | null>(null)
+  const [memberSelectReset, setMemberSelectReset] = useState(0)
 
   async function run(
     action: () => Promise<TeamspaceActionResult>,
@@ -178,13 +179,15 @@ export function TeamspaceManager({ teamspaces, orgPeople }: Props) {
                 <div className="flex flex-col gap-2 tablet:flex-row tablet:items-center">
                   <Select
                     disabled={pending}
-                    key={teamspace.people.length}
-                    onValueChange={(value) =>
+                    key={`${teamspace.id}-${teamspace.people.length}-${memberSelectReset}`}
+                    onValueChange={(value) => {
                       void run(
                         () => addTeamspaceMember(teamspace.id, value),
                         t('memberAdded'),
+                      ).finally(() =>
+                        setMemberSelectReset((current) => current + 1),
                       )
-                    }
+                    }}
                   >
                     <SelectTrigger
                       aria-label={t('addMemberLabel', {

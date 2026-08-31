@@ -3,6 +3,7 @@
 import { useTranslations } from 'next-intl'
 
 import { SyncIcon, UsersIcon } from '@/components/icons'
+import { cn } from '@/shared/utils'
 
 type Props = Readonly<{ connected: boolean }>
 
@@ -17,7 +18,10 @@ export function RealtimeIndicator({ connected }: Props) {
       </span>
       <p
         aria-hidden="true"
-        className="flex items-center gap-2 text-body-small text-content"
+        className={cn(
+          'flex items-center gap-2 text-body-small',
+          connected ? 'text-content' : 'text-warn',
+        )}
       >
         {connected ? (
           <UsersIcon aria-hidden="true" className="size-4" />

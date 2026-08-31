@@ -76,11 +76,13 @@ export function TeamspaceSections({ teamspaces, canCreate, onNavigate }: Props) 
               <PadlockIcon
                 aria-label={t('accessClosed')}
                 className="size-4 shrink-0 text-content"
+                role="img"
               />
             ) : (
               <UsersIcon
                 aria-label={t('accessOpen')}
                 className="size-4 shrink-0 text-content"
+                role="img"
               />
             )}
             <h3 className="min-w-0 flex-1 truncate font-bold text-body-small text-content-strong">
@@ -88,6 +90,7 @@ export function TeamspaceSections({ teamspaces, canCreate, onNavigate }: Props) 
             </h3>
             {teamspace.role === null ? (
               <Button
+                className="min-h-11"
                 disabled={pending}
                 onClick={() => handleJoin(teamspace.id)}
                 size="sm"

@@ -484,7 +484,7 @@
   },
   "realtime": {
     "connected": "Real-time collaboration",
-    "reconnecting": "Reconnecting",
+    "reconnecting": "No connection. Your changes are not saved yet",
     "someone": "Someone",
     "you": "{name} (you)",
     "peopleHere": "{count, plural, one {# person in this document} other {# people in this document}}"

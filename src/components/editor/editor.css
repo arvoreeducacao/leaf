@@ -94,7 +94,7 @@
 .leaf-editor .ProseMirror-selectednode > .bn-block-content > *::after,
 .leaf-editor .bn-block-content .ProseMirror-selectednode::after,
 .leaf-editor .bn-inline-content .ProseMirror-selectednode::after {
-  @apply bg-primary-500/10 inset-ring-2 inset-ring-primary-500;
+  @apply bg-brand/10 inset-ring-2 inset-ring-brand-strong;
 }
 
 .bn-container .bg-neutral-400 {
@@ -115,7 +115,7 @@
 }
 
 .dark .leaf-editor [data-background-color]:not([data-background-color="default"]) {
-  @apply text-gray-900;
+  @apply text-content-on-highlight;
 }
 
 @media (prefers-reduced-motion: reduce) {

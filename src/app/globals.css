@@ -217,6 +217,7 @@
 
   --color-code-surface: var(--code-surface);
   --color-code-content: var(--code-content);
+  --color-content-on-highlight: var(--content-on-highlight);
 
   --color-tooltip: var(--tooltip);
   --color-tooltip-foreground: var(--tooltip-foreground);
@@ -324,6 +325,7 @@
 
   --code-surface: var(--color-gray-900);
   --code-content: var(--color-gray-50);
+  --content-on-highlight: var(--color-gray-900);
 
   --tooltip: var(--color-gray-900);
   --tooltip-foreground: var(--color-white);

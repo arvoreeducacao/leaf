@@ -71,11 +71,12 @@ export function PresenceIndicator() {
           {overflow > 0 ? (
             <span
               aria-hidden="true"
-              className="-ml-2 flex size-7 items-center justify-center rounded-full border-2 border-surface-app bg-surface-sunken font-bold text-body-small text-content"
+              className="-ml-2 flex size-7 items-center justify-center rounded-full border-2 border-surface-app bg-surface-subtle font-bold text-body-small text-content"
             >
               {`+${overflow}`}
             </span>
           ) : null}
+          <span className="sr-only">{names}</span>
         </div>
       </TooltipTrigger>
       <TooltipContent>{names}</TooltipContent>

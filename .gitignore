@@ -47,6 +47,8 @@ next-env.d.ts
 !.env.example
 /tsconfig.tsbuildinfo
 /.next-e2e/
+/.next-build/
 /.e2e/
+/.e2e-realtime/
 /test-results/
 /playwright-report/
