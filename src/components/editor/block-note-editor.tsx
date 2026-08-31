@@ -12,12 +12,18 @@ import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { toast } from 'sonner'
 
 import {
+  onDocumentImportRequest,
+  pendingImportFlag,
+  setImportAvailability,
+} from '@/components/app/palette-bridge'
+import {
   onCommentedBlockFocus,
   publishBlockIds,
   resetBlockIds,
 } from '@/components/comments/comments-bridge'
 import { EyeIcon, WarningIcon } from '@/components/icons'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { takeSessionFlag } from '@/shared/storage'
 
 import { collectBlockIds } from './block-ids'
 import { readDocumentContent } from './content'
@@ -146,6 +152,27 @@ export default function BlockNoteEditor({
 
     return () => resetBlockIds()
   }, [editor])
+
+  useEffect(() => {
+    if (!isEditable) {
+      return
+    }
+
+    setImportAvailability(true)
+
+    const stop = onDocumentImportRequest(() =>
+      importRef.current?.pickMarkdown(),
+    )
+
+    if (takeSessionFlag(pendingImportFlag) !== null) {
+      importRef.current?.pickMarkdown()
+    }
+
+    return () => {
+      setImportAvailability(false)
+      stop()
+    }
+  }, [isEditable])
 
   const blockGoneRef = useRef(tComments('blockGone'))
 

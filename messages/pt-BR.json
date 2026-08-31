@@ -78,6 +78,24 @@
     "emptyPrivate": "Nenhum documento privado ainda",
     "organizationLink": "Organização"
   },
+  "palette": {
+    "title": "Busca e comandos",
+    "trigger": "Buscar em tudo",
+    "placeholder": "Buscar documentos ou executar uma ação",
+    "resultsLabel": "Resultados",
+    "sectionRecent": "Recentes",
+    "sectionDocuments": "Documentos",
+    "sectionActions": "Ações rápidas",
+    "actionNewDocument": "Novo documento",
+    "actionOrganization": "Ir para Organização",
+    "actionImport": "Importar arquivo",
+    "empty": "Nenhum resultado",
+    "loading": "Buscando",
+    "resultCount": "{count, plural, =0 {# resultados} one {# resultado} other {# resultados}}",
+    "hintNavigate": "navegar",
+    "hintOpen": "abrir",
+    "hintToggle": "abrir ou fechar"
+  },
   "home": {
     "title": "Crie seu primeiro documento",
     "subtitle": "Escreva, formate e organize suas ideias em um só lugar"

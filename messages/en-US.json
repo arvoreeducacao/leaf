@@ -78,6 +78,24 @@
     "emptyPrivate": "No private documents yet",
     "organizationLink": "Organization"
   },
+  "palette": {
+    "title": "Search and commands",
+    "trigger": "Search everything",
+    "placeholder": "Search documents or run an action",
+    "resultsLabel": "Results",
+    "sectionRecent": "Recent",
+    "sectionDocuments": "Documents",
+    "sectionActions": "Quick actions",
+    "actionNewDocument": "New document",
+    "actionOrganization": "Go to Organization",
+    "actionImport": "Import file",
+    "empty": "No results",
+    "loading": "Searching",
+    "resultCount": "{count, plural, =0 {# results} one {# result} other {# results}}",
+    "hintNavigate": "navigate",
+    "hintOpen": "open",
+    "hintToggle": "open or close"
+  },
   "home": {
     "title": "Create your first document",
     "subtitle": "Write, format, and organize your ideas in one place"
