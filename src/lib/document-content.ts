@@ -28,7 +28,7 @@ export async function persistDocumentContent(
     .where(eq(documents.id, id))
 
   await recordDocumentVersion(id, authorId)
-  indexDocument(id)
+  await indexDocument(id)
 
   return true
 }

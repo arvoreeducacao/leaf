@@ -1,102 +1,111 @@
 import { sql } from 'drizzle-orm'
 import {
-  type AnySQLiteColumn,
+  type AnyMySqlColumn,
+  boolean,
+  datetime,
   index,
-  integer,
-  sqliteTable,
+  longtext,
+  mysqlEnum,
+  mysqlTable,
   text,
   uniqueIndex,
-} from 'drizzle-orm/sqlite-core'
+  varchar,
+} from 'drizzle-orm/mysql-core'
 
-export const user = sqliteTable('user', {
-  id: text('id').primaryKey(),
-  name: text('name').notNull(),
-  email: text('email').notNull().unique(),
-  emailVerified: integer('email_verified', { mode: 'boolean' })
+const AUTH_ID = 36
+const APP_ID = 21
+
+export const user = mysqlTable('user', {
+  id: varchar('id', { length: AUTH_ID }).primaryKey(),
+  name: varchar('name', { length: 255 }).notNull(),
+  email: varchar('email', { length: 255 }).notNull().unique(),
+  emailVerified: boolean('email_verified')
     .$defaultFn(() => false)
     .notNull(),
   image: text('image'),
-  createdAt: integer('created_at', { mode: 'timestamp' })
+  createdAt: datetime('created_at', { mode: 'date', fsp: 3 })
     .$defaultFn(() => new Date())
     .notNull(),
-  updatedAt: integer('updated_at', { mode: 'timestamp' })
+  updatedAt: datetime('updated_at', { mode: 'date', fsp: 3 })
     .$defaultFn(() => new Date())
     .notNull(),
 })
 
-export const session = sqliteTable('session', {
-  id: text('id').primaryKey(),
-  expiresAt: integer('expires_at', { mode: 'timestamp' }).notNull(),
-  token: text('token').notNull().unique(),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
-  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
-  ipAddress: text('ip_address'),
-  userAgent: text('user_agent'),
-  userId: text('user_id')
+export const session = mysqlTable('session', {
+  id: varchar('id', { length: AUTH_ID }).primaryKey(),
+  expiresAt: datetime('expires_at', { mode: 'date', fsp: 3 }).notNull(),
+  token: varchar('token', { length: 255 }).notNull().unique(),
+  createdAt: datetime('created_at', { mode: 'date', fsp: 3 }).notNull(),
+  updatedAt: datetime('updated_at', { mode: 'date', fsp: 3 }).notNull(),
+  ipAddress: varchar('ip_address', { length: 64 }),
+  userAgent: varchar('user_agent', { length: 512 }),
+  userId: varchar('user_id', { length: AUTH_ID })
     .notNull()
     .references(() => user.id, { onDelete: 'cascade' }),
 })
 
-export const account = sqliteTable('account', {
-  id: text('id').primaryKey(),
-  issuer: text('issuer').notNull(),
-  accountId: text('account_id').notNull(),
-  providerId: text('provider_id').notNull(),
-  userId: text('user_id')
+export const account = mysqlTable('account', {
+  id: varchar('id', { length: AUTH_ID }).primaryKey(),
+  issuer: varchar('issuer', { length: 255 }).notNull(),
+  accountId: varchar('account_id', { length: 255 }).notNull(),
+  providerId: varchar('provider_id', { length: 255 }).notNull(),
+  userId: varchar('user_id', { length: AUTH_ID })
     .notNull()
     .references(() => user.id, { onDelete: 'cascade' }),
   accessToken: text('access_token'),
   refreshToken: text('refresh_token'),
   idToken: text('id_token'),
-  accessTokenExpiresAt: integer('access_token_expires_at', {
-    mode: 'timestamp',
+  accessTokenExpiresAt: datetime('access_token_expires_at', {
+    mode: 'date',
+    fsp: 3,
   }),
-  refreshTokenExpiresAt: integer('refresh_token_expires_at', {
-    mode: 'timestamp',
+  refreshTokenExpiresAt: datetime('refresh_token_expires_at', {
+    mode: 'date',
+    fsp: 3,
   }),
-  scope: text('scope'),
-  password: text('password'),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
-  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+  scope: varchar('scope', { length: 512 }),
+  password: varchar('password', { length: 512 }),
+  createdAt: datetime('created_at', { mode: 'date', fsp: 3 }).notNull(),
+  updatedAt: datetime('updated_at', { mode: 'date', fsp: 3 }).notNull(),
 })
 
-export const verification = sqliteTable('verification', {
-  id: text('id').primaryKey(),
-  identifier: text('identifier').notNull(),
-  value: text('value').notNull(),
-  expiresAt: integer('expires_at', { mode: 'timestamp' }).notNull(),
-  createdAt: integer('created_at', { mode: 'timestamp' })
+export const verification = mysqlTable('verification', {
+  id: varchar('id', { length: AUTH_ID }).primaryKey(),
+  identifier: varchar('identifier', { length: 255 }).notNull(),
+  value: varchar('value', { length: 2048 }).notNull(),
+  expiresAt: datetime('expires_at', { mode: 'date', fsp: 3 }).notNull(),
+  createdAt: datetime('created_at', { mode: 'date', fsp: 3 })
     .$defaultFn(() => new Date())
     .notNull(),
-  updatedAt: integer('updated_at', { mode: 'timestamp' })
+  updatedAt: datetime('updated_at', { mode: 'date', fsp: 3 })
     .$defaultFn(() => new Date())
     .notNull(),
 })
 
-export const organizations = sqliteTable('organizations', {
-  id: text('id').primaryKey(),
-  name: text('name').notNull(),
-  createdAt: integer('created_at', { mode: 'timestamp' })
+export const organizations = mysqlTable('organizations', {
+  id: varchar('id', { length: APP_ID }).primaryKey(),
+  name: varchar('name', { length: 255 }).notNull(),
+  createdAt: datetime('created_at', { mode: 'date', fsp: 3 })
     .notNull()
-    .default(sql`(unixepoch())`),
+    .default(sql`CURRENT_TIMESTAMP(3)`),
 })
 
-export const organizationMembers = sqliteTable(
+export const organizationMembers = mysqlTable(
   'organization_members',
   {
-    id: text('id').primaryKey(),
-    orgId: text('org_id')
+    id: varchar('id', { length: APP_ID }).primaryKey(),
+    orgId: varchar('org_id', { length: APP_ID })
       .notNull()
       .references(() => organizations.id, { onDelete: 'cascade' }),
-    userId: text('user_id')
+    userId: varchar('user_id', { length: AUTH_ID })
       .notNull()
       .references(() => user.id, { onDelete: 'cascade' }),
-    role: text('role', { enum: ['owner', 'admin', 'member'] })
+    role: mysqlEnum('role', ['owner', 'admin', 'member'])
       .notNull()
       .default('member'),
-    createdAt: integer('created_at', { mode: 'timestamp' })
+    createdAt: datetime('created_at', { mode: 'date', fsp: 3 })
       .notNull()
-      .default(sql`(unixepoch())`),
+      .default(sql`CURRENT_TIMESTAMP(3)`),
   },
   (table) => [
     uniqueIndex('organization_members_org_user_unq').on(
@@ -107,20 +116,18 @@ export const organizationMembers = sqliteTable(
   ],
 )
 
-export const organizationInvites = sqliteTable(
+export const organizationInvites = mysqlTable(
   'organization_invites',
   {
-    id: text('id').primaryKey(),
-    orgId: text('org_id')
+    id: varchar('id', { length: APP_ID }).primaryKey(),
+    orgId: varchar('org_id', { length: APP_ID })
       .notNull()
       .references(() => organizations.id, { onDelete: 'cascade' }),
-    email: text('email').notNull(),
-    role: text('role', { enum: ['admin', 'member'] })
+    email: varchar('email', { length: 255 }).notNull(),
+    role: mysqlEnum('role', ['admin', 'member']).notNull().default('member'),
+    createdAt: datetime('created_at', { mode: 'date', fsp: 3 })
       .notNull()
-      .default('member'),
-    createdAt: integer('created_at', { mode: 'timestamp' })
-      .notNull()
-      .default(sql`(unixepoch())`),
+      .default(sql`CURRENT_TIMESTAMP(3)`),
   },
   (table) => [
     uniqueIndex('organization_invites_org_email_unq').on(
@@ -131,40 +138,36 @@ export const organizationInvites = sqliteTable(
   ],
 )
 
-export const teamspaces = sqliteTable(
+export const teamspaces = mysqlTable(
   'teamspaces',
   {
-    id: text('id').primaryKey(),
-    orgId: text('org_id')
+    id: varchar('id', { length: APP_ID }).primaryKey(),
+    orgId: varchar('org_id', { length: APP_ID })
       .notNull()
       .references(() => organizations.id, { onDelete: 'cascade' }),
-    name: text('name').notNull(),
-    access: text('access', { enum: ['open', 'closed'] })
+    name: varchar('name', { length: 255 }).notNull(),
+    access: mysqlEnum('access', ['open', 'closed']).notNull().default('open'),
+    createdAt: datetime('created_at', { mode: 'date', fsp: 3 })
       .notNull()
-      .default('open'),
-    createdAt: integer('created_at', { mode: 'timestamp' })
-      .notNull()
-      .default(sql`(unixepoch())`),
+      .default(sql`CURRENT_TIMESTAMP(3)`),
   },
   (table) => [index('teamspaces_org_id_idx').on(table.orgId)],
 )
 
-export const teamspaceMembers = sqliteTable(
+export const teamspaceMembers = mysqlTable(
   'teamspace_members',
   {
-    id: text('id').primaryKey(),
-    teamspaceId: text('teamspace_id')
+    id: varchar('id', { length: APP_ID }).primaryKey(),
+    teamspaceId: varchar('teamspace_id', { length: APP_ID })
       .notNull()
       .references(() => teamspaces.id, { onDelete: 'cascade' }),
-    userId: text('user_id')
+    userId: varchar('user_id', { length: AUTH_ID })
       .notNull()
       .references(() => user.id, { onDelete: 'cascade' }),
-    role: text('role', { enum: ['owner', 'member'] })
+    role: mysqlEnum('role', ['owner', 'member']).notNull().default('member'),
+    createdAt: datetime('created_at', { mode: 'date', fsp: 3 })
       .notNull()
-      .default('member'),
-    createdAt: integer('created_at', { mode: 'timestamp' })
-      .notNull()
-      .default(sql`(unixepoch())`),
+      .default(sql`CURRENT_TIMESTAMP(3)`),
   },
   (table) => [
     uniqueIndex('teamspace_members_teamspace_user_unq').on(
@@ -175,36 +178,36 @@ export const teamspaceMembers = sqliteTable(
   ],
 )
 
-export const documents = sqliteTable(
+export const documents = mysqlTable(
   'documents',
   {
-    id: text('id').primaryKey(),
-    ownerId: text('owner_id')
+    id: varchar('id', { length: APP_ID }).primaryKey(),
+    ownerId: varchar('owner_id', { length: AUTH_ID })
       .notNull()
       .references(() => user.id, { onDelete: 'cascade' }),
-    parentId: text('parent_id').references(
-      (): AnySQLiteColumn => documents.id,
+    parentId: varchar('parent_id', { length: APP_ID }).references(
+      (): AnyMySqlColumn => documents.id,
       { onDelete: 'set null' },
     ),
-    orgId: text('org_id').references(() => organizations.id, {
-      onDelete: 'set null',
-    }),
-    teamspaceId: text('teamspace_id').references(() => teamspaces.id, {
-      onDelete: 'set null',
-    }),
-    orgAccess: text('org_access', {
-      enum: ['viewer', 'commenter', 'editor'],
-    }),
-    title: text('title').notNull().default('Sem título'),
-    content: text('content'),
-    publicToken: text('public_token').unique(),
-    createdAt: integer('created_at', { mode: 'timestamp' })
+    orgId: varchar('org_id', { length: APP_ID }).references(
+      () => organizations.id,
+      { onDelete: 'set null' },
+    ),
+    teamspaceId: varchar('teamspace_id', { length: APP_ID }).references(
+      () => teamspaces.id,
+      { onDelete: 'set null' },
+    ),
+    orgAccess: mysqlEnum('org_access', ['viewer', 'commenter', 'editor']),
+    title: varchar('title', { length: 500 }).notNull().default('Sem título'),
+    content: longtext('content'),
+    publicToken: varchar('public_token', { length: 64 }).unique(),
+    createdAt: datetime('created_at', { mode: 'date', fsp: 3 })
       .notNull()
-      .default(sql`(unixepoch())`),
-    updatedAt: integer('updated_at', { mode: 'timestamp' })
+      .default(sql`CURRENT_TIMESTAMP(3)`),
+    updatedAt: datetime('updated_at', { mode: 'date', fsp: 3 })
       .notNull()
-      .default(sql`(unixepoch())`),
-    deletedAt: integer('deleted_at', { mode: 'timestamp' }),
+      .default(sql`CURRENT_TIMESTAMP(3)`),
+    deletedAt: datetime('deleted_at', { mode: 'date', fsp: 3 }),
   },
   (table) => [
     index('documents_owner_id_idx').on(table.ownerId),
@@ -214,20 +217,20 @@ export const documents = sqliteTable(
   ],
 )
 
-export const documentShares = sqliteTable(
+export const documentShares = mysqlTable(
   'document_shares',
   {
-    id: text('id').primaryKey(),
-    documentId: text('document_id')
+    id: varchar('id', { length: APP_ID }).primaryKey(),
+    documentId: varchar('document_id', { length: APP_ID })
       .notNull()
       .references(() => documents.id, { onDelete: 'cascade' }),
-    granteeEmail: text('grantee_email').notNull(),
-    role: text('role', { enum: ['viewer', 'commenter', 'editor'] })
+    granteeEmail: varchar('grantee_email', { length: 255 }).notNull(),
+    role: mysqlEnum('role', ['viewer', 'commenter', 'editor'])
       .notNull()
       .default('viewer'),
-    createdAt: integer('created_at', { mode: 'timestamp' })
+    createdAt: datetime('created_at', { mode: 'date', fsp: 3 })
       .notNull()
-      .default(sql`(unixepoch())`),
+      .default(sql`CURRENT_TIMESTAMP(3)`),
   },
   (table) => [
     uniqueIndex('document_shares_doc_email_unq').on(
@@ -238,19 +241,20 @@ export const documentShares = sqliteTable(
   ],
 )
 
-export const documentVersions = sqliteTable(
+export const documentVersions = mysqlTable(
   'document_versions',
   {
-    id: text('id').primaryKey(),
-    documentId: text('document_id')
+    id: varchar('id', { length: APP_ID }).primaryKey(),
+    documentId: varchar('document_id', { length: APP_ID })
       .notNull()
       .references(() => documents.id, { onDelete: 'cascade' }),
-    title: text('title').notNull(),
-    content: text('content'),
-    authorId: text('author_id').references(() => user.id, {
-      onDelete: 'set null',
-    }),
-    createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
+    title: varchar('title', { length: 500 }).notNull(),
+    content: longtext('content'),
+    authorId: varchar('author_id', { length: AUTH_ID }).references(
+      () => user.id,
+      { onDelete: 'set null' },
+    ),
+    createdAt: datetime('created_at', { mode: 'date', fsp: 3 }).notNull(),
   },
   (table) => [
     index('document_versions_document_id_created_at_idx').on(
@@ -261,25 +265,26 @@ export const documentVersions = sqliteTable(
   ],
 )
 
-export const comments = sqliteTable(
+export const comments = mysqlTable(
   'comments',
   {
-    id: text('id').primaryKey(),
-    documentId: text('document_id')
+    id: varchar('id', { length: APP_ID }).primaryKey(),
+    documentId: varchar('document_id', { length: APP_ID })
       .notNull()
       .references(() => documents.id, { onDelete: 'cascade' }),
-    parentId: text('parent_id').references(
-      (): AnySQLiteColumn => comments.id,
+    parentId: varchar('parent_id', { length: APP_ID }).references(
+      (): AnyMySqlColumn => comments.id,
       { onDelete: 'cascade' },
     ),
-    blockId: text('block_id'),
-    authorId: text('author_id').references(() => user.id, {
-      onDelete: 'set null',
-    }),
-    body: text('body').notNull(),
-    resolvedAt: integer('resolved_at', { mode: 'timestamp_ms' }),
-    createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
-    updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
+    blockId: varchar('block_id', { length: 64 }),
+    authorId: varchar('author_id', { length: AUTH_ID }).references(
+      () => user.id,
+      { onDelete: 'set null' },
+    ),
+    body: varchar('body', { length: 2000 }).notNull(),
+    resolvedAt: datetime('resolved_at', { mode: 'date', fsp: 3 }),
+    createdAt: datetime('created_at', { mode: 'date', fsp: 3 }).notNull(),
+    updatedAt: datetime('updated_at', { mode: 'date', fsp: 3 }).notNull(),
   },
   (table) => [
     index('comments_document_id_created_at_idx').on(

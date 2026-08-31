@@ -2,31 +2,9 @@ import { sql } from 'drizzle-orm'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('@/db', async () => {
-  const { readFileSync, readdirSync } = await import('node:fs')
-  const { join } = await import('node:path')
-  const Database = (await import('better-sqlite3')).default
-  const { drizzle } = await import('drizzle-orm/better-sqlite3')
-  const schema = await import('@/db/schema')
+  const { createTestDb } = await import('@/db/testing')
 
-  const sqlite = new Database(':memory:')
-  const folder = join(process.cwd(), 'drizzle')
-  const files = readdirSync(folder)
-    .filter((name) => name.endsWith('.sql'))
-    .sort()
-
-  for (const file of files) {
-    const contents = readFileSync(join(folder, file), 'utf8')
-
-    for (const statement of contents.split('--> statement-breakpoint')) {
-      const trimmed = statement.trim()
-
-      if (trimmed.length > 0) {
-        sqlite.exec(trimmed)
-      }
-    }
-  }
-
-  return { db: drizzle(sqlite, { schema }), schema }
+  return createTestDb()
 })
 
 import { db } from '@/db'
@@ -37,10 +15,12 @@ import {
   organizations,
   user,
 } from '@/db/schema'
+import { resetDatabase } from '@/db/testing'
 import {
   HIGHLIGHT_END,
   HIGHLIGHT_START,
   buildMatchExpression,
+  buildSnippet,
   documentBodyText,
   indexDocument,
   listRecentAccessibleDocuments,
@@ -67,13 +47,6 @@ function paragraph(text: string) {
 }
 
 async function seed() {
-  await db.run(sql`delete from documents_fts`)
-  await db.delete(documentShares)
-  await db.delete(documents)
-  await db.delete(organizationMembers)
-  await db.delete(organizations)
-  await db.delete(user)
-
   const now = new Date()
 
   await db.insert(user).values(
@@ -154,17 +127,18 @@ async function seed() {
 }
 
 beforeEach(async () => {
+  await resetDatabase()
   await seed()
 })
 
 describe('buildMatchExpression', () => {
-  it('turns each word into a prefix term', () => {
-    expect(buildMatchExpression('plano leitura')).toBe('"plano"* "leitura"*')
+  it('turns each word into a required prefix term', () => {
+    expect(buildMatchExpression('plano leitura')).toBe('+plano* +leitura*')
   })
 
-  it('drops punctuation and fts operators', () => {
+  it('drops punctuation and boolean operators', () => {
     expect(buildMatchExpression('  NEAR("a" OR b) -c  ')).toBe(
-      '"NEAR"* "a"* "OR"* "b"* "c"*',
+      '+NEAR* +a* +OR* +b* +c*',
     )
   })
 
@@ -203,21 +177,46 @@ describe('documentBodyText', () => {
   })
 })
 
+describe('buildSnippet', () => {
+  it('highlights the whole matched word ignoring accents', () => {
+    const snippet = buildSnippet('trata de avaliação e de leitura', ['avali'])
+
+    expect(parseSnippet(snippet)).toEqual([
+      { text: 'trata de ', highlight: false },
+      { text: 'avaliação', highlight: true },
+      { text: ' e de leitura', highlight: false },
+    ])
+  })
+
+  it('trims long bodies around the match', () => {
+    const body = `${'palavra '.repeat(20)}alvo ${'depois '.repeat(20)}`.trim()
+    const snippet = buildSnippet(body, ['alvo'])
+
+    expect(snippet.startsWith('…')).toBe(true)
+    expect(snippet.endsWith('…')).toBe(true)
+    expect(snippet).toContain(`${HIGHLIGHT_START}alvo${HIGHLIGHT_END}`)
+  })
+
+  it('returns an empty snippet for an empty body', () => {
+    expect(buildSnippet('', ['alvo'])).toBe('')
+  })
+})
+
 describe('searchAccessibleDocuments', () => {
-  it('finds a document by a word in the title', () => {
-    const hits = searchAccessibleDocuments(viewerOf(owner), 'plano')
+  it('finds a document by a word in the title', async () => {
+    const hits = await searchAccessibleDocuments(viewerOf(owner), 'plano')
 
     expect(hits.map((hit) => hit.id)).toEqual(['doc-private'])
   })
 
-  it('finds a document by a word in the body and ignores accents', () => {
-    const hits = searchAccessibleDocuments(viewerOf(owner), 'relatorio')
+  it('finds a document by a word in the body and ignores accents', async () => {
+    const hits = await searchAccessibleDocuments(viewerOf(owner), 'relatorio')
 
     expect(hits.map((hit) => hit.id)).toEqual(['doc-private'])
   })
 
-  it('marks the matched term inside the excerpt', () => {
-    const [hit] = searchAccessibleDocuments(viewerOf(owner), 'educacao')
+  it('marks the matched term inside the excerpt', async () => {
+    const [hit] = await searchAccessibleDocuments(viewerOf(owner), 'educacao')
 
     expect(hit.segments.some((segment) => segment.highlight)).toBe(true)
     expect(
@@ -227,55 +226,66 @@ describe('searchAccessibleDocuments', () => {
     ).toEqual(['educação'])
   })
 
-  it('never returns a private document of someone else', () => {
-    expect(searchAccessibleDocuments(viewerOf(stranger), 'plano')).toEqual([])
-    expect(searchAccessibleDocuments(viewerOf(stranger), 'leitura')).toEqual([])
-    expect(searchAccessibleDocuments(viewerOf(guest), 'plano')).toEqual([])
-    expect(searchAccessibleDocuments(viewerOf(member), 'plano')).toEqual([])
-  })
-
-  it('returns a document shared directly with the person', () => {
-    const hits = searchAccessibleDocuments(viewerOf(guest), 'cronograma')
-
-    expect(hits.map((hit) => hit.id)).toEqual(['doc-shared'])
-  })
-
-  it('returns a document opened to the organization only to its members', () => {
+  it('never returns a private document of someone else', async () => {
     expect(
-      searchAccessibleDocuments(viewerOf(member), 'onboarding').map(
-        (hit) => hit.id,
-      ),
-    ).toEqual(['doc-org'])
-    expect(searchAccessibleDocuments(viewerOf(stranger), 'onboarding')).toEqual(
+      await searchAccessibleDocuments(viewerOf(stranger), 'plano'),
+    ).toEqual([])
+    expect(
+      await searchAccessibleDocuments(viewerOf(stranger), 'leitura'),
+    ).toEqual([])
+    expect(await searchAccessibleDocuments(viewerOf(guest), 'plano')).toEqual([])
+    expect(await searchAccessibleDocuments(viewerOf(member), 'plano')).toEqual(
       [],
     )
   })
 
-  it('skips documents in the trash', () => {
-    const hits = searchAccessibleDocuments(viewerOf(owner), 'leitura')
+  it('returns a document shared directly with the person', async () => {
+    const hits = await searchAccessibleDocuments(viewerOf(guest), 'cronograma')
+
+    expect(hits.map((hit) => hit.id)).toEqual(['doc-shared'])
+  })
+
+  it('returns a document opened to the organization only to its members', async () => {
+    const forMember = await searchAccessibleDocuments(
+      viewerOf(member),
+      'onboarding',
+    )
+
+    expect(forMember.map((hit) => hit.id)).toEqual(['doc-org'])
+    expect(
+      await searchAccessibleDocuments(viewerOf(stranger), 'onboarding'),
+    ).toEqual([])
+  })
+
+  it('skips documents in the trash', async () => {
+    const hits = await searchAccessibleDocuments(viewerOf(owner), 'leitura')
 
     expect(hits.map((hit) => hit.id)).toEqual(['doc-private'])
   })
 
-  it('requires every word of the query to match', () => {
-    expect(searchAccessibleDocuments(viewerOf(owner), 'plano leitura')).toHaveLength(1)
-    expect(searchAccessibleDocuments(viewerOf(owner), 'plano cronograma')).toEqual([])
-  })
-
-  it('matches by prefix', () => {
+  it('requires every word of the query to match', async () => {
     expect(
-      searchAccessibleDocuments(viewerOf(owner), 'avali').map((hit) => hit.id),
-    ).toEqual(['doc-private'])
+      await searchAccessibleDocuments(viewerOf(owner), 'plano leitura'),
+    ).toHaveLength(1)
+    expect(
+      await searchAccessibleDocuments(viewerOf(owner), 'plano cronograma'),
+    ).toEqual([])
   })
 
-  it('returns nothing for a blank query', () => {
-    expect(searchAccessibleDocuments(viewerOf(owner), '   ')).toEqual([])
+  it('matches by prefix', async () => {
+    const hits = await searchAccessibleDocuments(viewerOf(owner), 'avali')
+
+    expect(hits.map((hit) => hit.id)).toEqual(['doc-private'])
+  })
+
+  it('returns nothing for a blank query', async () => {
+    expect(await searchAccessibleDocuments(viewerOf(owner), '   ')).toEqual([])
   })
 })
 
 describe('index maintenance', () => {
   it('reindexes a document after the content changes', async () => {
-    searchAccessibleDocuments(viewerOf(owner), 'plano')
+    await searchAccessibleDocuments(viewerOf(owner), 'plano')
 
     await db
       .update(documents)
@@ -285,54 +295,65 @@ describe('index maintenance', () => {
       })
       .where(sql`id = 'doc-private'`)
 
-    indexDocument('doc-private')
+    await indexDocument('doc-private')
 
+    const found = await searchAccessibleDocuments(
+      viewerOf(owner),
+      'astronomia',
+    )
+
+    expect(found.map((hit) => hit.id)).toEqual(['doc-private'])
     expect(
-      searchAccessibleDocuments(viewerOf(owner), 'astronomia').map(
-        (hit) => hit.id,
-      ),
-    ).toEqual(['doc-private'])
-    expect(searchAccessibleDocuments(viewerOf(owner), 'relatorio')).toEqual([])
+      await searchAccessibleDocuments(viewerOf(owner), 'relatorio'),
+    ).toEqual([])
   })
 
-  it('picks up a document that was never indexed explicitly', () => {
-    expect(
-      searchAccessibleDocuments(viewerOf(owner), 'manual').map((hit) => hit.id),
-    ).toEqual(['doc-org'])
+  it('picks up a document that was never indexed explicitly', async () => {
+    const hits = await searchAccessibleDocuments(viewerOf(owner), 'manual')
+
+    expect(hits.map((hit) => hit.id)).toEqual(['doc-org'])
   })
 
   it('drops rows of documents that no longer exist', async () => {
-    indexDocument('doc-private')
+    await indexDocument('doc-private')
     await db.delete(documents).where(sql`id = 'doc-private'`)
 
-    expect(searchAccessibleDocuments(viewerOf(owner), 'plano')).toEqual([])
+    expect(await searchAccessibleDocuments(viewerOf(owner), 'plano')).toEqual([])
   })
 
-  it('removes a single document from the index', () => {
-    indexDocument('doc-private')
-    removeDocumentFromIndex('doc-private')
+  it('removes a single document from the index', async () => {
+    await indexDocument('doc-private')
+    await removeDocumentFromIndex('doc-private')
 
-    const rows = db.all<{ total: number }>(
+    const result = (await db.execute(
       sql`select count(*) as total from documents_fts where document_id = 'doc-private'`,
-    )
+    )) as unknown as [Array<{ total: number }>, unknown]
 
-    expect(rows[0].total).toBe(0)
+    expect(Number(result[0][0].total)).toBe(0)
   })
 })
 
 describe('listRecentAccessibleDocuments', () => {
-  it('lists only what the person can open', () => {
-    expect(listRecentAccessibleDocuments(viewerOf(owner)).length).toBe(3)
+  it('lists only what the person can open', async () => {
     expect(
-      listRecentAccessibleDocuments(viewerOf(guest)).map((hit) => hit.id),
+      (await listRecentAccessibleDocuments(viewerOf(owner))).length,
+    ).toBe(3)
+    expect(
+      (await listRecentAccessibleDocuments(viewerOf(guest))).map(
+        (hit) => hit.id,
+      ),
     ).toEqual(['doc-shared'])
     expect(
-      listRecentAccessibleDocuments(viewerOf(member)).map((hit) => hit.id),
+      (await listRecentAccessibleDocuments(viewerOf(member))).map(
+        (hit) => hit.id,
+      ),
     ).toEqual(['doc-org'])
-    expect(listRecentAccessibleDocuments(viewerOf(stranger))).toEqual([])
+    expect(await listRecentAccessibleDocuments(viewerOf(stranger))).toEqual([])
   })
 
-  it('respects the limit', () => {
-    expect(listRecentAccessibleDocuments(viewerOf(owner), 1)).toHaveLength(1)
+  it('respects the limit', async () => {
+    expect(await listRecentAccessibleDocuments(viewerOf(owner), 1)).toHaveLength(
+      1,
+    )
   })
 })

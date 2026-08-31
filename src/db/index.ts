@@ -1,31 +1,13 @@
-import { existsSync, mkdirSync } from 'node:fs'
-import { join } from 'node:path'
-
-import Database from 'better-sqlite3'
-import { drizzle } from 'drizzle-orm/better-sqlite3'
-import { migrate } from 'drizzle-orm/better-sqlite3/migrator'
-
+import { connect, createPool, databaseUrl, runMigrations } from './connection'
 import * as schema from './schema'
 
 function createDb() {
-  const directory = join(process.cwd(), 'data')
+  const pool = createPool(databaseUrl())
+  const ready = runMigrations(pool)
 
-  if (!existsSync(directory)) {
-    mkdirSync(directory, { recursive: true })
-  }
+  ready.catch(() => undefined)
 
-  const sqlite = new Database(join(directory, 'leaf.db'))
-  sqlite.pragma('journal_mode = WAL')
-  sqlite.pragma('foreign_keys = ON')
-
-  const instance = drizzle(sqlite, { schema })
-  const migrationsFolder = join(process.cwd(), 'drizzle')
-
-  if (existsSync(migrationsFolder)) {
-    migrate(instance, { migrationsFolder })
-  }
-
-  return instance
+  return connect(pool, ready)
 }
 
 const globalForDb = globalThis as unknown as {

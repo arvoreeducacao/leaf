@@ -9,7 +9,7 @@ import * as schema from '@/db/schema'
 export const auth = betterAuth({
   appName: 'Leaf',
   database: drizzleAdapter(db, {
-    provider: 'sqlite',
+    provider: 'mysql',
     schema: {
       user: schema.user,
       session: schema.session,

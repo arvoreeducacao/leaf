@@ -241,20 +241,22 @@ export async function updateShareRole(
     return { ok: false, error: await message('invalidRole') }
   }
 
-  const updated = await db
-    .update(documentShares)
-    .set({ role })
-    .where(
-      and(
-        eq(documentShares.id, shareId),
-        eq(documentShares.documentId, documentId),
-      ),
-    )
-    .returning({ id: documentShares.id })
+  const target = and(
+    eq(documentShares.id, shareId),
+    eq(documentShares.documentId, documentId),
+  )
 
-  if (updated.length === 0) {
+  const existing = await db
+    .select({ id: documentShares.id })
+    .from(documentShares)
+    .where(target)
+    .limit(1)
+
+  if (existing.length === 0) {
     return { ok: false, error: await message('shareNotFound') }
   }
+
+  await db.update(documentShares).set({ role }).where(target)
 
   revalidatePath('/', 'layout')
 

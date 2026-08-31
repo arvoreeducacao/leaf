@@ -84,7 +84,7 @@ export async function renameDocument(
     })
     .where(eq(documents.id, id))
 
-  indexDocument(id)
+  await indexDocument(id)
 
   revalidatePath('/', 'layout')
   revalidatePath(`/doc/${id}`)
@@ -337,7 +337,7 @@ export async function deleteForever(id: string): Promise<ActionResult> {
   await db.delete(documents).where(inArray(documents.id, subtree))
 
   for (const documentId of subtree) {
-    removeDocumentFromIndex(documentId)
+    await removeDocumentFromIndex(documentId)
   }
 
   revalidatePath('/', 'layout')
