@@ -146,4 +146,50 @@ test.describe('mobile 375px', () => {
 
     await expectNoHorizontalOverflow(page)
   })
+  test('painel de comentários vira bottom sheet e não estoura a tela', async ({
+    page,
+  }) => {
+    await signUp(page, uniqueEmail('comentario-mobile'))
+    await createDocument(page, 'Comentários no celular')
+
+    await typeInEditor(page, 'texto para comentar no celular')
+    await expect(page.getByText('Salvo', { exact: true }).first()).toBeVisible({
+      timeout: 20_000,
+    })
+
+    await page.getByTestId('comments-button').click()
+
+    const panel = page.getByTestId('comments-panel')
+
+    await expect(panel).toBeVisible()
+
+    const shape = await panel.evaluate((element) => {
+      const style = window.getComputedStyle(element)
+      const rect = element.getBoundingClientRect()
+
+      return {
+        bottomGap: window.innerHeight - rect.bottom,
+        left: rect.left,
+        radiusBottom: Number.parseFloat(style.borderBottomLeftRadius),
+        radiusTop: Number.parseFloat(style.borderTopLeftRadius),
+        widthGap: window.innerWidth - rect.width,
+      }
+    })
+
+    expect(shape.left).toBeLessThanOrEqual(2)
+    expect(shape.bottomGap).toBeLessThanOrEqual(2)
+    expect(shape.widthGap).toBeLessThanOrEqual(2)
+    expect(shape.radiusTop).toBeGreaterThan(0)
+    expect(shape.radiusBottom).toBe(0)
+
+    await page.getByLabel('Novo comentário').fill('Comentário do celular')
+    await page.getByTestId('submit-comment').click()
+
+    await expect(page.getByText('Comentário adicionado').first()).toBeVisible()
+    await expect(
+      page.getByTestId('comment-thread').first(),
+    ).toContainText('Comentário do celular')
+
+    await expectNoHorizontalOverflow(page)
+  })
 })

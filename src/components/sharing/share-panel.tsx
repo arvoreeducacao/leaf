@@ -61,8 +61,10 @@ export function SharePanel({ documentId, canManage }: Props) {
   const tErrors = useTranslations('errors')
   const roleLabels: Record<ShareRole, string> = {
     viewer: t('roleViewer'),
+    commenter: t('roleCommenter'),
     editor: t('roleEditor'),
   }
+  const roleOptions: ReadonlyArray<ShareRole> = ['viewer', 'commenter', 'editor']
   const emailFieldId = useId()
   const roleFieldId = useId()
   const inviteErrorId = useId()
@@ -263,8 +265,11 @@ export function SharePanel({ documentId, canManage }: Props) {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">{t('orgNone')}</SelectItem>
-                  <SelectItem value="viewer">{roleLabels.viewer}</SelectItem>
-                  <SelectItem value="editor">{roleLabels.editor}</SelectItem>
+                  {roleOptions.map((option) => (
+                    <SelectItem key={option} value={option}>
+                      {roleLabels[option]}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             ) : (
@@ -314,8 +319,11 @@ export function SharePanel({ documentId, canManage }: Props) {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="viewer">{roleLabels.viewer}</SelectItem>
-                  <SelectItem value="editor">{roleLabels.editor}</SelectItem>
+                  {roleOptions.map((option) => (
+                    <SelectItem key={option} value={option}>
+                      {roleLabels[option]}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -397,12 +405,11 @@ export function SharePanel({ documentId, canManage }: Props) {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="viewer">
-                        {roleLabels.viewer}
-                      </SelectItem>
-                      <SelectItem value="editor">
-                        {roleLabels.editor}
-                      </SelectItem>
+                      {roleOptions.map((option) => (
+                        <SelectItem key={option} value={option}>
+                          {roleLabels[option]}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
 

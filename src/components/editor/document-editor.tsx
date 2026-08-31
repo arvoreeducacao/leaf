@@ -15,6 +15,7 @@ type Props = Readonly<{
   initialContent: string | null
   readOnly: boolean
   isOwner: boolean
+  canComment: boolean
 }>
 
 export function DocumentEditor({
@@ -22,11 +23,13 @@ export function DocumentEditor({
   initialContent,
   readOnly,
   isOwner,
+  canComment,
 }: Props) {
   const locale = useLocale()
 
   return (
     <BlockNoteEditor
+      canComment={canComment}
       documentId={documentId}
       initialContent={initialContent}
       isOwner={isOwner}

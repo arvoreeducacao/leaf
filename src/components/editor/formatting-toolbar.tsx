@@ -11,9 +11,36 @@ import {
   NestBlockButton,
   TextAlignButton,
   UnnestBlockButton,
+  useBlockNoteEditor,
+  useComponentsContext,
 } from '@blocknote/react'
+import { useTranslations } from 'next-intl'
 
-function LeafFormattingToolbar() {
+import { requestCommentOnBlock } from '@/components/comments/comments-bridge'
+import { ChatIcon } from '@/components/icons'
+
+function CommentButton() {
+  const t = useTranslations('comments')
+  const editor = useBlockNoteEditor()
+  const components = useComponentsContext()
+
+  if (!components) {
+    return null
+  }
+
+  return (
+    <components.FormattingToolbar.Button
+      icon={<ChatIcon />}
+      label={t('toolbarButton')}
+      mainTooltip={t('toolbarButton')}
+      onClick={() => {
+        requestCommentOnBlock(editor.getTextCursorPosition().block.id)
+      }}
+    />
+  )
+}
+
+function LeafFormattingToolbar({ canComment }: Readonly<{ canComment: boolean }>) {
   return (
     <FormattingToolbar>
       <BlockTypeSelect key="blockTypeSelect" />
@@ -38,10 +65,18 @@ function LeafFormattingToolbar() {
       <UnnestBlockButton key="unnestBlockButton" />
 
       <CreateLinkButton key="createLinkButton" />
+
+      {canComment ? <CommentButton key="commentButton" /> : null}
     </FormattingToolbar>
   )
 }
 
-export function LeafFormattingToolbarController() {
-  return <FormattingToolbarController formattingToolbar={LeafFormattingToolbar} />
+export function LeafFormattingToolbarController({
+  canComment,
+}: Readonly<{ canComment: boolean }>) {
+  return (
+    <FormattingToolbarController
+      formattingToolbar={() => <LeafFormattingToolbar canComment={canComment} />}
+    />
+  )
 }

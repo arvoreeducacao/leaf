@@ -65,7 +65,7 @@ async function denied(): Promise<ShareResult> {
 }
 
 function isShareRole(value: string): value is ShareRole {
-  return value === 'viewer' || value === 'editor'
+  return value === 'viewer' || value === 'commenter' || value === 'editor'
 }
 
 async function readState(
@@ -296,7 +296,7 @@ export async function setOrganizationAccess(
     return { ok: false, error: guard.error }
   }
 
-  if (access !== 'none' && access !== 'viewer' && access !== 'editor') {
+  if (access !== 'none' && !isShareRole(access)) {
     return { ok: false, error: await message('invalidRole') }
   }
 

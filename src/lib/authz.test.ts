@@ -39,6 +39,8 @@ import {
   user,
 } from '@/db/schema'
 import {
+  atLeast,
+  canComment,
   canEdit,
   canManageShares,
   getDocumentAccess,
@@ -217,6 +219,22 @@ beforeEach(async () => {
       createdAt: now,
       updatedAt: now,
     },
+    {
+      id: 'doc-org-commenter',
+      ownerId: orgMember.id,
+      orgId: mainOrg,
+      orgAccess: 'commenter',
+      title: 'Proposta em revisão',
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      id: 'doc-commenter',
+      ownerId: owner.id,
+      title: 'Documento com revisor',
+      createdAt: now,
+      updatedAt: now,
+    },
   ])
 
   await db.insert(documentShares).values([
@@ -248,6 +266,20 @@ beforeEach(async () => {
       role: 'viewer',
       createdAt: now,
     },
+    {
+      id: 'share-commenter',
+      documentId: 'doc-commenter',
+      granteeEmail: viewer.email,
+      role: 'commenter',
+      createdAt: now,
+    },
+    {
+      id: 'share-org-commenter-upgrade',
+      documentId: 'doc-org-commenter',
+      granteeEmail: orgAdmin.email,
+      role: 'editor',
+      createdAt: now,
+    },
   ])
 })
 
@@ -276,6 +308,15 @@ describe('getDocumentAccess', () => {
         user: { id: editor.id, email: editor.email.toUpperCase() },
       }),
     ).resolves.toBe('editor')
+  })
+
+  it('reconhece convidado com papel de comentar', async () => {
+    await expect(
+      getDocumentAccess('doc-commenter', sessionFor(viewer)),
+    ).resolves.toBe('commenter')
+    await expect(
+      getDocumentAccess('doc-commenter', sessionFor(editor)),
+    ).resolves.toBeNull()
   })
 
   it('nega quem não foi convidado', async () => {
@@ -325,8 +366,26 @@ describe('hierarquia de papéis', () => {
   it('canEdit vale para dono e editor', () => {
     expect(canEdit('owner')).toBe(true)
     expect(canEdit('editor')).toBe(true)
+    expect(canEdit('commenter')).toBe(false)
     expect(canEdit('viewer')).toBe(false)
     expect(canEdit(null)).toBe(false)
+  })
+
+  it('canComment vale de commenter para cima', () => {
+    expect(canComment('owner')).toBe(true)
+    expect(canComment('editor')).toBe(true)
+    expect(canComment('commenter')).toBe(true)
+    expect(canComment('viewer')).toBe(false)
+    expect(canComment(null)).toBe(false)
+  })
+
+  it('a precedência é viewer < commenter < editor < owner', () => {
+    expect(atLeast('commenter', 'viewer')).toBe(true)
+    expect(atLeast('viewer', 'commenter')).toBe(false)
+    expect(atLeast('editor', 'commenter')).toBe(true)
+    expect(atLeast('commenter', 'editor')).toBe(false)
+    expect(atLeast('owner', 'editor')).toBe(true)
+    expect(atLeast('commenter', 'commenter')).toBe(true)
   })
 
   it('canManageShares vale só para o dono', () => {
@@ -492,6 +551,18 @@ describe('precedência com organização', () => {
     await expect(
       getDocumentAccess('doc-private', sessionFor(orgAdmin)),
     ).resolves.toBeNull()
+  })
+
+  it('membro da org comenta documento com org_access commenter', async () => {
+    await expect(
+      getDocumentAccess('doc-org-commenter', sessionFor(owner)),
+    ).resolves.toBe('commenter')
+  })
+
+  it('share explícito vence org_access menos permissivo', async () => {
+    await expect(
+      getDocumentAccess('doc-org-commenter', sessionFor(orgAdmin)),
+    ).resolves.toBe('editor')
   })
 
   it('org_access nulo não dá acesso nem com org_id preenchido', async () => {

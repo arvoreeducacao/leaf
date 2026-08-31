@@ -8,7 +8,7 @@ import {
 } from '@/db/schema'
 import type { Document } from '@/db/schema'
 
-export type AccessLevel = 'owner' | 'editor' | 'viewer'
+export type AccessLevel = 'owner' | 'editor' | 'commenter' | 'viewer'
 
 export type SessionLike = {
   user: { id: string; email: string }
@@ -16,8 +16,9 @@ export type SessionLike = {
 
 const levelRank: Record<AccessLevel, number> = {
   viewer: 1,
-  editor: 2,
-  owner: 3,
+  commenter: 2,
+  editor: 3,
+  owner: 4,
 }
 
 export function atLeast(level: AccessLevel, required: AccessLevel) {
@@ -26,6 +27,10 @@ export function atLeast(level: AccessLevel, required: AccessLevel) {
 
 export function canEdit(level: AccessLevel | null) {
   return level !== null && atLeast(level, 'editor')
+}
+
+export function canComment(level: AccessLevel | null) {
+  return level !== null && atLeast(level, 'commenter')
 }
 
 export async function getDocumentAccess(
@@ -170,6 +175,7 @@ function createRateLimiter(windowMs: number, maxAttempts: number) {
 
 const publicLookupLimiter = createRateLimiter(60_000, 30)
 const inviteLimiter = createRateLimiter(60_000, 20)
+const commentLimiter = createRateLimiter(60_000, 30)
 
 export function registerPublicLookupAttempt(
   key: string,
@@ -191,6 +197,17 @@ export function registerInviteAttempt(
 
 export function resetInviteLimiter() {
   inviteLimiter.reset()
+}
+
+export function registerCommentAttempt(
+  key: string,
+  now: number = Date.now(),
+): RateLimitDecision {
+  return commentLimiter.register(key, now)
+}
+
+export function resetCommentLimiter() {
+  commentLimiter.reset()
 }
 
 export type PublicLookupResult =

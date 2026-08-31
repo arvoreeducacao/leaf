@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 
 import { DocumentMenu } from '@/components/app/document-menu'
+import { CommentsPanel } from '@/components/comments/comments-panel'
 import {
   documentTitleInputId,
   requestEditorFocus,
@@ -20,6 +21,7 @@ type Props = Readonly<{
   canEdit: boolean
   isOwner: boolean
   sharedWithOrganization: boolean
+  openComments: number
 }>
 
 export function DocumentHeader({
@@ -28,6 +30,7 @@ export function DocumentHeader({
   canEdit,
   isOwner,
   sharedWithOrganization,
+  openComments,
 }: Props) {
   const t = useTranslations('document')
   const titleId = documentTitleInputId
@@ -118,6 +121,7 @@ export function DocumentHeader({
             <span className="sr-only">{t('orgTagHint')}</span>
           </Badge>
         ) : null}
+        <CommentsPanel documentId={documentId} initialOpenCount={openComments} />
         <ShareButton canShare={isOwner} documentId={documentId} />
         <DocumentMenu
           canEdit={canEdit}
