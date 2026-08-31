@@ -1846,3 +1846,143 @@ cliente rebaixava da sala viva, não do banco). Marcar `yjs` como externo resolv
   memória e volta do `documents.content`).
 - Sem GC extra além do default do Yjs (`new Y.Doc({ gc: true })` nos dois lados)
   e sem histórico de undo compartilhado além do que o BlockNote já traz.
+
+## Onda final de validação + fix (entregue, 2026-08-31)
+
+Paga a dívida das ondas 10-12, que fecharam sem suíte completa, sem `pnpm
+build`, sem `pnpm test:e2e` e sem design-review, conforme as duas decisões
+registradas no topo do `docs/ROADMAP.md`.
+
+### Números
+
+| | antes desta onda | depois |
+|---|---|---|
+| `pnpm exec tsc --noEmit` | limpo | limpo |
+| `pnpm exec vitest run` | 239 testes / 16 arquivos, verdes | 239 / 16, verdes |
+| `LEAF_DIST_DIR=.next-build pnpm build` | verde | verde |
+| `pnpm test:e2e` | 45 verdes, **2 vermelhos** (47) | 51 verdes (51) |
+
+A suíte E2E foi de 47 para 51 casos: 3 de colaboração em tempo real e 1 de
+header em 320px.
+
+### Bugs reais achados e corrigidos
+
+- **`.next-build/` não estava no `.gitignore`.** O `LEAF_DIST_DIR` da onda 5
+  existe justamente para rodar `next build` sem derrubar o `next dev` da 3000,
+  mas o diretório ficava rastreável, então a detecção automática de conteúdo do
+  Tailwind v4 varria o bundle de produção e extraía "classes" com bytes binários
+  (`.pb-\[max\(...,env\(safe-area-<lixo>\)\)\]`). Resultado medido: o dev server
+  passou a responder **500 em toda rota** com `Parsing CSS source code failed`
+  no `globals.css`. `/.next-build/` e `/.e2e-realtime/` entraram no `.gitignore`
+  e o dev voltou a 200.
+- **Header do documento estourava a viewport em todo mobile.** O cluster de
+  ações era `shrink-0`, o que resolve a base do flex item para `max-content` e
+  torna o `flex-wrap` interno código morto. Medido pelo design-review em
+  Chromium: `documentElement.scrollWidth` de **683px em 320, 375 e 430px**. O
+  defeito é da onda 7, mas as ondas 11 e 12 o agravaram (Badge de teamspace até
+  194px + presença até 108px). Agora o cluster é `basis-full` até `tablet`.
+- **Regressão que eu mesmo causei nessa correção, achada só no passe visual:**
+  `flex-1 basis-full tablet:basis-auto` deu `flex-grow` ao cluster também no
+  desktop, e o campo de título caiu de ~354px para ~130px ("Plano d"). O
+  `tsc`, o `vitest` e o E2E passavam; quem pegou foi a screenshot. Corrigido
+  com `tablet:flex-none`. Medido depois do fix: título 354px em 1280, 333px em
+  375 e 278px em 320, com `scrollWidth - clientWidth = -10` nos três.
+- Ring de nó selecionado do editor em `primary-500` sobre branco = **1,65:1**,
+  reprova WCAG 1.4.11 e era o único sinal de seleção. Foi para `brand-strong`
+  (3,72:1). Era pré-existente, não das ondas 10-12.
+- Chip "+N" da presença usava `surface-sunken`, que no escuro é `gray-950`,
+  igual ao `surface-app` e à própria borda: **1,00:1**, o círculo sumia. Foi
+  para `surface-subtle`.
+- A região `aria-live` do switcher de organização vivia **dentro** do
+  `DropdownMenuContent`. O Radix desmonta esse nó no instante em que o item de
+  rádio é escolhido, ou seja, exatamente quando `pending` vira `true`: o
+  anúncio nunca chegava ao leitor de tela. Saiu para fora do `DropdownMenu`.
+- O `Select` de adicionar pessoa ao teamspace resetava por `key={people.length}`
+  e, num `addTeamspaceMember` que falha, `people.length` não muda: o campo ficava
+  preso no nome que falhou, sem caminho de volta. A key ganhou um contador
+  incrementado no `finally`.
+
+### Token novo
+
+- `--content-on-highlight` (`gray-900` nos dois temas, declarado literalmente no
+  `:root` como `--code-surface`/`--code-content` já eram). Existe porque o
+  `editor.css` usa `@reference` e lá `var(--color-*)` não resolve; era a última
+  classe de paleta literal (`text-gray-900`) do código do app. **Merece PR no
+  `arvore-design-system`** junto com as divergências já listadas.
+
+### Copy alterada
+
+- `realtime.reconnecting` deixou de ser "Reconectando" / "Reconnecting" e passou
+  a dizer que o texto não está salvo ("Sem conexão. Suas mudanças ainda não foram
+  salvas" / "No connection. Your changes are not saved yet"), em `text-warn`.
+  Motivo: está registrado na onda 12 que, se o ws cai depois da sessão começar,
+  o autosave **não** volta a ligar e o texto fica só no Y.Doc local. A copy
+  antiga sugeria normalidade. Mudança de copy registrada aqui porque o protocolo
+  de redesign do Bonsai pede confirmação de produto.
+
+### E2E de colaboração (a lacuna da onda 12)
+
+- `e2e/realtime.spec.ts` com 3 casos: dois contextos convergindo nos dois
+  sentidos com o indicador de presença marcando "2 pessoas neste documento" em
+  ambos; o servidor ws gravando o conteúdo e o documento sobrevivendo ao
+  fechamento da sala; e o fallback com o servidor de colaboração mudo, em que o
+  editor sai do modo colaborativo e o autosave normal assume.
+- Como não dá para ligar o `LEAF_REALTIME` na sandbox existente sem tirar o
+  "Salvo" de todos os outros specs, o Playwright passou a ter **dois
+  webServers**: o `scripts/e2e-server.mjs` de sempre na 3100 (realtime
+  desligado) e o `scripts/e2e-realtime-server.mjs` novo na 3200, em sandbox
+  `.e2e-realtime/` própria, com `LEAF_REALTIME=1` e o `dev-realtime.mjs` na
+  1235. O projeto `realtime` do Playwright aponta para a 3200; `desktop` ignora
+  o spec.
+- O fallback é simulado com `page.routeWebSocket`: o handler não conecta no
+  servidor, então o provider nunca sincroniza e o timeout de 2,5 s do
+  `use-realtime-session` cai para `offline`.
+
+### Testes desatualizados corrigidos (não eram bug de app)
+
+- `e2e/organizations.spec.ts:145`: o `OrgSwitcher` da onda 11 pôs o nome da
+  organização na sidebar, então `getByText('Escola Gestão')` virou strict mode
+  violation. A asserção passou a escopar `main` e a conferir o switcher à parte.
+- `e2e/comments.spec.ts:280` ("bloco apagado ..."): **não era regressão.** Uma
+  sonda repetindo os mesmos passos à mão passou nos dois ambientes (dev com
+  realtime ligado e `next start` de produção). O que quebrava era o
+  `Control+a` + dois `Backspace` sob carga, no meio de rodadas longas. Agora o
+  bloco é apagado por `Backspace` repetido, que não depende de `AllSelection`.
+- `focusEditorEnd` do mesmo arquivo assertava `toBeFocused()` depois de um único
+  clique e falhou duas vezes em rodadas longas (`editar e excluir só valem para
+  o autor`, `leitor vê as conversas mas não comenta`), ambas **no começo do
+  teste**, não depois do painel. Virou `expect(...).toPass()` repetindo o
+  clique. Com isso, `comments.spec.ts` fechou 14/14 em `--repeat-each=2`.
+- Fica registrado o sinal que sobrou: em rodadas longas de um worker só, os
+  tempos por teste sobem (o mesmo caso foi de 14,5 s para 1,5 min) e o clique no
+  editor às vezes não foca de primeira. Não foi investigado a fundo; se voltar a
+  incomodar, o lugar de olhar é a inicialização do ProseMirror sob carga.
+
+### Passe de fumaça em navegador (dev server, 21 checagens)
+
+Fluxo completo com Playwright contra a 3000: signup, criar organização, criar
+teamspace, criar documento, mover para o teamspace, Badge no header, `Ctrl+K`
+achando o documento do teamspace **pelo corpo**, convite com papel "Pode
+comentar", commenter sem `contenteditable` comentando pelo painel, editor em
+modo colaborativo, duas abas convergindo, indicador de presença, tema escuro,
+idioma en-US e ausência de overflow horizontal em 375px e 320px no documento, na
+sidebar e no `/org`. 21/21. As screenshots foram olhadas uma a uma; foi assim
+que a regressão do título apareceu.
+
+**Pendência das ondas 9/10 resolvida no passe:** o commenter **consegue**
+comentar, mas pelo composer do painel. A `FormattingToolbar` do BlockNote não
+monta em modo somente-leitura (não há `contenteditable`), então o botão
+"Comentar" da toolbar **não** é caminho para quem só comenta. A âncora em bloco
+segue exclusiva de quem edita.
+
+### O que ficou de fora, de propósito
+
+- 🟡 do design-review não aplicados: densidade do header em mobile (6 controles
+  + 2 badges em 3 linhas a 320px, ~200px de altura antes do conteúdo — colapsar
+  no menu ⋯ é decisão de produto); foco perdido pelo `Select` de membros do
+  teamspace no remount (o reset foi corrigido, a devolução de foco não).
+- A ação "Importar arquivo" da palette **sem documento aberto** continua sem
+  E2E, como a onda 10 registrou.
+- O ícone de tema escuro/claro do cursor remoto continua capturado no mount.
+- Não foi medido o `scrollWidth` do header **antes** da correção nesta onda; o
+  número de 683px é a medição do design-review.
