@@ -146,6 +146,41 @@ test.describe('mobile 375px', () => {
 
     await expectNoHorizontalOverflow(page)
   })
+  test('command palette cabe na tela e abre o documento encontrado', async ({
+    page,
+  }) => {
+    await signUp(page, uniqueEmail('mobile-palette'))
+
+    const alvo = await createDocument(page, 'Pauta do conselho')
+
+    await typeInEditor(page, 'combinamos o calendario das reunioes')
+    await expect(page.getByText('Salvo', { exact: true }).first()).toBeVisible({
+      timeout: 20_000,
+    })
+
+    await page.getByRole('button', { name: 'Abrir navegação' }).click()
+    await page.getByRole('button', { name: /Buscar em tudo/ }).first().click()
+
+    const overlay = page.getByTestId('command-palette')
+
+    await expect(overlay).toBeVisible()
+    await expectNoHorizontalOverflow(page)
+
+    await page.getByTestId('command-palette-input').fill('calendario')
+
+    const hit = overlay.getByRole('option', { name: /Pauta do conselho/ })
+
+    await expect(hit).toBeVisible()
+    await expectNoHorizontalOverflow(page)
+
+    await hit.click()
+
+    await page.waitForURL(`**/doc/${alvo}`)
+    await expect(page.getByLabel('Título do documento')).toHaveValue(
+      'Pauta do conselho',
+    )
+  })
+
   test('painel de comentários vira bottom sheet e não estoura a tela', async ({
     page,
   }) => {
