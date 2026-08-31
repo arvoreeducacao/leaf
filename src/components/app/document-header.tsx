@@ -119,7 +119,11 @@ export function DocumentHeader({
           </Badge>
         ) : null}
         <ShareButton canShare={isOwner} documentId={documentId} />
-        <DocumentMenu documentId={documentId} isOwner={isOwner} />
+        <DocumentMenu
+          canEdit={canEdit}
+          documentId={documentId}
+          isOwner={isOwner}
+        />
       </div>
     </div>
   )

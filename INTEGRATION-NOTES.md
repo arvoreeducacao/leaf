@@ -1073,3 +1073,160 @@ sidebar que a spec 06 previa.
   depois de remover membro/cancelar convite (hoje o foco cai no `body` quando o
   `router.refresh` desmonta o botão) e a entrada de importação na tela vazia de
   quem ainda não tem nenhum documento.
+
+## Onda 8 — Histórico de versões (entregue)
+
+### Modelo de dados
+
+- Migração `drizzle/0003_wet_frank_castle.sql`: tabela `document_versions`
+  (`id`, `document_id`, `title`, `content`, `author_id`, `created_at`) com
+  índices `(document_id, created_at)` e `(author_id)`.
+- **Aqui o drizzle-kit acertou o `ON DELETE`**: o defeito das ondas 4 e 7 é
+  específico de `ALTER TABLE ... ADD COLUMN`; num `CREATE TABLE` as cláusulas
+  saem completas (`document_id` cascade, `author_id` set null). Nada foi editado
+  à mão no `.sql`. Se um dia entrar uma coluna nova por ALTER, confira de novo.
+- `author_id` é **nullable com `set null`** de propósito: uma versão escrita por
+  um editor convidado sobrevive à exclusão da conta dele (o documento é de outra
+  pessoa e não cascateia). A UI mostra "Autor removido" nesse caso.
+- `created_at` é o único timestamp do schema em `timestamp_ms` (os outros são
+  `unixepoch()` em segundos). Motivo: com resolução de segundo, várias versões
+  do mesmo segundo ficam sem ordenação estável. A ordenação é
+  `desc(created_at), desc(id)`.
+
+### Regras de gravação (`src/lib/document-versions.ts`)
+
+- `recordDocumentVersion(documentId, authorId, { force?, now? })` grava o estado
+  **já persistido** do documento (título + conteúdo), então é chamada **depois**
+  do `update`. Cada linha de versão é um estado que existiu de verdade.
+- Throttle de 5 min **por autor por documento** (`VERSION_THROTTLE_MS`): olha a
+  última versão daquele autor naquele documento. Autores diferentes não se
+  bloqueiam.
+- Guarda de duplicata: se a versão mais recente do documento já tem o mesmo
+  `content` **e** o mesmo `title`, nada é gravado (vale inclusive no `force`).
+  Isso é o que impede lixo quando duas pessoas salvam o mesmo estado e quando
+  alguém restaura a mesma versão duas vezes seguidas.
+- Retenção: `MAX_VERSIONS_PER_DOCUMENT = 50`, podadas **no insert**
+  (`pruneDocumentVersions`). A poda lê os ids do documento e apaga o excedente;
+  com teto de 50 linhas isso é barato e evita `LIMIT/OFFSET` no SQLite.
+- Os dois números vivem em `src/lib/version-limits.ts`, **não** em
+  `document-versions.ts`. Motivo concreto: o dialog é client component e importar
+  a constante do módulo de dados arrastaria `@/db` (better-sqlite3) para o bundle
+  do cliente. `document-versions.ts` só re-exporta.
+
+### Onde a versão nasce
+
+- `updateDocumentContent` (`document-actions.ts`): chama
+  `recordDocumentVersion` depois do update, sem `force`. O guard de no-op que a
+  onda 5 introduziu continua vindo **antes**, então salvar conteúdo idêntico não
+  gera versão nem `updated_at` fantasma.
+- `importMarkdownBlocks` (`markdown/import-action.ts`): grava com `force: true`
+  **antes** de devolver os blocos, ou seja, congela o estado *anterior* à
+  importação. É o que permite desfazer um import pelo histórico.
+- `applyDocumentVersion`: grava o estado atual com `force: true` antes de
+  aplicar a versão escolhida.
+- O import de `.zip` **não** gera versão: ele cria subpáginas novas e não toca o
+  conteúdo do documento aberto.
+
+### Autorização
+
+- `src/lib/version-actions.ts` (`'use server'`) é a única porta da UI:
+  `loadDocumentVersions`, `loadDocumentVersion` e `restoreDocumentVersion`, todas
+  atrás do mesmo `requireEditor` (`canEdit(getDocumentAccess(...))`). **Viewer
+  não lista, não pré-visualiza e não restaura**, e o item do menu nem é
+  renderizado para ele.
+- `restoreDocumentVersion` também restaura o **título** da versão, não só o
+  conteúdo. O `title` está na tabela justamente para o round-trip ficar completo.
+- Versão de outro documento devolve `notFound` mesmo que o id exista (o `where`
+  casa `id` **e** `document_id`).
+
+### UI
+
+- `src/components/app/document-history-dialog.tsx`. É `Dialog`, não `Sheet`: a
+  cópia local de `ui/dialog.tsx` (onda 5) já vira bottom sheet até `tablet` e
+  modal centralizado a partir dele, então um `Sheet` manual só duplicaria o
+  padrão. Largura `tablet:max-w-4xl` (o `tablet:max-w-lg` da base perde no
+  twMerge porque é a mesma variante).
+- Desktop: duas colunas (lista `tablet:max-w-72` + pré-visualização). Mobile
+  (`useIsMobile`): duas telas alternadas, com "Voltar para a lista" e foco
+  reposicionado nos dois sentidos (`backRef` na ida, `[data-version-id]` na
+  volta).
+- Data relativa vem do `useFormatter().relativeTime` do next-intl com um `now`
+  congelado no carregamento da lista; a data absoluta vai no `title` do item e no
+  cabeçalho da pré-visualização.
+- A pré-visualização usa o `DocumentRenderer` existente (read-only). O container
+  tem `role="region"` + `aria-label` + `tabIndex={0}` para o scroll ser
+  alcançável por teclado dentro do modal.
+- Restaurar tem confirmação **inline** (pergunta + Cancelar/Restaurar no lugar do
+  botão), não um AlertDialog: dialog dentro de dialog é ruim em mobile e a ação é
+  reversível pelo próprio histórico. Os labels dos botões são fixos.
+- **Depois de restaurar a página recarrega (`window.location.reload()`).** O
+  `useCreateBlockNote` não recria a instância quando `initialContent` muda, e
+  keyar o `DocumentEditor` pelo conteúdo faria o editor remontar no meio da
+  digitação a cada `revalidatePath` (risco real de perder texto). O reload é
+  seguro porque abrir o menu ⋯ tira o foco do editor e dispara o flush do
+  autosave antes. Como o toast morre no reload, a confirmação viaja num flag de
+  `sessionStorage` (`leaf:version-restored`, guardando o `documentId`) lido no
+  mount do dialog — `takeSessionFlag`/`writeSessionFlag` novos em
+  `src/shared/storage.ts`.
+- `DocumentMenu` ganhou a prop `canEdit` (além de `isOwner`) e devolve o foco ao
+  botão ⋯ ao fechar o dialog de histórico **e** o de mover (o Radix deixava o
+  foco no `body` porque o item de menu que abriu o dialog já tinha sido
+  desmontado). Há assert de foco no E2E.
+- i18n: namespace novo `versions` (17 chaves) com paridade pt-BR/en-US. A
+  retenção de 50 aparece na descrição do dialog via parâmetro `{max}`, ligado à
+  constante.
+
+### Ajustes vindos do design-review
+
+Todos os 🔴 corrigidos e a maior parte dos 🟡:
+
+- `tabIndex` + anel de foco no container de scroll da pré-visualização.
+- Gestão de foco na troca lista ⇄ pré-visualização no mobile.
+- `gap-0.5` (2px, fora da escala) virou `gap-1`.
+- Item selecionado ganhou `border-l-2 border-brand-strong` além do
+  `bg-brand-surface`: `brand-surface` sozinho dá 1,06:1 contra o card no claro,
+  ou seja, seleção invisível para quem não lê o negrito.
+- Live region com "Carregando" enquanto a restauração está no ar.
+- Itens da lista ficam `disabled` durante a restauração (evita trocar de versão
+  no meio da ação).
+- `selectPrompt` deixou de aparecer junto com o estado vazio e com o de erro.
+- Título da versão foi de `heading-medium` (20px, empatava com o `DialogTitle`)
+  para `body-medium` + `font-bold`.
+- `overflow-y-hidden` no `DialogContent` foi **tentado e revertido**: ele mata o
+  scroll de emergência da base em telefone deitado (~320px de altura útil), onde
+  a caixa de confirmação estoura. Hoje o `DialogContent` é só
+  `flex flex-col tablet:max-w-4xl` e o `max-h-[85dvh]`/`overflow-y-auto` vêm da
+  base.
+
+### Verificação
+
+- `pnpm exec tsc --noEmit` limpo, `pnpm exec vitest run` **151 testes verdes**
+  (10 arquivos; 15 novos em `src/lib/document-versions.test.ts` cobrindo
+  throttle, janela por autor, `force`, guarda de duplicata, poda em 50, poda no
+  insert, isolamento entre documentos, round-trip de restauração, versão de outro
+  documento, autor removido e cascade do documento).
+- `LEAF_DIST_DIR=.next-build pnpm build` verde.
+- `pnpm test:e2e` **32 testes verdes** (29 desktop + 3 mobile), com
+  `e2e/versions.spec.ts` (throttle segurando a segunda edição, pré-visualização
+  sem o texto novo, restauração mudando o editor, segunda versão aparecendo
+  depois, foco voltando ao ⋯ no fechamento; e leitor sem o item de menu contra
+  editor convidado com o histórico) e o caso mobile novo em `e2e/mobile.spec.ts`.
+
+### Pendências desta onda
+
+- **A versão não guarda diff, só o snapshot inteiro.** Um documento grande com 50
+  versões multiplica o `content` por 50 no SQLite. Para o MVP local isso é
+  aceitável; em produção seria caso de compressão ou de guardar delta.
+- Não há "nomear versão" nem marcação manual de ponto de restauração.
+- A lista não mostra o que mudou entre versões (sem diff visual). Escolher a
+  versão certa depende de abrir a pré-visualização.
+- Restaurar recarrega a página inteira. Some quando o editor souber trocar de
+  conteúdo sem remontar (provavelmente na onda 12, com Yjs).
+- O throttle é por autor, então N autores editando ao mesmo tempo podem gerar N
+  versões em 5 minutos. É intencional (cada um tem direito ao próprio ponto de
+  volta), mas acelera a poda dos 50.
+- Quem restaura vira o autor da versão de segurança gerada nesse momento, ainda
+  que o conteúdo congelado seja de outra pessoa. A UI não distingue "autor do
+  texto" de "quem disparou o snapshot".
+- Documento na lixeira não expõe histórico (a tela do documento nem abre); as
+  versões só somem de vez no "Excluir de vez", pelo cascade.

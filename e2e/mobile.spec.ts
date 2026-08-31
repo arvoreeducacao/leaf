@@ -50,6 +50,49 @@ test.describe('mobile 375px', () => {
     await expectNoHorizontalOverflow(page)
   })
 
+  test('histórico de versões cabe na tela e volta da pré-visualização', async ({
+    page,
+  }) => {
+    await signUp(page, uniqueEmail('mobile-versoes'))
+    await createDocument(page, 'Documento versionado no celular')
+
+    await typeInEditor(page, 'primeiro paragrafo do celular')
+    await expect(page.getByText('Salvo', { exact: true }).first()).toBeVisible({
+      timeout: 20_000,
+    })
+
+    await page.getByRole('button', { name: 'Ações do documento' }).click()
+    await page.getByRole('menuitem', { name: 'Histórico de versões' }).click()
+
+    const dialog = page
+      .getByRole('dialog')
+      .filter({ hasText: 'Histórico de versões' })
+
+    await expect(dialog).toBeVisible()
+    await expectNoHorizontalOverflow(page)
+
+    await dialog
+      .getByRole('list', { name: 'Versões salvas' })
+      .getByRole('listitem')
+      .first()
+      .getByRole('button')
+      .click()
+
+    await expect(
+      dialog.getByRole('region', { name: 'Conteúdo da versão' }),
+    ).toContainText('primeiro paragrafo do celular')
+    await expect(
+      dialog.getByRole('list', { name: 'Versões salvas' }),
+    ).toHaveCount(0)
+    await expectNoHorizontalOverflow(page)
+
+    await dialog.getByRole('button', { name: 'Voltar para a lista' }).click()
+
+    await expect(
+      dialog.getByRole('list', { name: 'Versões salvas' }).getByRole('listitem'),
+    ).toHaveCount(1)
+  })
+
   test('compartilhar abre como Sheet e o diálogo de excluir vira folha de baixo', async ({
     page,
   }) => {

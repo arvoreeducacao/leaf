@@ -104,6 +104,25 @@
     "orgTag": "Organização",
     "orgTagHint": "Este documento não é privado: quem faz parte da organização tem acesso"
   },
+  "versions": {
+    "menuItem": "Histórico de versões",
+    "title": "Histórico de versões",
+    "description": "Salvamos uma versão enquanto você escreve. Ficam guardadas as últimas {max}.",
+    "listLabel": "Versões salvas",
+    "empty": "Ainda não há versões salvas",
+    "emptyHint": "A primeira versão aparece aqui assim que o documento for editado.",
+    "newest": "versão mais recente",
+    "byAuthor": "por {name}",
+    "unknownAuthor": "Autor removido",
+    "selectPrompt": "Escolha uma versão para ver como o documento estava.",
+    "previewLabel": "Conteúdo da versão",
+    "backToList": "Voltar para a lista",
+    "restore": "Restaurar",
+    "restoreConfirm": "Restaurar esta versão?",
+    "restoreHint": "O conteúdo de agora vira uma versão nova antes da troca, então nada é perdido.",
+    "restored": "Versão restaurada",
+    "notFound": "Esta versão não existe mais."
+  },
   "move": {
     "title": "Mover para outra página",
     "description": "Escolha em qual página este documento vai ficar",
