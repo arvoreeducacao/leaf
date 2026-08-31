@@ -114,7 +114,7 @@ export function DocumentHeader({
         )}
       </div>
 
-      <div className="flex min-w-0 flex-1 basis-full flex-wrap items-center justify-end gap-2 tablet:basis-auto">
+      <div className="flex min-w-0 flex-1 basis-full flex-wrap items-center justify-end gap-2 tablet:flex-none tablet:basis-auto">
         {teamspaceName ? (
           <Badge
             className="gap-1"
