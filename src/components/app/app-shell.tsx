@@ -5,6 +5,8 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
 
+import { CommandPalette } from '@/components/app/command-palette'
+import { CommandPaletteTrigger } from '@/components/app/command-palette-trigger'
 import { DocumentList } from '@/components/app/document-list'
 import { DocumentSearchResults } from '@/components/app/document-search-results'
 import { DocumentTree } from '@/components/app/document-tree'
@@ -98,6 +100,8 @@ function NavContent({
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-4 p-4">
+      <CommandPaletteTrigger />
+
       <NewDocumentButton />
 
       <Separator />
@@ -288,6 +292,8 @@ export function AppShell({
 
   return (
     <div className="flex min-h-dvh w-full bg-surface-app">
+      <CommandPalette hasOrganization={organizationName !== null} />
+
       {collapsed ? null : (
         <aside
           aria-label={t('navigation')}

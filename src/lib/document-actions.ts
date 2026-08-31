@@ -17,6 +17,7 @@ import {
 import { recordDocumentVersion } from '@/lib/document-versions'
 import { listOwnedDocuments, listSubtreeIds } from '@/lib/documents'
 import { getMembership } from '@/lib/organizations'
+import { indexDocument, removeDocumentFromIndex } from '@/lib/search-index'
 
 export type ActionResult = { ok: true } | { ok: false; error: string }
 
@@ -83,6 +84,8 @@ export async function renameDocument(
     })
     .where(eq(documents.id, id))
 
+  indexDocument(id)
+
   revalidatePath('/', 'layout')
   revalidatePath(`/doc/${id}`)
 
@@ -114,6 +117,7 @@ export async function updateDocumentContent(
     .where(eq(documents.id, id))
 
   await recordDocumentVersion(id, session.user.id)
+  indexDocument(id)
 
   return { ok: true }
 }
@@ -329,6 +333,10 @@ export async function deleteForever(id: string): Promise<ActionResult> {
     .where(inArray(documents.id, subtree))
 
   await db.delete(documents).where(inArray(documents.id, subtree))
+
+  for (const documentId of subtree) {
+    removeDocumentFromIndex(documentId)
+  }
 
   revalidatePath('/', 'layout')
 
