@@ -12,14 +12,8 @@ type LeafServerEditor = ServerBlockNoteEditor<
   typeof leafServerSchema.styleSchema
 >
 
-let cached: LeafServerEditor | null = null
-
-function serverEditor() {
-  if (!cached) {
-    cached = ServerBlockNoteEditor.create({ schema: leafServerSchema })
-  }
-
-  return cached
+function serverEditor(): LeafServerEditor {
+  return ServerBlockNoteEditor.create({ schema: leafServerSchema })
 }
 
 export type SeedResult =
@@ -52,12 +46,14 @@ export function seedUpdateFromContent(content: string | null): SeedResult {
 export function contentFromRealtimeState(state: Uint8Array): string | null {
   const doc = new Y.Doc({ gc: true })
 
+  doc.getXmlFragment(realtimeFragmentName)
+
   try {
     Y.applyUpdate(doc, state)
 
-    const blocks = serverEditor().yDocToBlocks(doc, realtimeFragmentName)
-
-    return JSON.stringify(blocks)
+    return JSON.stringify(
+      serverEditor().yDocToBlocks(doc, realtimeFragmentName),
+    )
   } catch {
     return null
   } finally {

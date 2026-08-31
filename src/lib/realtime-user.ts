@@ -1,22 +1,53 @@
-export const realtimeCursorColors = [
-  '#309385',
-  '#3a6de4',
-  '#744cd2',
-  '#c73c0c',
-  '#c7002a',
-  '#5d911c',
-  '#307950',
-  '#154b5a',
-] as const
+export type RealtimeTheme = 'light' | 'dark'
 
-export function realtimeColorFor(userId: string) {
+export const realtimeCursorColors = {
+  light: [
+    '#266e64',
+    '#315bc1',
+    '#653acd',
+    '#952900',
+    '#81001e',
+    '#456c18',
+    '#235439',
+    '#053b4b',
+  ],
+  dark: [
+    '#adece5',
+    '#b3caf9',
+    '#c8b9ee',
+    '#fdc3b1',
+    '#fc98ab',
+    '#c7ec99',
+    '#90dcb4',
+    '#d5e4e7',
+  ],
+} as const
+
+export const realtimeTextColors = {
+  light: '#ffffff',
+  dark: '#02212a',
+} as const
+
+export function realtimeColorIndex(userId: string) {
   let hash = 0
 
   for (const codePoint of userId) {
     hash = (hash * 31 + (codePoint.codePointAt(0) ?? 0)) % 2_147_483_647
   }
 
-  return realtimeCursorColors[hash % realtimeCursorColors.length]
+  return hash % realtimeCursorColors.light.length
+}
+
+export function realtimeColorFor(userId: string, theme: RealtimeTheme) {
+  return realtimeCursorColors[theme][realtimeColorIndex(userId)]
+}
+
+export function realtimeTextColorFor(color: string) {
+  return realtimeCursorColors.dark.includes(
+    color as (typeof realtimeCursorColors.dark)[number],
+  )
+    ? realtimeTextColors.dark
+    : realtimeTextColors.light
 }
 
 export function realtimeInitials(name: string) {
@@ -39,14 +70,12 @@ export type RealtimePeer = Readonly<{
   clientId: number
   userId: string | null
   name: string
-  color: string
   isSelf: boolean
 }>
 
 type AwarenessUserState = Readonly<{
   id?: unknown
   name?: unknown
-  color?: unknown
 }>
 
 export function peersFromAwareness(
@@ -64,18 +93,15 @@ export function peersFromAwareness(
     }
 
     const userId = typeof user.id === 'string' ? user.id : null
-    const name = typeof user.name === 'string' && user.name.trim().length > 0
-      ? user.name.trim()
-      : fallbackName
+    const name =
+      typeof user.name === 'string' && user.name.trim().length > 0
+        ? user.name.trim()
+        : fallbackName
 
     peers.push({
       clientId,
       userId,
       name,
-      color:
-        typeof user.color === 'string' && user.color.length > 0
-          ? user.color
-          : realtimeColorFor(userId ?? String(clientId)),
       isSelf: clientId === localClientId,
     })
   }

@@ -1725,3 +1725,124 @@ Todos os 🔴 corrigidos e a maior parte dos 🟡:
   mais um Badge. Merece uma medida em mobile.
 - Não há transferência de propriedade de teamspace nem lixeira própria dele:
   excluir exige mover os documentos antes.
+
+## Onda 12 — Colaboração em tempo real (entregue)
+
+### Peças novas
+
+- `scripts/dev-realtime.mjs`: servidor WebSocket próprio (`ws` + `y-protocols` +
+  `lib0`), porta 1234, sobe junto no `pnpm dev` (`concurrently -n next,s3,ws`).
+  `y-websocket@3` só publica o **cliente** (não tem mais `bin/utils`), então o
+  servidor foi escrito à mão falando o mesmo protocolo do provider: sync (0),
+  awareness (1) e queryAwareness (3).
+- `src/lib/realtime.ts` (constantes puras: sala `doc:{id}`, fragmento
+  `prosemirror`, timeout de 2,5 s, códigos de fechamento), `realtime-config.ts`
+  (flag, porta, url, segredo interno), `realtime-user.ts` (paleta/iniciais/leitura
+  do awareness), `realtime-document.ts` (Y.Doc ⇄ blocos do BlockNote).
+- Rotas internas `POST /api/realtime/{authz,seed,persist}`.
+- Cliente: `use-realtime-session.ts` (provider + fases), `presence-bridge.ts`
+  (store no padrão do `comments-bridge`), `realtime-cursor.ts` (renderCursor
+  próprio), `realtime-indicator.tsx` e `app/presence-indicator.tsx`.
+
+### Decisões
+
+- **Authz no handshake, no servidor ws.** O navegador manda o cookie de sessão
+  automaticamente no upgrade (cookie não é isolado por porta), e o servidor ws
+  repassa esse cookie para `/api/realtime/authz`, que responde com o nível do
+  `authz.ts` — o mesmo do app, sem authz paralelo. Escolhido em vez de importar
+  o `authz.ts` direto porque o script é `.mjs` puro (sem alias de TS, sem
+  bundler). O upgrade só é concluído **depois** do authz e da sala pronta, então
+  nenhuma mensagem se perde; a recusa vira `close(4403)` (faixa 4400-4499 =
+  permanente no `y-websocket`, o cliente não fica reconectando à toa).
+- **Read-only é enforçado no servidor**: para conexão sem `editor` o servidor lê
+  o subtipo da mensagem de sync e só atende `syncStep1` (leitura), descartando
+  `syncStep2`/`update`. Verificado com um cliente Node cru usando o cookie de um
+  viewer: ele muda o Y.Doc local, o servidor ignora, e nem o dono nem o banco
+  veem a alteração.
+- **Quem escreve `documents.content` é o servidor ws**, nunca um cliente líder:
+  throttle de 3 s a partir do primeiro update, save final quando a sala esvazia
+  (5 s de carência) e 3 tentativas com 1 s entre elas. O `useAutosave` fica
+  desligado quando o editor está em modo colaborativo — é isso que garante um
+  escritor só.
+- O snapshot entra pelo **mesmo fluxo do autosave**: `updateDocumentContent` foi
+  fatiado e o miolo virou `src/lib/document-content.ts#persistDocumentContent`,
+  usado pela server action e pela rota `/api/realtime/persist`. Guard de no-op,
+  `recordDocumentVersion` (onda 8) e `indexDocument` (onda 10) continuam
+  valendo de graça. A rota valida o `authorId` contra a tabela `user` antes de
+  gravar (evita FK quebrada); id desconhecido vira versão sem autor.
+- **A semente é decisão do servidor.** Na criação da sala ele pede
+  `/api/realtime/seed`, que converte `documents.content` em update do Yjs com o
+  `ServerBlockNoteEditor`. O `Map` de salas guarda a **promise** da criação, então
+  duas conexões simultâneas esperam a mesma semente. Isso importa: aplicar duas
+  sementes no mesmo Y.Doc duplica o `<blockgroup>` (teste
+  `realtime-document.test.ts` documenta), e o `yDocToBlocks` esconde a corrupção
+  lendo só o primeiro grupo.
+- Conteúdo ilegível (JSON quebrado) faz a sala ser recusada com `close(4409)`; o
+  cliente cai no modo offline e mostra o alerta de "documento ilegível" que já
+  existia. Nunca sobrescreve o original.
+- Segredo interno `LEAF_REALTIME_SECRET` protege as três rotas. Em dev o default
+  é `leaf-dev-realtime`; **em produção, sem a env as rotas respondem 404** (não
+  existe credencial default em produção).
+- O servidor ws escuta em todas as interfaces (`LEAF_REALTIME_HOST` sobrescreve)
+  porque o cliente monta a URL a partir do `window.location.hostname`: quem abre
+  em `localhost:3000` precisa do cookie de `localhost`, e amarrar em `127.0.0.1`
+  quebrava o handshake.
+- Cor do cursor/avatar é derivada **localmente** do id da pessoa + tema local,
+  com paleta clara e escura da Bonsai (`renderCursor` próprio no lugar do
+  default do BlockNote). Assim o contraste do rótulo é garantido nos dois temas
+  em vez de depender do tema de quem está do outro lado.
+- Fase da sessão: `connecting` (mostra o `EditorSkeleton`) → `ready` (editor
+  colaborativo) ou `offline` (editor atual + autosave). O editor colaborativo só
+  monta **depois do sync**, senão a pessoa veria um documento vazio.
+
+### `serverExternalPackages: ["yjs"]` — não remova
+
+`next.config.ts` já marcava `@blocknote/server-util` como externo. Ao importar
+`yjs` direto no `realtime-document.ts` o Next passou a carregar **duas cópias**
+do Yjs no servidor (o aviso "Yjs was already imported" aparecia no log), e a
+conversão do estado quebrava com `TypeError: text.toDelta is not a function`
+dentro do `y-prosemirror` — checagem de construtor entre cópias diferentes. Todo
+persist respondia 422 e nada era gravado (o reload parecia funcionar porque o
+cliente rebaixava da sala viva, não do banco). Marcar `yjs` como externo resolve.
+`contentFromRealtimeState` também instancia o fragmento (`doc.getXmlFragment`)
+**antes** do `applyUpdate`.
+
+### Verificação (modo ultra-rápido)
+
+- `tsc --noEmit` limpo.
+- `src/lib/realtime.test.ts` (13) e `src/lib/realtime-document.test.ts` (6)
+  verdes, mais os testes das áreas tocadas (`documents`, `authz`,
+  `document-versions`, `search-index`, `teamspace-authz`): 105 verdes.
+- Prova de vida no navegador (dois contextos Playwright no dev server, scripts
+  descartáveis, não versionados): texto converge nos dois lados, cursor remoto
+  com nome, "2 pessoas neste documento" nos dois headers, conteúdo conferido
+  **direto no `data/leaf.db`**, viewer bloqueado no servidor, e com o ws
+  inacessível o editor aparece em ~3,2 s e salva pelo autosave normal.
+- Sem `pnpm build`, sem suíte completa, sem `pnpm test:e2e` e sem design-review —
+  tudo isso é a onda final de validação.
+
+### O que a onda final de validação precisa olhar aqui
+
+- **Nada de colaboração foi visto por olho humano**: o indicador de presença no
+  header (avatares sobrepostos), o `RealtimeIndicator` e o cursor remoto não
+  passaram por design-review. O header do documento ganhou mais um elemento e já
+  era apertado em 320-430px.
+- **Não existe E2E de colaboração versionado.** Os três roteiros usados
+  (convergência, read-only, fallback) foram scripts descartáveis; virar
+  `e2e/realtime.spec.ts` exige subir o ws no `webServer` do Playwright.
+- O tema do cursor é capturado quando o editor monta; trocar de tema no meio da
+  sessão só recolore cursores redesenhados depois. Presença e avatares reagem na
+  hora.
+- Se o ws cair **depois** da sessão começar, o editor continua em modo
+  colaborativo (o provider reconecta) e o autosave **não** volta a ligar: o que
+  a pessoa escrever fica só no Y.Doc local até a reconexão. Aceito nesta onda;
+  se incomodar, o caminho é religar o autosave após N segundos desconectado.
+- Um documento com uma sala viva e outra aba em modo offline (ws parcialmente
+  fora) teria dois escritores. Só acontece em falha parcial de rede; não foi
+  tratado.
+- Deploy real precisa de: `LEAF_REALTIME_SECRET`, `LEAF_REALTIME_URL` (wss no
+  mesmo domínio) e o servidor ws como processo próprio — o `dev-realtime.mjs` é
+  o desenho de dev, sem persistência de sala entre reinícios (o estado vive em
+  memória e volta do `documents.content`).
+- Sem GC extra além do default do Yjs (`new Y.Doc({ gc: true })` nos dois lados)
+  e sem histórico de undo compartilhado além do que o BlockNote já traz.

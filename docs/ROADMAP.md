@@ -1,6 +1,8 @@
 # Leaf — Roadmap das ondas restantes
 
-Estado: ondas 1-11 entregues (fundação, editor BlockNote, sharing, markdown, QA, import do Notion + hierarquia, polimento + E2E versionado, dark/claro + i18n pt-BR/en-US, organizações + import agnóstico via slash menu, histórico de versões, comentários + papel "Pode comentar", busca full-text + command palette, teamspaces + múltiplas organizações por pessoa). Detalhes e decisões acumuladas em `INTEGRATION-NOTES.md`.
+Estado: ondas 1-12 entregues (fundação, editor BlockNote, sharing, markdown, QA, import do Notion + hierarquia, polimento + E2E versionado, dark/claro + i18n pt-BR/en-US, organizações + import agnóstico via slash menu, histórico de versões, comentários + papel "Pode comentar", busca full-text + command palette, teamspaces + múltiplas organizações por pessoa, colaboração em tempo real). Detalhes e decisões acumuladas em `INTEGRATION-NOTES.md`.
+
+**Próximo passo: a ONDA FINAL DE VALIDAÇÃO** — `pnpm build`, suíte vitest completa, `pnpm test:e2e` e design-review consolidado das ondas 10-12, seguida da onda de fix dos bloqueantes.
 
 Regras de toda onda: i18n pt-BR/en-US com paridade de chaves; dark/claro AA; tokens semânticos (nunca classe de paleta literal); ícones de `@/components/icons`; sem comentários no código; build + vitest + `pnpm test:e2e` (cap de 15 min) + commit local por onda; feature só entra íntegra.
 
@@ -33,10 +35,14 @@ DECISÃO DO GUILHERME (2026-08-31, ampliada): a partir da onda 11, TAMBÉM ficam
 - **Decisão registrada:** a busca FTS/command palette **não** filtra pela org ativa — devolve tudo que a pessoa acessa (inclusive docs de teamspace), que é o caminho mais simples e o que o Cmd+K de fato promete.
 - Modo ultra-rápido: fechou com `tsc --noEmit` limpo + os arquivos de teste tocados (authz, teamspace-authz, documents, search-index) verdes. Sem vitest completo, E2E, build ou design-review — tudo isso na onda final de validação.
 
-## Onda 12 — Colaboração em tempo real (a mais pesada, por último)
-- Yjs + BlockNote collaboration; websocket local (y-websocket, porta 1234) subindo no `pnpm dev`; room = document id com authz no handshake.
-- Snapshot do Yjs pro documents.content no autosave (compatível com export/versões). Presença/cursores com cores da paleta Bonsai.
-- Flag env LEAF_REALTIME (fallback pro modo atual se o ws não subir). E2E com duas sessões convergindo.
+## Onda 12 — Colaboração em tempo real (entregue)
+- Yjs + `withCollaboration` do BlockNote 0.54; provider `y-websocket`; servidor ws próprio em `scripts/dev-realtime.mjs` (porta 1234) subindo junto no `pnpm dev`. Room = `doc:{id}`.
+- **Authz no handshake**: o servidor ws repassa o cookie de sessão do navegador para `POST /api/realtime/authz`; sem acesso a conexão é fechada com 4403 (código permanente, o cliente não fica reconectando). Read-only (viewer/commenter) conecta mas o servidor **descarta** os updates dele — não é só a UI.
+- **Um único escritor**: o servidor ws é o dono do `documents.content` enquanto a sala está aberta (throttle de 3 s + save final ao esvaziar a sala, com retentativas). O autosave do cliente fica desligado em modo colaborativo. O snapshot passa pelo mesmo `persistDocumentContent` do autosave, então o guard de no-op, as versões da onda 8 e o índice FTS continuam valendo.
+- **Semente**: o servidor decide — na primeira conexão da sala ele pede `POST /api/realtime/seed`, que converte `documents.content` em update do Yjs. Cliente nenhum semeia (duas sementes duplicariam o `blockgroup`, coberto por teste).
+- Presença/cursores com paleta Bonsai derivada do id da pessoa e do tema local (`renderCursor` próprio), indicador de presença no header do documento.
+- Flag `LEAF_REALTIME` (ligada por padrão fora de produção; em produção exige opt-in). Com o ws fora do ar o editor cai no modo atual em ~2,5 s, com autosave normal.
+- Verificação manual (dois contextos Playwright): convergência do texto, cursores com nome, "2 pessoas neste documento", persistência conferida direto no SQLite, viewer bloqueado no servidor e fallback com o ws inacessível. Detalhes e pendências em `INTEGRATION-NOTES.md`.
 
 ## Fora de escopo (decidido)
 Envio real de e-mail (convite resolve no login), apps nativos, API pública.

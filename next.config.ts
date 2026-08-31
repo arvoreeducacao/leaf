@@ -3,7 +3,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   distDir: process.env.LEAF_DIST_DIR ?? ".next",
-  serverExternalPackages: ["@blocknote/server-util", "jsdom"],
+  serverExternalPackages: ["@blocknote/server-util", "jsdom", "yjs"],
   experimental: {
     serverActions: {
       bodySizeLimit: "4mb",

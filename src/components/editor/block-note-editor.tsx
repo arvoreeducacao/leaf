@@ -4,6 +4,7 @@ import '@blocknote/shadcn/style.css'
 import './editor.css'
 
 import { filterSuggestionItems } from '@blocknote/core'
+import { withCollaboration } from '@blocknote/core/yjs'
 import { SuggestionMenuController, useCreateBlockNote } from '@blocknote/react'
 import { BlockNoteView } from '@blocknote/shadcn'
 import { useTranslations } from 'next-intl'
@@ -32,7 +33,10 @@ import type { DocumentImportHandle } from './document-import'
 import { DocumentStats } from './document-stats'
 import { focusDocumentTitle, onEditorFocusRequest } from './focus-bridge'
 import { LeafFormattingToolbarController } from './formatting-toolbar'
+import { renderRealtimeCursor } from './realtime-cursor'
+import { RealtimeIndicator } from './realtime-indicator'
 import { SaveIndicator } from './save-indicator'
+import type { RealtimeSession } from './use-realtime-session'
 import { leafSchema } from './schema'
 import { getLeafSlashMenuItems } from './slash-menu-items'
 import { statsFromBlocks } from './text-stats'
@@ -53,6 +57,8 @@ type Props = Readonly<{
   readOnly: boolean
   isOwner: boolean
   canComment: boolean
+  collaboration?: RealtimeSession | null
+  realtimeConnected?: boolean
 }>
 
 export default function BlockNoteEditor({
@@ -61,10 +67,13 @@ export default function BlockNoteEditor({
   readOnly,
   isOwner,
   canComment,
+  collaboration = null,
+  realtimeConnected = false,
 }: Props) {
   const t = useTranslations('editor')
   const tComments = useTranslations('comments')
   const tImport = useTranslations('importFile')
+  const tRealtime = useTranslations('realtime')
   const { resolvedTheme } = useTheme()
   const { calloutItem, dictionary } = useLeafDictionary(readOnly)
   const readOnlyHintId = useId()
@@ -74,17 +83,42 @@ export default function BlockNoteEditor({
   const isUnreadable = parsed.status === 'unreadable'
   const isEditable = !readOnly && !isUnreadable
 
-  const { status, schedule, flush } = useAutosave(documentId, isEditable)
+  const { status, schedule, flush } = useAutosave(
+    documentId,
+    isEditable && collaboration === null,
+  )
 
-  const editor = useCreateBlockNote({
+  const baseOptions = {
     schema: leafSchema,
     dictionary,
-    initialContent: parsed.status === 'ok' ? parsed.blocks : undefined,
+    initialContent:
+      collaboration === null && parsed.status === 'ok'
+        ? parsed.blocks
+        : undefined,
     uploadFile: (file: File) => uploadEditorFile(file, t('uploadFailed')),
     domAttributes: readOnly
       ? { editor: { 'aria-describedby': readOnlyHintId } }
       : undefined,
-  })
+  }
+
+  const cursorTheme = resolvedTheme === 'dark' ? 'dark' : 'light'
+  const anonymousName = tRealtime('someone')
+
+  const editor = useCreateBlockNote(
+    collaboration
+      ? withCollaboration({
+          ...baseOptions,
+          collaboration: {
+            fragment: collaboration.fragment,
+            provider: collaboration.provider,
+            user: collaboration.user,
+            showCursorLabels: 'activity',
+            renderCursor: (cursorUser) =>
+              renderRealtimeCursor(cursorUser, cursorTheme, anonymousName),
+          },
+        })
+      : baseOptions,
+  )
 
   const [highlightedBlock, setHighlightedBlock] = useState<string | null>(null)
 
@@ -261,7 +295,7 @@ export default function BlockNoteEditor({
       {highlightedBlock && blockIdPattern.test(highlightedBlock) ? (
         <style>{highlightRule(highlightedBlock)}</style>
       ) : null}
-      <div className="flex min-h-6 items-center justify-end px-8 tablet:px-14">
+      <div className="flex min-h-6 flex-wrap items-center justify-end gap-x-4 gap-y-1 px-8 tablet:px-14">
         {readOnly ? (
           <p
             className="flex items-center gap-2 text-body-small text-content"
@@ -270,7 +304,10 @@ export default function BlockNoteEditor({
             <EyeIcon aria-hidden="true" className="size-4" />
             {t('readOnly')}
           </p>
-        ) : (
+        ) : null}
+        {collaboration ? (
+          <RealtimeIndicator connected={realtimeConnected} />
+        ) : readOnly ? null : (
           <SaveIndicator onRetry={() => void flush()} status={status} />
         )}
       </div>

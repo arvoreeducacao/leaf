@@ -481,5 +481,12 @@
     "errorMemberNotFound": "Esta pessoa não faz mais parte do teamspace.",
     "errorAlreadyMember": "Esta pessoa já faz parte do teamspace.",
     "errorNotInOrganization": "Esta pessoa não faz parte da organização."
+  },
+  "realtime": {
+    "connected": "Colaboração em tempo real",
+    "reconnecting": "Reconectando",
+    "someone": "Alguém",
+    "you": "{name} (você)",
+    "peopleHere": "{count, plural, one {# pessoa neste documento} other {# pessoas neste documento}}"
   }
 }

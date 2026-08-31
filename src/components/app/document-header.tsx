@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 
 import { DocumentMenu } from '@/components/app/document-menu'
+import { PresenceIndicator } from '@/components/app/presence-indicator'
 import { CommentsPanel } from '@/components/comments/comments-panel'
 import {
   documentTitleInputId,
@@ -138,6 +139,7 @@ export function DocumentHeader({
             <span className="sr-only">{t('orgTagHint')}</span>
           </Badge>
         ) : null}
+        <PresenceIndicator />
         <CommentsPanel documentId={documentId} initialOpenCount={openComments} />
         <ShareButton canShare={isOwner} documentId={documentId} />
         <DocumentMenu
