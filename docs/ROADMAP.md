@@ -2,7 +2,7 @@
 
 Estado: ondas 1-12 entregues (fundação, editor BlockNote, sharing, markdown, QA, import do Notion + hierarquia, polimento + E2E versionado, dark/claro + i18n pt-BR/en-US, organizações + import agnóstico via slash menu, histórico de versões, comentários + papel "Pode comentar", busca full-text + command palette, teamspaces + múltiplas organizações por pessoa, colaboração em tempo real). Detalhes e decisões acumuladas em `INTEGRATION-NOTES.md`.
 
-**Próximo passo: a ONDA FINAL DE VALIDAÇÃO** — `pnpm build`, suíte vitest completa, `pnpm test:e2e` e design-review consolidado das ondas 10-12, seguida da onda de fix dos bloqueantes.
+**Onda final de validação + fix: ENTREGUE em 2026-08-31.** Ver a seção "Validação consolidada" no fim deste arquivo e a seção correspondente do `INTEGRATION-NOTES.md`.
 
 Regras de toda onda: i18n pt-BR/en-US com paridade de chaves; dark/claro AA; tokens semânticos (nunca classe de paleta literal); ícones de `@/components/icons`; sem comentários no código; build + vitest + `pnpm test:e2e` (cap de 15 min) + commit local por onda; feature só entra íntegra.
 
@@ -49,3 +49,30 @@ Envio real de e-mail (convite resolve no login), apps nativos, API pública.
 
 ## Pendências upstream (PRs no arvore-design-system — precisam de aprovação do Guilherme)
 Ver seção correspondente do `INTEGRATION-NOTES.md`: escala alpha-inverse + mapeamento dark + sombras de elevation p/ fundo escuro + border-focus/ring (primary-500 reprova 1.4.11); border-strong gray-600 nas cópias; Dialog como bottom sheet até tablet; Search h-11 mobile; contraste do variant destructive.
+
+## Validação consolidada (2026-08-31) — números finais
+
+Onda final de validação + fix, pagando a dívida das ondas 10-12.
+
+- `pnpm exec tsc --noEmit`: **limpo**, antes e depois dos fixes.
+- `pnpm exec vitest run`: **239 testes em 16 arquivos, verdes**, antes e depois.
+- `LEAF_DIST_DIR=.next-build pnpm build`: **verde**.
+- `pnpm test:e2e`: **45 verdes / 2 vermelhos (47)** no começo → **51 verdes (51)**
+  no fim. Os 2 vermelhos eram teste desatualizado e teste frágil, não regressão
+  de app; os 4 casos novos são 3 de colaboração em tempo real e 1 de header em
+  320px.
+- Design-review consolidado das ondas 10-12: veredito **AJUSTES NECESSÁRIOS**,
+  com 5 🔴 e 10 🟡. Todos os 🔴 corrigidos, mais 8 dos 🟡.
+- Passe de fumaça manual em navegador: **21/21** contra o dev server, incluindo
+  colaboração em duas abas, os dois temas, os dois idiomas e 375px/320px.
+
+Bugs reais achados (detalhe no `INTEGRATION-NOTES.md`): `.next-build/` fora do
+`.gitignore` derrubando o `next dev` com erro de CSS; header do documento com
+683px de scroll horizontal em todo mobile; ring de seleção do editor em 1,65:1;
+chip "+N" da presença invisível no escuro; `aria-live` do switcher de
+organização desmontado antes de anunciar; `Select` de membro do teamspace preso
+depois de erro.
+
+**Fica para o Guilherme decidir:** densidade do header do documento em mobile
+(colapsar Badges e ações secundárias no menu ⋯ abaixo de `tablet`) e a devolução
+de foco no `Select` de membros do teamspace.
