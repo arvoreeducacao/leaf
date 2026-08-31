@@ -76,11 +76,6 @@ lista. Em produção (`leaf.arvore.com.br`) a variável deve valer `arvore.com.b
 
 **Banco**: o database `leaf` está provisionado no cluster Aurora MySQL da Árvore (`arvore-cluster`, MySQL 8.0.42), com usuário dedicado no Secrets Manager (`prd/leaf/database`). As migrações de `drizzle/mysql` rodam no boot do app; o `next build` **não** toca no banco. As sete migrações antigas de SQLite ficaram arquivadas em `drizzle/sqlite-legacy/` e não são mais executadas.
 
-## Documentação
-
-- [`docs/ROADMAP.md`](docs/ROADMAP.md) — histórico das 12 ondas de construção, decisões e próximos passos
-- [`INTEGRATION-NOTES.md`](INTEGRATION-NOTES.md) — decisões técnicas acumuladas, pendências e propostas de PR para o design system
-
 ## Qualidade
 
 Construído em 12 ondas com fechamento validado, mais o port para MySQL e a onda de autenticação restrita: **270 testes unitários**, **52 cenários E2E** (desktop, mobile, colaboração em dois navegadores e domínio restrito), build de produção verde e design review do Bonsai com bloqueantes zerados nos dois temas.
