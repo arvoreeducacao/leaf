@@ -60,6 +60,39 @@ Produção é MySQL: o database `leaf` do cluster Aurora (`arvore-cluster`, MySQ
 - **Vermelho que sobra:** a asserção final de `versions.spec.ts` — o foco não volta para o botão "Ações do documento" depois do `Escape` que fecha o histórico. É devolução de foco do Radix (o diálogo é aberto por um item de menu que sai do DOM no mesmo tick), não o banco; três tentativas de estabilizar pelo teste não resolveram. **Fica para o Guilherme decidir** se corrige na UI.
 - **Também para o Guilherme:** com o dev server frio, o handshake do ws estoura o fallback de ~2,5 s, o editor vai para o modo solo e a sala fica aberta e **vazia**; quem entrar depois nessa sala sobrescreve o que o solo gravou. Detalhe no `INTEGRATION-NOTES.md`.
 
+## Autenticação restrita ao domínio da Árvore — ENTREGUE em 2026-08-31
+
+Decisão do Guilherme: **login apenas com a conta da Árvore**. Tudo ligado por
+env, para o dev na 3000 e a suíte inteira continuarem como estavam sem a
+variável.
+
+- `LEAF_ALLOWED_EMAIL_DOMAINS` (lista por vírgula). Setada: só esses domínios
+  criam conta, entram e podem ser convidados. Ausente: comportamento atual.
+- Validação **sempre no servidor**, em quatro pontos: hook `before` do
+  better-auth em `/sign-up/email` e `/sign-in/email`, `user.create.before`
+  (qualquer criação de conta, inclusive OAuth), `session.create.before`
+  (qualquer login, inclusive conta de fora criada antes da restrição) e os dois
+  pontos de convite (`inviteToDocument` e `inviteToOrganization`).
+- **Decisão sobre convites:** com a restrição ativa **não** dá para convidar
+  email de fora do domínio — o convite do Leaf é promessa de acesso futuro e um
+  convite que o login nunca honraria seria convite morto. O "convidado externo"
+  continua existindo como a conta `@arvore.com.br` que não é da organização.
+- Google OAuth **preparado e inativo**: `GOOGLE_CLIENT_ID` +
+  `GOOGLE_CLIENT_SECRET` registram o provider (com `hd` quando há um único
+  domínio) e mostram "Entrar com Google" no login/signup. Sem as envs a UI não
+  muda. O `hd` não é tratado como segurança: o email volta a passar pelos hooks.
+  Sem client OAuth criado, o fluxo real com o Google **não foi validado**.
+- UI: dica do domínio abaixo do campo de email quando a restrição está ativa (só
+  o domínio principal, nunca a lista crua), mensagem de erro dedicada, paridade
+  pt-BR/en-US. Botão do Google sem ícone — não existe `google` nos 968 ícones e
+  lucide/emoji é proibido.
+- Testes: `email-domain.test.ts` (14), `auth-domain.test.ts` (7, contra o
+  better-auth de verdade + MySQL de teste), `invite-domain.test.ts` (7) e um
+  cenário E2E novo no projeto `restricted` (porta 3300, env ativa).
+- Detalhes, limites e o que sobra para o Guilherme (entre eles: `.env.example`
+  não foi atualizado porque este ambiente bloqueia arquivos `.env*`) no
+  `INTEGRATION-NOTES.md`.
+
 ## Validação consolidada (2026-08-31) — números finais
 
 Onda final de validação + fix, pagando a dívida das ondas 10-12.

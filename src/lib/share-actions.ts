@@ -16,6 +16,7 @@ import type { OrgAccess, ShareRole } from '@/db/schema'
 import { getSession } from '@/lib/auth'
 import type { AccessLevel } from '@/lib/authz'
 import { canManageShares, getDocumentAccess } from '@/lib/authz'
+import { emailDomainPolicy, isEmailDomainAllowed } from '@/lib/email-domain'
 import {
   isMemberOf,
   listOrganizationEmails,
@@ -198,6 +199,17 @@ export async function inviteToDocument(
 
   if (normalized === guard.session.user.email.toLowerCase()) {
     return { ok: false, error: await message('ownerEmail') }
+  }
+
+  const policy = emailDomainPolicy()
+
+  if (!isEmailDomainAllowed(normalized, policy.domains)) {
+    return {
+      ok: false,
+      error: (await getTranslations('errors'))('domainRestricted', {
+        domain: policy.primaryDomain ?? '',
+      }),
+    }
   }
 
   const existing = await db.query.documentShares.findFirst({

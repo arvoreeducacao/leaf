@@ -37,7 +37,12 @@
     "passwordTooShort": "The password needs at least 8 characters.",
     "signupFailed": "We couldn't create the account. Check the details and try again.",
     "loginFailed": "Wrong email or password.",
-    "signOutFailed": "We couldn't sign you out"
+    "signOutFailed": "We couldn't sign you out",
+    "domainHint": "Use your @{domain} email",
+    "domainRestricted": "Use your @{domain} email to sign in to Leaf.",
+    "orSeparator": "or",
+    "googleSubmit": "Sign in with Google",
+    "googleFailed": "We couldn't sign you in with Google. Try again."
   },
   "settings": {
     "account": "Account",
@@ -330,7 +335,8 @@
     "descendantParent": "You can't move a document into one of its own subpages.",
     "commentNotFound": "This comment no longer exists.",
     "commentEmpty": "Write something before sending.",
-    "commentTooFast": "You've commented too many times in a row. Wait a minute."
+    "commentTooFast": "You've commented too many times in a row. Wait a minute.",
+    "domainRestricted": "Only @{domain} accounts."
   },
   "org": {
     "title": "Organization",
@@ -382,6 +388,7 @@
     "errorOwnerLocked": "The organization owner can't be changed.",
     "errorOwnerCannotLeave": "Hand the organization over to someone else before leaving.",
     "errorTooManyInvites": "Too many invites in a row. Try again in {seconds} seconds.",
+    "errorDomainRestricted": "Only @{domain} accounts.",
     "confirmRemoveTitle": "Remove {name} from the organization?",
     "confirmRemoveDescription": "They lose access to the organization's documents right away. Their own documents stay with them and go back to being private.",
     "confirmRemoveAction": "Remove from organization",

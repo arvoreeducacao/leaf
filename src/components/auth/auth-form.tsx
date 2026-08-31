@@ -9,22 +9,29 @@ import { AlertIcon, LeafIcon } from '@/components/icons'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Separator } from '@/components/ui/separator'
 import { authClient } from '@/lib/auth-client'
+import { emailDomainErrorCode } from '@/lib/email-domain'
 
 type Mode = 'login' | 'signup'
 
-type Props = Readonly<{ mode: Mode }>
+type Props = Readonly<{
+  mode: Mode
+  restrictedDomain: string | null
+  googleEnabled: boolean
+}>
 
 const switchHref = {
   login: '/signup',
   signup: '/login',
 } as const
 
-export function AuthForm({ mode }: Props) {
+export function AuthForm({ googleEnabled, mode, restrictedDomain }: Props) {
   const t = useTranslations('auth')
   const router = useRouter()
   const nameId = useId()
   const emailId = useId()
+  const emailHintId = useId()
   const passwordId = useId()
   const passwordHintId = useId()
   const errorId = useId()
@@ -60,12 +67,35 @@ export function AuthForm({ mode }: Props) {
 
     if (result.error) {
       setPending(false)
-      setError(t(mode === 'signup' ? 'signupFailed' : 'loginFailed'))
+      setError(
+        result.error.code === emailDomainErrorCode
+          ? t('domainRestricted', { domain: restrictedDomain ?? '' })
+          : t(mode === 'signup' ? 'signupFailed' : 'loginFailed'),
+      )
       return
     }
 
     router.push('/')
     router.refresh()
+  }
+
+  async function handleGoogle() {
+    setError(null)
+    setPending(true)
+
+    const result = await authClient.signIn.social({
+      callbackURL: '/',
+      provider: 'google',
+    })
+
+    if (result.error) {
+      setPending(false)
+      setError(
+        result.error.code === emailDomainErrorCode
+          ? t('domainRestricted', { domain: restrictedDomain ?? '' })
+          : t('googleFailed'),
+      )
+    }
   }
 
   return (
@@ -105,7 +135,11 @@ export function AuthForm({ mode }: Props) {
           <div className="flex flex-col gap-2">
             <Label htmlFor={emailId}>{t('emailLabel')}</Label>
             <Input
-              aria-describedby={error ? errorId : undefined}
+              aria-describedby={
+                [restrictedDomain ? emailHintId : null, error ? errorId : null]
+                  .filter(Boolean)
+                  .join(' ') || undefined
+              }
               aria-invalid={error ? true : undefined}
               autoComplete="email"
               className="max-w-full"
@@ -117,6 +151,11 @@ export function AuthForm({ mode }: Props) {
               type="email"
               value={email}
             />
+            {restrictedDomain ? (
+              <p className="text-body-small text-content" id={emailHintId}>
+                {t('domainHint', { domain: restrictedDomain })}
+              </p>
+            ) : null}
           </div>
 
           <div className="flex flex-col gap-2">
@@ -168,6 +207,28 @@ export function AuthForm({ mode }: Props) {
             {t(mode === 'signup' ? 'signupSubmit' : 'loginSubmit')}
           </Button>
         </form>
+
+        {googleEnabled ? (
+          <div className="mt-6 flex flex-col gap-4">
+            <div aria-hidden="true" className="flex items-center gap-3">
+              <Separator className="flex-1" />
+              <span className="text-body-small text-content">
+                {t('orSeparator')}
+              </span>
+              <Separator className="flex-1" />
+            </div>
+            <Button
+              aria-busy={pending}
+              className="w-full"
+              disabled={pending}
+              onClick={handleGoogle}
+              type="button"
+              variant="secondary"
+            >
+              {t('googleSubmit')}
+            </Button>
+          </div>
+        ) : null}
 
         <p className="mt-6 text-body-small text-content">
           {t(mode === 'signup' ? 'signupSwitchText' : 'loginSwitchText')}{' '}
