@@ -484,7 +484,7 @@
   },
   "realtime": {
     "connected": "Colaboração em tempo real",
-    "reconnecting": "Reconectando",
+    "reconnecting": "Sem conexão. Suas mudanças ainda não foram salvas",
     "someone": "Alguém",
     "you": "{name} (você)",
     "peopleHere": "{count, plural, one {# pessoa neste documento} other {# pessoas neste documento}}"

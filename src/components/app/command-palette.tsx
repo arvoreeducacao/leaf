@@ -370,7 +370,7 @@ export function CommandPalette({ hasOrganization }: Props) {
         <DialogOverlay />
         <DialogPrimitive.Content
           aria-describedby={undefined}
-          className="data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed inset-x-4 top-[10vh] z-50 flex max-h-[80dvh] flex-col overflow-hidden rounded-xlarge border border-line bg-surface-card shadow-center-xlarge duration-200 data-[state=closed]:animate-out data-[state=open]:animate-in tablet:inset-x-auto tablet:left-[50%] tablet:w-[calc(100%-2rem)] tablet:max-w-2xl tablet:translate-x-[-50%]"
+          className="data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed inset-x-4 top-[10dvh] z-50 flex max-h-[80dvh] flex-col overflow-hidden rounded-xlarge border border-line bg-surface-card shadow-center-xlarge duration-200 data-[state=closed]:animate-out data-[state=open]:animate-in tablet:inset-x-auto tablet:left-[50%] tablet:w-[calc(100%-2rem)] tablet:max-w-2xl tablet:translate-x-[-50%]"
           data-testid="command-palette"
           onOpenAutoFocus={(event) => {
             event.preventDefault()
@@ -395,7 +395,7 @@ export function CommandPalette({ hasOrganization }: Props) {
               aria-expanded={true}
               aria-label={t('title')}
               autoComplete="off"
-              className="min-w-0 flex-1 bg-transparent text-[16px] text-content-strong outline-hidden placeholder:text-content-muted"
+              className="min-w-0 flex-1 bg-transparent text-body-medium text-content-strong outline-hidden placeholder:text-content-muted"
               data-testid="command-palette-input"
               onChange={(event) => {
                 setQuery(event.target.value)
@@ -455,7 +455,7 @@ export function CommandPalette({ hasOrganization }: Props) {
                       <li
                         aria-selected={active}
                         className={cn(
-                          'flex cursor-pointer items-center gap-3 border-l-2 px-4 py-2.5 transition-colors',
+                          'flex min-h-11 cursor-pointer items-center gap-3 border-l-2 px-4 py-2.5 transition-colors',
                           active
                             ? 'border-brand-strong bg-surface-hover'
                             : 'border-transparent hover:bg-surface-subtle',
@@ -476,7 +476,7 @@ export function CommandPalette({ hasOrganization }: Props) {
                             {item.label}
                           </span>
                           {item.hit && item.hit.segments.length > 0 ? (
-                            <span className="mt-0.5 block truncate text-caption text-content">
+                            <span className="mt-0.5 block truncate text-body-small text-content">
                               {item.hit.segments.map((segment, part) => (
                                 <span
                                   className={
