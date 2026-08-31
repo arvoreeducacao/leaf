@@ -41,16 +41,52 @@ export function createPool(url: string, extra: mysql.PoolOptions = {}) {
   return mysql.createPool({ ...connectionOptions(url), ...extra })
 }
 
+const BUILD_PHASE = 'phase-production-build'
+const LOCK_TIMEOUT_SECONDS = 120
+
+async function withMigrationLock<T>(
+  pool: mysql.Pool,
+  run: () => Promise<T>,
+): Promise<T> {
+  const connection = await pool.getConnection()
+
+  const [databases] = (await connection.query(
+    'select database() as name',
+  )) as unknown as [Array<{ name: string }>, unknown]
+
+  const lock = `leaf:migrations:${databases[0]?.name ?? 'default'}`
+
+  const [acquired] = (await connection.query(
+    'select get_lock(?, ?) as granted',
+    [lock, LOCK_TIMEOUT_SECONDS],
+  )) as unknown as [Array<{ granted: number | null }>, unknown]
+
+  if (acquired[0]?.granted !== 1) {
+    connection.release()
+
+    throw new Error(`não foi possível obter o lock de migração ${lock}`)
+  }
+
+  try {
+    return await run()
+  } finally {
+    await connection.query('do release_lock(?)', [lock])
+    connection.release()
+  }
+}
+
 export async function runMigrations(pool: mysql.Pool) {
   const folder = join(process.cwd(), MIGRATIONS_FOLDER)
 
-  if (!existsSync(folder)) {
+  if (!existsSync(folder) || process.env.NEXT_PHASE === BUILD_PHASE) {
     return
   }
 
-  await migrate(drizzle(pool, { schema, mode: 'default' }), {
-    migrationsFolder: folder,
-  })
+  await withMigrationLock(pool, () =>
+    migrate(drizzle(pool, { schema, mode: 'default' }), {
+      migrationsFolder: folder,
+    }),
+  )
 }
 
 export function gated<T extends object>(pool: T, ready: Promise<unknown>): T {

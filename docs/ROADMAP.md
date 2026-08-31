@@ -21,7 +21,7 @@ DECISÃO DO GUILHERME (2026-08-31, ampliada): a partir da onda 11, TAMBÉM ficam
 - Painel lateral (Sheet mobile): threads, resolver/reabrir, responder; âncora em bloco a partir da seleção (botão na toolbar), clique rola e destaca; bloco apagado vira "sem âncora". Comentar exige commenter+; editar/excluir só autor; resolver: autor ou editor+.
 
 ## Onda 10 — Busca full-text (entregue)
-- SQLite FTS5 (title + texto plano do content, sync no save; extração de texto testada).
+- SQLite FTS5 (title + texto plano do content, sync no save; extração de texto testada). *Portado para `FULLTEXT` do MySQL no port de banco de 2026-08-31.*
 - **Atalhos: Cmd/Ctrl+K E Alt/Option+K** abrem a command palette (toggle; Esc fecha). Cmd+P da sidebar continua como filtro rápido.
 - UX de referência (pedido do usuário): a barra de comando estilo Arc/Notion e a busca do backoffice — LER `frontend-arvore-nextjs/src/app/[locale]/(authenticated)/backoffice-v2/_components/command-palette.tsx` como referência de estrutura (overlay centrado no topo, input grande, resultados em seções, itens com ícone + título + trecho/caminho, navegação por setas + Enter, detecção de Mac pra exibir ⌘K vs Ctrl+K, documentos recentes quando a query está vazia). Reimplementar com componente command do DS e tokens semânticos do Leaf — sem copiar lucide/estilos de lá.
 - Seções da palette do Leaf: Recentes (query vazia), Documentos (FTS com trecho destacado), Ações rápidas (Novo documento, Ir para Organização, Importar).
@@ -42,13 +42,23 @@ DECISÃO DO GUILHERME (2026-08-31, ampliada): a partir da onda 11, TAMBÉM ficam
 - **Semente**: o servidor decide — na primeira conexão da sala ele pede `POST /api/realtime/seed`, que converte `documents.content` em update do Yjs. Cliente nenhum semeia (duas sementes duplicariam o `blockgroup`, coberto por teste).
 - Presença/cursores com paleta Bonsai derivada do id da pessoa e do tema local (`renderCursor` próprio), indicador de presença no header do documento.
 - Flag `LEAF_REALTIME` (ligada por padrão fora de produção; em produção exige opt-in). Com o ws fora do ar o editor cai no modo atual em ~2,5 s, com autosave normal.
-- Verificação manual (dois contextos Playwright): convergência do texto, cursores com nome, "2 pessoas neste documento", persistência conferida direto no SQLite, viewer bloqueado no servidor e fallback com o ws inacessível. Detalhes e pendências em `INTEGRATION-NOTES.md`.
+- Verificação manual (dois contextos Playwright): convergência do texto, cursores com nome, "2 pessoas neste documento", persistência conferida direto no banco, viewer bloqueado no servidor e fallback com o ws inacessível. Detalhes e pendências em `INTEGRATION-NOTES.md`.
 
 ## Fora de escopo (decidido)
 Envio real de e-mail (convite resolve no login), apps nativos, API pública.
 
-## Pendências upstream (PRs no arvore-design-system — precisam de aprovação do Guilherme)
-Ver seção correspondente do `INTEGRATION-NOTES.md`: escala alpha-inverse + mapeamento dark + sombras de elevation p/ fundo escuro + border-focus/ring (primary-500 reprova 1.4.11); border-strong gray-600 nas cópias; Dialog como bottom sheet até tablet; Search h-11 mobile; contraste do variant destructive.
+## ~~Pendências upstream (PRs no arvore-design-system — precisam de aprovação do Guilherme)~~ — CANCELADO
+~~Ver seção correspondente do `INTEGRATION-NOTES.md`: escala alpha-inverse + mapeamento dark + sombras de elevation p/ fundo escuro + border-focus/ring (primary-500 reprova 1.4.11); border-strong gray-600 nas cópias; Dialog como bottom sheet até tablet; Search h-11 mobile; contraste do variant destructive.~~
+
+**Decisão do usuário 2026-08-31: sem PRs upstream.** As divergências do Leaf em relação ao `arvore-design-system` continuam registradas no `INTEGRATION-NOTES.md` como divergências locais assumidas, e nenhum PR será aberto no design system.
+
+## Port de banco SQLite → MySQL — ENTREGUE em 2026-08-31
+Produção é MySQL: o database `leaf` do cluster Aurora (`arvore-cluster`, MySQL 8.0.42) com usuário dedicado no Secrets Manager (`prd/leaf/database`). O app trocou `drizzle-orm/sqlite-core` + `better-sqlite3` por `mysql-core` + `mysql2` (pool, `DATABASE_URL`), ganhou um baseline novo em `drizzle/mysql/` (as sete migrações antigas foram arquivadas em `drizzle/sqlite-legacy/`) e a busca saiu do FTS5 para índices `FULLTEXT` em BOOLEAN MODE, com o trecho destacado extraído em JS. Números e decisões de mapeamento de tipos no `INTEGRATION-NOTES.md`.
+
+- `tsc --noEmit` **limpo**; `vitest run` **242 verdes em 16 arquivos** (eram 239; +3 do `buildSnippet`); `LEAF_DIST_DIR=.next-build pnpm build` **verde**; `pnpm test:e2e` **50 verdes / 1 vermelho (51)**; passe de fumaça manual **8/8** contra o dev server no `leaf_dev`.
+- Dois bugs reais de corrida apareceram só com o banco remoto e foram corrigidos: adesão duplicada em `organization_members` quando duas renderizações do layout resolvem o mesmo convite, e o `router.push('/')` da lixeira ainda no ar quando o teste mobile abre a navegação.
+- **Vermelho que sobra:** a asserção final de `versions.spec.ts` — o foco não volta para o botão "Ações do documento" depois do `Escape` que fecha o histórico. É devolução de foco do Radix (o diálogo é aberto por um item de menu que sai do DOM no mesmo tick), não o banco; três tentativas de estabilizar pelo teste não resolveram. **Fica para o Guilherme decidir** se corrige na UI.
+- **Também para o Guilherme:** com o dev server frio, o handshake do ws estoura o fallback de ~2,5 s, o editor vai para o modo solo e a sala fica aberta e **vazia**; quem entrar depois nessa sala sobrescreve o que o solo gravou. Detalhe no `INTEGRATION-NOTES.md`.
 
 ## Validação consolidada (2026-08-31) — números finais
 

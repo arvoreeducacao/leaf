@@ -1986,3 +1986,313 @@ segue exclusiva de quem edita.
 - O ícone de tema escuro/claro do cursor remoto continua capturado no mount.
 - Não foi medido o `scrollWidth` do header **antes** da correção nesta onda; o
   número de 683px é a medição do design-review.
+
+## Port de banco SQLite → MySQL (entregue, 2026-08-31)
+
+Produção é MySQL: o database `leaf` já existe no cluster Aurora da Árvore
+(`arvore-cluster`, engine `aurora-mysql` 8.0.mysql_aurora.3.10.3, servidor
+reportando `8.0.42`), com usuário dedicado guardado no Secrets Manager em
+`prd/leaf/database`. O app saiu de `drizzle-orm/sqlite-core` + `better-sqlite3`
+para `mysql-core` + `mysql2`.
+
+### Decisão do usuário sobre os PRs upstream
+
+**2026-08-31: sem PRs upstream.** A seção "Pendências upstream (PRs no
+arvore-design-system)" do `docs/ROADMAP.md` está riscada. As divergências do
+Leaf em relação ao `arvore-design-system` (alpha-inverse + mapeamento dark,
+sombras de elevation para fundo escuro, border-focus/ring, `border-gray-600` nas
+bordas de repouso, `DialogContent` como bottom sheet até `tablet`, `Search` em
+`h-11` no mobile, contraste do variant destructive, token
+`--content-on-highlight`) continuam registradas neste arquivo como divergências
+locais assumidas. Nenhum PR será aberto.
+
+### Conexão
+
+- `DATABASE_URL` (`mysql://usuario:senha@host:3306/banco`) é obrigatória; o app
+  lança na ausência dela. `DATABASE_POOL_SIZE` (padrão 10) dimensiona o pool.
+- O pool é criado em `src/db/connection.ts` com `dateStrings: true`,
+  `timezone: 'Z'` e `charset: 'UTF8MB4_UNICODE_CI'`. Os três não são
+  cosméticos:
+  - **`dateStrings: true` é obrigatório.** O `datetime` do drizzle faz
+    `value.replace(' ', 'T') + 'Z'` no `mapFromDriverValue`; sem `dateStrings`
+    o `mysql2` já devolve um `Date` e o `replace` estoura. Com a flag, o par
+    `toISOString()` na ida / `+'Z'` na volta mantém tudo em UTC
+    independentemente do fuso do servidor (o cluster está em `SYSTEM`).
+  - **`charset` explícito**: o default do `mysql2` é `UTF8_GENERAL_CI`, que é
+    utf8mb3 e não aguenta 4 bytes (emoji no título ou no corpo).
+- `src/db/index.ts` continua criando o `db` de forma síncrona, como antes. O
+  migrator, que agora é assíncrono, roda no boot atrás de um **portão**: o pool
+  é embrulhado num `Proxy` que só deixa `query`, `execute` e `getConnection`
+  passarem depois que a promessa das migrações resolve. Se a migração falhar, a
+  primeira query rejeita com o erro dela em vez de rodar contra um schema
+  incompleto.
+
+### Migrações
+
+- Baseline novo em `drizzle/mysql/0000_mysql_baseline.sql` (gerado pelo
+  drizzle-kit) + `0001_search_index.sql` (escrito à mão, porque o `mysql-core`
+  não sabe declarar índice `FULLTEXT`). As sete migrações antigas foram para
+  `drizzle/sqlite-legacy/` com o `meta/` delas; **não são traduzidas nem
+  executadas** — não existe dado de SQLite para migrar.
+- **`GET_LOCK` em volta do migrator.** Sem ele, dois processos subindo juntos
+  (ou um boot logo depois de um build interrompido) rodavam o mesmo
+  `CREATE TABLE` e o segundo morria com `ER_TABLE_EXISTS_ERROR`. Isso quebrou a
+  primeira execução da suíte E2E — o sintoma na tela era "Não foi possível criar
+  a conta" no signup, e a causa estava no log do servidor. O lock é nomeado por
+  database (`leaf:migrations:<db>`), com 120 s de espera.
+- **O `next build` não toca no banco.** `runMigrations` sai cedo quando
+  `NEXT_PHASE === 'phase-production-build'`. Antes disso, o build abria o pool,
+  começava a migrar e o processo terminava no meio: sobravam as tabelas do
+  `0000` com o `__drizzle_migrations` **vazio**, um estado do qual o boot
+  seguinte não conseguia sair sozinho.
+- Limitação herdada do MySQL: DDL não é transacional. O migrator do drizzle
+  abre uma transação, mas cada `CREATE TABLE` faz commit implícito. Uma
+  migração interrompida no meio precisa de conserto manual — não há rollback.
+
+### Mapeamento de tipos
+
+| SQLite | MySQL | Por quê |
+|---|---|---|
+| `text` id do better-auth | `varchar(36)` | os ids do better-auth têm 32 caracteres |
+| `text` id do app (nanoid) | `varchar(21)` | `nanoid()` padrão; `nanoid(12)` cabe |
+| `text` email / nome / identifier | `varchar(255)` | índice único cabe folgado no limite de 3072 bytes |
+| `text` title | `varchar(500)` | título é curto por natureza; `renameDocument` já corta em 200 |
+| `text` content | `longtext` | JSON de blocos do BlockNote, sem teto prático |
+| `text` body de comentário | `varchar(2000)` | é exatamente o `MAX_COMMENT_LENGTH` |
+| `text` token de sessão | `varchar(255)` | único |
+| `text` public_token | `varchar(64)` | o formato aceito é `[A-Za-z0-9_-]{21,64}` |
+| `text` image / tokens OAuth | `text` | URL e token de tamanho imprevisível, sem índice |
+| `text` com `enum` do drizzle | `enum(...)` | papéis e acessos viram enum de verdade no banco |
+| `integer { mode: 'boolean' }` | `boolean` (`tinyint(1)`) | `email_verified` |
+| `integer { mode: 'timestamp' }` (s) | `datetime(3)` | ganha milissegundo, mantém a ordenação |
+| `integer { mode: 'timestamp_ms' }` | `datetime(3)` | **preserva a semântica da onda 8**: o throttle de versão e o `order by created_at desc, id desc` continuam distinguindo eventos no mesmo segundo |
+| `default (unixepoch())` | `default CURRENT_TIMESTAMP(3)` | |
+
+`datetime` e não `timestamp`: o `TIMESTAMP` do MySQL morre em 2038 e sofre
+conversão de fuso no servidor; o `DATETIME` guarda o que o app mandou, e o app
+manda UTC.
+
+### `.returning()` não existe no MySQL
+
+Quatro chamadas usavam `.returning({ id })` para saber se o `UPDATE`/`DELETE`
+pegou alguma linha (`updateCommentBody`, `deleteComment`, `setCommentResolved`,
+`updateShareRole`). Viraram um `select ... limit 1` com o **mesmo** `where`
+antes da escrita. Deliberadamente não se usa `affectedRows`: o MySQL, sem
+`CLIENT_FOUND_ROWS`, devolve 0 quando o `UPDATE` acerta a linha mas não muda
+valor nenhum — e `updateCommentBody(id, mesmoTexto)` precisa continuar
+devolvendo `true`.
+
+### Busca: FTS5 → FULLTEXT
+
+A tabela `documents_fts` continua existindo com o mesmo papel (id, título e
+**texto plano** do corpo, mais o `indexed_at` para reconciliação), agora como
+tabela InnoDB comum com três índices `FULLTEXT`:
+
+- `documents_fts_all (title, body)` — usado no `WHERE`. É o índice
+  multi-coluna que dá a semântica do FTS5: os termos podem estar em qualquer
+  uma das duas colunas.
+- `documents_fts_title (title)` e `documents_fts_body (body)` — usados só no
+  `ORDER BY`, como `match(title) * 10 + match(body)`, que é a leitura direta do
+  `bm25(documents_fts, 0.0, 10.0, 1.0, 0.0)` de antes.
+
+`buildMatchExpression` deixou de emitir `"termo"*` e passa a emitir `+termo*`
+(BOOLEAN MODE): `+` é o "todos os termos são obrigatórios" do FTS5 e `*` é o
+mesmo prefixo.
+
+**Sem acento sai de graça.** O database usa `utf8mb4_unicode_ci`, que é
+accent-insensitive e case-insensitive, então `relatorio` acha "relatório",
+`educacao` acha "educação" e `avali` acha "avaliação" — verificado contra o
+cluster antes de escrever o código. **O parser `ngram` não foi usado**: ele é
+pensado para CJK, quebra em bigramas e estragaria o casamento por prefixo em
+português.
+
+**O `snippet()` foi reimplementado em JS.** O MySQL não tem nada equivalente, e
+a alternativa (devolver o corpo inteiro) seria pior. `buildSnippet` tokeniza o
+texto plano por `\p{L}\p{N}`, dobra acentos com `NFD` + remoção de diacríticos
+para comparar, acha a primeira palavra que casa por prefixo, abre uma janela de
+12 palavras começando 4 antes, marca **a palavra inteira** (não só o prefixo,
+igual ao FTS5) com os mesmos `char(2)`/`char(3)` e põe `…` nas pontas cortadas.
+O `parseSnippet` e o componente da palette não mudaram uma linha.
+
+**Limitação nova:** `innodb_ft_min_token_size` do cluster é 3, então termo de
+uma ou duas letras não casa — nem como prefixo. O FTS5 casava. É a única
+regressão funcional conhecida da busca.
+
+Toda a `search-index.ts` virou assíncrona (o `better-sqlite3` era síncrono e o
+`mysql2` não é). Os três chamadores — `search-actions.ts`,
+`document-content.ts` e `document-actions.ts` — ganharam `await`.
+
+### Dev e testes sem Docker
+
+Docker não está disponível na máquina, então dev e teste falam com o cluster de
+verdade. Os databases foram criados com o **master secret** do cluster (obtido
+via `aws rds describe-db-clusters --db-cluster-identifier arvore-cluster` →
+`MasterUserSecret.SecretArn` → `secretsmanager get-secret-value`, profile
+`arvore-prd`), porque o usuário `leaf` só tem grant em `leaf.*`:
+
+| Database | Uso |
+|---|---|
+| `leaf` | produção (intocado) |
+| `leaf_dev` | `pnpm dev` |
+| `leaf_test_1` … `leaf_test_6` | um por worker do vitest |
+| `leaf_e2e` | sandbox E2E padrão (porta 3100) |
+| `leaf_e2e_realtime` | sandbox E2E com realtime (porta 3200) |
+
+Todos com `utf8mb4` / `utf8mb4_unicode_ci`, igual ao `leaf`, e
+`GRANT ALL PRIVILEGES` para `'leaf'@'%'`. O secret do master ficou num arquivo
+600 fora do repositório enquanto durou o trabalho e foi apagado no fim; nenhuma
+credencial aparece em log, output ou commit. O `.env.local` (que já está no
+`.gitignore`) ganhou `DATABASE_URL`, `LEAF_TEST_DATABASE_URL`,
+`LEAF_E2E_DATABASE_URL` e `LEAF_E2E_REALTIME_DATABASE_URL`.
+
+**Paralelismo do vitest: um database por worker.** A decisão entre `singleThread`
+e "database por worker" foi resolvida pela latência: o cluster está a ~154 ms de
+ida e volta desta máquina (medido: 50 `select 1` sequenciais em 7,7 s). Serializar
+tudo num database só deixaria a suíte na casa dos 10 minutos. Com `maxWorkers: 6`
+e `leaf_test_<VITEST_POOL_ID>`, a suíte inteira fecha em ~3 minutos.
+
+- `src/db/testing.ts` guarda o pool e a promessa de migração no `globalThis`,
+  para sobreviver ao registro de módulos que o vitest recria por arquivo.
+- `resetDatabase()` trunca **todas** as tabelas do schema mais a
+  `documents_fts` num único round-trip (`multipleStatements` ligado só no pool
+  de teste, com `foreign_key_checks = 0` em volta). Os sete arquivos de teste
+  que batem no banco chamam isso no `beforeEach`; os mocks
+  `vi.mock('@/db')` que montavam um SQLite em memória viraram três linhas
+  chamando `createTestDb()`.
+- A E2E derruba as tabelas do banco da sandbox antes de subir (a migração as
+  recria) e injeta `DATABASE_URL` no `env` do processo filho — o `next start`
+  não sobrescreve variável que já existe no `process.env`, então o `.env.local`
+  do dev nunca vaza para a sandbox. Conferido: `leaf_dev` não recebe nada
+  durante a E2E.
+
+### Um bug de corrida que só o MySQL revelou
+
+`acceptPendingInvites` roda no layout de `(app)`, a cada render. Quando alguém
+com convite pendente faz signup, o Next dispara mais de uma requisição para a
+mesma rota (navegação + prefetch) e as duas executavam o par
+"lista as adesões → insere a que falta". Com o SQLite embutido a janela entre a
+leitura e a escrita era pequena o bastante para nunca dar; com o banco a 150 ms
+as duas leem "não é membro" e as duas inserem, e a segunda morre em
+`ER_DUP_ENTRY` na `organization_members_org_user_unq` — a tela de organização
+virava "A server error occurred".
+
+O `insert` ganhou `.onDuplicateKeyUpdate({ set: { orgId } })`. O índice único já
+garantia uma adesão só; agora a segunda inserção concorrente é um no-op em vez
+de uma exceção. **Não é maquiagem de teste: a corrida existe em produção.**
+
+### E2E: o que a latência mudou
+
+- A sandbox agora **aplica as migrações antes de subir o Next**
+  (`prepareDatabase` em `scripts/e2e-database.mjs`). Sem isso, o primeiro
+  `signUp` da suíte pagava a migração inteira dentro dos 8 s que o
+  `submitUntilLeaves` do `e2e/helpers.ts` espera, e o primeiro caso quebrava
+  sempre.
+- **Um worker, como antes.** Uma tentativa com `workers: 3` derrubou quatro
+  casos que passam em série (o de foco no título, o de renomear, o de
+  organizações e um de comentários que foi de 28 s para 1,5 min): três
+  navegadores disputando server actions contra um banco a 150 ms viram
+  concorrência que a suíte nunca teve. Ficou `workers: Number(E2E_WORKERS ?? 1)`
+   — a variável existe para quem quiser tentar em rede mais rápida.
+- **Consequência prática: a suíte inteira passa de 15 minutos** e não cabe mais
+  num único comando com teto de 10 min. O jeito de rodar é build uma vez e
+  depois `playwright test --project=<projeto> <specs>` em pedaços.
+- `e2e/editor.spec.ts` trocou um `waitForTimeout(500)` por
+  `expect(...).toBeEnabled()` no campo de título: o input fica `disabled`
+  enquanto a server action de renomear está no ar, e com MySQL ela demora mais
+  do que os 500 ms fixos, então o `Backspace` chegava no campo desabilitado e o
+  foco não ia para lugar nenhum.
+- `uniqueEmail` ganhou o `process.pid` na composição, para não colidir entre
+  workers.
+
+### O caso E2E que ficou vermelho
+
+`e2e/versions.spec.ts` → "grava uma versão por janela de throttle, mostra o
+preview e restaura" falha na **última** asserção do caso: depois do `Escape`
+que fecha o diálogo de histórico, o foco não volta para o botão "Ações do
+documento". Tudo antes disso passa — o throttle, a versão única, o preview e a
+restauração estão corretos com MySQL. O outro caso do arquivo (leitor não vê o
+histórico) passa.
+
+Diagnóstico: é a devolução de foco do Radix, não o banco. O diálogo é aberto por
+um `DropdownMenuItem`; o menu fecha e o diálogo abre no mesmo tick, então o
+`FocusScope` do diálogo guarda como "elemento anterior" um item de menu que já
+saiu do DOM, e no fechamento o foco cai no `body`. A restauração faz
+`window.location.reload()` e o `revalidatePath` correspondente; com o banco mais
+lento a página fica ocupada mais tempo e a corrida passa a perder sempre. Antes
+do port passava.
+
+Três tentativas de estabilizar pelo teste (esperar o input habilitado, esperar
+`networkidle` antes de reabrir o histórico e antes do `Escape`) **não**
+resolveram — a asserção continua caindo, e as mudanças foram revertidas para não
+deixar espera inútil no teste. A correção de verdade é na UI (devolver o foco
+explicitamente no `onCloseAutoFocus` do diálogo, ou `preventDefault` no
+`onSelect` do item de menu), que é mudança de comportamento de interface e está
+fora do escopo do port de banco. **Fica para o Guilherme decidir.**
+
+### Outro bug real de latência: a lixeira no mobile
+
+`e2e/mobile.spec.ts` → "compartilhar abre como Sheet e o diálogo de excluir vira
+folha de baixo" estourava os 90 s do caso com "element is not stable" e depois
+"element was detached from the DOM". O `handleTrash` do `document-menu.tsx` faz
+`router.push('/')` **e em seguida** mostra o toast; o teste esperava só o toast e
+já abria a navegação. Com o banco mais lento a navegação para `/` ainda estava no
+ar, e quando ela chegava o Sheet aberto era destruído. O teste passou a esperar
+`waitForURL(pathname === '/')` antes de abrir a navegação, e o caso caiu de 90 s
+(timeout) para 11,9 s.
+
+### Testes ajustados
+
+- `buildMatchExpression`: as duas asserções de string agora esperam a sintaxe
+  do BOOLEAN MODE.
+- `searchAccessibleDocuments` / `listRecentAccessibleDocuments` /
+  `indexDocument` / `removeDocumentFromIndex` viraram `await`.
+- A asserção que lia a `documents_fts` direto trocou `db.all` por `db.execute`
+  (no MySQL o drizzle devolve `[rows, fields]`).
+- **Três casos novos** para `buildSnippet`, que antes era o `snippet()` do
+  SQLite e agora é código nosso: destaque da palavra inteira ignorando acento,
+  corte com reticências nas duas pontas, e corpo vazio.
+
+### Números
+
+| | resultado |
+|---|---|
+| `pnpm exec tsc --noEmit` | **limpo** |
+| `pnpm exec vitest run` | **242 testes em 16 arquivos, verdes** (eram 239; +3 do `buildSnippet`), ~3 min com 6 workers |
+| `LEAF_DIST_DIR=.next-build pnpm build` | **verde** |
+| `pnpm test:e2e` | **50 verdes / 1 vermelho (51)** |
+
+A E2E rodou em pedaços, por causa do teto de 10 min por comando:
+
+| pedaço | resultado |
+|---|---|
+| desktop: comments + editor + import-export (18) | 17 ✓ / 1 ✘ (o `title` da aba — corrigido e reconferido no pedaço seguinte) |
+| desktop: editor + notion-import + organizations (11) | 10 ✓ / 1 ✘ (organizações — corrigido com o `onDuplicateKeyUpdate` e reconferido) |
+| desktop: organizations + preferences + sharing + versions (11) | 10 ✓ / 1 ✘ (o foco do histórico) |
+| desktop: versions + search + sidebar (12) | 11 ✓ / 1 ✘ (o mesmo foco do histórico) |
+| mobile + realtime (10) | 9 ✓ / 1 ✘ (lixeira no mobile — corrigido) |
+| mobile, depois do fix (7) | **7 ✓** |
+
+O único vermelho que sobra é a asserção de foco do `versions.spec.ts` descrita
+acima.
+
+### Passe de fumaça manual (dev server na 3000, banco `leaf_dev`)
+
+Oito checagens, todas verdes: signup, criar documento, renomear, conteúdo
+sobrevivendo ao reload, `Ctrl+K` achando o documento por uma palavra do **corpo
+sem acento** (`avaliacao` → "avaliação"), dois contextos convergindo, indicador
+de presença com os dois nomes, e o texto dos dois contextos persistido depois do
+reload. Conferido também direto no `leaf_dev`: `documents.content`,
+`documents_fts` (com `indexed_at` igual ao `updated_at`) e `document_versions`.
+
+**Uma observação que vale registrar, e não é do banco:** na *primeira* execução,
+contra um dev server recém-subido, o handshake do ws demorou 2,4 s (Next
+compilando a rota) e o editor caiu no fallback solo — mas a sala já tinha sido
+aberta e semeada **vazia**. O texto foi para o `documents.content` pelo autosave
+solo; quando o segundo contexto entrou naquela sala vazia e escreveu, o servidor
+de colaboração, que é o dono do conteúdo enquanto a sala está aberta,
+sobrescreveu o parágrafo anterior. Na segunda execução, com o servidor quente, o
+editor entrou em modo colaborativo e os dois textos sobreviveram. É a fragilidade
+do fallback de ~2,5 s já registrada na onda 12, agora com uma consequência
+observada: **sala aberta e vazia + cliente em modo solo = perda do que o solo
+gravou.** O MySQL não causa isso, mas o custo extra por query encurta a margem.
+Vale um olhar do Guilherme.

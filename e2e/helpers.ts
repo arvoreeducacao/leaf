@@ -5,7 +5,7 @@ let counter = 0
 export function uniqueEmail(prefix = 'leaf') {
   counter += 1
 
-  return `${prefix}-${Date.now()}-${counter}@exemplo.test`
+  return `${prefix}-${Date.now()}-${process.pid}-${counter}@exemplo.test`
 }
 
 export const password = 'senha-de-teste-123'
@@ -76,6 +76,7 @@ export async function renameDocument(page: Page, title: string) {
   await input.fill(title)
   await input.blur()
   await expect(page.getByLabel('Título do documento')).toHaveValue(title)
+  await expect(page.getByLabel('Título do documento')).toBeEnabled()
 }
 
 export function editorBody(page: Page) {

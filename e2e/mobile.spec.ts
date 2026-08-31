@@ -113,9 +113,14 @@ test.describe('mobile 375px', () => {
     await page.getByRole('menuitem', { name: 'Mover para a lixeira' }).click()
 
     await expect(page.getByText('Documento movido para a lixeira')).toBeVisible()
+    await page.waitForURL((url) => url.pathname === '/')
 
     await page.getByRole('button', { name: 'Abrir navegação' }).click()
-    await page.getByRole('button', { name: /Lixeira/ }).click()
+
+    const trash = page.getByRole('button', { name: /Lixeira/ })
+
+    await expect(trash).toBeVisible()
+    await trash.click()
     await page
       .getByRole('button', { name: /Excluir .* de vez/ })
       .first()

@@ -165,12 +165,15 @@ export async function acceptPendingInvites(
       continue
     }
 
-    await db.insert(organizationMembers).values({
-      id: nanoid(12),
-      orgId: invite.orgId,
-      userId,
-      role: invite.role,
-    })
+    await db
+      .insert(organizationMembers)
+      .values({
+        id: nanoid(12),
+        orgId: invite.orgId,
+        userId,
+        role: invite.role,
+      })
+      .onDuplicateKeyUpdate({ set: { orgId: invite.orgId } })
 
     if (hadNoOrganization && joined.size === 0) {
       await attachOwnerDocuments(invite.orgId, userId)
