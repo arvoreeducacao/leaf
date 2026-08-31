@@ -141,7 +141,6 @@ export function CommentThreadItem({
               className="w-full tablet:w-auto"
               disabled={pending}
               onClick={() => setEditingId(null)}
-              size="lg"
               type="button"
               variant="secondary"
             >
@@ -151,7 +150,6 @@ export function CommentThreadItem({
               className="w-full tablet:w-auto"
               disabled={pending || editBody.trim().length === 0}
               onClick={() => void submitEdit()}
-              size="lg"
               type="button"
             >
               {t('save')}
@@ -189,7 +187,6 @@ export function CommentThreadItem({
               className="w-full tablet:w-auto"
               disabled={pending}
               onClick={() => setConfirmingDelete(null)}
-              size="lg"
               type="button"
               variant="secondary"
             >
@@ -199,7 +196,6 @@ export function CommentThreadItem({
               className="w-full tablet:w-auto"
               disabled={pending}
               onClick={() => void onDelete(comment.id)}
-              size="lg"
               type="button"
               variant="destructive"
             >
@@ -214,6 +210,7 @@ export function CommentThreadItem({
       <div className="flex flex-wrap items-center gap-1">
         {isRoot && canComment && !resolved ? (
           <Button
+            className="h-auto min-h-11 px-2 py-1 tablet:min-h-0"
             disabled={pending}
             onClick={() => setReplying(true)}
             size="sm"
@@ -227,6 +224,7 @@ export function CommentThreadItem({
 
         {isAuthor ? (
           <Button
+            className="h-auto min-h-11 px-2 py-1 tablet:min-h-0"
             disabled={pending}
             onClick={() => startEdit(comment)}
             size="sm"
@@ -240,6 +238,7 @@ export function CommentThreadItem({
 
         {isAuthor ? (
           <Button
+            className="h-auto min-h-11 px-2 py-1 tablet:min-h-0"
             disabled={pending}
             onClick={() => setConfirmingDelete(comment.id)}
             size="sm"
@@ -253,6 +252,7 @@ export function CommentThreadItem({
 
         {isRoot && canResolve ? (
           <Button
+            className="h-auto min-h-11 px-2 py-1 tablet:min-h-0"
             disabled={pending}
             onClick={() => void onResolve(thread.id, !resolved)}
             size="sm"
@@ -372,7 +372,6 @@ export function CommentThreadItem({
                 setReplying(false)
                 setReplyBody('')
               }}
-              size="lg"
               type="button"
               variant="secondary"
             >
@@ -382,7 +381,6 @@ export function CommentThreadItem({
               className="w-full tablet:w-auto"
               disabled={pending || replyBody.trim().length === 0}
               onClick={() => void submitReply()}
-              size="lg"
               type="button"
             >
               {t('sendReply')}

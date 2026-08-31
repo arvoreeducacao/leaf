@@ -89,10 +89,7 @@ test.describe('comentários', () => {
 
     await page.getByRole('button', { name: 'Responder', exact: true }).click()
     await page.getByLabel(/^Resposta para/).fill('Resposta da autora')
-    await page
-      .getByRole('button', { name: 'Responder', exact: true })
-      .last()
-      .click()
+    await page.getByRole('button', { name: 'Enviar resposta' }).click()
 
     await expect(
       page.getByTestId('comment-thread').first(),

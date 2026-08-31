@@ -14,10 +14,12 @@ Regras de toda onda: i18n pt-BR/en-US com paridade de chaves; dark/claro AA; tok
 - Papel 'commenter' em document_shares.role e org_access: viewer < commenter < editor; authz + testes; opção nos selects do modal Compartilhar.
 - Painel lateral (Sheet mobile): threads, resolver/reabrir, responder; âncora em bloco a partir da seleção (botão na toolbar), clique rola e destaca; bloco apagado vira "sem âncora". Comentar exige commenter+; editar/excluir só autor; resolver: autor ou editor+.
 
-## Onda 10 — Busca full-text
+## Onda 10 — Busca full-text (requisito direto do Guilherme)
 - SQLite FTS5 (title + texto plano do content, sync no save; extração de texto testada).
-- Cmd/Ctrl+K abre command palette (componente command do DS) buscando nos docs acessíveis (authz obrigatório no server) com trecho destacado. Busca da sidebar continua como filtro rápido.
-- Teste: doc privado de terceiro nunca aparece.
+- **Atalhos: Cmd/Ctrl+K E Alt/Option+K** abrem a command palette (toggle; Esc fecha). Cmd+P da sidebar continua como filtro rápido.
+- UX de referência (pedido do usuário): a barra de comando estilo Arc/Notion e a busca do backoffice — LER `frontend-arvore-nextjs/src/app/[locale]/(authenticated)/backoffice-v2/_components/command-palette.tsx` como referência de estrutura (overlay centrado no topo, input grande, resultados em seções, itens com ícone + título + trecho/caminho, navegação por setas + Enter, detecção de Mac pra exibir ⌘K vs Ctrl+K, documentos recentes quando a query está vazia). Reimplementar com componente command do DS e tokens semânticos do Leaf — sem copiar lucide/estilos de lá.
+- Seções da palette do Leaf: Recentes (query vazia), Documentos (FTS com trecho destacado), Ações rápidas (Novo documento, Ir para Organização, Importar).
+- Busca só nos docs acessíveis (authz obrigatório no SERVER). Teste: doc privado de terceiro nunca aparece.
 
 ## Onda 11 — Teamspaces + múltiplas orgs por usuário
 - `teamspaces` (org_id, name, access open|closed) + `teamspace_members` (role owner|member); `documents.teamspace_id` nullable; membros herdam acesso; open = qualquer membro da org entra/vê, closed = só convidados.
