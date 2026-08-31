@@ -15,7 +15,7 @@ import {
   getDocumentAccess,
   getTrashedDocumentAccess,
 } from '@/lib/authz'
-import { recordDocumentVersion } from '@/lib/document-versions'
+import { persistDocumentContent } from '@/lib/document-content'
 import { listOwnedDocuments, listSubtreeIds } from '@/lib/documents'
 import { indexDocument, removeDocumentFromIndex } from '@/lib/search-index'
 
@@ -103,21 +103,7 @@ export async function updateDocumentContent(
     return notAllowedResult()
   }
 
-  const current = await db.query.documents.findFirst({
-    where: eq(documents.id, id),
-  })
-
-  if (current?.content === contentJSON) {
-    return { ok: true }
-  }
-
-  await db
-    .update(documents)
-    .set({ content: contentJSON, updatedAt: new Date() })
-    .where(eq(documents.id, id))
-
-  await recordDocumentVersion(id, session.user.id)
-  indexDocument(id)
+  await persistDocumentContent(id, contentJSON, session.user.id)
 
   return { ok: true }
 }
