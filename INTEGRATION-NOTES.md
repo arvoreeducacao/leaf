@@ -1230,3 +1230,170 @@ Todos os 🔴 corrigidos e a maior parte dos 🟡:
   texto" de "quem disparou o snapshot".
 - Documento na lixeira não expõe histórico (a tela do documento nem abre); as
   versões só somem de vez no "Excluir de vez", pelo cascade.
+
+## Onda 9 — Comentários e papel "Pode comentar" (entregue)
+
+### Modelo de dados
+
+- Migração `drizzle/0004_amused_daredevil.sql`: tabela `comments` (`id`,
+  `document_id`, `parent_id`, `block_id`, `author_id`, `body`, `resolved_at`,
+  `created_at`, `updated_at`) com índices `(document_id, created_at)`,
+  `(parent_id)` e `(author_id)`.
+- **O `CREATE TABLE` emitiu os três `ON DELETE` certos** (`document_id` cascade,
+  `parent_id` cascade, `author_id` set null), confirmando a regra da onda 8: o
+  defeito do drizzle-kit é específico de `ALTER TABLE ... ADD COLUMN`. Nada foi
+  editado à mão; conferido também no `data/leaf.db` real com
+  `pragma foreign_key_list(comments)`.
+- **Widening de enum não gera DDL.** `document_shares.role` e
+  `documents.org_access` passaram a aceitar `commenter`, mas no SQLite o
+  `text('...', { enum: [...] })` do drizzle é só `TEXT` sem `CHECK`, então a
+  migração não tem nenhum `ALTER`. Quem valida o valor é `isShareRole` em
+  `share-actions.ts`.
+- `author_id` é **nullable com `set null`**, mesma decisão da onda 8: o
+  comentário de um convidado sobrevive à exclusão da conta dele e a UI mostra
+  "Autor removido". Consequência intencional: comentário sem autor não pode mais
+  ser editado nem excluído por ninguém (a checagem é `authorId === viewerId`, e
+  `null` nunca casa), e só editor+ consegue resolvê-lo.
+- `created_at`/`updated_at`/`resolved_at` são `timestamp_ms` (como
+  `document_versions.created_at`), para a ordenação ser estável entre comentários
+  do mesmo segundo.
+- `updated_at` **não** é tocado por resolver/reabrir, só por edição do corpo. É o
+  que faz o marcador "editado" (`updatedAt > createdAt`) significar edição de
+  verdade.
+
+### Autorização
+
+- `AccessLevel` virou `owner | editor | commenter | viewer` e o `levelRank` de
+  `authz.ts` passou a `viewer 1 < commenter 2 < editor 3 < owner 4`. `canEdit`
+  continua exigindo `editor`, então **commenter não edita o documento**; entrou
+  `canComment` (exige `commenter`).
+- A precedência de `getDocumentAccess` não mudou de forma (dono → share
+  explícito → `org_access` → nada); só passou a poder devolver `commenter` por
+  qualquer um dos dois caminhos. `authz.test.ts` ganhou os casos dos dois
+  sentidos: share `commenter` no lugar de `viewer`, e share `editor` subindo
+  sobre um `org_access` `commenter`.
+- `src/lib/comment-actions.ts` (`'use server'`) é a única porta da UI. Regras:
+  **ler** exige qualquer acesso ao documento (decisão registrada: leitura de
+  comentário acompanha leitura do doc, então viewer vê as conversas);
+  **comentar** exige `canComment`; **editar/excluir** só o autor; **resolver ou
+  reabrir** o autor da conversa ou `canEdit`. Toda ação devolve o estado inteiro
+  (`threads`, `viewerId`, `canComment`, `canResolveAny`, `openCount`), como o
+  `ShareState` da onda 2 — o painel nunca faz merge otimista.
+- Rate limit de criação: `registerCommentAttempt`, 30 por 60s na chave
+  `documentId:userId`, criado com a mesma fábrica `createRateLimiter` que a onda
+  7 extraiu. Continua in-memory por processo.
+- **A página pública `/share/[token]` não mostra comentários** e não tem como
+  chegar neles: o `CommentsPanel` só é montado pelo `document-header.tsx`, que é
+  exclusivo de `/doc/[id]`, e todas as actions passam por `getDocumentAccess`,
+  que ignora o caminho do `public_token`.
+
+### Âncora em bloco
+
+- A âncora é o **id de bloco do BlockNote** (`block_id`), que é estável no JSON e
+  é renderizado no DOM como `data-id` (confirmado no `addGlobalAttributes` do
+  core). Resposta não tem âncora própria: `createComment` zera o `blockId` quando
+  há `parentId`, porque a conversa inteira pendura no bloco da raiz.
+- Só um nível de resposta: `createComment` recusa `parentId` que aponte para um
+  comentário que já tem pai, e recusa pai de outro documento.
+- `src/components/comments/comments-bridge.ts` liga editor e painel sem prop
+  drilling entre árvores React separadas (o painel vive no header, o editor no
+  corpo da página): um store de módulo com `useSyncExternalStore` para os ids de
+  bloco vivos, mais dois CustomEvents de janela (`leaf:comment-request` da
+  toolbar para o painel, `leaf:comment-focus-block` do painel para o editor). É a
+  mesma família de solução do `focus-bridge.ts` da onda 5.
+- **"Sem âncora" nunca é chute:** o store guarda um flag `ready` e
+  `isAnchorMissing` só devolve `true` depois que o editor publicou os ids pelo
+  menos uma vez. Sem isso, todo comentário apareceria como órfão no primeiro
+  paint, antes de o editor montar.
+- Clicar em "Ir para o trecho comentado" fecha o painel, espera os 320ms da
+  animação de saída do Sheet e então rola até o bloco com destaque temporário de
+  2,2s (`.leaf-comment-target`). **O painel fecha nos dois breakpoints, não só no
+  mobile**: o Sheet é Radix Dialog modal, então no desktop o bloco ficaria atrás
+  do overlay `alpha-800` e fora do trap de foco (🔴 do design-review).
+- Se o bloco não existe mais no DOM, o clique cai num `toast.error` e a conversa
+  segue viva com o badge "Sem âncora". Nenhum caminho apaga comentário por causa
+  de bloco removido.
+
+### UI
+
+- `CommentsPanel` (`src/components/comments/comments-panel.tsx`) renderiza o
+  gatilho **e** o painel. O gatilho fica no cluster de ações do
+  `document-header.tsx` com o contador de conversas abertas; o número inicial vem
+  do servidor (`countOpenComments` em `doc/[id]/page.tsx`), e depois é o estado
+  devolvido pelas actions que manda.
+- É `Sheet`, não `Dialog`: `side="right"` no desktop (`sm:max-w-md`, casando a
+  variante `sm:` da base para o twMerge deduplicar) e `side="bottom"` com
+  `h-[85dvh]` no mobile, onde usa o `SheetHeader type="close"` (fechar de 48px).
+  A cópia local de `ui/dialog.tsx` já vira bottom sheet sozinha, mas aqui o
+  painel precisa conviver com o editor, e Sheet é o componente do padrão.
+- `CommentThreadItem` cuida de uma conversa: meta do autor, corpo, âncora,
+  respostas, e confirmação **inline** de exclusão (não AlertDialog: dialog dentro
+  de dialog é ruim no mobile, mesma decisão da onda 8 para restaurar versão).
+- Conversas resolvidas somem por padrão e voltam pelo switch "Mostrar
+  resolvidos", que só aparece quando existe alguma resolvida. O estado vazio
+  distingue "ainda não há comentários" de "todos foram resolvidos".
+- Botão "Comentar" na `formatting-toolbar.tsx` custom, via
+  `Components.FormattingToolbar.Button` do `useComponentsContext()` (o `label`
+  vira `aria-label` e o `mainTooltip` vira tooltip, conferido no bundle do
+  `@blocknote/shadcn`). Ele é renderizado só quando `canComment`.
+- Feedback é só `toast`, sem live region própria — a região ARIA do Sonner já
+  cobre, e ter as duas coisas fazia o leitor de tela anunciar duas vezes (o
+  mesmo que a onda 7 corrigiu no `OrganizationManager`).
+- i18n: namespace novo `comments` (46 chaves) com paridade pt-BR/en-US, mais
+  `share.roleCommenter` e três chaves em `errors`. Os selects de papel do modal
+  Compartilhar (pessoas **e** organização) passaram a ser gerados de um array
+  `roleOptions`, então a terceira opção entrou nos três lugares de uma vez.
+
+### Verificação
+
+- `pnpm exec tsc --noEmit` limpo e `pnpm exec vitest run` **174 testes verdes**
+  (11 arquivos; 23 novos: 19 em `src/lib/comments.test.ts` cobrindo criação
+  ancorada, corpo vazio, corte no limite, resposta de um nível, recusa de
+  resposta de resposta e de pai em outro documento, ordenação, contagem de
+  abertas, resolver/reabrir sem mexer no `updated_at`, resposta que não resolve,
+  edição, exclusão em cascata da conversa, cascade do documento, `set null` do
+  autor e isolamento entre documentos; mais 4 em `authz.test.ts` para a
+  precedência nova).
+- Design-review rodado nos 10 arquivos de UI, nos dois temas: os quatro 🔴 e a
+  maior parte dos 🟡 foram corrigidos no commit `fix(comments)`.
+
+### Ajustes vindos do design-review
+
+- **🔴 destaque invisível:** `.leaf-comment-target` era só `bg-warn-surface`,
+  que dá 1,03:1 no claro e 1,04:1 no escuro contra o fundo do editor. Ganhou
+  `ring-2 ring-warn` (`warning-800` no claro = 5,27:1, `warning-300` no escuro).
+- **🔴 área de toque:** o `size="lg"` do `ui/button.tsx` deste repo é **40px**,
+  não 44. Saiu dos nove CTAs do painel (o default é h-12) e as quatro ações da
+  conversa, que são `size="sm"` (32px), ganharam
+  `h-auto min-h-11 px-2 py-1 tablet:min-h-0`.
+- **🔴 header estourando em 375px:** o cluster de ações era `shrink-0` sem
+  `flex-wrap`; com o Badge "Organização" mais o botão novo passava de 400px numa
+  linha de 343px. Virou `flex-wrap justify-end`.
+- **🔴 rolar até o bloco atrás do overlay** (descrito na seção da âncora).
+- 🟡 corrigidos: o painel afirmava "você não pode comentar" durante o
+  carregamento; estado vazio mentia quando tudo estava resolvido; a legenda do
+  rascunho ancorado reusava o texto do botão "Ir para o trecho"; dois CTAs
+  "Responder" com o mesmo nome acessível no mesmo card (o de envio virou "Enviar
+  resposta"); âncora antiga sobrevivia ao reabrir o painel pelo header; alvo de
+  toque do switch "Mostrar resolvidos"; e a validação morta do rascunho, que
+  mostrava o placeholder como mensagem de erro num caminho inalcançável.
+
+### Pendências desta onda
+
+- **O botão "Comentar" da toolbar depende de a formatting toolbar do BlockNote
+  aparecer, e no modo somente-leitura isso não foi verificado em navegador.** No
+  bundle, cada botão default do pacote começa com `if (!editor.isEditable) return
+  null`, mas nem a `FormattingToolbar` nem o `FormattingToolbarController` têm
+  essa guarda, então o botão custom deveria aparecer sozinho para quem só
+  comenta. Enquanto isso não for confirmado, o caminho garantido para o
+  `commenter` é o composer do painel, que cria comentário **sem âncora**. Se a
+  toolbar não aparecer, a correção é dar ao commenter outro jeito de escolher o
+  bloco.
+- O comentário não tem menção a pessoa, notificação, nem anexo.
+- A âncora é o bloco inteiro, não o intervalo de texto selecionado. A copy fala
+  em "trecho"; alinhar o vocabulário (ou ancorar no range) ficou para depois.
+- `maxLength` corta o texto sem contador visível.
+- O painel não faz polling: comentário criado por outra pessoa só aparece ao
+  reabrir o painel, e o contador do header só no reload da página.
+- O select de papel não explica o que cada opção libera (heurística 10).
+- Sem paginação: documento com muitas conversas carrega todas de uma vez.

@@ -147,6 +147,10 @@ export default function BlockNoteEditor({
     return () => resetBlockIds()
   }, [editor])
 
+  const blockGoneRef = useRef(tComments('blockGone'))
+
+  blockGoneRef.current = tComments('blockGone')
+
   useEffect(() => {
     let timeout = 0
     let highlighted: HTMLElement | null = null
@@ -167,7 +171,7 @@ export default function BlockNoteEditor({
       )
 
       if (!target) {
-        toast.error(tComments('blockGone'))
+        toast.error(blockGoneRef.current)
 
         return
       }
@@ -192,7 +196,7 @@ export default function BlockNoteEditor({
       stop()
       clearHighlight()
     }
-  }, [tComments])
+  }, [])
 
   useEffect(
     () =>

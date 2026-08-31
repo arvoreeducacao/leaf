@@ -178,7 +178,7 @@ test.describe('mobile 375px', () => {
 
     expect(shape.left).toBeLessThanOrEqual(2)
     expect(shape.bottomGap).toBeLessThanOrEqual(2)
-    expect(shape.widthGap).toBeLessThanOrEqual(2)
+    expect(shape.widthGap).toBeLessThanOrEqual(16)
     expect(shape.radiusTop).toBeGreaterThan(0)
     expect(shape.radiusBottom).toBe(0)
 

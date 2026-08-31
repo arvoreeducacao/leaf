@@ -10,7 +10,18 @@ import {
   waitForSaved,
 } from './helpers'
 
+async function focusEditorEnd(page: Page) {
+  const body = editorBody(page)
+
+  await expect(body).toHaveCount(1)
+  await body.click()
+  await expect(body).toBeFocused()
+  await page.keyboard.press('Control+End')
+}
+
 async function selectLastWord(page: Page, length: number) {
+  await focusEditorEnd(page)
+
   for (let index = 0; index < length; index += 1) {
     await page.keyboard.press('Shift+ArrowLeft')
   }
@@ -99,7 +110,9 @@ test.describe('comentários', () => {
     await expect(page.getByText('Comentário resolvido').first()).toBeVisible()
 
     await expect(page.getByTestId('comment-thread')).toHaveCount(0)
-    await expect(page.getByText('Ainda não há comentários')).toBeVisible()
+    await expect(
+      page.getByText('Todos os comentários foram resolvidos'),
+    ).toBeVisible()
 
     await page.getByRole('switch', { name: 'Mostrar resolvidos' }).click()
 
@@ -272,13 +285,14 @@ test.describe('comentários', () => {
     await expect(page.getByTestId('comment-anchor')).toHaveCount(1)
 
     await page.keyboard.press('Escape')
+    await expect(page.getByTestId('comments-panel')).toHaveCount(0)
 
-    const body = editorBody(page)
-
-    await body.click()
+    await focusEditorEnd(page)
     await page.keyboard.press('Control+a')
     await page.keyboard.press('Backspace')
     await page.keyboard.press('Backspace')
+
+    await expect(editorBody(page)).not.toContainText('linha que vai sumir')
     await waitForSaved(page)
 
     await openPanel(page)
