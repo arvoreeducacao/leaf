@@ -87,13 +87,9 @@ async function seed() {
     })),
   )
 
-  await db.insert(organizations).values({
-    id: org,
-    name: 'Árvore',
-    ownerId: owner.id,
-    createdAt: now,
-    updatedAt: now,
-  })
+  await db
+    .insert(organizations)
+    .values({ id: org, name: 'Escola Árvore', createdAt: now })
 
   await db.insert(organizationMembers).values([
     { id: 'm-owner', orgId: org, userId: owner.id, role: 'owner', createdAt: now },
