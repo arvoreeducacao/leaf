@@ -5,10 +5,12 @@ import { notFound, redirect } from 'next/navigation'
 import { DocumentBreadcrumb } from '@/components/app/document-breadcrumb'
 import { DocumentHeader } from '@/components/app/document-header'
 import { DocumentEditor } from '@/components/editor/document-editor'
+import { authorNameOf } from '@/lib/author-name'
 import { getSession } from '@/lib/auth'
 import { canComment, canEdit, getDocumentAccess } from '@/lib/authz'
 import { countOpenComments } from '@/lib/comments'
 import { getDocument, listAncestors } from '@/lib/documents'
+import { isRealtimeEnabled, realtimePort } from '@/lib/realtime-config'
 import { getTeamspace } from '@/lib/teamspaces'
 
 type Props = Readonly<{ params: Promise<{ id: string }> }>
@@ -69,6 +71,19 @@ export default async function DocumentPage({ params }: Props) {
           initialContent={document.content}
           isOwner={access === 'owner'}
           readOnly={!canEdit(access)}
+          realtime={
+            isRealtimeEnabled()
+              ? {
+                  url: process.env.LEAF_REALTIME_URL?.trim() || null,
+                  port: realtimePort(),
+                  user: {
+                    id: session.user.id,
+                    name:
+                      authorNameOf(session.user.name, session.user.email) ?? '',
+                  },
+                }
+              : null
+          }
         />
       </div>
     </article>

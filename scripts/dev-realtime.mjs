@@ -24,6 +24,8 @@ const appUrl = process.env.LEAF_APP_URL ?? 'http://127.0.0.1:3000'
 const secret = process.env.LEAF_REALTIME_SECRET ?? 'leaf-dev-realtime'
 const persistIntervalMs = Number(process.env.LEAF_REALTIME_PERSIST_MS ?? 3_000)
 const idleRoomMs = Number(process.env.LEAF_REALTIME_IDLE_MS ?? 5_000)
+const persistAttempts = 3
+const persistRetryMs = 1_000
 const pingIntervalMs = 25_000
 
 const flag = (process.env.LEAF_REALTIME ?? '').trim().toLowerCase()
@@ -160,13 +162,11 @@ function encodeAwareness(awareness, clients) {
   return encoding.toUint8Array(encoder)
 }
 
-async function persistRoom(room) {
-  if (!room.dirty) {
-    return
-  }
+function wait(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
 
-  room.dirty = false
-
+async function persistOnce(room) {
   const state = Buffer.from(Y.encodeStateAsUpdate(room.doc)).toString('base64')
 
   try {
@@ -176,13 +176,48 @@ async function persistRoom(room) {
       authorId: room.lastAuthorId,
     })
 
-    if (!response.ok) {
-      room.dirty = true
-      log('falha ao salvar', room.documentId, response.status)
+    if (response.ok) {
+      return true
     }
+
+    log('falha ao salvar', room.documentId, response.status)
+
+    return false
   } catch (error) {
-    room.dirty = true
     log('falha ao salvar', room.documentId, error.message)
+
+    return false
+  }
+}
+
+async function persistRoom(room, attempts = persistAttempts) {
+  if (!room.dirty) {
+    return
+  }
+
+  if (room.persisting) {
+    schedulePersist(room)
+
+    return
+  }
+
+  room.persisting = true
+  room.dirty = false
+
+  try {
+    for (let attempt = 1; attempt <= attempts; attempt += 1) {
+      if (await persistOnce(room)) {
+        return
+      }
+
+      if (attempt < attempts) {
+        await wait(persistRetryMs)
+      }
+    }
+
+    room.dirty = true
+  } finally {
+    room.persisting = false
   }
 }
 
@@ -220,6 +255,17 @@ function scheduleRoomShutdown(room) {
       return
     }
 
+    if (room.dirty && room.shutdownAttempts < 3) {
+      room.shutdownAttempts += 1
+      scheduleRoomShutdown(room)
+
+      return
+    }
+
+    if (room.dirty) {
+      log('desistindo de salvar', room.documentId)
+    }
+
     rooms.delete(room.documentId)
     room.awareness.destroy()
     room.doc.destroy()
@@ -248,9 +294,11 @@ async function createRoom(documentId) {
     awareness,
     connections: new Map(),
     dirty: false,
+    persisting: false,
     lastAuthorId: null,
     persistTimer: null,
     idleTimer: null,
+    shutdownAttempts: 0,
   }
 
   doc.on('update', (update, origin) => {
@@ -373,6 +421,7 @@ function setupConnection(connection, room, access) {
     room.idleTimer = null
   }
 
+  room.shutdownAttempts = 0
   connection.binaryType = 'arraybuffer'
 
   const encoder = encoding.createEncoder()
@@ -506,8 +555,8 @@ server.on('upgrade', async (request, socket, head) => {
   })
 })
 
-server.listen(port, '127.0.0.1', () => {
-  log(`servidor de colaboração em ws://127.0.0.1:${port} (app ${appUrl})`)
+server.listen(port, process.env.LEAF_REALTIME_HOST, () => {
+  log(`servidor de colaboração na porta ${port} (app ${appUrl})`)
 })
 
 async function shutdown() {

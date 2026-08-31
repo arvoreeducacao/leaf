@@ -481,5 +481,12 @@
     "errorMemberNotFound": "This person is no longer in the teamspace.",
     "errorAlreadyMember": "This person is already in the teamspace.",
     "errorNotInOrganization": "This person is not in the organization."
+  },
+  "realtime": {
+    "connected": "Real-time collaboration",
+    "reconnecting": "Reconnecting",
+    "someone": "Someone",
+    "you": "{name} (you)",
+    "peopleHere": "{count, plural, one {# person in this document} other {# people in this document}}"
   }
 }
