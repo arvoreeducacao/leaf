@@ -142,7 +142,12 @@ test.describe('organizações', () => {
 
     await signUp(memberPage, memberEmail, 'Pessoa Membro')
     await memberPage.goto('/org')
-    await expect(memberPage.getByText('Escola Gestão')).toBeVisible()
+    await expect(
+      memberPage.getByRole('main').getByText('Escola Gestão'),
+    ).toBeVisible()
+    await expect(memberPage.getByTestId('org-switcher')).toContainText(
+      'Escola Gestão',
+    )
     await expect(
       memberPage.getByRole('heading', { name: 'Convidar pessoa' }),
     ).toHaveCount(0)

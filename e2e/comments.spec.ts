@@ -14,8 +14,12 @@ async function focusEditorEnd(page: Page) {
   const body = editorBody(page)
 
   await expect(body).toHaveCount(1)
-  await body.click()
-  await expect(body).toBeFocused()
+
+  await expect(async () => {
+    await body.click()
+    await expect(body).toBeFocused({ timeout: 2_000 })
+  }).toPass({ timeout: 20_000 })
+
   await page.keyboard.press('Control+End')
 }
 
@@ -295,9 +299,10 @@ test.describe('comentários', () => {
     await expect(page.getByTestId('comments-panel')).toHaveCount(0)
 
     await focusEditorEnd(page)
-    await page.keyboard.press('Control+a')
-    await page.keyboard.press('Backspace')
-    await page.keyboard.press('Backspace')
+
+    for (let index = 0; index <= 'linha que vai sumir'.length; index += 1) {
+      await page.keyboard.press('Backspace')
+    }
 
     await expect(editorBody(page)).not.toContainText('linha que vai sumir')
     await waitForSaved(page)
