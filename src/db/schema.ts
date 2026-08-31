@@ -188,6 +188,29 @@ export const documentShares = sqliteTable(
   ],
 )
 
+export const documentVersions = sqliteTable(
+  'document_versions',
+  {
+    id: text('id').primaryKey(),
+    documentId: text('document_id')
+      .notNull()
+      .references(() => documents.id, { onDelete: 'cascade' }),
+    title: text('title').notNull(),
+    content: text('content'),
+    authorId: text('author_id').references(() => user.id, {
+      onDelete: 'set null',
+    }),
+    createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
+  },
+  (table) => [
+    index('document_versions_document_id_created_at_idx').on(
+      table.documentId,
+      table.createdAt,
+    ),
+    index('document_versions_author_id_idx').on(table.authorId),
+  ],
+)
+
 export type Document = typeof documents.$inferSelect
 export type DocumentShare = typeof documentShares.$inferSelect
 export type ShareRole = DocumentShare['role']
@@ -197,3 +220,4 @@ export type OrganizationRole = OrganizationMember['role']
 export type OrganizationInvite = typeof organizationInvites.$inferSelect
 export type InviteRole = OrganizationInvite['role']
 export type OrgAccess = NonNullable<Document['orgAccess']>
+export type DocumentVersion = typeof documentVersions.$inferSelect

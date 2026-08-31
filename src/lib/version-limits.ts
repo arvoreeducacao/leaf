@@ -1,0 +1,2 @@
+export const VERSION_THROTTLE_MS = 5 * 60 * 1000
+export const MAX_VERSIONS_PER_DOCUMENT = 50

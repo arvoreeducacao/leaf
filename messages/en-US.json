@@ -104,6 +104,25 @@
     "orgTag": "Organization",
     "orgTagHint": "This document isn't private: people in the organization have access"
   },
+  "versions": {
+    "menuItem": "Version history",
+    "title": "Version history",
+    "description": "We save a version as you write. The latest {max} are kept.",
+    "listLabel": "Saved versions",
+    "empty": "No saved versions yet",
+    "emptyHint": "The first version shows up here as soon as the document is edited.",
+    "newest": "most recent version",
+    "byAuthor": "by {name}",
+    "unknownAuthor": "Removed author",
+    "selectPrompt": "Pick a version to see how the document looked.",
+    "previewLabel": "Version content",
+    "backToList": "Back to the list",
+    "restore": "Restore",
+    "restoreConfirm": "Restore this version?",
+    "restoreHint": "The current content becomes a new version before the swap, so nothing is lost.",
+    "restored": "Version restored",
+    "notFound": "This version no longer exists."
+  },
   "move": {
     "title": "Move to another page",
     "description": "Choose which page this document will live in",

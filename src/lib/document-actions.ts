@@ -14,6 +14,7 @@ import {
   getDocumentAccess,
   getTrashedDocumentAccess,
 } from '@/lib/authz'
+import { recordDocumentVersion } from '@/lib/document-versions'
 import { listOwnedDocuments, listSubtreeIds } from '@/lib/documents'
 import { getMembership } from '@/lib/organizations'
 
@@ -111,6 +112,8 @@ export async function updateDocumentContent(
     .update(documents)
     .set({ content: contentJSON, updatedAt: new Date() })
     .where(eq(documents.id, id))
+
+  await recordDocumentVersion(id, session.user.id)
 
   return { ok: true }
 }

@@ -1,10 +1,10 @@
 # Leaf — Roadmap das ondas restantes
 
-Estado: ondas 1-7 entregues (fundação, editor BlockNote, sharing, markdown, QA, import do Notion + hierarquia, polimento + E2E versionado, dark/claro + i18n pt-BR/en-US, organizações + import agnóstico via slash menu). Detalhes e decisões acumuladas em `INTEGRATION-NOTES.md`.
+Estado: ondas 1-8 entregues (fundação, editor BlockNote, sharing, markdown, QA, import do Notion + hierarquia, polimento + E2E versionado, dark/claro + i18n pt-BR/en-US, organizações + import agnóstico via slash menu, histórico de versões). Detalhes e decisões acumuladas em `INTEGRATION-NOTES.md`.
 
 Regras de toda onda: i18n pt-BR/en-US com paridade de chaves; dark/claro AA; tokens semânticos (nunca classe de paleta literal); ícones de `@/components/icons`; sem comentários no código; build + vitest + `pnpm test:e2e` + design-review (corrigir bloqueantes) + commit local por onda; feature só entra íntegra.
 
-## Onda 8 — Histórico de versões
+## Onda 8 — Histórico de versões (entregue)
 - `document_versions` (id, document_id, content, title, author_id, created_at). Snapshot no autosave com throttle (máx. 1 a cada 5 min por autor) + ao importar/restaurar. Retenção: últimas 50 (poda no insert).
 - Menu do documento → "Histórico de versões": painel/Sheet com lista (data relativa + autor), preview read-only (DocumentRenderer) e restaurar (gera versão do estado atual antes). Owner/editor veem; viewer não.
 - Testes: throttle, poda, restauração round-trip.

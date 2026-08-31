@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation'
 
 import { getSession } from '@/lib/auth'
 import { canEdit, getDocumentAccess } from '@/lib/authz'
+import { recordDocumentVersion } from '@/lib/document-versions'
 import { markdownToBlocks } from '@/lib/markdown/convert'
 import { MAX_MARKDOWN_BYTES, MAX_MARKDOWN_LABEL } from '@/lib/markdown/limits'
 import { looksBinary } from '@/lib/markdown/text'
@@ -50,6 +51,8 @@ export async function importMarkdownBlocks(
     if (blocks.length === 0) {
       return { ok: false, error: t('noContent') }
     }
+
+    await recordDocumentVersion(documentId, session.user.id, { force: true })
 
     return { ok: true, blocks: JSON.stringify(blocks) }
   } catch {

@@ -22,6 +22,13 @@
       "when": 1787964450755,
       "tag": "0002_simple_shinko_yamashiro",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1788133707569,
+      "tag": "0003_wet_frank_castle",
+      "breakpoints": true
     }
   ]
 }

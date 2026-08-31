@@ -27,3 +27,33 @@ export function writeStoredValue(key: string, value: unknown) {
     return
   }
 }
+
+export function writeSessionFlag(key: string, value: string) {
+  if (typeof window === 'undefined') {
+    return
+  }
+
+  try {
+    window.sessionStorage.setItem(key, value)
+  } catch {
+    return
+  }
+}
+
+export function takeSessionFlag(key: string): string | null {
+  if (typeof window === 'undefined') {
+    return null
+  }
+
+  try {
+    const value = window.sessionStorage.getItem(key)
+
+    if (value !== null) {
+      window.sessionStorage.removeItem(key)
+    }
+
+    return value
+  } catch {
+    return null
+  }
+}
