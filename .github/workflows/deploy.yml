@@ -1,0 +1,90 @@
+name: Deploy
+
+on:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  build-and-push:
+    runs-on: arc-deploy-set
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Production Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: us-east-1
+          role-to-assume: arn:aws:iam::AWS_ACCOUNT_ID:role/ECR_PUSH_ROLE
+          mask-aws-account-id: false
+
+      - name: Login to ECR
+        id: login_ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push Leaf
+        uses: docker/build-push-action@v6
+        env:
+          ECR_REGISTRY: AWS_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com
+          ECR_REPOSITORY: leaf
+          IMAGE_TAG: ${{ github.sha }}
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: |
+            ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
+            ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Configure AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::AWS_ACCOUNT_ID:role/ECR_PUSH_ROLE
+          aws-region: us-east-1
+          mask-aws-account-id: false
+
+      - name: Assume EKS role
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::AWS_ACCOUNT_ID:role/EKS_RBAC_ROLE
+          aws-region: us-east-1
+          role-duration-seconds: 1800
+          role-chaining: true
+          mask-aws-account-id: false
+
+      - name: Setup EKS on PRD
+        run: aws eks update-kubeconfig --name EKS_CLUSTER --region us-east-1 && kubectl config set-context --current --namespace=leaf
+
+      - name: Deploy new image
+        run: |
+          IMAGE=AWS_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/leaf:${{ github.sha }}
+          kubectl set image deployment/leaf-web web=$IMAGE
+          kubectl set image deployment/leaf-realtime realtime=$IMAGE
+
+      - name: Verify deployment
+        run: |
+          kubectl rollout status deployment/leaf-web --timeout=600s
+          kubectl rollout status deployment/leaf-realtime --timeout=300s
+          kubectl get pods -l 'app in (leaf-web, leaf-realtime)'
