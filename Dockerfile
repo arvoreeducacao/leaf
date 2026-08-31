@@ -6,6 +6,7 @@ RUN pnpm install --frozen-lockfile
 
 FROM deps AS build
 COPY . .
+ENV DATABASE_URL="mysql://build:build@127.0.0.1:3306/build"
 RUN pnpm build
 
 FROM node:22-alpine
