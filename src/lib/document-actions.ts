@@ -8,6 +8,7 @@ import { redirect } from 'next/navigation'
 
 import { db } from '@/db'
 import { documents } from '@/db/schema'
+import { getActiveMembership } from '@/lib/active-org'
 import { getSession } from '@/lib/auth'
 import {
   canEdit,
@@ -16,7 +17,6 @@ import {
 } from '@/lib/authz'
 import { recordDocumentVersion } from '@/lib/document-versions'
 import { listOwnedDocuments, listSubtreeIds } from '@/lib/documents'
-import { getMembership } from '@/lib/organizations'
 import { indexDocument, removeDocumentFromIndex } from '@/lib/search-index'
 
 export type ActionResult = { ok: true } | { ok: false; error: string }
@@ -45,7 +45,7 @@ export async function createDocument() {
   const session = await requireSession()
   const id = nanoid(12)
   const now = new Date()
-  const membership = await getMembership(session.user.id)
+  const membership = await getActiveMembership(session.user.id)
 
   await db.insert(documents).values({
     id,
@@ -152,6 +152,7 @@ export async function duplicateDocument(
     ownerId: session.user.id,
     parentId: source.parentId,
     orgId: source.orgId,
+    teamspaceId: source.teamspaceId,
     title: (await getTranslations('document'))('copyTitle', {
       title: source.title,
     }).slice(0, 200),
@@ -248,6 +249,21 @@ export async function moveDocument(
     .update(documents)
     .set({ parentId, updatedAt: new Date() })
     .where(and(eq(documents.id, id), isNull(documents.deletedAt)))
+
+  if (parentId) {
+    const parent = await db.query.documents.findFirst({
+      where: eq(documents.id, parentId),
+    })
+
+    if (parent) {
+      const subtree = await listSubtreeIds(id, session.user.id)
+
+      await db
+        .update(documents)
+        .set({ teamspaceId: parent.teamspaceId, orgId: parent.orgId })
+        .where(inArray(documents.id, subtree))
+    }
+  }
 
   revalidatePath('/', 'layout')
   revalidatePath(`/doc/${id}`)

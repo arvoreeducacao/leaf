@@ -9,6 +9,7 @@ import { getSession } from '@/lib/auth'
 import { canComment, canEdit, getDocumentAccess } from '@/lib/authz'
 import { countOpenComments } from '@/lib/comments'
 import { getDocument, listAncestors } from '@/lib/documents'
+import { getTeamspace } from '@/lib/teamspaces'
 
 type Props = Readonly<{ params: Promise<{ id: string }> }>
 
@@ -44,16 +45,21 @@ export default async function DocumentPage({ params }: Props) {
 
   const crumbs = await listAncestors(document.id)
   const openComments = await countOpenComments(document.id)
+  const teamspace = document.teamspaceId
+    ? await getTeamspace(document.teamspaceId)
+    : null
 
   return (
     <article className="mx-auto flex w-full max-w-content flex-col gap-6 px-4 py-8 tablet:px-8 tablet:py-10">
       <DocumentBreadcrumb crumbs={crumbs} />
       <DocumentHeader
         canEdit={canEdit(access)}
+        canMoveToTeamspace={access === 'owner' && document.orgId !== null}
         documentId={document.id}
         isOwner={access === 'owner'}
         openComments={openComments}
         sharedWithOrganization={document.orgAccess !== null}
+        teamspaceName={teamspace?.name ?? null}
         title={document.title}
       />
       <div className="mx-auto w-full max-w-prose-leaf">

@@ -2,13 +2,14 @@ import { getTranslations } from 'next-intl/server'
 import { revalidatePath } from 'next/cache'
 import { NextResponse } from 'next/server'
 
+import { getActiveMembership } from '@/lib/active-org'
 import { getSession } from '@/lib/auth'
 import { getDocumentAccess } from '@/lib/authz'
+import { getDocument } from '@/lib/documents'
 import { importNotionZip } from '@/lib/notion/import'
 import type { ImportEvent } from '@/lib/notion/import'
 import { MAX_ZIP_BYTES, MAX_ZIP_LABEL, ZIP_EXTENSIONS } from '@/lib/notion/limits'
 import { buildNotionImportMessages } from '@/lib/notion/messages'
-import { getMembership } from '@/lib/organizations'
 
 export const runtime = 'nodejs'
 
@@ -83,10 +84,12 @@ export async function POST(request: Request) {
   }
 
   const data = new Uint8Array(await file.arrayBuffer())
-  const membership = await getMembership(session.user.id)
+  const membership = await getActiveMembership(session.user.id)
+  const parent = parentId ? await getDocument(parentId) : null
   const owner = {
     id: session.user.id,
-    orgId: membership?.orgId ?? null,
+    orgId: parent?.orgId ?? membership?.orgId ?? null,
+    teamspaceId: parent?.teamspaceId ?? null,
     parentId,
   }
   const encoder = new TextEncoder()

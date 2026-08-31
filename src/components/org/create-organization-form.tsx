@@ -41,6 +41,7 @@ export function CreateOrganizationForm() {
     }
 
     toast.success(t('created'))
+    router.push('/org')
     router.refresh()
   }
 

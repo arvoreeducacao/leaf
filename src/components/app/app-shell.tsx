@@ -11,6 +11,9 @@ import { DocumentList } from '@/components/app/document-list'
 import { DocumentSearchResults } from '@/components/app/document-search-results'
 import { DocumentTree } from '@/components/app/document-tree'
 import { NewDocumentButton } from '@/components/app/new-document-button'
+import { OrgSwitcher } from '@/components/app/org-switcher'
+import type { OrganizationOption } from '@/components/app/org-switcher'
+import { TeamspaceSections } from '@/components/app/teamspace-sections'
 import { TrashSection } from '@/components/app/trash-section'
 import { UserMenu } from '@/components/app/user-menu'
 import {
@@ -37,6 +40,7 @@ import {
 } from '@/components/ui/tooltip'
 import { searchDocumentList, searchDocumentTree } from '@/lib/document-search'
 import type { DocumentNode, DocumentSummary } from '@/lib/documents'
+import type { TeamspaceSection } from '@/lib/teamspaces'
 import { readStoredValue, writeStoredValue } from '@/shared/storage'
 import { cn } from '@/shared/utils'
 
@@ -48,6 +52,9 @@ type Props = Readonly<{
   owned: Array<DocumentNode>
   organizationDocuments: Array<DocumentNode>
   organizationName: string | null
+  organizations: Array<OrganizationOption>
+  activeOrgId: string | null
+  teamspaces: Array<TeamspaceSection>
   shared: Array<DocumentSummary>
   trashed: Array<DocumentSummary>
   children: React.ReactNode
@@ -57,6 +64,9 @@ function NavContent({
   owned,
   organizationDocuments,
   organizationName,
+  organizations,
+  activeOrgId,
+  teamspaces,
   shared,
   trashed,
   user,
@@ -67,6 +77,9 @@ function NavContent({
   owned: Array<DocumentNode>
   organizationDocuments: Array<DocumentNode>
   organizationName: string | null
+  organizations: Array<OrganizationOption>
+  activeOrgId: string | null
+  teamspaces: Array<TeamspaceSection>
   shared: Array<DocumentSummary>
   trashed: Array<DocumentSummary>
   user: { name: string; email: string }
@@ -85,11 +98,14 @@ function NavContent({
     }
 
     return [
+      ...teamspaces.flatMap((teamspace) =>
+        searchDocumentTree(teamspace.documents, term),
+      ),
       ...searchDocumentTree(organizationDocuments, term),
       ...searchDocumentTree(owned, term),
       ...searchDocumentList(shared, term),
     ]
-  }, [organizationDocuments, owned, shared, term])
+  }, [organizationDocuments, owned, shared, teamspaces, term])
 
   const searchStatus =
     term.length === 0
@@ -100,6 +116,12 @@ function NavContent({
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-4 p-4">
+      <OrgSwitcher
+        activeOrgId={activeOrgId}
+        onNavigate={onNavigate}
+        organizations={organizations}
+      />
+
       <CommandPaletteTrigger />
 
       <NewDocumentButton />
@@ -149,6 +171,14 @@ function NavContent({
           </section>
         ) : (
           <>
+            {organizationName ? (
+              <TeamspaceSections
+                canCreate={true}
+                onNavigate={onNavigate}
+                teamspaces={teamspaces}
+              />
+            ) : null}
+
             {organizationName ? (
               <section className="flex flex-col gap-1">
                 <h2 className="font-bold text-caption text-content uppercase tracking-wide">
@@ -211,6 +241,9 @@ export function AppShell({
   owned,
   organizationDocuments,
   organizationName,
+  organizations,
+  activeOrgId,
+  teamspaces,
   shared,
   trashed,
   children,
@@ -326,12 +359,15 @@ export function AppShell({
               </Tooltip>
             </div>
             <NavContent
+              activeOrgId={activeOrgId}
               locale={locale}
               organizationDocuments={organizationDocuments}
               organizationName={organizationName}
+              organizations={organizations}
               owned={owned}
               searchRef={desktopSearchRef}
               shared={shared}
+              teamspaces={teamspaces}
               trashed={trashed}
               user={user}
             />
@@ -402,13 +438,16 @@ export function AppShell({
             </SheetDescription>
           </SheetHeader>
           <NavContent
+            activeOrgId={activeOrgId}
             locale={locale}
             onNavigate={() => setMobileOpen(false)}
             organizationDocuments={organizationDocuments}
             organizationName={organizationName}
+            organizations={organizations}
             owned={owned}
             searchRef={mobileSearchRef}
             shared={shared}
+            teamspaces={teamspaces}
             trashed={trashed}
             user={user}
           />

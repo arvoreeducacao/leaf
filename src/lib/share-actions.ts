@@ -17,7 +17,6 @@ import { getSession } from '@/lib/auth'
 import type { AccessLevel } from '@/lib/authz'
 import { canManageShares, getDocumentAccess } from '@/lib/authz'
 import {
-  getMembership,
   isMemberOf,
   listOrganizationEmails,
 } from '@/lib/organizations'
@@ -300,12 +299,14 @@ export async function setOrganizationAccess(
     return { ok: false, error: await message('invalidRole') }
   }
 
-  const membership = await getMembership(guard.session.user.id)
   const document = await db.query.documents.findFirst({
     where: eq(documents.id, documentId),
   })
 
-  if (!document || !membership || document.orgId !== membership.orgId) {
+  if (
+    !document?.orgId ||
+    !(await isMemberOf(document.orgId, guard.session.user.id))
+  ) {
     return denied()
   }
 

@@ -39,8 +39,10 @@ export function canManageOrganization(role: OrganizationRole | null) {
   return role === 'owner' || role === 'admin'
 }
 
-export async function getMembership(userId: string): Promise<Membership | null> {
-  const rows = await db
+export async function listMemberships(
+  userId: string,
+): Promise<Array<Membership>> {
+  return db
     .select({
       orgId: organizations.id,
       orgName: organizations.name,
@@ -51,9 +53,29 @@ export async function getMembership(userId: string): Promise<Membership | null> 
     .innerJoin(organizations, eq(organizations.id, organizationMembers.orgId))
     .where(eq(organizationMembers.userId, userId))
     .orderBy(asc(organizationMembers.createdAt))
-    .limit(1)
+}
+
+export async function getMembership(userId: string): Promise<Membership | null> {
+  const rows = await listMemberships(userId)
 
   return rows[0] ?? null
+}
+
+export async function resolveMembership(
+  userId: string,
+  preferredOrgId: string | null,
+): Promise<Membership | null> {
+  const rows = await listMemberships(userId)
+
+  if (rows.length === 0) {
+    return null
+  }
+
+  const preferred = preferredOrgId
+    ? rows.find((row) => row.orgId === preferredOrgId)
+    : undefined
+
+  return preferred ?? rows[0]
 }
 
 export async function isMemberOf(orgId: string, userId: string) {
@@ -117,13 +139,7 @@ export async function listOrganizationEmails(orgId: string) {
 export async function acceptPendingInvites(
   userId: string,
   email: string,
-): Promise<Membership | null> {
-  const existing = await getMembership(userId)
-
-  if (existing) {
-    return existing
-  }
-
+): Promise<Array<Membership>> {
   const normalized = email.trim().toLowerCase()
 
   const invites = await db
@@ -136,26 +152,38 @@ export async function acceptPendingInvites(
     .where(eq(organizationInvites.email, normalized))
     .orderBy(asc(organizationInvites.createdAt))
 
-  const invite = invites[0]
-
-  if (!invite) {
-    return null
+  if (invites.length === 0) {
+    return listMemberships(userId)
   }
 
-  await db.insert(organizationMembers).values({
-    id: nanoid(12),
-    orgId: invite.orgId,
-    userId,
-    role: invite.role,
-  })
+  const current = await listMemberships(userId)
+  const joined = new Set(current.map((membership) => membership.orgId))
+  const hadNoOrganization = current.length === 0
+
+  for (const invite of invites) {
+    if (joined.has(invite.orgId)) {
+      continue
+    }
+
+    await db.insert(organizationMembers).values({
+      id: nanoid(12),
+      orgId: invite.orgId,
+      userId,
+      role: invite.role,
+    })
+
+    if (hadNoOrganization && joined.size === 0) {
+      await attachOwnerDocuments(invite.orgId, userId)
+    }
+
+    joined.add(invite.orgId)
+  }
 
   await db
     .delete(organizationInvites)
     .where(eq(organizationInvites.email, normalized))
 
-  await attachOwnerDocuments(invite.orgId, userId)
-
-  return getMembership(userId)
+  return listMemberships(userId)
 }
 
 export async function listOrganizationDocuments(
@@ -174,6 +202,7 @@ export async function listOrganizationDocuments(
       and(
         eq(documents.orgId, orgId),
         isNotNull(documents.orgAccess),
+        isNull(documents.teamspaceId),
         isNull(documents.deletedAt),
       ),
     )
@@ -192,7 +221,7 @@ export async function attachOwnerDocuments(orgId: string, userId: string) {
 export async function detachMemberDocuments(orgId: string, userId: string) {
   await db
     .update(documents)
-    .set({ orgId: null, orgAccess: null })
+    .set({ orgId: null, orgAccess: null, teamspaceId: null })
     .where(and(eq(documents.orgId, orgId), eq(documents.ownerId, userId)))
 }
 

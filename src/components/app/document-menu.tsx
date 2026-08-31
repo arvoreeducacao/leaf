@@ -7,6 +7,7 @@ import { toast } from 'sonner'
 
 import { DocumentHistoryDialog } from '@/components/app/document-history-dialog'
 import { MoveDocumentDialog } from '@/components/app/move-document-dialog'
+import { MoveToTeamspaceDialog } from '@/components/app/move-to-teamspace-dialog'
 import {
   EllipsisIcon,
   FileCodeIcon,
@@ -15,6 +16,7 @@ import {
   HistoryIcon,
   PagesIcon,
   TrashIcon,
+  UsersIcon,
 } from '@/components/icons'
 import { ButtonIcon } from '@/components/ui/button-icon'
 import {
@@ -36,6 +38,7 @@ type Props = Readonly<{
   documentId: string
   isOwner: boolean
   canEdit: boolean
+  canMoveToTeamspace: boolean
 }>
 
 function fileNameFromResponse(
@@ -49,13 +52,20 @@ function fileNameFromResponse(
   return match ? match[1] : `${fallback}.${format}`
 }
 
-export function DocumentMenu({ documentId, isOwner, canEdit }: Props) {
+export function DocumentMenu({
+  documentId,
+  isOwner,
+  canEdit,
+  canMoveToTeamspace,
+}: Props) {
   const t = useTranslations('document')
   const tCommon = useTranslations('common')
   const tVersions = useTranslations('versions')
+  const tTeamspace = useTranslations('teamspace')
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [moving, setMoving] = useState(false)
+  const [movingToTeamspace, setMovingToTeamspace] = useState(false)
   const [historyOpen, setHistoryOpen] = useState(false)
   const triggerRef = useRef<HTMLButtonElement>(null)
 
@@ -169,6 +179,18 @@ export function DocumentMenu({ documentId, isOwner, canEdit }: Props) {
               {t('moveToPage')}
             </DropdownMenuItem>
           ) : null}
+          {canMoveToTeamspace ? (
+            <DropdownMenuItem
+              onSelect={(event) => {
+                event.preventDefault()
+                setOpen(false)
+                setMovingToTeamspace(true)
+              }}
+            >
+              <UsersIcon aria-hidden="true" />
+              {tTeamspace('moveMenuItem')}
+            </DropdownMenuItem>
+          ) : null}
           {isOwner ? (
             <DropdownMenuItem disabled={pending} onSelect={handleDuplicate}>
               <PagesIcon aria-hidden="true" />
@@ -225,6 +247,17 @@ export function DocumentMenu({ documentId, isOwner, canEdit }: Props) {
         }}
         open={moving}
       />
+
+      {canMoveToTeamspace ? (
+        <MoveToTeamspaceDialog
+          documentId={documentId}
+          onOpenChange={(next) => {
+            setMovingToTeamspace(next)
+            restoreTriggerFocus(next)
+          }}
+          open={movingToTeamspace}
+        />
+      ) : null}
 
       {canEdit ? (
         <DocumentHistoryDialog

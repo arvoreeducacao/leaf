@@ -141,6 +141,21 @@ function accessCondition(viewer: ViewerKeys) {
       where s.document_id = d.id and s.grantee_email = ${viewer.email.toLowerCase()}
     )
     or (
+      d.teamspace_id is not null and exists (
+        select 1 from teamspace_members tm
+        where tm.teamspace_id = d.teamspace_id and tm.user_id = ${viewer.userId}
+      )
+    )
+    or (
+      d.teamspace_id is not null and exists (
+        select 1 from teamspaces ts
+        join organization_members tm2 on tm2.org_id = ts.org_id
+        where ts.id = d.teamspace_id
+          and ts.access = 'open'
+          and tm2.user_id = ${viewer.userId}
+      )
+    )
+    or (
       d.org_id is not null and d.org_access is not null and exists (
         select 1 from organization_members m
         where m.org_id = d.org_id and m.user_id = ${viewer.userId}
