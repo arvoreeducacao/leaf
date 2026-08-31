@@ -53,6 +53,7 @@ export async function listPrivateDocuments(
         eq(documents.ownerId, userId),
         isNull(documents.deletedAt),
         isNull(documents.orgAccess),
+        isNull(documents.teamspaceId),
       ),
     )
     .orderBy(desc(documents.updatedAt))

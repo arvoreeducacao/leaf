@@ -6,6 +6,8 @@ Regras de toda onda: i18n pt-BR/en-US com paridade de chaves; dark/claro AA; tok
 
 DECISÃO DO GUILHERME (2026-08-31): design-review POR ONDA está suspenso a partir da onda 10 — as ondas fecham sem review para ganhar velocidade, e UM ÚNICO design-review consolidado roda ao final da onda 12 cobrindo tudo que mudou desde então, com os bloqueantes corrigidos numa onda de fix dedicada.
 
+DECISÃO DO GUILHERME (2026-08-31, ampliada): a partir da onda 11, TAMBÉM ficam fora do fechamento por onda a suíte vitest, o `pnpm test:e2e` e o `pnpm build` — a onda fecha só com `tsc --noEmit` limpo + commit. Toda a validação (vitest + E2E + build de produção + design-review consolidado) roda de uma vez na ONDA FINAL DE VALIDAÇÃO após a 12, seguida da onda de fix.
+
 ## Onda 8 — Histórico de versões (entregue)
 - `document_versions` (id, document_id, content, title, author_id, created_at). Snapshot no autosave com throttle (máx. 1 a cada 5 min por autor) + ao importar/restaurar. Retenção: últimas 50 (poda no insert).
 - Menu do documento → "Histórico de versões": painel/Sheet com lista (data relativa + autor), preview read-only (DocumentRenderer) e restaurar (gera versão do estado atual antes). Owner/editor veem; viewer não.

@@ -657,7 +657,7 @@ describe('convites de organização', () => {
 
     await expect(
       acceptPendingInvites(stranger.id, stranger.email.toUpperCase()),
-    ).resolves.toMatchObject({ orgId: mainOrg, role: 'admin' })
+    ).resolves.toMatchObject([{ orgId: mainOrg, role: 'admin' }])
 
     const remaining = await db.query.organizationInvites.findFirst({
       where: eq(organizationInvites.id, 'invite-1'),
@@ -666,7 +666,7 @@ describe('convites de organização', () => {
     expect(remaining).toBeUndefined()
   })
 
-  it('não move quem já faz parte de uma organização', async () => {
+  it('quem já tem organização entra também na segunda', async () => {
     await db.insert(organizationInvites).values({
       id: 'invite-2',
       orgId: otherOrg,
@@ -675,20 +675,26 @@ describe('convites de organização', () => {
       createdAt: new Date(),
     })
 
-    await expect(acceptPendingInvites(orgMember.id, orgMember.email)).resolves
-      .toMatchObject({ orgId: mainOrg, role: 'member' })
+    const memberships = await acceptPendingInvites(
+      orgMember.id,
+      orgMember.email,
+    )
+
+    expect(memberships.map((item) => item.orgId).sort()).toEqual(
+      [mainOrg, otherOrg].sort(),
+    )
 
     const remaining = await db.query.organizationInvites.findFirst({
       where: eq(organizationInvites.id, 'invite-2'),
     })
 
-    expect(remaining).toBeDefined()
+    expect(remaining).toBeUndefined()
   })
 
   it('sem convite, o acesso não cria organização nenhuma', async () => {
     await expect(
       acceptPendingInvites(stranger.id, stranger.email),
-    ).resolves.toBeNull()
+    ).resolves.toEqual([])
   })
 
   it('limita a rajada de convites por pessoa', () => {

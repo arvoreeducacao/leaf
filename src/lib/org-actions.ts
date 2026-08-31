@@ -13,16 +13,22 @@ import {
   organizations,
 } from '@/db/schema'
 import type { InviteRole } from '@/db/schema'
+import {
+  clearActiveOrgId,
+  getActiveMembership,
+  writeActiveOrgId,
+} from '@/lib/active-org'
 import { getSession } from '@/lib/auth'
 import { registerInviteAttempt } from '@/lib/authz'
 import {
   attachOwnerDocuments,
   canManageOrganization,
   detachMemberDocuments,
-  getMembership,
+  listMemberships,
   listOrganizationEmails,
   otherOwnersInOrganization,
 } from '@/lib/organizations'
+import { removeTeamspaceMemberships } from '@/lib/teamspaces'
 
 export type OrgActionResult = { ok: true } | { ok: false; error: string }
 
@@ -52,15 +58,28 @@ function isInviteRole(value: string): value is InviteRole {
   return value === 'admin' || value === 'member'
 }
 
+export async function setActiveOrganization(
+  orgId: string,
+): Promise<OrgActionResult> {
+  const session = await requireSession()
+  const memberships = await listMemberships(session.user.id)
+
+  if (!memberships.some((membership) => membership.orgId === orgId)) {
+    return failure('errorNotAllowed')
+  }
+
+  await writeActiveOrgId(orgId)
+
+  revalidatePath('/', 'layout')
+
+  return { ok: true }
+}
+
 export async function createOrganization(
   name: string,
 ): Promise<OrgActionResult> {
   const session = await requireSession()
-  const existing = await getMembership(session.user.id)
-
-  if (existing) {
-    return failure('errorAlreadyMember')
-  }
+  const existing = await listMemberships(session.user.id)
 
   const trimmed = name.trim().slice(0, maxNameLength)
 
@@ -80,9 +99,18 @@ export async function createOrganization(
 
   await db
     .delete(organizationInvites)
-    .where(eq(organizationInvites.email, session.user.email.toLowerCase()))
+    .where(
+      and(
+        eq(organizationInvites.orgId, orgId),
+        eq(organizationInvites.email, session.user.email.toLowerCase()),
+      ),
+    )
 
-  await attachOwnerDocuments(orgId, session.user.id)
+  if (existing.length === 0) {
+    await attachOwnerDocuments(orgId, session.user.id)
+  }
+
+  await writeActiveOrgId(orgId)
 
   revalidatePath('/', 'layout')
 
@@ -93,7 +121,7 @@ export async function renameOrganization(
   name: string,
 ): Promise<OrgActionResult> {
   const session = await requireSession()
-  const membership = await getMembership(session.user.id)
+  const membership = await getActiveMembership(session.user.id)
 
   if (!membership || !canManageOrganization(membership.role)) {
     return failure('errorNotAllowed')
@@ -120,7 +148,7 @@ export async function inviteToOrganization(
   role: string,
 ): Promise<OrgActionResult> {
   const session = await requireSession()
-  const membership = await getMembership(session.user.id)
+  const membership = await getActiveMembership(session.user.id)
 
   if (!membership || !canManageOrganization(membership.role)) {
     return failure('errorNotAllowed')
@@ -183,7 +211,7 @@ export async function cancelOrganizationInvite(
   inviteId: string,
 ): Promise<OrgActionResult> {
   const session = await requireSession()
-  const membership = await getMembership(session.user.id)
+  const membership = await getActiveMembership(session.user.id)
 
   if (!membership || !canManageOrganization(membership.role)) {
     return failure('errorNotAllowed')
@@ -208,7 +236,7 @@ export async function updateMemberRole(
   role: string,
 ): Promise<OrgActionResult> {
   const session = await requireSession()
-  const membership = await getMembership(session.user.id)
+  const membership = await getActiveMembership(session.user.id)
 
   if (!membership || !canManageOrganization(membership.role)) {
     return failure('errorNotAllowed')
@@ -247,7 +275,7 @@ export async function removeMember(
   memberId: string,
 ): Promise<OrgActionResult> {
   const session = await requireSession()
-  const membership = await getMembership(session.user.id)
+  const membership = await getActiveMembership(session.user.id)
 
   if (!membership || !canManageOrganization(membership.role)) {
     return failure('errorNotAllowed')
@@ -269,6 +297,7 @@ export async function removeMember(
   }
 
   await detachMemberDocuments(membership.orgId, target.userId)
+  await removeTeamspaceMemberships(membership.orgId, target.userId)
   await db
     .delete(organizationMembers)
     .where(eq(organizationMembers.id, memberId))
@@ -280,7 +309,7 @@ export async function removeMember(
 
 export async function leaveOrganization(): Promise<OrgActionResult> {
   const session = await requireSession()
-  const membership = await getMembership(session.user.id)
+  const membership = await getActiveMembership(session.user.id)
 
   if (!membership) {
     return failure('errorNotAllowed')
@@ -294,9 +323,19 @@ export async function leaveOrganization(): Promise<OrgActionResult> {
   }
 
   await detachMemberDocuments(membership.orgId, session.user.id)
+  await removeTeamspaceMemberships(membership.orgId, session.user.id)
   await db
     .delete(organizationMembers)
     .where(eq(organizationMembers.id, membership.memberId))
+
+  const remaining = await listMemberships(session.user.id)
+  const next = remaining[0]
+
+  if (next) {
+    await writeActiveOrgId(next.orgId)
+  } else {
+    await clearActiveOrgId()
+  }
 
   revalidatePath('/', 'layout')
 

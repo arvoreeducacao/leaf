@@ -10,7 +10,7 @@ import {
   documentTitleInputId,
   requestEditorFocus,
 } from '@/components/editor/focus-bridge'
-import { TeamIcon } from '@/components/icons'
+import { TeamIcon, UsersIcon } from '@/components/icons'
 import { ShareButton } from '@/components/sharing/share-button'
 import { Badge } from '@/components/ui/badge'
 import { renameDocument } from '@/lib/document-actions'
@@ -20,6 +20,8 @@ type Props = Readonly<{
   title: string
   canEdit: boolean
   isOwner: boolean
+  canMoveToTeamspace: boolean
+  teamspaceName: string | null
   sharedWithOrganization: boolean
   openComments: number
 }>
@@ -29,10 +31,13 @@ export function DocumentHeader({
   title,
   canEdit,
   isOwner,
+  canMoveToTeamspace,
+  teamspaceName,
   sharedWithOrganization,
   openComments,
 }: Props) {
   const t = useTranslations('document')
+  const tTeamspace = useTranslations('teamspace')
   const titleId = documentTitleInputId
   const [value, setValue] = useState(title)
   const [saving, setSaving] = useState(false)
@@ -109,6 +114,18 @@ export function DocumentHeader({
       </div>
 
       <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+        {teamspaceName ? (
+          <Badge
+            className="gap-1"
+            data-testid="document-teamspace-tag"
+            title={tTeamspace('badgeHint')}
+            variant="info"
+          >
+            <UsersIcon aria-hidden="true" className="size-4 shrink-0" />
+            <span className="max-w-40 truncate">{teamspaceName}</span>
+            <span className="sr-only">{tTeamspace('badgeHint')}</span>
+          </Badge>
+        ) : null}
         {sharedWithOrganization ? (
           <Badge
             className="gap-1"
@@ -125,6 +142,7 @@ export function DocumentHeader({
         <ShareButton canShare={isOwner} documentId={documentId} />
         <DocumentMenu
           canEdit={canEdit}
+          canMoveToTeamspace={canMoveToTeamspace}
           documentId={documentId}
           isOwner={isOwner}
         />

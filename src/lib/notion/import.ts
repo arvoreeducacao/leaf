@@ -47,6 +47,7 @@ export type ImportEvent =
 export type ImportOwner = Readonly<{
   id: string
   orgId?: string | null
+  teamspaceId?: string | null
   parentId?: string | null
 }>
 
@@ -140,6 +141,7 @@ export async function* importNotionZip(
     id: idByKey.get(page.key) as string,
     ownerId: owner.id,
     orgId: owner.orgId ?? null,
+    teamspaceId: owner.teamspaceId ?? null,
     parentId: page.parentKey
       ? (idByKey.get(page.parentKey) ?? owner.parentId ?? null)
       : (owner.parentId ?? null),

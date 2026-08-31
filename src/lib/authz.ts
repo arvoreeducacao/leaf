@@ -5,6 +5,8 @@ import {
   documentShares,
   documents,
   organizationMembers,
+  teamspaceMembers,
+  teamspaces,
 } from '@/db/schema'
 import type { Document } from '@/db/schema'
 
@@ -31,6 +33,47 @@ export function canEdit(level: AccessLevel | null) {
 
 export function canComment(level: AccessLevel | null) {
   return level !== null && atLeast(level, 'commenter')
+}
+
+export async function getTeamspaceGrant(
+  document: Pick<Document, 'teamspaceId'>,
+  session: SessionLike,
+): Promise<AccessLevel | null> {
+  if (!document.teamspaceId || !session) {
+    return null
+  }
+
+  const teamspace = await db.query.teamspaces.findFirst({
+    where: eq(teamspaces.id, document.teamspaceId),
+  })
+
+  if (!teamspace) {
+    return null
+  }
+
+  const membership = await db.query.teamspaceMembers.findFirst({
+    where: and(
+      eq(teamspaceMembers.teamspaceId, teamspace.id),
+      eq(teamspaceMembers.userId, session.user.id),
+    ),
+  })
+
+  if (membership) {
+    return 'editor'
+  }
+
+  if (teamspace.access !== 'open') {
+    return null
+  }
+
+  const orgMembership = await db.query.organizationMembers.findFirst({
+    where: and(
+      eq(organizationMembers.orgId, teamspace.orgId),
+      eq(organizationMembers.userId, session.user.id),
+    ),
+  })
+
+  return orgMembership ? 'viewer' : null
 }
 
 export async function getDocumentAccess(
@@ -62,6 +105,12 @@ export async function getDocumentAccess(
 
   if (share) {
     return share.role
+  }
+
+  const teamspaceGrant = await getTeamspaceGrant(document, session)
+
+  if (teamspaceGrant) {
+    return teamspaceGrant
   }
 
   if (!document.orgId || !document.orgAccess) {

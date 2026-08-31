@@ -131,6 +131,50 @@ export const organizationInvites = sqliteTable(
   ],
 )
 
+export const teamspaces = sqliteTable(
+  'teamspaces',
+  {
+    id: text('id').primaryKey(),
+    orgId: text('org_id')
+      .notNull()
+      .references(() => organizations.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    access: text('access', { enum: ['open', 'closed'] })
+      .notNull()
+      .default('open'),
+    createdAt: integer('created_at', { mode: 'timestamp' })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (table) => [index('teamspaces_org_id_idx').on(table.orgId)],
+)
+
+export const teamspaceMembers = sqliteTable(
+  'teamspace_members',
+  {
+    id: text('id').primaryKey(),
+    teamspaceId: text('teamspace_id')
+      .notNull()
+      .references(() => teamspaces.id, { onDelete: 'cascade' }),
+    userId: text('user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    role: text('role', { enum: ['owner', 'member'] })
+      .notNull()
+      .default('member'),
+    createdAt: integer('created_at', { mode: 'timestamp' })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (table) => [
+    uniqueIndex('teamspace_members_teamspace_user_unq').on(
+      table.teamspaceId,
+      table.userId,
+    ),
+    index('teamspace_members_user_id_idx').on(table.userId),
+  ],
+)
+
 export const documents = sqliteTable(
   'documents',
   {
@@ -143,6 +187,9 @@ export const documents = sqliteTable(
       { onDelete: 'set null' },
     ),
     orgId: text('org_id').references(() => organizations.id, {
+      onDelete: 'set null',
+    }),
+    teamspaceId: text('teamspace_id').references(() => teamspaces.id, {
       onDelete: 'set null',
     }),
     orgAccess: text('org_access', {
@@ -163,6 +210,7 @@ export const documents = sqliteTable(
     index('documents_owner_id_idx').on(table.ownerId),
     index('documents_parent_id_idx').on(table.parentId),
     index('documents_org_id_idx').on(table.orgId),
+    index('documents_teamspace_id_idx').on(table.teamspaceId),
   ],
 )
 
@@ -252,5 +300,9 @@ export type OrganizationRole = OrganizationMember['role']
 export type OrganizationInvite = typeof organizationInvites.$inferSelect
 export type InviteRole = OrganizationInvite['role']
 export type OrgAccess = NonNullable<Document['orgAccess']>
+export type Teamspace = typeof teamspaces.$inferSelect
+export type TeamspaceAccess = Teamspace['access']
+export type TeamspaceMember = typeof teamspaceMembers.$inferSelect
+export type TeamspaceRole = TeamspaceMember['role']
 export type DocumentVersion = typeof documentVersions.$inferSelect
 export type Comment = typeof comments.$inferSelect
