@@ -40,8 +40,12 @@ import { uploadEditorFile } from './upload-file'
 import { useAutosave } from './use-autosave'
 import { useLeafDictionary } from './use-leaf-dictionary'
 
-const highlightClass = 'leaf-comment-target'
 const highlightDuration = 2_200
+const blockIdPattern = /^[A-Za-z0-9_-]+$/
+
+function highlightRule(blockId: string) {
+  return `.leaf-editor .bn-block-outer[data-id="${blockId}"]{border-radius:var(--radius-medium);background-color:var(--warn-surface);box-shadow:0 0 0 2px var(--warn);}`
+}
 
 type Props = Readonly<{
   documentId: string
@@ -81,6 +85,8 @@ export default function BlockNoteEditor({
       ? { editor: { 'aria-describedby': readOnlyHintId } }
       : undefined,
   })
+
+  const [highlightedBlock, setHighlightedBlock] = useState<string | null>(null)
 
   const [stats, setStats] = useState(() =>
     statsFromBlocks(parsed.status === 'ok' ? parsed.blocks : []),
@@ -180,17 +186,6 @@ export default function BlockNoteEditor({
 
   useEffect(() => {
     let timeout = 0
-    let highlighted: HTMLElement | null = null
-
-    function clearHighlight() {
-      if (timeout !== 0) {
-        window.clearTimeout(timeout)
-        timeout = 0
-      }
-
-      highlighted?.classList.remove(highlightClass)
-      highlighted = null
-    }
 
     const stop = onCommentedBlockFocus((blockId) => {
       const target = containerRef.current?.querySelector<HTMLElement>(
@@ -203,7 +198,9 @@ export default function BlockNoteEditor({
         return
       }
 
-      clearHighlight()
+      if (timeout !== 0) {
+        window.clearTimeout(timeout)
+      }
 
       const reduced = window.matchMedia(
         '(prefers-reduced-motion: reduce)',
@@ -214,14 +211,19 @@ export default function BlockNoteEditor({
         block: 'center',
       })
 
-      target.classList.add(highlightClass)
-      highlighted = target
-      timeout = window.setTimeout(clearHighlight, highlightDuration)
+      setHighlightedBlock(blockId)
+      timeout = window.setTimeout(
+        () => setHighlightedBlock(null),
+        highlightDuration,
+      )
     })
 
     return () => {
       stop()
-      clearHighlight()
+
+      if (timeout !== 0) {
+        window.clearTimeout(timeout)
+      }
     }
   }, [])
 
@@ -256,6 +258,9 @@ export default function BlockNoteEditor({
 
   return (
     <div className="flex w-full flex-col gap-2" ref={containerRef}>
+      {highlightedBlock && blockIdPattern.test(highlightedBlock) ? (
+        <style>{highlightRule(highlightedBlock)}</style>
+      ) : null}
       <div className="flex min-h-6 items-center justify-end px-8 tablet:px-14">
         {readOnly ? (
           <p
