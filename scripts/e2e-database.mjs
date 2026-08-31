@@ -1,6 +1,8 @@
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 
+import { drizzle } from 'drizzle-orm/mysql2'
+import { migrate } from 'drizzle-orm/mysql2/migrator'
 import mysql from 'mysql2/promise'
 
 export function loadLocalEnv(projectRoot) {
@@ -30,18 +32,22 @@ export function sandboxDatabaseUrl(key, database) {
   return url.toString()
 }
 
-export async function resetDatabase(url) {
+export async function prepareDatabase(url, projectRoot) {
   const parsed = new URL(url)
   const database = decodeURIComponent(parsed.pathname.replace(/^\//, ''))
 
-  const connection = await mysql.createConnection({
+  const options = {
     host: parsed.hostname,
     port: parsed.port.length > 0 ? Number(parsed.port) : 3306,
     user: decodeURIComponent(parsed.username),
     password: decodeURIComponent(parsed.password),
     database,
-    multipleStatements: true,
     connectTimeout: 20_000,
+  }
+
+  const connection = await mysql.createConnection({
+    ...options,
+    multipleStatements: true,
   })
 
   const [tables] = await connection.query(
@@ -58,4 +64,12 @@ export async function resetDatabase(url) {
   }
 
   await connection.end()
+
+  const pool = mysql.createPool({ ...options, dateStrings: true })
+
+  await migrate(drizzle(pool), {
+    migrationsFolder: join(projectRoot, 'drizzle/mysql'),
+  })
+
+  await pool.end()
 }

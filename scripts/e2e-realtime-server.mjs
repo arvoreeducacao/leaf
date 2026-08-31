@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url'
 
 import {
   loadLocalEnv,
-  resetDatabase,
+  prepareDatabase,
   sandboxDatabaseUrl,
 } from './e2e-database.mjs'
 
@@ -24,7 +24,7 @@ const databaseUrl = sandboxDatabaseUrl(
   'leaf_e2e_realtime',
 )
 
-await resetDatabase(databaseUrl)
+await prepareDatabase(databaseUrl, projectRoot)
 
 rmSync(sandbox, { force: true, recursive: true })
 mkdirSync(join(sandbox, 'data'), { recursive: true })

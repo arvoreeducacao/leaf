@@ -104,7 +104,7 @@ test.describe('editor', () => {
     await expect(page.getByLabel('Título do documento')).toHaveValue(
       'Documento com foco',
     )
-    await page.waitForTimeout(500)
+    await expect(page.getByLabel('Título do documento')).toBeEnabled()
 
     await page.keyboard.press('Backspace')
 
@@ -177,6 +177,9 @@ test.describe('editor', () => {
     await signUp(page, uniqueEmail('titulo'))
     await createDocument(page)
     await renameDocument(page, 'Diário de bordo')
+
+    await expect(page).toHaveTitle('Diário de bordo | Leaf')
+
     await page.reload()
 
     await expect(page).toHaveTitle('Diário de bordo | Leaf')

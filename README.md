@@ -12,7 +12,7 @@ Editor de documentos colaborativo da Árvore, no espírito do Notion: blocos, hi
 - **Organizações e teamspaces**: documento nasce privado; seções Privado / Organização / Teamspaces na sidebar; teamspaces abertos ou fechados; múltiplas organizações por pessoa com switcher; convidados externos com selo próprio
 - **Comentários**: threads ancoradas em blocos, respostas, resolver e reabrir, papel dedicado de comentarista
 - **Histórico de versões**: snapshots automáticos com throttle, preview e restauração
-- **Busca**: `Ctrl+K` / `Alt+K` abrem a command palette (full-text via SQLite FTS5, recentes e ações rápidas), sempre filtrada por permissão no servidor
+- **Busca**: `Ctrl+K` / `Alt+K` abrem a command palette (full-text via índice `FULLTEXT` do MySQL, recentes e ações rápidas), sempre filtrada por permissão no servidor
 - **Colaboração em tempo real**: Yjs + WebSocket, cursores nomeados, indicador de presença, escrita autorizada no handshake e fallback automático para edição solo
 - **Dois temas** (claro/escuro/sistema, contraste AA verificado) e **dois idiomas** (pt-BR e en-US)
 
@@ -23,7 +23,7 @@ Editor de documentos colaborativo da Árvore, no espírito do Notion: blocos, hi
 | Framework | Next.js 16 (App Router) · React 19 · TypeScript |
 | Editor | BlockNote 0.54 sobre ProseMirror/Yjs |
 | Estilo | Tailwind CSS v4 + design system Bonsai (tokens semânticos, Averta, ícones próprios) |
-| Banco | Drizzle ORM · SQLite em desenvolvimento (`data/leaf.db`) |
+| Banco | Drizzle ORM · MySQL 8 / Aurora MySQL (driver `mysql2`, `DATABASE_URL`) |
 | Auth | better-auth (email e senha) |
 | Arquivos | API S3 (`@aws-sdk/client-s3`) — emulador s3rver em dev |
 | Realtime | Servidor WebSocket próprio (`scripts/dev-realtime.mjs`) falando o protocolo y-websocket |
@@ -32,11 +32,13 @@ Editor de documentos colaborativo da Árvore, no espírito do Notion: blocos, hi
 
 ```bash
 pnpm install
-cp .env.example .env.local
+cp .env.example .env.local   # aponte DATABASE_URL para um MySQL 8 seu
 pnpm dev
 ```
 
-`pnpm dev` sobe três processos juntos: o Next em `http://localhost:3000`, o emulador S3 na `4568` e o servidor de colaboração na `1234`. Crie uma conta em `/signup` (sem verificação de email em dev) e pronto.
+`pnpm dev` sobe três processos juntos: o Next em `http://localhost:3000`, o emulador S3 na `4568` e o servidor de colaboração na `1234`. As migrações de `drizzle/mysql` rodam no boot do app. Crie uma conta em `/signup` (sem verificação de email em dev) e pronto.
+
+O ambiente de desenvolvimento da Árvore usa o database `leaf_dev` no cluster Aurora MySQL (`arvore-cluster`), com o mesmo usuário `leaf` da produção.
 
 ## Testes
 
@@ -45,7 +47,11 @@ pnpm test        # unitários (vitest)
 pnpm test:e2e    # Playwright, em sandbox própria (não interfere no dev server)
 ```
 
-A suíte E2E sobe dois ambientes isolados: o app padrão na porta 3100 e um segundo com realtime ligado na 3200 (ws na 1235).
+Os testes precisam de MySQL de verdade — não há mais SQLite em memória. Cada worker do vitest usa o seu próprio database `<LEAF_TEST_DATABASE_URL>_<VITEST_POOL_ID>` (`leaf_test_1` … `leaf_test_6`, com `maxWorkers: 6`), truncado entre suítes; o schema é aplicado pelas migrações no primeiro uso.
+
+A suíte E2E sobe dois ambientes isolados: o app padrão na porta 3100 (banco `leaf_e2e`) e um segundo com realtime ligado na 3200 / ws 1235 (banco `leaf_e2e_realtime`). Cada execução derruba as tabelas do respectivo banco e aplica as migrações antes de subir o servidor, e o `DATABASE_URL` é injetado no processo filho, então o `.env.local` do dev nunca é usado pela sandbox.
+
+A E2E roda com um worker só (`E2E_WORKERS` permite mudar). Com o banco a ~150 ms de distância, cada caso leva perto de 20 s e a suíte inteira passa de 15 minutos — para rodar em pedaços, faça o build uma vez (`LEAF_DIST_DIR=.next-e2e pnpm exec next build`) e depois `pnpm exec playwright test --project=<projeto> <specs>`.
 
 ## Produção
 
@@ -53,11 +59,13 @@ O app fala S3 e SQL por configuração — publicar é trocar env:
 
 | Variável | Uso |
 |---|---|
+| `DATABASE_URL` | `mysql://usuario:senha@host:3306/leaf` — obrigatória; o app não sobe sem ela |
+| `DATABASE_POOL_SIZE` | tamanho do pool do `mysql2` (padrão `10`) |
 | `S3_ENDPOINT` / `S3_BUCKET` / `S3_ACCESS_KEY_ID` / `S3_SECRET_ACCESS_KEY` | storage de imagens (bucket provisionado: `arvore-leaf-uploads`) |
 | `LEAF_REALTIME` / `LEAF_REALTIME_URL` (`wss://`) / `LEAF_REALTIME_SECRET` | colaboração em tempo real (o ws roda como processo próprio) |
 | `BETTER_AUTH_URL` / `BETTER_AUTH_SECRET` | auth |
 
-**Banco**: o database `leaf` está provisionado no cluster Aurora MySQL da Árvore (`arvore-cluster`). O código hoje usa o dialeto SQLite do Drizzle; a troca para MySQL (dialeto + regeneração de migrações + FTS5 → FULLTEXT) é a primeira tarefa pós-publicação — ver `docs/ROADMAP.md`.
+**Banco**: o database `leaf` está provisionado no cluster Aurora MySQL da Árvore (`arvore-cluster`, MySQL 8.0.42), com usuário dedicado no Secrets Manager (`prd/leaf/database`). As migrações de `drizzle/mysql` rodam no boot do app; o `next build` **não** toca no banco. As sete migrações antigas de SQLite ficaram arquivadas em `drizzle/sqlite-legacy/` e não são mais executadas.
 
 ## Documentação
 
