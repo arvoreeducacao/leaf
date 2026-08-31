@@ -55,10 +55,8 @@ export function CommentsPanel({ documentId, initialOpenCount }: Props) {
   const [loadError, setLoadError] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
   const [draft, setDraft] = useState('')
-  const [draftError, setDraftError] = useState<string | null>(null)
   const [anchorId, setAnchorId] = useState<string | null>(null)
   const [showResolved, setShowResolved] = useState(false)
-  const [status, setStatus] = useState('')
   const [now, setNow] = useState(() => Date.now())
 
   const composerRef = useRef<HTMLTextAreaElement>(null)
@@ -91,25 +89,11 @@ export function CommentsPanel({ documentId, initialOpenCount }: Props) {
     () =>
       onCommentRequest((blockId) => {
         setAnchorId(blockId)
-        setDraftError(null)
         setOpen(true)
         window.setTimeout(() => composerRef.current?.focus(), 120)
       }),
     [],
   )
-
-  function apply(result: CommentsResult, success: string) {
-    if (!result.ok) {
-      toast.error(result.error)
-
-      return false
-    }
-
-    setState(result.state)
-    setStatus(success)
-
-    return true
-  }
 
   async function run(
     action: () => Promise<CommentsResult>,
@@ -119,18 +103,19 @@ export function CommentsPanel({ documentId, initialOpenCount }: Props) {
     const result = await action()
     setPending(false)
 
-    return apply(result, success)
+    if (!result.ok) {
+      toast.error(result.error)
+
+      return false
+    }
+
+    setState(result.state)
+    toast.success(success)
+
+    return true
   }
 
   async function submitDraft() {
-    if (draft.trim().length === 0) {
-      setDraftError(t('placeholder'))
-
-      return
-    }
-
-    setDraftError(null)
-
     const done = await run(
       () => addComment(documentId, draft, anchorId, null),
       t('added'),
@@ -139,16 +124,12 @@ export function CommentsPanel({ documentId, initialOpenCount }: Props) {
     if (done) {
       setDraft('')
       setAnchorId(null)
-      toast.success(t('added'))
     }
   }
 
   function goToBlock(blockId: string) {
-    if (isMobile) {
-      setOpen(false)
-    }
-
-    focusCommentedBlock(blockId)
+    setOpen(false)
+    window.setTimeout(() => focusCommentedBlock(blockId), 320)
   }
 
   const threads = state?.threads ?? []
@@ -161,22 +142,20 @@ export function CommentsPanel({ documentId, initialOpenCount }: Props) {
 
   const body = (
     <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-5 pb-5">
-      <span aria-live="polite" className="sr-only">
-        {status}
-      </span>
+      {!state && loading ? (
+        <Skeleton className="h-24 w-full shrink-0" />
+      ) : null}
 
-      {canComment ? (
+      {state && canComment ? (
         <div className="flex shrink-0 flex-col gap-2">
           <Label htmlFor={composerId}>{t('newLabel')}</Label>
           {anchorId ? (
             <p className="flex items-center gap-2 text-body-small text-content">
               <TargetIcon aria-hidden="true" className="size-4 shrink-0" />
-              {t('anchorHint')}
+              {t('anchorPending')}
             </p>
           ) : null}
           <Textarea
-            aria-describedby={draftError ? `${composerId}-error` : undefined}
-            aria-invalid={draftError ? true : undefined}
             className="max-w-full"
             disabled={pending}
             id={composerId}
@@ -186,15 +165,6 @@ export function CommentsPanel({ documentId, initialOpenCount }: Props) {
             ref={composerRef}
             value={draft}
           />
-          {draftError ? (
-            <p
-              className="text-body-small text-danger"
-              id={`${composerId}-error`}
-              role="alert"
-            >
-              {draftError}
-            </p>
-          ) : null}
           <div className="flex flex-col gap-2 tablet:flex-row tablet:justify-end">
             {draft.length > 0 || anchorId ? (
               <Button
@@ -203,9 +173,7 @@ export function CommentsPanel({ documentId, initialOpenCount }: Props) {
                 onClick={() => {
                   setDraft('')
                   setAnchorId(null)
-                  setDraftError(null)
                 }}
-                size="lg"
                 type="button"
                 variant="secondary"
               >
@@ -218,21 +186,22 @@ export function CommentsPanel({ documentId, initialOpenCount }: Props) {
               data-testid="submit-comment"
               disabled={pending || draft.trim().length === 0}
               onClick={() => void submitDraft()}
-              size="lg"
               type="button"
             >
               {t('submit')}
             </Button>
           </div>
         </div>
-      ) : (
+      ) : null}
+
+      {state && !canComment ? (
         <p className="text-body-small text-content">{t('readOnlyHint')}</p>
-      )}
+      ) : null}
 
       {resolvedCount > 0 ? (
         <div className="flex shrink-0 items-center justify-between gap-3">
           <Label
-            className="text-body-small text-content"
+            className="min-h-11 flex-1 cursor-pointer items-center text-content"
             htmlFor={`${composerId}-resolved`}
           >
             {t('showResolved')}
@@ -256,12 +225,7 @@ export function CommentsPanel({ documentId, initialOpenCount }: Props) {
       {loadError ? (
         <div className="flex flex-col items-start gap-2" role="alert">
           <p className="text-body-small text-danger">{loadError}</p>
-          <Button
-            onClick={() => void load()}
-            size="lg"
-            type="button"
-            variant="secondary"
-          >
+          <Button onClick={() => void load()} type="button" variant="secondary">
             {tCommon('tryAgain')}
           </Button>
         </div>
@@ -274,10 +238,14 @@ export function CommentsPanel({ documentId, initialOpenCount }: Props) {
             className="mx-auto size-8 text-content-muted"
           />
           <p className="font-bold text-body-medium text-content-strong">
-            {t('empty')}
+            {resolvedCount > 0 ? t('emptyResolvedOnly') : t('empty')}
           </p>
           <p className="text-body-small text-content">
-            {canComment ? t('emptyHint') : t('emptyReadOnly')}
+            {resolvedCount > 0
+              ? t('emptyResolvedHint')
+              : canComment
+                ? t('emptyHint')
+                : t('emptyReadOnly')}
           </p>
         </div>
       ) : null}
@@ -302,14 +270,10 @@ export function CommentsPanel({ documentId, initialOpenCount }: Props) {
               formatWhen={(at) => format.relativeTime(new Date(at), now)}
               key={thread.id}
               onDelete={async (commentId) => {
-                if (
-                  await run(
-                    () => removeComment(documentId, commentId),
-                    t('removed'),
-                  )
-                ) {
-                  toast.success(t('removed'))
-                }
+                await run(
+                  () => removeComment(documentId, commentId),
+                  t('removed'),
+                )
               }}
               onEdit={(commentId, value) =>
                 run(
@@ -325,16 +289,10 @@ export function CommentsPanel({ documentId, initialOpenCount }: Props) {
                 )
               }
               onResolve={async (threadId, resolved) => {
-                if (
-                  await run(
-                    () => resolveComment(documentId, threadId, resolved),
-                    resolved ? t('resolvedToast') : t('reopenedToast'),
-                  )
-                ) {
-                  toast.success(
-                    resolved ? t('resolvedToast') : t('reopenedToast'),
-                  )
-                }
+                await run(
+                  () => resolveComment(documentId, threadId, resolved),
+                  resolved ? t('resolvedToast') : t('reopenedToast'),
+                )
               }}
               pending={pending}
               thread={thread}
@@ -351,7 +309,10 @@ export function CommentsPanel({ documentId, initialOpenCount }: Props) {
       <Button
         className="h-12"
         data-testid="comments-button"
-        onClick={() => setOpen(true)}
+        onClick={() => {
+          setAnchorId(null)
+          setOpen(true)
+        }}
         type="button"
         variant="secondary"
       >
@@ -375,12 +336,22 @@ export function CommentsPanel({ documentId, initialOpenCount }: Props) {
               : 'w-full sm:max-w-md'
           }
           data-testid="comments-panel"
+          showClose={!isMobile}
           side={isMobile ? 'bottom' : 'right'}
         >
-          <SheetHeader className="shrink-0 gap-2 p-5 pb-0">
-            <SheetTitle>{t('title')}</SheetTitle>
-            <SheetDescription>{t('description')}</SheetDescription>
-          </SheetHeader>
+          {isMobile ? (
+            <SheetHeader
+              className="shrink-0"
+              subtitle={t('description')}
+              title={t('title')}
+              type="close"
+            />
+          ) : (
+            <SheetHeader className="shrink-0 gap-2 p-5 pb-0">
+              <SheetTitle>{t('title')}</SheetTitle>
+              <SheetDescription>{t('description')}</SheetDescription>
+            </SheetHeader>
+          )}
           {body}
         </SheetContent>
       </Sheet>

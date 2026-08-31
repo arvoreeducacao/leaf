@@ -131,6 +131,8 @@
     "empty": "Ainda não há comentários",
     "emptyHint": "Selecione um trecho e use o botão Comentar para começar uma conversa.",
     "emptyReadOnly": "Ninguém comentou neste documento até agora.",
+    "emptyResolvedOnly": "Todos os comentários foram resolvidos",
+    "emptyResolvedHint": "Ative \"Mostrar resolvidos\" para rever as conversas fechadas.",
     "newLabel": "Novo comentário",
     "placeholder": "Escreva um comentário",
     "submit": "Comentar",
@@ -138,7 +140,7 @@
     "reply": "Responder",
     "replyLabel": "Resposta para {name}",
     "replyPlaceholder": "Escreva uma resposta",
-    "sendReply": "Responder",
+    "sendReply": "Enviar resposta",
     "edit": "Editar",
     "editLabel": "Editar comentário",
     "save": "Salvar",
@@ -166,7 +168,8 @@
     "reopenedToast": "Comentário reaberto",
     "toolbarButton": "Comentar",
     "readOnlyHint": "Você pode ler os comentários, mas não comentar neste documento.",
-    "blockGone": "O trecho deste comentário não está mais no documento."
+    "blockGone": "O trecho deste comentário não está mais no documento.",
+    "anchorPending": "Comentando no trecho selecionado"
   },
   "move": {
     "title": "Mover para outra página",

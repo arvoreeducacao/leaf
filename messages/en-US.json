@@ -131,6 +131,8 @@
     "empty": "No comments yet",
     "emptyHint": "Select a passage and use the Comment button to start a conversation.",
     "emptyReadOnly": "Nobody has commented on this document yet.",
+    "emptyResolvedOnly": "All comments are resolved",
+    "emptyResolvedHint": "Turn on \"Show resolved\" to revisit the closed conversations.",
     "newLabel": "New comment",
     "placeholder": "Write a comment",
     "submit": "Comment",
@@ -138,7 +140,7 @@
     "reply": "Reply",
     "replyLabel": "Reply to {name}",
     "replyPlaceholder": "Write a reply",
-    "sendReply": "Reply",
+    "sendReply": "Send reply",
     "edit": "Edit",
     "editLabel": "Edit comment",
     "save": "Save",
@@ -166,7 +168,8 @@
     "reopenedToast": "Comment reopened",
     "toolbarButton": "Comment",
     "readOnlyHint": "You can read the comments, but you can't comment on this document.",
-    "blockGone": "This comment's passage is no longer in the document."
+    "blockGone": "This comment's passage is no longer in the document.",
+    "anchorPending": "Commenting on the selected passage"
   },
   "move": {
     "title": "Move to another page",
