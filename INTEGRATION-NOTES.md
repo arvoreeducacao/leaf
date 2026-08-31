@@ -2296,3 +2296,119 @@ do fallback de ~2,5 s já registrada na onda 12, agora com uma consequência
 observada: **sala aberta e vazia + cliente em modo solo = perda do que o solo
 gravou.** O MySQL não causa isso, mas o custo extra por query encurta a margem.
 Vale um olhar do Guilherme.
+
+## Autenticação restrita ao domínio da Árvore (2026-08-31)
+
+Decisão do Guilherme: **login apenas com a conta da Árvore**. A restrição é
+ligada por variável de ambiente, para não quebrar dev nem a suíte de testes.
+
+### `LEAF_ALLOWED_EMAIL_DOMAINS`
+
+Lista separada por vírgula (`arvore.com.br` em produção). Ausente ou vazia = o
+comportamento de sempre, sem restrição nenhuma — é assim que o `pnpm dev` na
+3000 e os 19 arquivos de vitest continuam rodando sem mudança.
+
+A leitura da variável é **em tempo de chamada**, não no carregamento do módulo
+(`emailDomainPolicy()` em `src/lib/email-domain.ts`), justamente para os testes
+poderem ligar e desligar a restrição no mesmo processo.
+
+Regras da comparação, todas cobertas por teste:
+
+- caixa e espaços são normalizados dos dois lados; `@` inicial do valor da env é
+  descartado (`@arvore.com.br` e `arvore.com.br` valem a mesma coisa);
+- domínios repetidos na lista são deduplicados;
+- a comparação é do domínio **inteiro**, depois do último `@` do email. Isso
+  significa que **subdomínio não vale**: `pessoa@mail.arvore.com.br` é recusado
+  com a lista `arvore.com.br`. É a escolha mais restritiva e a mais previsível;
+  se algum dia a Árvore usar subdomínio de email, entra explicitamente na lista.
+
+### Onde a validação acontece (quatro pontos, todos no servidor)
+
+Nunca só na UI. Em `src/lib/auth.ts`:
+
+1. `hooks.before` do better-auth, em `/sign-up/email` e `/sign-in/email` — é o
+   que devolve o erro bonito para o formulário;
+2. `databaseHooks.user.create.before` — pega **qualquer** caminho de criação de
+   conta, inclusive o callback do Google;
+3. `databaseHooks.session.create.before` — pega **qualquer** caminho de login,
+   inclusive o do Google e o de uma conta de fora do domínio criada *antes* da
+   restrição ser ligada (esse caso tem teste);
+4. os convites, descritos abaixo.
+
+Os três primeiros levantam `APIError('FORBIDDEN', { code:
+'EMAIL_DOMAIN_NOT_ALLOWED' })`. O código viaja no corpo da resposta e o
+`auth-form.tsx` traduz esse código para a mensagem localizada — assim a mensagem
+do usuário fica no i18n (pt-BR/en-US) e o servidor não precisa resolver locale
+dentro do handler do better-auth.
+
+### Convites e compartilhamento — a decisão
+
+**Com a restrição ativa não dá para convidar email de fora do domínio.** Nem em
+`inviteToDocument` (`share-actions.ts`) nem em `inviteToOrganization`
+(`org-actions.ts`); os dois devolvem "Somente contas @arvore.com.br." O convite
+do Leaf sempre foi uma promessa de acesso futuro ("a pessoa entra quando fizer
+login com este email") — deixar criar um convite que o login nunca honraria só
+produziria convite morto e confusão.
+
+O conceito de **convidado externo continua existindo**: é a pessoa com conta
+`@arvore.com.br` que não é membro da organização dona do documento. Ela continua
+recebendo o selo "externo" no painel de compartilhamento, que é calculado por
+pertencimento à org e não por domínio de email. Tem teste cobrindo exatamente
+esse caso.
+
+### Google OAuth — preparado, inativo sem env
+
+`GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET` ligam o provider `google` do
+better-auth e o botão "Entrar com Google" nas telas de login e signup. Sem as
+duas variáveis o provider não é registrado e a UI não muda em nada.
+
+- Quando a lista de domínios tem **exatamente um** domínio, ele vai também no
+  `hd` do provider. No better-auth 1.7 o `hd` não é só o hint de tela do Google:
+  ele é conferido contra a claim `hd` do id token. Com mais de um domínio o `hd`
+  fica de fora (a opção aceita só uma string) e a garantia fica inteiramente com
+  os hooks.
+- De todo jeito o email devolvido pelo Google passa pelos hooks 2 e 3 acima. O
+  `hd` sozinho nunca foi tratado como segurança.
+- **Não validado de ponta a ponta**: não há client OAuth do Google criado para o
+  Leaf, então o fluxo real com o Google nunca rodou. O que está testado é que
+  sem as envs nada muda, e que a configuração é montada como descrito.
+
+### Ícone do botão do Google
+
+Não existe ícone `google` nos 968 de `@/components/icons`, e a regra do projeto
+proíbe lucide/emoji. O botão ficou **só com texto**, no `variant="secondary"`,
+com um separador "ou" acima. Se o Guilherme quiser o `G` colorido oficial, é um
+ícone novo no design system.
+
+### Testes
+
+- `src/lib/email-domain.test.ts` — 14 casos puros da política (parse,
+  permitido/negado, multi-domínio, caixa, subdomínio, arroba extra, malformados).
+- `src/lib/auth-domain.test.ts` — 7 casos contra o **better-auth de verdade**
+  (`auth.api.signUpEmail` / `signInEmail`) e o MySQL de teste, recarregando
+  `@/lib/auth` com `vi.resetModules()` entre as variações de env. Cobre o caso da
+  conta antiga de fora do domínio que deixa de conseguir entrar.
+- `src/lib/invite-domain.test.ts` — 7 casos dos dois pontos de convite, com
+  `next/headers`, `next/cache`, `next-intl/server` e `@/lib/auth` mockados e o
+  banco de teste real.
+- `e2e/restricted-auth.spec.ts` (projeto `restricted`, porta 3300) — um cenário
+  fim a fim com a env ativa: a dica do domínio aparece, o signup de fora é
+  recusado com a mensagem certa, o signup `@arvore.com.br` entra, o convite de
+  org de fora do domínio é recusado e o de dentro passa.
+
+O servidor E2E restrito (`scripts/e2e-restricted-server.mjs`) **reaproveita o
+banco `leaf_e2e`** em vez de criar um `leaf_e2e_restricted`: o usuário `leaf` só
+tem grant nos bancos que já existem, e criar um novo exigiria de novo o master
+secret do cluster Aurora. Como a E2E roda com um worker só e o spec usa emails
+únicos, compartilhar o banco com o projeto `desktop` não dá conflito.
+
+### O que ficou de fora / para o Guilherme
+
+- `.env.example` **não foi atualizado**: o ambiente deste agente bloqueia leitura
+  e escrita de arquivos `.env*`. As três variáveis novas
+  (`LEAF_ALLOWED_EMAIL_DOMAINS`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`)
+  estão documentadas no README e precisam ser adicionadas lá à mão.
+- Ligar `LEAF_ALLOWED_EMAIL_DOMAINS=arvore.com.br` no deploy de produção é uma
+  mudança de env no EKS, não de código.
+- Contas de fora do domínio criadas antes da restrição **não são apagadas** —
+  elas só param de conseguir entrar. Se for para limpar, é decisão à parte.

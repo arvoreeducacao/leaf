@@ -2,9 +2,11 @@ import { defineConfig, devices } from '@playwright/test'
 
 const port = Number(process.env.E2E_PORT ?? 3100)
 const realtimePort = Number(process.env.E2E_REALTIME_APP_PORT ?? 3200)
+const restrictedPort = Number(process.env.E2E_RESTRICTED_PORT ?? 3300)
 
 const baseURL = `http://127.0.0.1:${port}`
 const realtimeBaseURL = `http://127.0.0.1:${realtimePort}`
+const restrictedBaseURL = `http://127.0.0.1:${restrictedPort}`
 
 export default defineConfig({
   testDir: './e2e',
@@ -23,7 +25,7 @@ export default defineConfig({
     {
       name: 'desktop',
       use: { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 900 } },
-      testIgnore: /(mobile|realtime)\.spec\.ts/,
+      testIgnore: /(mobile|realtime|restricted-auth)\.spec\.ts/,
     },
     {
       name: 'mobile',
@@ -39,6 +41,15 @@ export default defineConfig({
       },
       testMatch: /realtime\.spec\.ts/,
     },
+    {
+      name: 'restricted',
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 1280, height: 900 },
+        baseURL: restrictedBaseURL,
+      },
+      testMatch: /restricted-auth\.spec\.ts/,
+    },
   ],
   webServer: [
     {
@@ -52,6 +63,14 @@ export default defineConfig({
     {
       command: 'node scripts/e2e-realtime-server.mjs',
       url: realtimeBaseURL,
+      reuseExistingServer: false,
+      timeout: 180_000,
+      stdout: 'pipe',
+      stderr: 'pipe',
+    },
+    {
+      command: 'node scripts/e2e-restricted-server.mjs',
+      url: restrictedBaseURL,
       reuseExistingServer: false,
       timeout: 180_000,
       stdout: 'pipe',

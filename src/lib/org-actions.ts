@@ -20,6 +20,7 @@ import {
 } from '@/lib/active-org'
 import { getSession } from '@/lib/auth'
 import { registerInviteAttempt } from '@/lib/authz'
+import { emailDomainPolicy, isEmailDomainAllowed } from '@/lib/email-domain'
 import {
   attachOwnerDocuments,
   canManageOrganization,
@@ -173,6 +174,17 @@ export async function inviteToOrganization(
 
   if (normalized.length > maxEmailLength || !emailPattern.test(normalized)) {
     return failure('errorInvalidEmail')
+  }
+
+  const policy = emailDomainPolicy()
+
+  if (!isEmailDomainAllowed(normalized, policy.domains)) {
+    return {
+      ok: false,
+      error: (await getTranslations('org'))('errorDomainRestricted', {
+        domain: policy.primaryDomain ?? '',
+      }),
+    }
   }
 
   const memberEmails = await listOrganizationEmails(membership.orgId)

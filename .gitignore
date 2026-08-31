@@ -50,5 +50,6 @@ next-env.d.ts
 /.next-build/
 /.e2e/
 /.e2e-realtime/
+/.e2e-restricted/
 /test-results/
 /playwright-report/

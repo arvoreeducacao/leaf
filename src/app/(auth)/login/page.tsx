@@ -3,7 +3,7 @@ import { getTranslations } from 'next-intl/server'
 import { redirect } from 'next/navigation'
 
 import { AuthForm } from '@/components/auth/auth-form'
-import { getSession } from '@/lib/auth'
+import { authAccessConfig, getSession } from '@/lib/auth'
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('metadata')
@@ -18,5 +18,13 @@ export default async function LoginPage() {
     redirect('/')
   }
 
-  return <AuthForm mode="login" />
+  const { googleEnabled, restrictedDomain } = authAccessConfig()
+
+  return (
+    <AuthForm
+      googleEnabled={googleEnabled}
+      mode="login"
+      restrictedDomain={restrictedDomain}
+    />
+  )
 }

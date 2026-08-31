@@ -37,7 +37,12 @@
     "passwordTooShort": "A senha precisa de pelo menos 8 caracteres.",
     "signupFailed": "Não foi possível criar a conta. Confira os dados e tente de novo.",
     "loginFailed": "Email ou senha incorretos.",
-    "signOutFailed": "Não foi possível sair da conta"
+    "signOutFailed": "Não foi possível sair da conta",
+    "domainHint": "Use seu email @{domain}",
+    "domainRestricted": "Use seu email @{domain} para entrar no Leaf.",
+    "orSeparator": "ou",
+    "googleSubmit": "Entrar com Google",
+    "googleFailed": "Não foi possível entrar com o Google. Tente de novo."
   },
   "settings": {
     "account": "Conta",
@@ -330,7 +335,8 @@
     "descendantParent": "Não dá para mover um documento para dentro de uma subpágina dele.",
     "commentNotFound": "Este comentário não existe mais.",
     "commentEmpty": "Escreva algo antes de enviar.",
-    "commentTooFast": "Você comentou muitas vezes seguidas. Espere um minuto."
+    "commentTooFast": "Você comentou muitas vezes seguidas. Espere um minuto.",
+    "domainRestricted": "Somente contas @{domain}."
   },
   "org": {
     "title": "Organização",
@@ -382,6 +388,7 @@
     "errorOwnerLocked": "A pessoa dona da organização não pode ser alterada.",
     "errorOwnerCannotLeave": "Passe a organização para outra pessoa antes de sair.",
     "errorTooManyInvites": "Muitos convites seguidos. Tente de novo em {seconds} segundos.",
+    "errorDomainRestricted": "Somente contas @{domain}.",
     "confirmRemoveTitle": "Remover {name} da organização?",
     "confirmRemoveDescription": "A pessoa perde o acesso aos documentos da organização na hora. Os documentos dela continuam com ela e voltam a ser privados.",
     "confirmRemoveAction": "Remover da organização",
