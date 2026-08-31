@@ -228,3 +228,47 @@ test.describe('mobile 375px', () => {
     await expectNoHorizontalOverflow(page)
   })
 })
+
+test.describe('mobile 320px', () => {
+  test.use({ viewport: { width: 320, height: 780 } })
+
+  test('header do documento com badges e ações cabe na tela', async ({
+    page,
+  }) => {
+    await signUp(page, uniqueEmail('mobile-320'))
+
+    await page.goto('/org')
+    await page.getByLabel('Nome da organização').fill('Escola Estreita')
+    await page.getByRole('button', { name: 'Criar organização' }).click()
+    await expect(page.getByRole('heading', { name: 'Membros' })).toBeVisible()
+
+    await page.getByRole('button', { name: 'Criar teamspace' }).first().click()
+    await page.getByLabel('Nome do teamspace').fill('Time de Conteúdo')
+    await page.getByRole('button', { name: 'Criar teamspace' }).last().click()
+    await expect(page.getByText('Teamspace criado')).toBeVisible()
+
+    await page.goto('/')
+    await createDocument(page, 'Documento com o header cheio')
+
+    await page.getByRole('button', { name: 'Ações do documento' }).click()
+    await page.getByRole('menuitem', { name: 'Mover para teamspace' }).click()
+    await page.getByRole('radio', { name: /Time de Conteúdo/ }).click()
+    await page.getByRole('button', { name: 'Mover', exact: true }).click()
+    await expect(page.getByText('Documento movido')).toBeVisible()
+
+    await page.getByRole('button', { name: 'Compartilhar' }).click()
+    await page.getByRole('combobox', { name: 'Acesso da organização' }).click()
+    await page.getByRole('option', { name: 'Pode ver' }).click()
+    await expect(page.getByText('Acesso da organização atualizado')).toBeVisible()
+    await page.getByRole('button', { name: 'Fechar' }).click()
+    await expect(page.getByRole('dialog')).toHaveCount(0)
+
+    await page.reload()
+    await expect(page.getByTestId('document-teamspace-tag')).toBeVisible()
+    await expect(page.getByTestId('document-org-tag')).toBeVisible()
+    await expectNoHorizontalOverflow(page)
+
+    await expect(page.getByTestId('comments-button')).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Ações do documento' })).toBeVisible()
+  })
+})
