@@ -3,8 +3,8 @@ import { getTranslations } from 'next-intl/server'
 import { redirect } from 'next/navigation'
 
 import { AuthForm } from '@/components/auth/auth-form'
-import { GoogleSignIn } from '@/components/auth/google-sign-in'
-import { authAccessConfig, getSession } from '@/lib/auth'
+import { SsoSignIn } from '@/components/auth/sso-sign-in'
+import { arvoreSsoProviderId, authAccessConfig, getSession } from '@/lib/auth'
 
 type Props = Readonly<{
   searchParams: Promise<Record<string, string | Array<string> | undefined>>
@@ -23,14 +23,15 @@ export default async function LoginPage({ searchParams }: Props) {
     redirect('/')
   }
 
-  const { googleEnabled, restrictedDomain } = authAccessConfig()
+  const { restrictedDomain, ssoEnabled } = authAccessConfig()
 
-  if (googleEnabled) {
+  if (ssoEnabled) {
     const { error } = await searchParams
 
     return (
-      <GoogleSignIn
+      <SsoSignIn
         errorCode={typeof error === 'string' ? error : null}
+        providerId={arvoreSsoProviderId}
         restrictedDomain={restrictedDomain}
       />
     )

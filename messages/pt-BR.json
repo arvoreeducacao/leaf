@@ -40,11 +40,11 @@
     "signOutFailed": "Não foi possível sair da conta",
     "domainHint": "Use seu email @{domain}",
     "domainRestricted": "Use seu email @{domain} para entrar no Leaf.",
-    "googleOnlyTitle": "Bem-vindo ao Leaf",
-    "googleOnlySubtitle": "Entre com sua conta Google para escrever e compartilhar documentos.",
-    "googleDomainHint": "Use sua conta @{domain}",
-    "googleSubmit": "Entrar com Google",
-    "googleFailed": "Não foi possível entrar com o Google. Tente de novo."
+    "ssoTitle": "Bem-vindo ao Leaf",
+    "ssoSubtitle": "Entre com sua conta Árvore para escrever e compartilhar documentos.",
+    "ssoDomainHint": "Use sua conta @{domain}",
+    "ssoSubmit": "Entrar com a conta Árvore",
+    "ssoFailed": "Não foi possível entrar com a conta Árvore. Tente de novo."
   },
   "settings": {
     "account": "Conta",

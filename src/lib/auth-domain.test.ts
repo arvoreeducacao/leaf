@@ -6,6 +6,8 @@ vi.mock('@/db', async () => {
   return createTestDb()
 })
 
+import { handleOAuthUserInfo } from 'better-auth/oauth2'
+
 import { db } from '@/db'
 import { account, session, user } from '@/db/schema'
 import { resetDatabase } from '@/db/testing'
@@ -34,6 +36,37 @@ async function signUp(auth: AuthInstance, email: string) {
 async function signIn(auth: AuthInstance, email: string) {
   return auth.api.signInEmail({
     body: { email, password: 'senha-forte-123' },
+  })
+}
+
+async function ssoSignIn(auth: AuthInstance, email: string) {
+  const context = {
+    body: {},
+    context: await auth.$context,
+    getCookie: () => undefined,
+    getSignedCookie: async () => undefined,
+    headers: new Headers(),
+    json: (value: unknown) => value,
+    method: 'GET',
+    path: '/callback/arvore',
+    query: {},
+    redirect: () => new Response(null, { status: 302 }),
+    setCookie: () => undefined,
+    setSignedCookie: async () => undefined,
+  }
+
+  return handleOAuthUserInfo(context as never, {
+    account: {
+      accountId: `identidade-${email}`,
+      issuer: 'https://auth.arvore.com.br/api-arvore',
+      providerId: 'arvore',
+    },
+    userInfo: {
+      email,
+      emailVerified: true,
+      id: `identidade-${email}`,
+      name: email.split('@')[0],
+    },
   })
 }
 
@@ -124,5 +157,24 @@ describe('restrição de domínio ligada', () => {
     const auth = await loadAuth('arvore.com.br')
 
     await expectDomainRejection(signUp(auth, 'pessoa@mail.arvore.com.br'))
+  })
+
+  it('deixa a conta do SSO do domínio permitido entrar', async () => {
+    const auth = await loadAuth('arvore.com.br')
+
+    const entrou = await ssoSignIn(auth, 'pessoa@arvore.com.br')
+
+    expect(entrou.error).toBeNull()
+    expect(entrou.data?.user.email).toBe('pessoa@arvore.com.br')
+    expect(await db.select().from(session)).toHaveLength(1)
+  })
+
+  it('recusa a conta do SSO fora do domínio', async () => {
+    const auth = await loadAuth('arvore.com.br')
+
+    await expectDomainRejection(ssoSignIn(auth, 'pessoa@gmail.com'))
+
+    expect(await db.select().from(user)).toHaveLength(0)
+    expect(await db.select().from(session)).toHaveLength(0)
   })
 })

@@ -1,11 +1,13 @@
 import { expect, test } from '@playwright/test'
 
-test.describe('login apenas com Google', () => {
+const issuer = 'https://auth.e2e.invalid/api-arvore'
+
+test.describe('login pelo SSO da Árvore', () => {
   test('a tela de login não tem email e senha', async ({ page }) => {
     await page.goto('/login')
 
     await expect(
-      page.getByRole('button', { name: 'Entrar com Google' }),
+      page.getByRole('button', { name: 'Entrar com a conta Árvore' }),
     ).toBeVisible()
     await expect(page.getByText('Use sua conta @arvore.com.br')).toBeVisible()
     await expect(page.getByLabel('Email')).toHaveCount(0)
@@ -18,32 +20,35 @@ test.describe('login apenas com Google', () => {
 
     await expect(page).toHaveURL(/\/login$/)
     await expect(
-      page.getByRole('button', { name: 'Entrar com Google' }),
+      page.getByRole('button', { name: 'Entrar com a conta Árvore' }),
     ).toBeVisible()
   })
 
-  test('o botão leva para o consentimento do Google', async ({ page }) => {
-    await page.route('https://accounts.google.com/**', (route) =>
+  test('o botão leva para o authorize do SSO com PKCE', async ({ page }) => {
+    await page.route('https://auth.e2e.invalid/**', (route) =>
       route.fulfill({
-        body: '<html lang="pt-BR"><body>consentimento</body></html>',
+        body: '<html lang="pt-BR"><body>login da Árvore</body></html>',
         contentType: 'text/html',
       }),
     )
 
     await page.goto('/login')
-    await page.getByRole('button', { name: 'Entrar com Google' }).click()
+    await page.getByRole('button', { name: 'Entrar com a conta Árvore' }).click()
 
-    await page.waitForURL(/accounts\.google\.com/)
+    await page.waitForURL(/auth\.e2e\.invalid/)
 
     const target = new URL(page.url())
 
-    expect(target.searchParams.get('client_id')).toBe(
-      'leaf-e2e-google-client-id.apps.googleusercontent.com',
-    )
-    expect(target.searchParams.get('hd')).toBe('arvore.com.br')
+    expect(`${target.origin}${target.pathname}`).toBe(`${issuer}/oauth2/authorize`)
+    expect(target.searchParams.get('response_type')).toBe('code')
+    expect(target.searchParams.get('client_id')).toBe('leaf-e2e')
+    expect(target.searchParams.get('scope')).toBe('openid profile email')
     expect(target.searchParams.get('redirect_uri')).toContain(
-      '/api/auth/callback/google',
+      '/api/auth/callback/arvore',
     )
+    expect(target.searchParams.get('code_challenge_method')).toBe('S256')
+    expect(target.searchParams.get('code_challenge')).toMatch(/^[\w-]{43}$/)
+    expect(target.searchParams.get('state')).toBeTruthy()
   })
 
   test('erro de domínio negado volta com mensagem na tela de login', async ({
@@ -65,7 +70,7 @@ test.describe('login apenas com Google', () => {
 
     await expect(
       page.getByRole('alert').filter({
-        hasText: 'Não foi possível entrar com o Google. Tente de novo.',
+        hasText: 'Não foi possível entrar com a conta Árvore. Tente de novo.',
       }),
     ).toBeVisible()
   })

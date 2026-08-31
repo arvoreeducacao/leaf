@@ -3,17 +3,18 @@
 import { useTranslations } from 'next-intl'
 import { useEffect, useId, useRef, useState } from 'react'
 
-import { AlertIcon, GoogleIcon, LeafIcon } from '@/components/icons'
+import { AlertIcon, LeafIcon } from '@/components/icons'
 import { Button } from '@/components/ui/button'
 import { authClient } from '@/lib/auth-client'
 import { emailDomainErrorCode } from '@/lib/email-domain'
 
 type Props = Readonly<{
   errorCode: string | null
+  providerId: string
   restrictedDomain: string | null
 }>
 
-export function GoogleSignIn({ errorCode, restrictedDomain }: Props) {
+export function SsoSignIn({ errorCode, providerId, restrictedDomain }: Props) {
   const t = useTranslations('auth')
   const hintId = useId()
   const errorId = useId()
@@ -22,7 +23,7 @@ export function GoogleSignIn({ errorCode, restrictedDomain }: Props) {
     errorCode
       ? errorCode === emailDomainErrorCode
         ? t('domainRestricted', { domain: restrictedDomain ?? '' })
-        : t('googleFailed')
+        : t('ssoFailed')
       : null,
   )
   const [pending, setPending] = useState(false)
@@ -34,14 +35,14 @@ export function GoogleSignIn({ errorCode, restrictedDomain }: Props) {
     }
   }, [errorCode])
 
-  async function handleGoogle() {
+  async function handleSignIn() {
     setError(null)
     setPending(true)
 
     const result = await authClient.signIn.social({
       callbackURL: '/',
       errorCallbackURL: '/login',
-      provider: 'google',
+      provider: providerId,
     })
 
     if (result.error) {
@@ -49,7 +50,7 @@ export function GoogleSignIn({ errorCode, restrictedDomain }: Props) {
       setError(
         result.error.code === emailDomainErrorCode
           ? t('domainRestricted', { domain: restrictedDomain ?? '' })
-          : t('googleFailed'),
+          : t('ssoFailed'),
       )
     }
   }
@@ -65,11 +66,9 @@ export function GoogleSignIn({ errorCode, restrictedDomain }: Props) {
         </div>
 
         <h1 className="mt-6 font-bold text-heading-large text-content-strong">
-          {t('googleOnlyTitle')}
+          {t('ssoTitle')}
         </h1>
-        <p className="mt-2 text-body-small text-content">
-          {t('googleOnlySubtitle')}
-        </p>
+        <p className="mt-2 text-body-small text-content">{t('ssoSubtitle')}</p>
 
         {error ? (
           <p
@@ -93,16 +92,15 @@ export function GoogleSignIn({ errorCode, restrictedDomain }: Props) {
           }
           className="mt-6 w-full"
           disabled={pending}
-          onClick={handleGoogle}
+          onClick={handleSignIn}
           type="button"
         >
-          <GoogleIcon aria-hidden="true" className="size-5" />
-          {t('googleSubmit')}
+          {t('ssoSubmit')}
         </Button>
 
         {restrictedDomain ? (
           <p className="mt-3 text-body-small text-content" id={hintId}>
-            {t('googleDomainHint', { domain: restrictedDomain })}
+            {t('ssoDomainHint', { domain: restrictedDomain })}
           </p>
         ) : null}
       </div>

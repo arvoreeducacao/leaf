@@ -18,9 +18,9 @@ export default async function SignupPage() {
     redirect('/')
   }
 
-  const { googleEnabled, restrictedDomain } = authAccessConfig()
+  const { restrictedDomain, ssoEnabled } = authAccessConfig()
 
-  if (googleEnabled) {
+  if (ssoEnabled) {
     redirect('/login')
   }
 
