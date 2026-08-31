@@ -1010,7 +1010,8 @@ sidebar que a spec 06 previa.
   não encontrado" aparece normalmente e o acesso continua barrado; é só o código
   HTTP. Por isso o E2E de organização confere o conteúdo, não o status.
 - Sem transferência de propriedade da org, sem exclusão de organização e sem
-  segunda organização por pessoa.
+  segunda organização por pessoa. (A segunda organização passou a existir na
+  onda 11; o resto continua de fora.)
 - O convite não valida se o email existe (de propósito, para não vazar a
   existência de conta), então convite para email errado fica pendente para
   sempre até alguém cancelar.
@@ -1563,3 +1564,164 @@ Todos os 🔴 corrigidos e a maior parte dos 🟡:
   temas (fundo branco / gray-900 no escuro) e o texto do item selecionado dá
   4,83:1 no claro (gray-700 sobre gray-200) e 7,44:1 no escuro (gray-300 sobre
   gray-800). O resto da tela não foi auditado.
+
+## Onda 11 — Teamspaces + múltiplas organizações (entregue)
+
+### Modelo de dados
+
+- Migração `drizzle/0006_green_mother_askani.sql`: `teamspaces` (`id`, `org_id`
+  cascade, `name`, `access` `open|closed` default `open`, `created_at`),
+  `teamspace_members` (`id`, `teamspace_id` cascade, `user_id` cascade, `role`
+  `owner|member`, unique `(teamspace_id,user_id)`) e
+  `documents.teamspace_id`.
+- **O defeito das ondas 4 e 7 se repetiu:** o `ALTER TABLE documents ADD
+  teamspace_id` saiu do drizzle-kit sem `ON DELETE`. O `.sql` foi editado à mão
+  para `... REFERENCES teamspaces(id) ON DELETE SET NULL`. Se a migração for
+  regerada, confira de novo.
+- No `.sql` gerado, `CREATE TABLE teamspace_members` vem **antes** de
+  `CREATE TABLE teamspaces`. O SQLite aceita FK apontando para tabela que ainda
+  não existe, então tanto o migrator do boot quanto o harness dos testes
+  (que executa os `.sql` em ordem) passam.
+- `documents.teamspace_id` é a única fonte da verdade sobre "o documento vive
+  num teamspace". `org_id` continua existindo em paralelo (o move para teamspace
+  grava os dois).
+
+### Autorização (o coração desta onda)
+
+- `getDocumentAccess` agora é: **dono → share explícito → teamspace → org_access
+  → nada**, com o link público seguindo no caminho separado
+  (`lookupPublicDocument`). O passo novo é `getTeamspaceGrant(document, session)`,
+  exportado de `authz.ts` para dar para testar isolado.
+- Regra do teamspace: quem está em `teamspace_members` recebe **`editor`**
+  (papel dentro do teamspace só distingue quem administra, não quem edita);
+  quem não está, mas é membro da organização e o teamspace é `open`, recebe
+  **`viewer`**; teamspace `closed` não concede nada para não-membro.
+- **A precedência é literal, primeiro nível que casa vence.** Consequências
+  medidas e cobertas por teste: um share `viewer` rebaixa quem seria editor pelo
+  teamspace (mesma regra que já valia para `org_access`), e um documento em
+  teamspace **aberto** com `org_access: editor` entrega `viewer` para quem é da
+  org mas não é do teamspace. Já um teamspace **fechado** não concede nada, então
+  o `org_access` do documento continua valendo para quem é da org — é o
+  fallthrough esperado da cadeia.
+- `src/lib/teamspace-authz.test.ts` (13 casos) trava tudo isso, mais a
+  visibilidade das listas e a entrada em várias organizações. `authz.test.ts`
+  teve três testes de convite reescritos (a regra "uma org por pessoa" morreu).
+- `search-index.ts`: o `accessCondition` do FTS ganhou os dois ramos de
+  teamspace (membro e aberto+membro da org). Sem isso o documento de teamspace
+  ficaria invisível na busca mesmo com acesso — a paridade entre `authz.ts` e o
+  SQL da busca é obrigatória e é o primeiro lugar para olhar em qualquer
+  mudança futura de permissão.
+
+### Múltiplas organizações
+
+- O limite de uma organização por pessoa era garantido em código (`getMembership`
+  + guardas), não no banco. Saiu: `listMemberships(userId)` devolve todas e
+  `resolveMembership(userId, preferredOrgId)` escolhe a ativa.
+- **Organização ativa vive num cookie** `leaf-active-org` (`httpOnly`,
+  `sameSite: lax`, 1 ano), em `src/lib/active-org.ts` (`readActiveOrgId`,
+  `getActiveMembership`, `writeActiveOrgId`, `clearActiveOrgId`). O módulo é
+  separado de `organizations.ts` de propósito: `organizations.ts` é puro e é
+  importado pelos testes, `active-org.ts` importa `next/headers`.
+- Regra de resolução: cookie válido vence; senão a participação mais antiga.
+  Cookie apontando para org da qual a pessoa saiu cai no fallback sem erro.
+- `acceptPendingInvites` mudou de assinatura: devolve **`Array<Membership>`** e
+  aceita **todos** os convites pendentes daquele email, pulando as orgs em que a
+  pessoa já está. Isso conserta a pendência da onda 7 (convite de outra org
+  sumia sem aviso). `attachOwnerDocuments` só roda quando a pessoa não tinha
+  nenhuma organização — na segunda org em diante os documentos antigos ficam
+  onde estão.
+- As ações de organização (`renameOrganization`, `inviteToOrganization`,
+  `cancelOrganizationInvite`, `updateMemberRole`, `removeMember`,
+  `leaveOrganization`) agem sobre a **org ativa**. `setActiveOrganization(orgId)`
+  é a ação nova do switcher e valida a participação antes de gravar o cookie.
+- `createOrganization` deixou de recusar quem já tem org; grava o cookie da nova
+  org no fim. A chave `org.errorAlreadyMember` foi removida dos dois catálogos e
+  o `org.createHelp` foi reescrito.
+- Sair ou ser removida de uma org agora também apaga as participações em
+  teamspaces daquela org (`removeTeamspaceMemberships`) e o
+  `detachMemberDocuments` zera `teamspace_id` junto com `org_id`/`org_access`.
+  Ao sair, o cookie passa para a org restante ou é apagado.
+- `setOrganizationAccess` (share-actions) parou de comparar com a org ativa e
+  passou a exigir participação na org **do documento** (`isMemberOf`) — com N
+  orgs, comparar com a ativa bloquearia o dono legítimo.
+- `createDocument`, o import de `.zip` e o duplicar usam a org **ativa**.
+
+### Onde um documento passa a morar
+
+- `moveDocumentToTeamspace(documentId, teamspaceId | null)` exige `owner` no
+  documento e move **a subárvore inteira** (`listSubtreeIds`), não só o
+  documento: página e subpáginas vivem no mesmo teamspace. Mover para "Privado"
+  é o mesmo caminho com `null`.
+- `moveDocument` (mover para outra página) passou a propagar `teamspace_id` e
+  `org_id` do destino para a subárvore movida, senão um filho ficaria numa seção
+  e o pai em outra.
+- O import de `.zip` herda `teamspace_id` e `org_id` do documento pai
+  (`ImportOwner.teamspaceId`), e `duplicateDocument` copia o `teamspace_id`.
+- `listPrivateDocuments` e `listOrganizationDocuments` passaram a excluir
+  documentos com `teamspace_id`, senão o mesmo documento aparecia em duas seções
+  da sidebar.
+
+### UI
+
+- `OrgSwitcher` (`src/components/app/org-switcher.tsx`) no topo da sidebar:
+  DropdownMenu com radiogroup das organizações + "Gerenciar organização" e
+  "Criar organização" (`/org?new=1`). Sem organização nenhuma, vira só um link
+  "Criar organização".
+- `TeamspaceSections` (`src/components/app/teamspace-sections.tsx`): seção
+  "Teamspaces" **acima** de "Organização", um bloco por teamspace com ícone de
+  cadeado (fechado) ou pessoas (aberto), botão "Entrar" quando a pessoa ainda
+  não é membro, e `DocumentTree` própria. O botão "+" abre o
+  `TeamspaceFormDialog` (nome + acesso), que também é usado no `/org` para
+  editar.
+- `/org` virou duas seções: `OrganizationManager` (como antes, agora sobre a org
+  ativa) e `TeamspaceManager` novo (lista, membros, adicionar pessoa a partir do
+  select de membros da org, entrar/sair, editar, excluir vazio). O `?new=1`
+  mostra o formulário de criar organização acima de tudo.
+- **Quem pode o quê:** qualquer membro da organização cria teamspace (e vira
+  `owner` dele); administrar (renomear, trocar acesso, membros, excluir) exige
+  ser `owner` do teamspace **ou** `owner`/`admin` da organização
+  (`canManageTeamspace`). Admin da org enxerga também os teamspaces fechados em
+  `/org` — mas isso **não** dá acesso a documento nenhum: continua valendo que
+  papel de organização nunca escala para leitura de documento.
+- Excluir teamspace só com zero documentos, com confirmação inline (não abriu
+  mais um AlertDialog).
+- Adicionar membro é um `Select` de membros da organização, não um campo de
+  email: sem enumeração de conta, sem rate limit novo.
+- Header do documento ganhou o Badge do teamspace
+  (`data-testid="document-teamspace-tag"`) e o menu ⋯ ganhou "Mover para
+  teamspace" (só para dono de documento que pertence a uma organização).
+- i18n: namespace novo `teamspace` (58 chaves) com paridade pt-BR/en-US
+  (439 chaves em cada catálogo), mais `org.switcherLabel`, `org.switching` e
+  `org.manageLink`.
+
+### Verificação (modo ultra-rápido)
+
+- `pnpm exec tsc --noEmit` limpo.
+- `vitest run` **só dos arquivos tocados**: `teamspace-authz.test.ts` (13),
+  `authz.test.ts` (49), `documents.test.ts` + `search-index.test.ts` (28) —
+  todos verdes. A suíte inteira, o `pnpm test:e2e`, o `pnpm build` e o
+  design-review **não** rodaram, conforme a decisão registrada no topo do
+  `docs/ROADMAP.md`.
+- Servidor de desenvolvimento reiniciado (o migrator só roda no boot, e o `db`
+  fica cacheado em `globalThis` no dev): `/login` 200, `/` e `/org` 307 para
+  quem não está logado, migração 0006 aplicada no `data/leaf.db`.
+
+### O que a onda final de validação precisa olhar aqui
+
+- **Nada desta onda foi aberto no navegador logado.** Não foram vistos: o
+  switcher trocando de organização, a seção de teamspace na sidebar (desktop e
+  mobile), o `/org` com o `TeamspaceManager`, o "Mover para teamspace" e o Badge
+  do teamspace no header. Contraste e responsividade dos componentes novos
+  (`org-switcher`, `teamspace-sections`, `teamspace-form-dialog`,
+  `move-to-teamspace-dialog`, `teamspace-manager`) estão **sem design-review**.
+- O `Select` de adicionar pessoa usa `key={people.length}` para voltar ao
+  placeholder depois de cada adição (Radix não aceita `value=""` em item). Vale
+  conferir no navegador que ele não fica preso no nome escolhido.
+- `e2e/organizations.spec.ts` foi escrito na regra antiga ("uma org por
+  pessoa") e **não foi executado**. É o primeiro E2E a rodar na onda final; se
+  quebrar, o suspeito é o texto de `org.createHelp` e o fluxo de convite, que
+  agora aceita várias orgs.
+- O header do documento já era apertado em 320-430px (ajuste da onda 7) e ganhou
+  mais um Badge. Merece uma medida em mobile.
+- Não há transferência de propriedade de teamspace nem lixeira própria dele:
+  excluir exige mover os documentos antes.

@@ -1,6 +1,6 @@
 # Leaf — Roadmap das ondas restantes
 
-Estado: ondas 1-10 entregues (fundação, editor BlockNote, sharing, markdown, QA, import do Notion + hierarquia, polimento + E2E versionado, dark/claro + i18n pt-BR/en-US, organizações + import agnóstico via slash menu, histórico de versões, comentários + papel "Pode comentar", busca full-text + command palette). Detalhes e decisões acumuladas em `INTEGRATION-NOTES.md`.
+Estado: ondas 1-11 entregues (fundação, editor BlockNote, sharing, markdown, QA, import do Notion + hierarquia, polimento + E2E versionado, dark/claro + i18n pt-BR/en-US, organizações + import agnóstico via slash menu, histórico de versões, comentários + papel "Pode comentar", busca full-text + command palette, teamspaces + múltiplas organizações por pessoa). Detalhes e decisões acumuladas em `INTEGRATION-NOTES.md`.
 
 Regras de toda onda: i18n pt-BR/en-US com paridade de chaves; dark/claro AA; tokens semânticos (nunca classe de paleta literal); ícones de `@/components/icons`; sem comentários no código; build + vitest + `pnpm test:e2e` (cap de 15 min) + commit local por onda; feature só entra íntegra.
 
@@ -25,10 +25,13 @@ DECISÃO DO GUILHERME (2026-08-31, ampliada): a partir da onda 11, TAMBÉM ficam
 - Seções da palette do Leaf: Recentes (query vazia), Documentos (FTS com trecho destacado), Ações rápidas (Novo documento, Ir para Organização, Importar).
 - Busca só nos docs acessíveis (authz obrigatório no SERVER). Teste: doc privado de terceiro nunca aparece.
 
-## Onda 11 — Teamspaces + múltiplas orgs por usuário
-- `teamspaces` (org_id, name, access open|closed) + `teamspace_members` (role owner|member); `documents.teamspace_id` nullable; membros herdam acesso; open = qualquer membro da org entra/vê, closed = só convidados.
-- Sidebar: seção por teamspace; gestão em /org. Remover limite de 1 org por usuário: switcher de org na sidebar (cookie da org ativa).
-- Precedência: owner > share > teamspace > org_access > público; testes.
+## Onda 11 — Teamspaces + múltiplas orgs por usuário (entregue)
+- Migração `0006`: `teamspaces` (org_id, name, access open|closed) + `teamspace_members` (role owner|member) + `documents.teamspace_id`. Membro do teamspace herda **editor**; teamspace aberto dá **viewer** para qualquer membro da org (que também pode entrar); fechado não dá nada para quem não foi convidado.
+- Precedência implementada em `authz.ts`: dono > share explícito > teamspace > org_access > público, com 13 testes novos em `src/lib/teamspace-authz.test.ts`.
+- Sidebar: switcher de organização no topo (cookie `leaf-active-org`) + seção "Teamspaces" acima de "Organização", com entrar em teamspace aberto e criar. Gestão completa em `/org` (criar, renomear, trocar acesso, membros, excluir vazio). Menu do documento ganhou "Mover para teamspace".
+- Limite de 1 org por pessoa removido: convites de várias orgs resolvem todos; ações de org agem sobre a org ativa.
+- **Decisão registrada:** a busca FTS/command palette **não** filtra pela org ativa — devolve tudo que a pessoa acessa (inclusive docs de teamspace), que é o caminho mais simples e o que o Cmd+K de fato promete.
+- Modo ultra-rápido: fechou com `tsc --noEmit` limpo + os arquivos de teste tocados (authz, teamspace-authz, documents, search-index) verdes. Sem vitest completo, E2E, build ou design-review — tudo isso na onda final de validação.
 
 ## Onda 12 — Colaboração em tempo real (a mais pesada, por último)
 - Yjs + BlockNote collaboration; websocket local (y-websocket, porta 1234) subindo no `pnpm dev`; room = document id com authz no handshake.
