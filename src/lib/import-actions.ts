@@ -12,6 +12,13 @@ import {
   destinationOfParent,
   serializeImportDestination,
 } from '@/lib/import-destination'
+import { createNotionClient } from '@/lib/notion/api'
+import {
+  getNotionConnection,
+  notionOAuthConfig,
+} from '@/lib/notion/connection'
+import { pageTitle } from '@/lib/notion/crawl'
+import { notionIdFromLink } from '@/lib/notion/link'
 
 export type ImportDestinationOption = Readonly<{
   value: string
@@ -89,4 +96,85 @@ export async function listImportDestinations(
     suggested: reachable ? fromParent : 'organization',
     teamspaces: available,
   }
+}
+
+export type NotionPreview =
+  | Readonly<{ state: 'unavailable' }>
+  | Readonly<{ state: 'disconnected' }>
+  | Readonly<{ state: 'invalidLink' }>
+  | Readonly<{ state: 'unreachable' }>
+  | Readonly<{
+      state: 'ready'
+      title: string
+      childPages: number
+      childDatabases: number
+    }>
+
+export async function previewNotionLink(link: string): Promise<NotionPreview> {
+  const session = await getSession()
+
+  if (!session) {
+    return { state: 'disconnected' }
+  }
+
+  if (!notionOAuthConfig()) {
+    return { state: 'unavailable' }
+  }
+
+  const connection = await getNotionConnection(session.user.id)
+
+  if (!connection) {
+    return { state: 'disconnected' }
+  }
+
+  const pageId = notionIdFromLink(link)
+
+  if (!pageId) {
+    return { state: 'invalidLink' }
+  }
+
+  const client = createNotionClient(connection.accessToken)
+
+  try {
+    const page = await client.page(pageId)
+    let childPages = 0
+    let childDatabases = 0
+
+    for await (const block of client.children(pageId)) {
+      if (block.type === 'child_page') {
+        childPages += 1
+      }
+
+      if (block.type === 'child_database') {
+        childDatabases += 1
+      }
+    }
+
+    return {
+      childDatabases,
+      childPages,
+      state: 'ready',
+      title: pageTitle(page, ''),
+    }
+  } catch {
+    return { state: 'unreachable' }
+  }
+}
+
+export async function notionConnectionState(): Promise<
+  'unavailable' | 'disconnected' | 'connected'
+> {
+  if (!notionOAuthConfig()) {
+    return 'unavailable'
+  }
+
+  const session = await getSession()
+
+  if (!session) {
+    return 'disconnected'
+  }
+
+  return (await getNotionConnection(session.user.id))
+    ? 'connected'
+    : 'disconnected'
 }

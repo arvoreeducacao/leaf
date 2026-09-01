@@ -415,7 +415,9 @@
     "slashArchive": "Importar exportação .zip",
     "slashArchiveHint": "Cria subpáginas deste documento a partir do zip",
     "markdownInserted": "Markdown inserido no documento",
-    "reading": "Lendo o arquivo"
+    "reading": "Lendo o arquivo",
+    "slashLink": "Importar do Notion por link",
+    "slashLinkHint": "Puxa uma página do Notion e tudo abaixo dela, sem exportar zip"
   },
   "uploads": {
     "notAuthenticated": "Não autenticado",
@@ -568,7 +570,30 @@
     "tooLargeZip": "O arquivo passa de {limit}",
     "csvColumn": "Coluna",
     "csvView": "Tabela",
-    "csvDatabases": "{count, plural, one {# database do Notion virou base de dados} other {# databases do Notion viraram bases de dados}}"
+    "csvDatabases": "{count, plural, one {# database do Notion virou base de dados} other {# databases do Notion viraram bases de dados}}",
+    "phaseReading": "Lendo as páginas no Notion",
+    "readingCount": "{done, plural, one {# página lida} other {# páginas lidas}}",
+    "crawlTruncated": "A importação parou em {max} páginas. O resto da árvore ficou de fora.",
+    "invalidLink": "Esse link não parece ser de uma página do Notion",
+    "notConnected": "Conecte sua conta do Notion antes de importar por link"
+  },
+  "notionLink": {
+    "title": "Importar do Notion",
+    "description": "Cole o link de uma página do Notion. Ela e tudo abaixo dela entram no Leaf.",
+    "linkLabel": "Link da página no Notion",
+    "linkPlaceholder": "https://www.notion.so/...",
+    "linkHelp": "Abra a página no Notion, copie o link e cole aqui.",
+    "checkLink": "Conferir",
+    "startImport": "Importar",
+    "connect": "Conectar minha conta do Notion",
+    "openDocument": "Abrir documento",
+    "cancelImport": "Cancelar importação",
+    "untitledPage": "Página sem título",
+    "previewReady": "{title} — {pages, plural, =0 {sem subpáginas diretas} one {# subpágina direta} other {# subpáginas diretas}} e {databases, plural, =0 {nenhuma base de dados} one {# base de dados} other {# bases de dados}}. A importação segue até o fim da árvore.",
+    "unavailable": "A importação por link ainda não está ligada neste Leaf.",
+    "disconnected": "Conecte sua conta do Notion para o Leaf ler as páginas que você já enxerga lá.",
+    "invalidLink": "Esse link não parece ser de uma página do Notion.",
+    "unreachable": "Não conseguimos abrir essa página. Confira se você deu acesso a ela na conexão com o Notion."
   },
   "teamspace": {
     "sectionTitle": "Teamspaces",
