@@ -23,6 +23,7 @@ type Props = Readonly<{
   readOnly: boolean
   isOwner: boolean
   canComment: boolean
+  openCommentCount: number
   realtime: RealtimeConfig | null
 }>
 
@@ -32,6 +33,7 @@ export function DocumentEditor({
   readOnly,
   isOwner,
   canComment,
+  openCommentCount,
   realtime,
 }: Props) {
   const locale = useLocale()
@@ -57,6 +59,7 @@ export function DocumentEditor({
       initialContent={initialContent}
       isOwner={isOwner}
       key={locale}
+      openCommentCount={openCommentCount}
       readOnly={readOnly}
       realtimeConnected={connected}
     />
