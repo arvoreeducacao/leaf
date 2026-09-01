@@ -97,7 +97,7 @@ export function DocumentHeader({
 
   const topbar = (
     <>
-      <div className="flex min-w-0 flex-1 basis-full items-center gap-1 text-body-small text-content tablet:basis-0">
+      <div className="flex min-w-0 flex-1 items-center gap-1 text-body-small text-content">
         {breadcrumb}
         {breadcrumb ? (
           <CaretRightIcon
@@ -110,7 +110,7 @@ export function DocumentHeader({
         </span>
       </div>
 
-      <div className="flex min-w-0 flex-1 basis-full flex-wrap items-center justify-end gap-1 tablet:flex-none tablet:basis-auto">
+      <div className="flex shrink-0 items-center justify-end gap-1">
         <DocumentStatus />
         <PresenceIndicator />
         <CommentsPanel documentId={documentId} initialOpenCount={openComments} />
