@@ -147,7 +147,7 @@ export function SelectEditor({
 
   if (readOnly) {
     return (
-      <span className={cn('flex min-w-0 items-center', compact && 'h-9 px-2')}>
+      <span className={cn('flex min-w-0 items-center', compact && 'h-9 px-2 tablet:h-8')}>
         {summary}
       </span>
     )
@@ -160,7 +160,7 @@ export function SelectEditor({
           aria-label={label}
           className={cn(
             'flex w-full min-w-0 cursor-pointer items-center rounded-medium text-left text-body-small transition-colors hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-focus focus-visible:-outline-offset-2',
-            compact ? 'h-9 px-2' : 'min-h-9 border border-line px-2 py-1',
+            compact ? 'h-9 px-2 tablet:h-8' : 'min-h-9 border border-line px-2 py-1',
           )}
           type="button"
         >
@@ -170,7 +170,7 @@ export function SelectEditor({
       <PopoverContent align="start" className="w-64 p-2">
         <Input
           aria-label={t('searchOrCreate')}
-          className="h-9 text-body-small"
+          className="h-9 text-body-small tablet:h-8"
           onChange={(event) => setQuery(event.target.value)}
           onKeyDown={(event) => {
             if (event.key === 'Enter' && !exact && trimmed.length > 0) {

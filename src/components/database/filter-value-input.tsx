@@ -29,7 +29,7 @@ export function FilterValueInput({
   }
 
   const inputClass =
-    'h-9 w-full min-w-0 rounded-medium border border-line-strong bg-surface-card px-2 text-body-small text-content-strong outline-none transition-colors hover:border-line-contrast focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-1'
+    'h-9 tablet:h-7 w-full min-w-0 rounded-medium border border-line-strong bg-surface-card px-2 text-body-small text-content-strong outline-none transition-colors hover:border-line-contrast focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-1'
 
   if (!property) {
     return (

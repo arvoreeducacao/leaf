@@ -54,7 +54,7 @@ export function PropertyCell({
 
   const inputClass = cn(
     'w-full min-w-0 rounded-medium bg-transparent text-body-small text-content-strong outline-none transition-colors placeholder:text-content-subtle focus-visible:outline-2 focus-visible:outline-focus focus-visible:-outline-offset-2 disabled:text-content',
-    compact ? 'h-9 px-2' : 'min-h-9 border border-line px-2 py-1',
+    compact ? 'h-9 px-2 tablet:h-8' : 'min-h-9 border border-line px-2 py-1',
   )
 
   if (property.type === 'select' || property.type === 'multiSelect') {
@@ -88,7 +88,7 @@ export function PropertyCell({
 
     return (
       <span
-        className={cn('flex items-center', compact ? 'h-9 px-2' : 'min-h-9')}
+        className={cn('flex items-center', compact ? 'h-9 px-2 tablet:h-8' : 'min-h-9')}
       >
         <button
           aria-checked={checked}
