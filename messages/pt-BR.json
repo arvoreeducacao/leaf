@@ -296,7 +296,9 @@
     "toolbarButton": "Comentar",
     "readOnlyHint": "Você pode ler os comentários, mas não comentar neste documento.",
     "blockGone": "O trecho deste comentário não está mais no documento.",
-    "anchorPending": "Comentando no trecho selecionado"
+    "anchorPending": "Comentando no trecho selecionado",
+    "markerLabel": "{count, plural, one {# comentário neste trecho} other {# comentários neste trecho}}",
+    "inlineTitle": "Comentários deste trecho"
   },
   "move": {
     "title": "Mover para outra página",

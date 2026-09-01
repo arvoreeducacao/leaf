@@ -296,7 +296,9 @@
     "toolbarButton": "Comment",
     "readOnlyHint": "You can read the comments, but you can't comment on this document.",
     "blockGone": "This comment's passage is no longer in the document.",
-    "anchorPending": "Commenting on the selected passage"
+    "anchorPending": "Commenting on the selected passage",
+    "markerLabel": "{count, plural, one {# comment on this passage} other {# comments on this passage}}",
+    "inlineTitle": "Comments on this passage"
   },
   "move": {
     "title": "Move to another page",

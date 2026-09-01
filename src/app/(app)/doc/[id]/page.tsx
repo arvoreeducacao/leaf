@@ -85,6 +85,7 @@ export default async function DocumentPage({ params }: Props) {
             documentId={document.id}
             initialContent={document.content}
             isOwner={access === 'owner'}
+            openCommentCount={openComments}
             readOnly={!canEdit(access)}
             realtime={
               isRealtimeEnabled()

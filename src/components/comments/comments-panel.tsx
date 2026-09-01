@@ -11,6 +11,10 @@ import {
   onCommentRequest,
   useBlockIndex,
 } from '@/components/comments/comments-bridge'
+import {
+  publishCommentsState,
+  useCommentsState,
+} from '@/components/comments/comments-store'
 import { ChatIcon, TargetIcon } from '@/components/icons'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
@@ -31,7 +35,7 @@ import {
   removeComment,
   resolveComment,
 } from '@/lib/comment-actions'
-import type { CommentsResult, CommentsState } from '@/lib/comment-actions'
+import type { CommentsResult } from '@/lib/comment-actions'
 import { MAX_COMMENT_LENGTH } from '@/lib/comment-limits'
 import { useIsMobile } from '@/shared/hooks/use-mobile'
 
@@ -48,8 +52,9 @@ export function CommentsPanel({ documentId, initialOpenCount }: Props) {
   const blockIndex = useBlockIndex()
   const composerId = useId()
 
+  const state = useCommentsState(documentId)
+
   const [open, setOpen] = useState(false)
-  const [state, setState] = useState<CommentsState | null>(null)
   const [loading, setLoading] = useState(false)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
@@ -68,7 +73,7 @@ export function CommentsPanel({ documentId, initialOpenCount }: Props) {
 
     if (result.ok) {
       setNow(Date.now())
-      setState(result.state)
+      publishCommentsState(documentId, result.state)
     } else {
       setLoadError(result.error)
     }
@@ -108,7 +113,7 @@ export function CommentsPanel({ documentId, initialOpenCount }: Props) {
       return false
     }
 
-    setState(result.state)
+    publishCommentsState(documentId, result.state)
     toast.success(success)
 
     return true
