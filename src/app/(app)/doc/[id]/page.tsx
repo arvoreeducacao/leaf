@@ -52,9 +52,11 @@ export default async function DocumentPage({ params }: Props) {
     : null
 
   return (
-    <article className="mx-auto flex w-full max-w-content flex-col gap-6 px-4 py-8 tablet:px-8 tablet:py-10">
-      <DocumentBreadcrumb crumbs={crumbs} />
+    <article className="mx-auto flex w-full max-w-page flex-col gap-2 pt-10 pb-40 tablet:pt-20">
       <DocumentHeader
+        breadcrumb={
+          crumbs.length > 0 ? <DocumentBreadcrumb crumbs={crumbs} /> : null
+        }
         canEdit={canEdit(access)}
         canMoveToTeamspace={access === 'owner' && document.orgId !== null}
         documentId={document.id}
@@ -64,28 +66,26 @@ export default async function DocumentPage({ params }: Props) {
         teamspaceName={teamspace?.name ?? null}
         title={document.title}
       />
-      <div className="mx-auto w-full max-w-prose-leaf">
-        <DocumentEditor
-          canComment={canComment(access)}
-          documentId={document.id}
-          initialContent={document.content}
-          isOwner={access === 'owner'}
-          readOnly={!canEdit(access)}
-          realtime={
-            isRealtimeEnabled()
-              ? {
-                  url: process.env.LEAF_REALTIME_URL?.trim() || null,
-                  port: realtimePort(),
-                  user: {
-                    id: session.user.id,
-                    name:
-                      authorNameOf(session.user.name, session.user.email) ?? '',
-                  },
-                }
-              : null
-          }
-        />
-      </div>
+      <DocumentEditor
+        canComment={canComment(access)}
+        documentId={document.id}
+        initialContent={document.content}
+        isOwner={access === 'owner'}
+        readOnly={!canEdit(access)}
+        realtime={
+          isRealtimeEnabled()
+            ? {
+                url: process.env.LEAF_REALTIME_URL?.trim() || null,
+                port: realtimePort(),
+                user: {
+                  id: session.user.id,
+                  name:
+                    authorNameOf(session.user.name, session.user.email) ?? '',
+                },
+              }
+            : null
+        }
+      />
     </article>
   )
 }

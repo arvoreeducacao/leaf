@@ -160,8 +160,8 @@ export function DocumentMenu({
           <ButtonIcon
             aria-label={t('menuLabel')}
             ref={triggerRef}
-            size="xlarge"
-            variant="secondary"
+            size="medium"
+            variant="ghost"
           >
             <EllipsisIcon aria-hidden="true" />
           </ButtonIcon>

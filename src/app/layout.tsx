@@ -3,27 +3,9 @@ import './globals.css'
 import type { Metadata, Viewport } from 'next'
 import { NextIntlClientProvider } from 'next-intl'
 import { getLocale, getTranslations } from 'next-intl/server'
-import localFont from 'next/font/local'
 
 import { ThemeProvider } from '@/components/app/theme-provider'
 import { Toaster } from '@/components/ui/sonner'
-
-const averta = localFont({
-  src: [
-    {
-      path: '../../public/font/Averta-Regular.otf',
-      weight: '400',
-      style: 'normal',
-    },
-    {
-      path: '../../public/font/Averta-Bold.otf',
-      weight: '700',
-      style: 'normal',
-    },
-  ],
-  variable: '--font-averta',
-  display: 'swap',
-})
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -48,7 +30,7 @@ export default async function RootLayout({ children }: Props) {
 
   return (
     <html lang={locale} suppressHydrationWarning>
-      <body className={`${averta.variable} font-sans antialiased min-h-dvh`}>
+      <body className="min-h-dvh font-sans">
         <ThemeProvider>
           <NextIntlClientProvider>
             {children}

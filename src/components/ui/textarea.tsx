@@ -26,7 +26,7 @@ function PlainTextarea({
     <textarea
       aria-invalid={error}
       className={cn(
-        'flex min-h-16 w-full min-w-[180px] max-w-[500px] rounded-large border bg-transparent px-3 py-2 text-base text-content outline-none transition-colors placeholder:text-content-muted focus-visible:border-2 focus-visible:border-line-stronger disabled:cursor-not-allowed disabled:bg-surface-subtle',
+        'flex min-h-16 w-full min-w-45 max-w-125 rounded-large border border-line-muted bg-surface-app px-2 py-1.5 text-body-medium text-content-strong outline-none transition-colors tablet:text-body-small placeholder:text-content-disabled focus-visible:border-focus focus-visible:ring-2 focus-visible:ring-focus/30 disabled:cursor-not-allowed disabled:bg-surface-subtle',
         error ? 'border-destructive' : 'border-line-stronger',
         resizable ? 'resize-y' : 'resize-none',
         className
@@ -98,7 +98,7 @@ function Textarea({
           aria-describedby={helperId}
           aria-invalid={error}
           className={cn(
-            'min-h-20 w-full bg-transparent px-4 pb-2 text-base text-content outline-none placeholder-transparent',
+            'min-h-20 w-full bg-transparent px-3 pb-2 text-body-medium text-content-strong outline-none tablet:text-body-small placeholder-transparent',
             resizable ? 'resize-y' : 'resize-none',
             disabled && 'cursor-not-allowed'
           )}
@@ -120,7 +120,7 @@ function Textarea({
             error ? 'text-destructive' : 'text-content',
             isFloating
               ? '-translate-y-1/2 top-0 left-3 px-1 text-sm'
-              : 'top-3 text-base'
+              : 'top-3 text-body-medium'
           )}
           htmlFor={fieldId}
         >

@@ -85,9 +85,9 @@ function SheetContent({
         {showClose && (
           <SheetPrimitive.Close
             aria-label={t('close')}
-            className="absolute top-4 right-4 inline-flex size-8 items-center justify-center rounded-large text-content outline-none transition-colors hover:bg-surface-hover hover:text-content-strong focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 disabled:pointer-events-none"
+            className="absolute top-3 right-3 inline-flex size-9 items-center justify-center rounded-large text-content-subtle outline-none tablet:size-7 transition-colors hover:bg-surface-hover hover:text-content-strong focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none"
           >
-            <CancelIcon className="size-5" />
+            <CancelIcon className="size-4" />
             <span className="sr-only">{t('close')}</span>
           </SheetPrimitive.Close>
         )}
@@ -136,10 +136,10 @@ function SheetHeader({
       {...props}
     >
       {type === 'draggable' && (
-        <span className="mx-auto h-1 w-12 shrink-0 rounded-pill bg-surface-hover" />
+        <span className="mx-auto h-1 w-10 shrink-0 rounded-pill bg-surface-grabber" />
       )}
       <div className="flex items-center justify-between gap-2 px-4">
-        {type === 'close' && <span aria-hidden className="size-12 shrink-0" />}
+        {type === 'close' && <span aria-hidden className="size-10 shrink-0" />}
         {type === 'progress' ? (
           <div className="flex flex-1 justify-center">
             <StepProgress current={currentStep} total={steps ?? 5} />
@@ -162,14 +162,14 @@ function SheetHeader({
         {type === 'close' && (
           <SheetClose
             aria-label={t('close')}
-            className="inline-flex size-12 shrink-0 items-center justify-center rounded-large text-content outline-none transition-colors hover:bg-surface-hover hover:text-content-strong focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+            className="inline-flex size-10 shrink-0 items-center justify-center rounded-large text-content-subtle outline-none transition-colors hover:bg-surface-hover hover:text-content-strong focus-visible:ring-2 focus-visible:ring-ring"
           >
-            <CancelIcon className="size-6" />
+            <CancelIcon className="size-5" />
             <span className="sr-only">{t('close')}</span>
           </SheetClose>
         )}
       </div>
-      <div className="h-px w-full bg-surface-hover" />
+      <div className="h-px w-full bg-line" />
       {children}
     </div>
   )
@@ -194,7 +194,7 @@ function SheetTitle({
 }: Readonly<React.ComponentProps<typeof SheetPrimitive.Title>>) {
   return (
     <SheetPrimitive.Title
-      className={cn('font-bold text-[20px] text-content-strong', className)}
+      className={cn('font-semibold text-content-strong text-heading-medium', className)}
       data-slot="sheet-title"
       {...props}
     />
@@ -207,7 +207,7 @@ function SheetDescription({
 }: Readonly<React.ComponentProps<typeof SheetPrimitive.Description>>) {
   return (
     <SheetPrimitive.Description
-      className={cn('text-[16px] text-content-muted', className)}
+      className={cn('text-body-small text-content', className)}
       data-slot="sheet-description"
       {...props}
     />

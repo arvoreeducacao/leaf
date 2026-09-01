@@ -6,18 +6,18 @@ import { CancelIcon } from '@/components/icons'
 import { cn } from '@/shared/utils'
 
 const badgeVariants = cva(
-  'inline-flex h-6 w-fit shrink-0 items-center justify-center gap-1 overflow-hidden whitespace-nowrap rounded-pill border px-2 py-1 font-bold text-sm leading-none transition-colors focus-visible:ring-2 focus-visible:ring-ring [&>svg]:pointer-events-none [&>svg]:size-[14px]',
+  'inline-flex h-5 w-fit shrink-0 items-center justify-center gap-1 overflow-hidden whitespace-nowrap rounded-small border px-1.5 font-medium text-caption leading-none transition-colors focus-visible:ring-2 focus-visible:ring-ring [&>svg]:pointer-events-none [&>svg]:size-3.5',
   {
     variants: {
       variant: {
-        more: 'border-line-soft bg-surface-hover text-content-strong',
-        info: 'border-line-soft bg-muted text-content',
-        warning: 'border-warn-surface-strong bg-warn-surface-strong text-content-strong',
-        caution: 'border-danger-surface-strong bg-danger-surface-strong text-content-strong',
-        success: 'border-positive-surface-strong bg-positive-surface-strong text-content-strong',
-        default: 'border-line-soft bg-surface-hover text-content-strong',
-        secondary: 'border-line-soft bg-muted text-content',
-        destructive: 'border-danger-surface-strong bg-danger-surface-strong text-content-strong',
+        more: 'border-transparent bg-surface-subtle text-content',
+        info: 'border-transparent bg-surface-subtle text-content',
+        warning: 'border-transparent bg-warn-surface text-warn',
+        caution: 'border-transparent bg-danger-surface text-danger',
+        success: 'border-transparent bg-positive-surface-strong text-positive',
+        default: 'border-transparent bg-surface-subtle text-content',
+        secondary: 'border-transparent bg-surface-subtle text-content',
+        destructive: 'border-transparent bg-danger-surface text-danger',
         outline: 'border-line-strong bg-transparent text-content',
         activity:
           'border-transparent bg-muted text-content [&>svg]:text-content-muted',
@@ -72,7 +72,7 @@ function EditableTag({
   return (
     <span
       className={cn(
-        'inline-flex h-6 w-fit shrink-0 items-center gap-1 rounded-pill border px-2 py-1 font-bold text-[14px] leading-none',
+        'inline-flex h-5 w-fit shrink-0 items-center gap-1 rounded-small border px-1.5 font-medium text-caption leading-none',
         isLight ? 'border-content-inverse text-content-inverse' : 'border-line-strong text-content',
         className
       )}

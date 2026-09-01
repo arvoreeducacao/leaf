@@ -2,7 +2,6 @@ import { getTranslations } from 'next-intl/server'
 import { redirect } from 'next/navigation'
 
 import { NewDocumentButton } from '@/components/app/new-document-button'
-import { LeafIcon } from '@/components/icons'
 import { getSession } from '@/lib/auth'
 import { listOwnedDocuments } from '@/lib/documents'
 
@@ -21,19 +20,16 @@ export default async function HomePage() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-content px-4 py-8 tablet:px-8 tablet:py-10">
-      <section className="flex flex-col items-center gap-4 rounded-xlarge border border-line-subtle bg-surface-nav px-4 py-10 text-center tablet:px-8">
-        <LeafIcon aria-hidden="true" className="size-10 text-brand" />
-        <h1 className="font-bold text-heading-large text-content-strong">
-          {t('title')}
-        </h1>
-        <p className="max-w-110 text-body-medium text-content">
-          {t('subtitle')}
-        </p>
-        <div className="w-full max-w-70">
-          <NewDocumentButton />
-        </div>
-      </section>
+    <div className="mx-auto flex w-full max-w-page flex-col px-4 pt-10 pb-40 tablet:px-[54px] tablet:pt-20">
+      <h1 className="font-heavy text-content-disabled text-display-medium">
+        {t('title')}
+      </h1>
+      <p className="mt-4 max-w-prose-leaf text-body-medium text-content">
+        {t('subtitle')}
+      </p>
+      <div className="mt-6">
+        <NewDocumentButton variant="primary" />
+      </div>
     </div>
   )
 }

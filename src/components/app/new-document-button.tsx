@@ -4,11 +4,15 @@ import { useTranslations } from 'next-intl'
 import { useTransition } from 'react'
 import { toast } from 'sonner'
 
+import { sidebarIcon, sidebarRow } from '@/components/app/sidebar-styles'
 import { AddIcon } from '@/components/icons'
 import { Button } from '@/components/ui/button'
 import { createDocument } from '@/lib/document-actions'
+import { cn } from '@/shared/utils'
 
-export function NewDocumentButton() {
+type Props = Readonly<{ variant?: 'sidebar' | 'primary' }>
+
+export function NewDocumentButton({ variant = 'sidebar' }: Props) {
   const t = useTranslations('nav')
   const [pending, startTransition] = useTransition()
 
@@ -26,16 +30,32 @@ export function NewDocumentButton() {
     })
   }
 
+  if (variant === 'primary') {
+    return (
+      <Button
+        aria-busy={pending}
+        disabled={pending}
+        onClick={handleClick}
+        type="button"
+      >
+        <AddIcon aria-hidden="true" />
+        {t('newDocument')}
+      </Button>
+    )
+  }
+
   return (
-    <Button
-      className="w-full"
-      disabled={pending}
+    <button
       aria-busy={pending}
+      className={cn(sidebarRow, 'cursor-pointer disabled:opacity-60')}
+      disabled={pending}
       onClick={handleClick}
       type="button"
     >
-      <AddIcon aria-hidden="true" />
-      {t('newDocument')}
-    </Button>
+      <span className="flex size-5 shrink-0 items-center justify-center">
+        <AddIcon aria-hidden="true" className={sidebarIcon} />
+      </span>
+      <span className="min-w-0 flex-1 truncate">{t('newDocument')}</span>
+    </button>
   )
 }
