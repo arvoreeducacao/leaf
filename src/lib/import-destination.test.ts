@@ -58,6 +58,7 @@ import {
   resolveImportPlacement,
   serializeImportDestination,
 } from '@/lib/import-destination'
+import { moveDocument } from '@/lib/document-actions'
 import { setOrganizationAccess } from '@/lib/share-actions'
 
 const orgId = 'org-arvore'
@@ -245,6 +246,39 @@ describe('destino da importação', () => {
         ownerId,
       ),
     ).toBeNull()
+  })
+})
+
+describe('mover para dentro de uma página compartilhada', () => {
+  it('copia o acesso da organização do pai para a subárvore movida', async () => {
+    await seedDocument('destino', { orgId, orgAccess: 'editor' })
+    await seedDocument('solta', { orgId })
+    await seedDocument('filha-da-solta', { orgId, parentId: 'solta' })
+
+    expect((await moveDocument('solta', 'destino')).ok).toBe(true)
+
+    const rows = await db
+      .select({ id: documents.id, orgAccess: documents.orgAccess })
+      .from(documents)
+    const accessById = new Map(rows.map((row) => [row.id, row.orgAccess]))
+
+    expect(accessById.get('solta')).toBe('editor')
+    expect(accessById.get('filha-da-solta')).toBe('editor')
+  })
+
+  it('tira o acesso quando o novo pai é privado', async () => {
+    await seedDocument('destino-privado', { orgId })
+    await seedDocument('compartilhada', { orgId, orgAccess: 'editor' })
+
+    expect(
+      (await moveDocument('compartilhada', 'destino-privado')).ok,
+    ).toBe(true)
+
+    const moved = await db.query.documents.findFirst({
+      where: eq(documents.id, 'compartilhada'),
+    })
+
+    expect(moved?.orgAccess).toBeNull()
   })
 })
 
