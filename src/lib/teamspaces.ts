@@ -153,7 +153,9 @@ export async function countTeamspaceDocuments(teamspaceId: string) {
   const rows = await db
     .select({ id: documents.id })
     .from(documents)
-    .where(eq(documents.teamspaceId, teamspaceId))
+    .where(
+      and(eq(documents.teamspaceId, teamspaceId), isNull(documents.deletedAt)),
+    )
 
   return rows.length
 }
