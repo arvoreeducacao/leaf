@@ -5,7 +5,8 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useId, useState } from 'react'
 
-import { AlertIcon, LeafIcon } from '@/components/icons'
+import { LeafMark } from '@/components/app/leaf-mark'
+import { AlertIcon } from '@/components/icons'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -81,7 +82,7 @@ export function AuthForm({ mode, restrictedDomain }: Props) {
     <main className="flex min-h-dvh w-full items-center justify-center bg-surface-app px-6 py-10">
       <div className="w-full max-w-80">
         <div className="flex items-center gap-2">
-          <LeafIcon aria-hidden="true" className="size-6 text-brand" />
+          <LeafMark aria-hidden="true" className="size-6 text-brand" />
           <span className="font-semibold text-content-strong text-heading-medium">
             Leaf
           </span>
