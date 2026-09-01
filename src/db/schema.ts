@@ -4,6 +4,7 @@ import {
   boolean,
   datetime,
   index,
+  int,
   longtext,
   mysqlEnum,
   mysqlTable,
@@ -198,8 +199,12 @@ export const documents = mysqlTable(
       { onDelete: 'set null' },
     ),
     orgAccess: mysqlEnum('org_access', ['viewer', 'commenter', 'editor']),
+    kind: mysqlEnum('kind', ['page', 'database', 'row'])
+      .notNull()
+      .default('page'),
     title: varchar('title', { length: 500 }).notNull().default('Sem título'),
     content: longtext('content'),
+    properties: longtext('properties'),
     publicToken: varchar('public_token', { length: 64 }).unique(),
     createdAt: datetime('created_at', { mode: 'date', fsp: 3 })
       .notNull()
@@ -214,6 +219,63 @@ export const documents = mysqlTable(
     index('documents_parent_id_idx').on(table.parentId),
     index('documents_org_id_idx').on(table.orgId),
     index('documents_teamspace_id_idx').on(table.teamspaceId),
+    index('documents_kind_parent_id_idx').on(table.kind, table.parentId),
+  ],
+)
+
+export const databaseProperties = mysqlTable(
+  'database_properties',
+  {
+    id: varchar('id', { length: APP_ID }).primaryKey(),
+    databaseId: varchar('database_id', { length: APP_ID })
+      .notNull()
+      .references(() => documents.id, { onDelete: 'cascade' }),
+    name: varchar('name', { length: 120 }).notNull(),
+    type: mysqlEnum('type', [
+      'text',
+      'number',
+      'select',
+      'multiSelect',
+      'date',
+      'checkbox',
+      'url',
+    ])
+      .notNull()
+      .default('text'),
+    options: longtext('options'),
+    position: int('position').notNull().default(0),
+    createdAt: datetime('created_at', { mode: 'date', fsp: 3 })
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP(3)`),
+  },
+  (table) => [
+    index('database_properties_database_id_position_idx').on(
+      table.databaseId,
+      table.position,
+    ),
+  ],
+)
+
+export const databaseViews = mysqlTable(
+  'database_views',
+  {
+    id: varchar('id', { length: APP_ID }).primaryKey(),
+    databaseId: varchar('database_id', { length: APP_ID })
+      .notNull()
+      .references(() => documents.id, { onDelete: 'cascade' }),
+    name: varchar('name', { length: 120 }).notNull(),
+    type: mysqlEnum('type', ['table', 'board']).notNull().default('table'),
+    config: longtext('config'),
+    position: int('position').notNull().default(0),
+    createdAt: datetime('created_at', { mode: 'date', fsp: 3 })
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP(3)`),
+  },
+  (table) => [
+    index('database_views_database_id_position_idx').on(
+      table.databaseId,
+      table.position,
+    ),
   ],
 )
 
@@ -297,6 +359,11 @@ export const comments = mysqlTable(
 )
 
 export type Document = typeof documents.$inferSelect
+export type DocumentKind = Document['kind']
+export type DatabaseProperty = typeof databaseProperties.$inferSelect
+export type DatabasePropertyType = DatabaseProperty['type']
+export type DatabaseView = typeof databaseViews.$inferSelect
+export type DatabaseViewType = DatabaseView['type']
 export type DocumentShare = typeof documentShares.$inferSelect
 export type ShareRole = DocumentShare['role']
 export type Organization = typeof organizations.$inferSelect

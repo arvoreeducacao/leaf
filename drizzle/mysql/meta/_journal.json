@@ -15,6 +15,13 @@
       "when": 1788198955066,
       "tag": "0001_search_index",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1788264704986,
+      "tag": "0002_databases",
+      "breakpoints": true
     }
   ]
 }
