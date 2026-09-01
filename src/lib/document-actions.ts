@@ -264,7 +264,11 @@ export async function moveDocument(
 
       await db
         .update(documents)
-        .set({ teamspaceId: parent.teamspaceId, orgId: parent.orgId })
+        .set({
+          teamspaceId: parent.teamspaceId,
+          orgId: parent.orgId,
+          orgAccess: parent.orgAccess,
+        })
         .where(inArray(documents.id, subtree))
     }
   }
