@@ -7,6 +7,8 @@ import { useCreateBlockNote } from '@blocknote/react'
 import { BlockNoteView } from '@blocknote/shadcn'
 import { useTheme } from 'next-themes'
 
+import { sanitizeBlocks } from '@/lib/markdown/sanitize'
+
 import { parseDocumentContent } from './content'
 import { leafSchema } from './schema'
 import { useLeafDictionary } from './use-leaf-dictionary'
@@ -19,7 +21,7 @@ export default function BlockNoteRenderer({ content }: Props) {
   const editor = useCreateBlockNote({
     schema: leafSchema,
     dictionary,
-    initialContent: parseDocumentContent(content),
+    initialContent: sanitizeBlocks(parseDocumentContent(content)),
   })
 
   return (
