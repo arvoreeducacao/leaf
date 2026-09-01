@@ -399,7 +399,8 @@
     "saveError": "We couldn't save",
     "words": "{count, plural, one {# word} other {# words}}",
     "characters": "{count, plural, one {# character} other {# characters}}",
-    "uploadFailed": "We couldn't upload the image. Try again."
+    "uploadFailed": "We couldn't upload the image. Try again.",
+    "saveOffline": "Saved on this device"
   },
   "blocknote": {
     "placeholder": "Type / for commands",
@@ -679,10 +680,20 @@
   },
   "realtime": {
     "connected": "Real-time collaboration",
-    "reconnecting": "No connection. Your changes are not saved yet",
+    "reconnecting": "Reconnecting. Your changes are saved on this device",
     "someone": "Someone",
     "you": "{name} (you)",
     "peopleHere": "{count, plural, one {# person in this document} other {# people in this document}}"
+  },
+  "offline": {
+    "banner": "No connection",
+    "badge": "Offline · saved on this device",
+    "conflict": "This document changed somewhere else",
+    "pageTitle": "You're offline",
+    "pageBody": "The documents you already opened are still available. This page had not been loaded on this device yet.",
+    "retry": "Try again",
+    "documentUnavailableTitle": "This document is not available offline yet",
+    "documentUnavailableBody": "Open it once with a connection and it starts working offline on this device."
   },
   "join": {
     "heading": "You've been invited to join {org}",

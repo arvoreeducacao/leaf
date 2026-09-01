@@ -2,6 +2,7 @@ import { sql } from 'drizzle-orm'
 import {
   type AnyMySqlColumn,
   boolean,
+  customType,
   datetime,
   index,
   int,
@@ -12,6 +13,18 @@ import {
   uniqueIndex,
   varchar,
 } from 'drizzle-orm/mysql-core'
+
+const longblob = customType<{ data: Uint8Array; driverData: Buffer }>({
+  dataType() {
+    return 'longblob'
+  },
+  fromDriver(value) {
+    return new Uint8Array(value)
+  },
+  toDriver(value) {
+    return Buffer.from(value)
+  },
+})
 
 const AUTH_ID = 36
 const APP_ID = 21
@@ -280,6 +293,20 @@ export const databaseViews = mysqlTable(
       table.position,
     ),
   ],
+)
+
+export const documentRealtimeState = mysqlTable(
+  'document_realtime_state',
+  {
+    documentId: varchar('document_id', { length: APP_ID })
+      .primaryKey()
+      .references(() => documents.id, { onDelete: 'cascade' }),
+    identity: varchar('identity', { length: 24 }).notNull(),
+    state: longblob('state').notNull(),
+    updatedAt: datetime('updated_at', { mode: 'date', fsp: 3 })
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP(3)`),
+  },
 )
 
 export const documentShares = mysqlTable(

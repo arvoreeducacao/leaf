@@ -41,7 +41,8 @@ import {
   readOnlyHintId,
   resetEditorStatus,
 } from './status-bridge'
-import type { RealtimeSession } from './use-realtime-session'
+import type { ConnectionStatus } from './status-bridge'
+import type { DocumentSession } from './use-document-session'
 import { leafSchema } from './schema'
 import { getLeafSlashMenuItems } from './slash-menu-items'
 import { statsFromBlocks } from './text-stats'
@@ -63,8 +64,11 @@ type Props = Readonly<{
   isOwner: boolean
   canComment: boolean
   openCommentCount: number
-  collaboration?: RealtimeSession | null
-  realtimeConnected?: boolean
+  collaboration: DocumentSession
+  connection: ConnectionStatus
+  seed: string | null
+  conflict: boolean
+  localOnly: boolean
 }>
 
 export default function BlockNoteEditor({
@@ -74,8 +78,11 @@ export default function BlockNoteEditor({
   isOwner,
   canComment,
   openCommentCount,
-  collaboration = null,
-  realtimeConnected = false,
+  collaboration,
+  connection,
+  seed,
+  conflict,
+  localOnly,
 }: Props) {
   const t = useTranslations('editor')
   const tComments = useTranslations('comments')
@@ -86,52 +93,41 @@ export default function BlockNoteEditor({
   const { calloutItem, databaseItem, dictionary } = useLeafDictionary(readOnly)
   const containerRef = useRef<HTMLDivElement>(null)
   const importRef = useRef<DocumentImportHandle>(null)
-  const parsed = readDocumentContent(initialContent)
+  const parsed = readDocumentContent(seed ?? initialContent)
   const isUnreadable = parsed.status === 'unreadable'
   const isEditable = !readOnly && !isUnreadable
+  const seedBlocks = parsed.status === 'ok' ? parsed.blocks : null
 
-  const { status, schedule, flush } = useAutosave(
+  const { status, schedule, flush, markSaved } = useAutosave(
     documentId,
-    isEditable && collaboration === null,
+    isEditable && connection !== 'connected',
   )
-
-  const baseOptions = {
-    schema: leafSchema,
-    dictionary,
-    initialContent:
-      collaboration === null && parsed.status === 'ok'
-        ? parsed.blocks
-        : undefined,
-    uploadFile: (file: File) => uploadEditorFile(file, t('uploadFailed')),
-    domAttributes: readOnly
-      ? { editor: { 'aria-describedby': readOnlyHintId } }
-      : undefined,
-  }
 
   const cursorTheme = resolvedTheme === 'dark' ? 'dark' : 'light'
   const anonymousName = tRealtime('someone')
 
   const editor = useCreateBlockNote(
-    collaboration
-      ? withCollaboration({
-          ...baseOptions,
-          collaboration: {
-            fragment: collaboration.fragment,
-            provider: collaboration.provider,
-            user: collaboration.user,
-            showCursorLabels: 'activity',
-            renderCursor: (cursorUser) =>
-              renderRealtimeCursor(cursorUser, cursorTheme, anonymousName),
-          },
-        })
-      : baseOptions,
+    withCollaboration({
+      schema: leafSchema,
+      dictionary,
+      uploadFile: (file: File) => uploadEditorFile(file, t('uploadFailed')),
+      domAttributes: readOnly
+        ? { editor: { 'aria-describedby': readOnlyHintId } }
+        : undefined,
+      collaboration: {
+        fragment: collaboration.fragment,
+        provider: collaboration.provider ?? undefined,
+        user: collaboration.user,
+        showCursorLabels: 'activity',
+        renderCursor: (cursorUser) =>
+          renderRealtimeCursor(cursorUser, cursorTheme, anonymousName),
+      },
+    }),
   )
 
   const [highlightedBlock, setHighlightedBlock] = useState<string | null>(null)
-
-  const [stats, setStats] = useState(() =>
-    statsFromBlocks(parsed.status === 'ok' ? parsed.blocks : []),
-  )
+  const [stats, setStats] = useState(() => statsFromBlocks([]))
+  const seededRef = useRef(false)
 
   const handleChange = useCallback(() => {
     const blocks = editor.document
@@ -184,6 +180,34 @@ export default function BlockNoteEditor({
   }, [documentId, editor, handleChange, tDatabase])
 
   useEffect(() => {
+    if (seed === null || seedBlocks === null || seededRef.current) {
+      return
+    }
+
+    seededRef.current = true
+
+    if (statsFromBlocks(editor.document).characters > 0) {
+      return
+    }
+
+    editor.replaceBlocks(editor.document, seedBlocks)
+    markSaved(JSON.stringify(editor.document))
+    setStats(statsFromBlocks(editor.document))
+  }, [editor, markSaved, seed, seedBlocks])
+
+  useEffect(() => {
+    setStats(statsFromBlocks(editor.document))
+  }, [editor])
+
+  useEffect(() => {
+    if (!localOnly || !isEditable) {
+      return
+    }
+
+    schedule(JSON.stringify(editor.document))
+  }, [editor, isEditable, localOnly, schedule])
+
+  useEffect(() => {
     const element = containerRef.current
 
     if (!isEditable || !element) {
@@ -231,13 +255,10 @@ export default function BlockNoteEditor({
       readOnly,
       save: status,
       stats,
-      realtime: collaboration
-        ? realtimeConnected
-          ? 'connected'
-          : 'reconnecting'
-        : 'off',
+      connection,
+      conflict,
     })
-  }, [collaboration, readOnly, realtimeConnected, stats, status])
+  }, [conflict, connection, readOnly, stats, status])
 
   useEffect(() => resetEditorStatus, [])
 
