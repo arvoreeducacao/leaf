@@ -3,16 +3,16 @@ import { expect, test } from '@playwright/test'
 import { createDocument, editorBody, signUp, uniqueEmail } from './helpers'
 
 const markdownFixture = [
-  '# Plano de leitura',
+  '# Reading plan',
   '',
-  '## Turma A',
+  '## Class A',
   '',
-  'Parágrafo com **negrito** e um [link](https://arvore.com.br).',
+  'Paragraph with **bold** and a [link](https://arvore.com.br).',
   '',
-  '- [ ] Enviar convite',
-  '- [x] Confirmar presença',
+  '- [ ] Send the invite',
+  '- [x] Confirm attendance',
   '',
-  '| Nome | Turma |',
+  '| Name | Group |',
   '| --- | --- |',
   '| Ana | A |',
   '',
@@ -24,10 +24,10 @@ const markdownFixture = [
 
 const markdownInput = '[data-testid="import-markdown-input"]'
 
-test.describe('importar e exportar', () => {
-  test('a importação mora no slash menu e saiu da sidebar', async ({ page }) => {
+test.describe('import and export', () => {
+  test('the import lives in the slash menu and left the sidebar', async ({ page }) => {
     await signUp(page, uniqueEmail('slash-import'))
-    await createDocument(page, 'Documento com importação')
+    await createDocument(page, 'Document with an import')
 
     await expect(
       page.getByRole('button', { name: 'Importar arquivo' }),
@@ -46,27 +46,27 @@ test.describe('importar e exportar', () => {
     await (
       await chooser
     ).setFiles({
-      name: 'nota.md',
+      name: 'note.md',
       mimeType: 'text/markdown',
-      buffer: Buffer.from('# Nota importada\n\nCorpo da nota.\n', 'utf8'),
+      buffer: Buffer.from('# Imported note\n\nBody of the note.\n', 'utf8'),
     })
 
     await expect(page.getByText('Markdown inserido no documento')).toBeVisible()
 
     const body = editorBody(page)
 
-    await expect(body.locator('h1')).toHaveText('Nota importada')
+    await expect(body.locator('h1')).toHaveText('Imported note')
     await expect(body).not.toContainText('/')
   })
 
-  test('importa markdown no documento aberto e exporta md e html com o conteúdo certo', async ({
+  test('imports markdown into the open document and exports md and html with the right content', async ({
     page,
   }) => {
     await signUp(page, uniqueEmail('import'))
-    const documentId = await createDocument(page, 'Plano de leitura')
+    const documentId = await createDocument(page, 'Reading plan')
 
     await page.setInputFiles(markdownInput, {
-      name: 'Plano de leitura.md',
+      name: 'Reading plan.md',
       mimeType: 'text/markdown',
       buffer: Buffer.from(markdownFixture, 'utf8'),
     })
@@ -75,7 +75,7 @@ test.describe('importar e exportar', () => {
 
     const body = editorBody(page)
 
-    await expect(body.locator('h1')).toContainText('Plano de leitura')
+    await expect(body.locator('h1')).toContainText('Reading plan')
     await expect(body.locator('table')).toHaveCount(1)
     await expect(
       body.locator('[data-content-type="checkListItem"]'),
@@ -91,8 +91,8 @@ test.describe('importar e exportar', () => {
       return response.text()
     }, documentId)
 
-    expect(markdown).toContain('# Plano de leitura')
-    expect(markdown).toContain('**negrito**')
+    expect(markdown).toContain('# Reading plan')
+    expect(markdown).toContain('**bold**')
     expect(markdown).toContain('https://arvore.com.br')
 
     const html = await page.evaluate(async (id) => {
@@ -101,18 +101,18 @@ test.describe('importar e exportar', () => {
       return response.text()
     }, documentId)
 
-    expect(html).toContain('<h1>Plano de leitura</h1>')
+    expect(html).toContain('<h1>Reading plan</h1>')
     expect(html).not.toContain('classname=')
   })
 
-  test('markdown gigante e arquivo binário devolvem erro claro sem mexer no documento', async ({
+  test('a huge markdown and a binary file return a clear error without touching the document', async ({
     page,
   }) => {
-    await signUp(page, uniqueEmail('import-erro'))
-    await createDocument(page, 'Documento que deve ficar sozinho')
+    await signUp(page, uniqueEmail('import-error'))
+    await createDocument(page, 'Document that must be left alone')
 
     await page.setInputFiles(markdownInput, {
-      name: 'gigante.md',
+      name: 'huge.md',
       mimeType: 'text/markdown',
       buffer: Buffer.from('a'.repeat(3 * 1024 * 1024), 'utf8'),
     })
@@ -120,7 +120,7 @@ test.describe('importar e exportar', () => {
     await expect(page.getByText(/passa de 2 MB/)).toBeVisible()
 
     await page.setInputFiles(markdownInput, {
-      name: 'binario.md',
+      name: 'binary.md',
       mimeType: 'text/markdown',
       buffer: Buffer.from([0x50, 0x4b, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00]),
     })
@@ -137,11 +137,11 @@ test.describe('importar e exportar', () => {
     await expect(editorBody(page)).toHaveText('')
   })
 
-  test('imagem enviada aparece depois do reload e vai absoluta no export', async ({
+  test('an uploaded image shows up after the reload and goes absolute in the export', async ({
     page,
   }) => {
     await signUp(page, uniqueEmail('upload'))
-    const id = await createDocument(page, 'Documento com imagem')
+    const id = await createDocument(page, 'Document with an image')
 
     const png = Buffer.from(
       'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
@@ -153,7 +153,7 @@ test.describe('importar e exportar', () => {
 
       data.append(
         'file',
-        new File([new Uint8Array(bytes)], 'ponto.png', { type: 'image/png' }),
+        new File([new Uint8Array(bytes)], 'dot.png', { type: 'image/png' }),
       )
 
       const response = await fetch('/api/uploads', {
@@ -175,9 +175,9 @@ test.describe('importar e exportar', () => {
     expect(proxied.headers()['x-content-type-options']).toBe('nosniff')
 
     await page.setInputFiles(markdownInput, {
-      name: 'Com imagem.md',
+      name: 'With image.md',
       mimeType: 'text/markdown',
-      buffer: Buffer.from(`![Capa](${url})\n`, 'utf8'),
+      buffer: Buffer.from(`![Cover](${url})\n`, 'utf8'),
     })
 
     await expect(page.getByText('Markdown inserido no documento')).toBeVisible()

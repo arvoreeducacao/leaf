@@ -38,8 +38,8 @@ function sidebarSection(page: Page, name: string) {
   return page.getByRole('heading', { level: 2, name })
 }
 
-test.describe('organizações', () => {
-  test('privado por padrão, org_access libera leitura e depois edição', async ({
+test.describe('organizations', () => {
+  test('private by default, org_access grants reading and then editing', async ({
     browser,
   }) => {
     const ownerContext = await browser.newContext()
@@ -49,18 +49,18 @@ test.describe('organizações', () => {
     const memberPage = await memberContext.newPage()
     const guestPage = await guestContext.newPage()
 
-    const memberEmail = uniqueEmail('membro')
-    const guestEmail = uniqueEmail('externo')
+    const memberEmail = uniqueEmail('member')
+    const guestEmail = uniqueEmail('external')
 
-    await signUp(ownerPage, uniqueEmail('dona'), 'Dona da Org')
-    await createOrganization(ownerPage, 'Escola Teste')
+    await signUp(ownerPage, uniqueEmail('owner'), 'Org Owner')
+    await createOrganization(ownerPage, 'Test School')
     await inviteToOrganization(ownerPage, memberEmail)
 
-    await signUp(memberPage, memberEmail, 'Membro')
+    await signUp(memberPage, memberEmail, 'Member')
     await expect(sidebarSection(memberPage, 'Organização')).toBeVisible()
 
-    const id = await createDocument(ownerPage, 'Plano da equipe')
-    await typeInEditor(ownerPage, 'conteúdo da equipe')
+    const id = await createDocument(ownerPage, 'Team plan')
+    await typeInEditor(ownerPage, 'team content')
     await waitForSaved(ownerPage)
 
     await expect(sidebarSection(ownerPage, 'Privado')).toBeVisible()
@@ -73,7 +73,7 @@ test.describe('organizações', () => {
       memberPage.getByRole('heading', { name: 'Documento não encontrado' }),
     ).toBeVisible()
     await expect(
-      memberPage.getByRole('link', { name: 'Plano da equipe' }),
+      memberPage.getByRole('link', { name: 'Team plan' }),
     ).toHaveCount(0)
 
     await ownerPage.goto(`/doc/${id}`)
@@ -84,7 +84,7 @@ test.describe('organizações', () => {
     await expect(memberPage.getByText('Somente leitura')).toBeVisible()
     await expect(editorBody(memberPage)).toHaveCount(0)
     await expect(
-      memberPage.getByRole('link', { name: 'Plano da equipe' }),
+      memberPage.getByRole('link', { name: 'Team plan' }),
     ).toBeVisible()
 
     await ownerPage.goto(`/doc/${id}`)
@@ -92,10 +92,10 @@ test.describe('organizações', () => {
 
     await memberPage.goto(`/doc/${id}`)
     await expect(memberPage.getByText('Somente leitura')).toHaveCount(0)
-    await typeInEditor(memberPage, ' editado pelo membro')
+    await typeInEditor(memberPage, ' edited by the member')
     await waitForSaved(memberPage)
 
-    await signUp(guestPage, guestEmail, 'Externo')
+    await signUp(guestPage, guestEmail, 'External')
     await expect(sidebarSection(guestPage, 'Organização')).toHaveCount(0)
 
     await guestPage.goto(`/doc/${id}`)
@@ -103,7 +103,7 @@ test.describe('organizações', () => {
       guestPage.getByRole('heading', { name: 'Documento não encontrado' }),
     ).toBeVisible()
 
-    const shared = await createDocument(ownerPage, 'Convite externo')
+    const shared = await createDocument(ownerPage, 'External invite')
 
     await ownerPage.getByRole('button', { name: 'Compartilhar' }).click()
     await ownerPage.getByLabel('Email', { exact: true }).fill(guestEmail)
@@ -112,11 +112,11 @@ test.describe('organizações', () => {
 
     await guestPage.goto(`/doc/${shared}`)
     await expect(
-      guestPage.getByRole('heading', { name: 'Convite externo' }),
+      guestPage.getByRole('heading', { name: 'External invite' }),
     ).toBeVisible()
     await expect(sidebarSection(guestPage, 'Compartilhados comigo')).toBeVisible()
     await expect(
-      guestPage.getByRole('link', { name: 'Plano da equipe' }),
+      guestPage.getByRole('link', { name: 'Team plan' }),
     ).toHaveCount(0)
 
     await ownerContext.close()
@@ -124,7 +124,7 @@ test.describe('organizações', () => {
     await guestContext.close()
   })
 
-  test('link de convite: entrar pela URL, fluxo deslogado e revogação', async ({
+  test('invite link: joining by URL, the signed-out flow and revocation', async ({
     browser,
   }) => {
     const ownerContext = await browser.newContext()
@@ -134,8 +134,8 @@ test.describe('organizações', () => {
     const joinerPage = await joinerContext.newPage()
     const latePage = await lateContext.newPage()
 
-    await signUp(ownerPage, uniqueEmail('dona'), 'Dona da Org')
-    await createOrganization(ownerPage, 'Escola do Link')
+    await signUp(ownerPage, uniqueEmail('owner'), 'Org Owner')
+    await createOrganization(ownerPage, 'Link School')
 
     await ownerPage.getByRole('switch', { name: 'Link de convite' }).click()
     await expect(ownerPage.getByText('Link de convite ativado')).toBeVisible()
@@ -146,11 +146,11 @@ test.describe('organizações', () => {
 
     expect(inviteUrl).toContain('/join/')
 
-    await signUp(joinerPage, uniqueEmail('entrante'), 'Entrante')
+    await signUp(joinerPage, uniqueEmail('joiner'), 'Joiner')
     await joinerPage.goto(inviteUrl)
 
     await expect(
-      joinerPage.getByText('Você recebeu um convite para entrar em Escola do Link'),
+      joinerPage.getByText('Você recebeu um convite para entrar em Link School'),
     ).toBeVisible()
 
     await joinerPage.getByTestId('join-organization').click()
@@ -164,11 +164,11 @@ test.describe('organizações', () => {
     await latePage.goto(inviteUrl)
 
     await expect(
-      latePage.getByText('Você recebeu um convite para entrar em Escola do Link'),
+      latePage.getByText('Você recebeu um convite para entrar em Link School'),
     ).toBeVisible()
     await expect(latePage.getByRole('link', { name: 'Entrar' })).toBeVisible()
 
-    await signUp(latePage, uniqueEmail('atrasada'), 'Atrasada')
+    await signUp(latePage, uniqueEmail('latecomer'), 'Latecomer')
 
     await latePage.waitForURL(/\/join\//)
     await latePage.getByTestId('join-organization').click()
@@ -196,22 +196,22 @@ test.describe('organizações', () => {
     await anonContext.close()
   })
 
-  test('excluir teamspace com documento e excluir a organização', async ({
+  test('deleting a teamspace with a document and deleting the organization', async ({
     page,
   }) => {
-    await signUp(page, uniqueEmail('dona'), 'Dona')
-    await createOrganization(page, 'Org Descartável')
+    await signUp(page, uniqueEmail('owner'), 'Owner')
+    await createOrganization(page, 'Disposable Org')
 
     await page.getByRole('button', { name: 'Criar teamspace' }).first().click()
-    await page.getByLabel('Nome do teamspace').fill('Time Passageiro')
+    await page.getByLabel('Nome do teamspace').fill('Passing Team')
     await page.getByRole('button', { name: 'Criar teamspace' }).last().click()
     await expect(page.getByText('Teamspace criado')).toBeVisible()
 
     await page.goto('/')
-    await createDocument(page, 'Documento no teamspace')
+    await createDocument(page, 'Document in the teamspace')
     await page.getByRole('button', { name: 'Ações do documento' }).click()
     await page.getByRole('menuitem', { name: 'Mover para teamspace' }).click()
-    await page.getByRole('radio', { name: /Time Passageiro/ }).click()
+    await page.getByRole('radio', { name: /Passing Team/ }).click()
     await page.getByRole('button', { name: 'Mover', exact: true }).click()
     await expect(page.getByText('Documento movido')).toBeVisible()
 
@@ -228,7 +228,7 @@ test.describe('organizações', () => {
       .last()
       .click()
     await expect(page.getByText('Teamspace excluído')).toBeVisible()
-    await expect(page.getByText('Time Passageiro')).toHaveCount(0)
+    await expect(page.getByText('Passing Team')).toHaveCount(0)
 
     await page.getByTestId('delete-org').click()
     await page.getByTestId('confirm-delete-org').click()
@@ -237,33 +237,33 @@ test.describe('organizações', () => {
 
     await page.goto('/')
     await expect(
-      page.getByText('Documento no teamspace').first(),
+      page.getByText('Document in the teamspace').first(),
     ).toBeVisible()
   })
 
-  test('gestão da org: papel, remoção e saída', async ({ browser }) => {
+  test('org management: role, removal and leaving', async ({ browser }) => {
     const ownerContext = await browser.newContext()
     const memberContext = await browser.newContext()
     const ownerPage = await ownerContext.newPage()
     const memberPage = await memberContext.newPage()
 
-    const memberEmail = uniqueEmail('gestao')
+    const memberEmail = uniqueEmail('management')
 
-    await signUp(ownerPage, uniqueEmail('gestora'), 'Gestora')
-    await createOrganization(ownerPage, 'Escola Gestão')
+    await signUp(ownerPage, uniqueEmail('manager'), 'Manager')
+    await createOrganization(ownerPage, 'Management School')
     await inviteToOrganization(ownerPage, memberEmail)
 
     await expect(
       ownerPage.getByRole('heading', { name: 'Convites pendentes' }),
     ).toBeVisible()
 
-    await signUp(memberPage, memberEmail, 'Pessoa Membro')
+    await signUp(memberPage, memberEmail, 'Member Person')
     await memberPage.goto('/org')
     await expect(
-      memberPage.getByRole('main').getByText('Escola Gestão'),
+      memberPage.getByRole('main').getByText('Management School'),
     ).toBeVisible()
     await expect(memberPage.getByTestId('org-switcher')).toContainText(
-      'Escola Gestão',
+      'Management School',
     )
     await expect(
       memberPage.getByRole('heading', { name: 'Convidar pessoa' }),
@@ -273,7 +273,7 @@ test.describe('organizações', () => {
     await expect(ownerPage.getByText('Nenhum convite pendente')).toBeVisible()
 
     await ownerPage
-      .getByRole('combobox', { name: 'Papel de Pessoa Membro' })
+      .getByRole('combobox', { name: 'Papel de Member Person' })
       .click()
     await ownerPage.getByRole('option', { name: 'Admin' }).click()
     await expect(ownerPage.getByText('Papel atualizado')).toBeVisible()

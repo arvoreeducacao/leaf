@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { layoutMarkers } from './marker-layout'
 
 describe('layoutMarkers', () => {
-  it('mantém posições que já têm espaço entre si', () => {
+  it('keeps positions that already have room between them', () => {
     const markers = layoutMarkers(
       [
         { blockId: 'b', top: 100 },
@@ -18,7 +18,7 @@ describe('layoutMarkers', () => {
     ])
   })
 
-  it('empurra marcadores sobrepostos para baixo na ordem do documento', () => {
+  it('pushes overlapping markers down in document order', () => {
     const markers = layoutMarkers(
       [
         { blockId: 'a', top: 10 },
@@ -35,7 +35,7 @@ describe('layoutMarkers', () => {
     ])
   })
 
-  it('desempata blocos na mesma altura pelo id', () => {
+  it('breaks ties between blocks at the same height by id', () => {
     const markers = layoutMarkers(
       [
         { blockId: 'z', top: 50 },
@@ -47,7 +47,7 @@ describe('layoutMarkers', () => {
     expect(markers.map((marker) => marker.blockId)).toEqual(['a', 'z'])
   })
 
-  it('lista vazia continua vazia', () => {
+  it('an empty list stays empty', () => {
     expect(layoutMarkers([], 34)).toEqual([])
   })
 })

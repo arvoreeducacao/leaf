@@ -23,7 +23,7 @@ export function sandboxDatabaseUrl(key, database) {
   const base = process.env.DATABASE_URL?.trim()
 
   if (!base) {
-    throw new Error(`defina ${key} ou DATABASE_URL no .env.local`)
+    throw new Error(`set ${key} or DATABASE_URL in .env.local`)
   }
 
   const url = new URL(base)

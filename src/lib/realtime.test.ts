@@ -30,35 +30,35 @@ function request(secret: string | null) {
   })
 }
 
-describe('sala do documento', () => {
-  it('vai e volta do id para o nome da sala', () => {
+describe('document room', () => {
+  it('round-trips between the id and the room name', () => {
     expect(realtimeRoomName('abc123')).toBe('doc:abc123')
     expect(documentIdFromRoom('doc:abc123')).toBe('abc123')
   })
 
-  it('recusa sala fora do padrão', () => {
-    expect(documentIdFromRoom('outro:abc')).toBeNull()
+  it('rejects a room outside the pattern', () => {
+    expect(documentIdFromRoom('other:abc')).toBeNull()
     expect(documentIdFromRoom('doc:')).toBeNull()
     expect(documentIdFromRoom('doc:../../etc/passwd')).toBeNull()
     expect(documentIdFromRoom(`doc:${'a'.repeat(65)}`)).toBeNull()
   })
 
-  it('valida o formato do id que chega pelos endpoints internos', () => {
+  it('validates the shape of the id coming from the internal endpoints', () => {
     expect(isDocumentIdShaped('abc-123_XYZ')).toBe(true)
     expect(isDocumentIdShaped('abc 123')).toBe(false)
     expect(isDocumentIdShaped(42)).toBe(false)
   })
 })
 
-describe('flag e segredo', () => {
-  it('fica ligada por padrão fora de produção', () => {
+describe('flag and secret', () => {
+  it('is on by default outside production', () => {
     vi.stubEnv('LEAF_REALTIME', undefined)
     vi.stubEnv('NODE_ENV', 'development')
 
     expect(isRealtimeEnabled()).toBe(true)
   })
 
-  it('exige opt-in explícito em produção', () => {
+  it('requires an explicit opt-in in production', () => {
     vi.stubEnv('LEAF_REALTIME', undefined)
     vi.stubEnv('NODE_ENV', 'production')
 
@@ -69,35 +69,35 @@ describe('flag e segredo', () => {
     expect(isRealtimeEnabled()).toBe(true)
   })
 
-  it('desliga com LEAF_REALTIME=false', () => {
+  it('turns off with LEAF_REALTIME=false', () => {
     vi.stubEnv('NODE_ENV', 'development')
     vi.stubEnv('LEAF_REALTIME', 'false')
 
     expect(isRealtimeEnabled()).toBe(false)
   })
 
-  it('só aceita chamada interna com o segredo certo', () => {
+  it('only accepts an internal call with the right secret', () => {
     vi.stubEnv('NODE_ENV', 'development')
     vi.stubEnv('LEAF_REALTIME_SECRET', undefined)
 
     expect(hasValidRealtimeSecret(request('leaf-dev-realtime'))).toBe(true)
-    expect(hasValidRealtimeSecret(request('outro'))).toBe(false)
+    expect(hasValidRealtimeSecret(request('other'))).toBe(false)
     expect(hasValidRealtimeSecret(request(null))).toBe(false)
 
-    vi.stubEnv('LEAF_REALTIME_SECRET', 'segredo-do-deploy')
+    vi.stubEnv('LEAF_REALTIME_SECRET', 'deploy-secret')
 
-    expect(hasValidRealtimeSecret(request('segredo-do-deploy'))).toBe(true)
+    expect(hasValidRealtimeSecret(request('deploy-secret'))).toBe(true)
     expect(hasValidRealtimeSecret(request('leaf-dev-realtime'))).toBe(false)
   })
 
-  it('não aceita nenhuma chamada interna sem segredo em produção', () => {
+  it('accepts no internal call without a secret in production', () => {
     vi.stubEnv('NODE_ENV', 'production')
     vi.stubEnv('LEAF_REALTIME_SECRET', undefined)
 
     expect(hasValidRealtimeSecret(request('leaf-dev-realtime'))).toBe(false)
   })
 
-  it('usa a porta e a url configuradas', () => {
+  it('uses the configured port and url', () => {
     vi.stubEnv('LEAF_REALTIME_PORT', undefined)
     vi.stubEnv('LEAF_REALTIME_URL', undefined)
 
@@ -108,48 +108,48 @@ describe('flag e segredo', () => {
 
     expect(realtimeClientUrl()).toBe('ws://127.0.0.1:4321')
 
-    vi.stubEnv('LEAF_REALTIME_URL', 'wss://leaf.example/colab')
+    vi.stubEnv('LEAF_REALTIME_URL', 'wss://leaf.example/collab')
 
-    expect(realtimeClientUrl()).toBe('wss://leaf.example/colab')
+    expect(realtimeClientUrl()).toBe('wss://leaf.example/collab')
   })
 })
 
-describe('identidade das pessoas na sala', () => {
-  it('dá sempre a mesma cor para a mesma pessoa', () => {
-    expect(realtimeColorFor('pessoa-1', 'light')).toBe(
-      realtimeColorFor('pessoa-1', 'light'),
+describe('identity of the people in the room', () => {
+  it('always gives the same color to the same person', () => {
+    expect(realtimeColorFor('person-1', 'light')).toBe(
+      realtimeColorFor('person-1', 'light'),
     )
-    expect(realtimeColorFor('pessoa-1', 'dark')).not.toBe(
-      realtimeColorFor('pessoa-1', 'light'),
+    expect(realtimeColorFor('person-1', 'dark')).not.toBe(
+      realtimeColorFor('person-1', 'light'),
     )
   })
 
-  it('escolhe texto legível sobre a cor do cursor', () => {
-    expect(realtimeTextColorFor(realtimeColorFor('pessoa-1', 'light'))).toBe(
+  it('picks readable text over the cursor color', () => {
+    expect(realtimeTextColorFor(realtimeColorFor('person-1', 'light'))).toBe(
       '#ffffff',
     )
-    expect(realtimeTextColorFor(realtimeColorFor('pessoa-1', 'dark'))).toBe(
+    expect(realtimeTextColorFor(realtimeColorFor('person-1', 'dark'))).toBe(
       '#02212a',
     )
   })
 
-  it('monta as iniciais do nome', () => {
-    expect(realtimeInitials('Ana Colaboradora')).toBe('AC')
+  it('builds the initials of the name', () => {
+    expect(realtimeInitials('Ana Collaborator')).toBe('AC')
     expect(realtimeInitials('Ana')).toBe('A')
     expect(realtimeInitials('   ')).toBe('?')
   })
 
-  it('lê a presença do awareness ignorando estado sem usuário', () => {
+  it('reads presence from awareness ignoring state without a user', () => {
     const states = new Map<number, Record<string, unknown>>([
       [7, { user: { id: 'u-1', name: 'Ana' } }],
       [3, { user: { id: 'u-2', name: '  ' } }],
       [9, { cursor: {} }],
     ])
 
-    const peers = peersFromAwareness(states, 7, 'Alguém')
+    const peers = peersFromAwareness(states, 7, 'Someone')
 
     expect(peers.map((peer) => peer.clientId)).toEqual([3, 7])
-    expect(peers.map((peer) => peer.name)).toEqual(['Alguém', 'Ana'])
+    expect(peers.map((peer) => peer.name)).toEqual(['Someone', 'Ana'])
     expect(peers.find((peer) => peer.clientId === 7)?.isSelf).toBe(true)
     expect(peers.find((peer) => peer.clientId === 3)?.isSelf).toBe(false)
   })

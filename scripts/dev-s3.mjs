@@ -19,12 +19,12 @@ const server = new S3rver({
 
 server.run((error) => {
   if (error) {
-    console.error('[dev-s3] falha ao subir o emulador S3:', error)
+    console.error('[dev-s3] failed to start the S3 emulator:', error)
     process.exit(1)
   }
 
   console.log(
-    `[dev-s3] emulador S3 em http://127.0.0.1:${port} (bucket ${bucket})`,
+    `[dev-s3] S3 emulator at http://127.0.0.1:${port} (bucket ${bucket})`,
   )
 })
 

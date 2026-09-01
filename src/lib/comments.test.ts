@@ -21,8 +21,8 @@ import {
   updateCommentBody,
 } from '@/lib/comments'
 
-const author = { id: 'user-author', email: 'autor@arvore.com.br' }
-const guest = { id: 'user-guest', email: 'convidado@arvore.com.br' }
+const author = { id: 'user-author', email: 'author@arvore.com.br' }
+const guest = { id: 'user-guest', email: 'guest@arvore.com.br' }
 
 async function seedComment(
   body: string,
@@ -67,14 +67,14 @@ beforeEach(async () => {
     {
       id: 'doc-a',
       ownerId: author.id,
-      title: 'Documento A',
+      title: 'Document A',
       createdAt: now,
       updatedAt: now,
     },
     {
       id: 'doc-b',
       ownerId: author.id,
-      title: 'Documento B',
+      title: 'Document B',
       createdAt: now,
       updatedAt: now,
     },
@@ -82,8 +82,8 @@ beforeEach(async () => {
 })
 
 describe('createComment', () => {
-  it('cria um comentário ancorado num bloco', async () => {
-    const id = await seedComment('Revisar este parágrafo', {
+  it('creates a comment anchored to a block', async () => {
+    const id = await seedComment('Review this paragraph', {
       blockId: 'block-1',
     })
 
@@ -93,18 +93,18 @@ describe('createComment', () => {
 
     expect(threads).toHaveLength(1)
     expect(threads[0]?.blockId).toBe('block-1')
-    expect(threads[0]?.body).toBe('Revisar este parágrafo')
+    expect(threads[0]?.body).toBe('Review this paragraph')
     expect(threads[0]?.authorName).toBe(author.email)
     expect(threads[0]?.resolvedAt).toBeNull()
   })
 
-  it('recusa corpo vazio ou só com espaço', async () => {
+  it('rejects an empty body or one with whitespace only', async () => {
     await expect(seedComment('   \n  ')).resolves.toBeNull()
     await expect(seedComment('')).resolves.toBeNull()
     await expect(countOpenComments('doc-a')).resolves.toBe(0)
   })
 
-  it('apara o corpo e corta no limite', async () => {
+  it('trims the body and cuts it at the limit', async () => {
     await seedComment(`  ${'a'.repeat(MAX_COMMENT_LENGTH + 50)}  `)
 
     const threads = await listDocumentComments('doc-a')
@@ -112,9 +112,9 @@ describe('createComment', () => {
     expect(threads[0]?.body).toHaveLength(MAX_COMMENT_LENGTH)
   })
 
-  it('cria resposta de um nível e ignora âncora própria', async () => {
-    const root = await seedComment('Pergunta', { blockId: 'block-1' })
-    const reply = await seedComment('Resposta', {
+  it('creates a one-level reply and ignores its own anchor', async () => {
+    const root = await seedComment('Question', { blockId: 'block-1' })
+    const reply = await seedComment('Reply', {
       blockId: 'block-9',
       parentId: root,
     })
@@ -125,53 +125,50 @@ describe('createComment', () => {
 
     expect(threads).toHaveLength(1)
     expect(threads[0]?.replies).toHaveLength(1)
-    expect(threads[0]?.replies[0]?.body).toBe('Resposta')
+    expect(threads[0]?.replies[0]?.body).toBe('Reply')
 
     const stored = await getComment('doc-a', reply as string)
 
     expect(stored?.parentId).toBe(root)
   })
 
-  it('recusa resposta de resposta', async () => {
-    const root = await seedComment('Pergunta')
-    const reply = await seedComment('Resposta', { parentId: root })
+  it('rejects a reply to a reply', async () => {
+    const root = await seedComment('Question')
+    const reply = await seedComment('Reply', { parentId: root })
 
     await expect(
-      seedComment('Resposta da resposta', { parentId: reply }),
+      seedComment('Reply to the reply', { parentId: reply }),
     ).resolves.toBeNull()
   })
 
-  it('recusa resposta a comentário de outro documento', async () => {
-    const root = await seedComment('Pergunta', { documentId: 'doc-b' })
+  it('rejects a reply to a comment of another document', async () => {
+    const root = await seedComment('Question', { documentId: 'doc-b' })
 
     await expect(
-      seedComment('Resposta', { documentId: 'doc-a', parentId: root }),
+      seedComment('Reply', { documentId: 'doc-a', parentId: root }),
     ).resolves.toBeNull()
   })
 })
 
 describe('listDocumentComments', () => {
-  it('lista as conversas mais novas primeiro e as respostas em ordem', async () => {
-    const first = await seedComment('Primeira', { at: 1_000 })
-    await seedComment('Segunda', { at: 2_000 })
-    await seedComment('Resposta antiga', { parentId: first, at: 3_000 })
-    await seedComment('Resposta nova', { parentId: first, at: 4_000 })
+  it('lists the newest threads first and the replies in order', async () => {
+    const first = await seedComment('First', { at: 1_000 })
+    await seedComment('Second', { at: 2_000 })
+    await seedComment('Old reply', { parentId: first, at: 3_000 })
+    await seedComment('New reply', { parentId: first, at: 4_000 })
 
     const threads = await listDocumentComments('doc-a')
 
-    expect(threads.map((thread) => thread.body)).toEqual([
-      'Segunda',
-      'Primeira',
-    ])
+    expect(threads.map((thread) => thread.body)).toEqual(['Second', 'First'])
     expect(threads[1]?.replies.map((reply) => reply.body)).toEqual([
-      'Resposta antiga',
-      'Resposta nova',
+      'Old reply',
+      'New reply',
     ])
   })
 
-  it('não mistura comentários de documentos diferentes', async () => {
-    await seedComment('Do A', { documentId: 'doc-a' })
-    await seedComment('Do B', { documentId: 'doc-b' })
+  it('does not mix comments of different documents', async () => {
+    await seedComment('From A', { documentId: 'doc-a' })
+    await seedComment('From B', { documentId: 'doc-b' })
 
     await expect(listDocumentComments('doc-a')).resolves.toHaveLength(1)
     await expect(listDocumentComments('doc-b')).resolves.toHaveLength(1)
@@ -179,10 +176,10 @@ describe('listDocumentComments', () => {
 })
 
 describe('countOpenComments', () => {
-  it('conta só conversas raiz não resolvidas', async () => {
-    const first = await seedComment('Primeira')
-    await seedComment('Segunda')
-    await seedComment('Resposta', { parentId: first })
+  it('counts only unresolved root threads', async () => {
+    const first = await seedComment('First')
+    await seedComment('Second')
+    await seedComment('Reply', { parentId: first })
 
     await expect(countOpenComments('doc-a')).resolves.toBe(2)
 
@@ -192,9 +189,9 @@ describe('countOpenComments', () => {
   })
 })
 
-describe('resolver e reabrir', () => {
-  it('marca e desmarca sem alterar o updated_at do corpo', async () => {
-    const id = (await seedComment('Trecho confuso', { at: 1_000 })) as string
+describe('resolve and reopen', () => {
+  it('marks and unmarks without changing the updated_at of the body', async () => {
+    const id = (await seedComment('Confusing passage', { at: 1_000 })) as string
 
     await setCommentResolved(id, true, new Date(5_000))
 
@@ -213,9 +210,9 @@ describe('resolver e reabrir', () => {
     })
   })
 
-  it('não resolve uma resposta', async () => {
-    const root = await seedComment('Pergunta')
-    const reply = (await seedComment('Resposta', {
+  it('does not resolve a reply', async () => {
+    const root = await seedComment('Question')
+    const reply = (await seedComment('Reply', {
       parentId: root,
     })) as string
 
@@ -223,43 +220,43 @@ describe('resolver e reabrir', () => {
   })
 })
 
-describe('editar e excluir', () => {
-  it('edita o corpo e avança o updated_at', async () => {
-    const id = (await seedComment('Texto antigo', { at: 1_000 })) as string
+describe('edit and delete', () => {
+  it('edits the body and moves the updated_at forward', async () => {
+    const id = (await seedComment('Old text', { at: 1_000 })) as string
 
     await expect(
-      updateCommentBody(id, 'Texto novo', new Date(2_000)),
+      updateCommentBody(id, 'New text', new Date(2_000)),
     ).resolves.toBe(true)
 
     const [thread] = await listDocumentComments('doc-a')
 
-    expect(thread?.body).toBe('Texto novo')
+    expect(thread?.body).toBe('New text')
     expect(thread?.updatedAt).toBe(2_000)
     expect(thread?.createdAt).toBe(1_000)
   })
 
-  it('recusa edição para corpo vazio', async () => {
-    const id = (await seedComment('Texto')) as string
+  it('rejects an edit to an empty body', async () => {
+    const id = (await seedComment('Text')) as string
 
     await expect(updateCommentBody(id, '   ')).resolves.toBe(false)
 
     const [thread] = await listDocumentComments('doc-a')
 
-    expect(thread?.body).toBe('Texto')
+    expect(thread?.body).toBe('Text')
   })
 
-  it('excluir a raiz leva as respostas junto', async () => {
-    const root = (await seedComment('Pergunta')) as string
+  it('deleting the root takes the replies with it', async () => {
+    const root = (await seedComment('Question')) as string
 
-    await seedComment('Resposta', { parentId: root })
+    await seedComment('Reply', { parentId: root })
 
     await expect(deleteComment(root)).resolves.toBe(true)
     await expect(db.select().from(comments)).resolves.toHaveLength(0)
   })
 
-  it('excluir uma resposta mantém a conversa', async () => {
-    const root = (await seedComment('Pergunta')) as string
-    const reply = (await seedComment('Resposta', { parentId: root })) as string
+  it('deleting a reply keeps the thread', async () => {
+    const root = (await seedComment('Question')) as string
+    const reply = (await seedComment('Reply', { parentId: root })) as string
 
     await deleteComment(reply)
 
@@ -270,17 +267,17 @@ describe('editar e excluir', () => {
   })
 })
 
-describe('integridade', () => {
-  it('apagar o documento apaga os comentários', async () => {
-    await seedComment('Some comigo')
+describe('integrity', () => {
+  it('deleting the document deletes the comments', async () => {
+    await seedComment('Vanish with me')
 
     await db.delete(documents).where(eq(documents.id, 'doc-a'))
 
     await expect(db.select().from(comments)).resolves.toHaveLength(0)
   })
 
-  it('apagar a conta do autor mantém o comentário sem autor', async () => {
-    await seedComment('Escrito por quem saiu', { authorId: guest.id })
+  it('deleting the author account keeps the comment without an author', async () => {
+    await seedComment('Written by someone who left', { authorId: guest.id })
 
     await db.delete(user).where(eq(user.id, guest.id))
 
@@ -291,8 +288,8 @@ describe('integridade', () => {
     expect(threads[0]?.authorName).toBeNull()
   })
 
-  it('getComment não devolve comentário de outro documento', async () => {
-    const id = (await seedComment('Do B', { documentId: 'doc-b' })) as string
+  it('getComment does not return a comment of another document', async () => {
+    const id = (await seedComment('From B', { documentId: 'doc-b' })) as string
 
     await expect(getComment('doc-a', id)).resolves.toBeNull()
     await expect(getComment('doc-b', id)).resolves.not.toBeNull()

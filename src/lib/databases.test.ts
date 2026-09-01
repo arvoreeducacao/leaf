@@ -25,12 +25,12 @@ import {
   loadRowContext,
 } from '@/lib/databases'
 
-const owner = { id: 'user-owner', email: 'dono@arvore.com.br' }
-const guest = { id: 'user-guest', email: 'convidado@arvore.com.br' }
+const owner = { id: 'user-owner', email: 'owner@arvore.com.br' }
+const guest = { id: 'user-guest', email: 'guest@arvore.com.br' }
 
 const statusOptions = [
-  { id: 'todo', name: 'A fazer', color: 'gray' as const },
-  { id: 'done', name: 'Feito', color: 'success' as const },
+  { id: 'todo', name: 'To do', color: 'gray' as const },
+  { id: 'done', name: 'Done', color: 'success' as const },
 ]
 
 const now = new Date('2026-03-01T12:00:00.000Z')
@@ -52,7 +52,7 @@ beforeEach(async () => {
   await db.insert(user).values([
     {
       id: owner.id,
-      name: 'Dono',
+      name: 'Owner',
       email: owner.email,
       emailVerified: false,
       createdAt: now,
@@ -60,7 +60,7 @@ beforeEach(async () => {
     },
     {
       id: guest.id,
-      name: 'Convidado',
+      name: 'Guest',
       email: guest.email,
       emailVerified: false,
       createdAt: now,
@@ -73,7 +73,7 @@ beforeEach(async () => {
       id: 'base',
       ownerId: owner.id,
       kind: 'database',
-      title: 'Pedidos',
+      title: 'Orders',
       createdAt: now,
       updatedAt: now,
     },
@@ -105,7 +105,7 @@ beforeEach(async () => {
       ownerId: owner.id,
       parentId: 'base',
       kind: 'row',
-      title: 'Apagada',
+      title: 'Deleted',
       createdAt: at(3),
       updatedAt: at(3),
       deletedAt: at(4),
@@ -115,7 +115,7 @@ beforeEach(async () => {
       ownerId: owner.id,
       parentId: 'base',
       kind: 'page',
-      title: 'Uma página comum',
+      title: 'An ordinary page',
       createdAt: at(5),
       updatedAt: at(5),
     },
@@ -125,7 +125,7 @@ beforeEach(async () => {
     {
       id: 'prop-points',
       databaseId: 'base',
-      name: 'Pontos',
+      name: 'Points',
       type: 'number',
       position: 1,
       createdAt: now,
@@ -144,7 +144,7 @@ beforeEach(async () => {
   await db.insert(databaseViews).values({
     id: 'view-1',
     databaseId: 'base',
-    name: 'Tabela',
+    name: 'Table',
     type: 'table',
     config: viewConfig,
     position: 0,
@@ -152,8 +152,8 @@ beforeEach(async () => {
   })
 })
 
-describe('leitura de uma base de dados', () => {
-  it('devolve propriedades na ordem da posição', async () => {
+describe('reading a database', () => {
+  it('returns the properties in position order', async () => {
     const snapshot = await loadDatabase('base')
 
     expect(snapshot?.properties.map((item) => item.id)).toEqual([
@@ -162,46 +162,46 @@ describe('leitura de uma base de dados', () => {
     ])
   })
 
-  it('lista só as linhas vivas, na ordem de criação', async () => {
+  it('lists only the live rows, in creation order', async () => {
     const rows = await listDatabaseRows('base')
 
     expect(rows.map((row) => row.id)).toEqual(['linha-1', 'linha-2'])
   })
 
-  it('não confunde subpágina comum com linha', async () => {
+  it('does not mistake an ordinary subpage for a row', async () => {
     const rows = await listDatabaseRows('base')
 
     expect(rows.map((row) => row.id)).not.toContain('subpagina')
   })
 
-  it('lê os valores da linha já convertidos', async () => {
+  it('reads the row values already converted', async () => {
     const rows = await listDatabaseRows('base')
 
     expect(rows[0].values).toEqual({ 'prop-status': 'todo', 'prop-points': 3 })
     expect(typeof rows[0].createdAt).toBe('string')
   })
 
-  it('não abre documento que não é base de dados', async () => {
+  it('does not open a document that is not a database', async () => {
     await expect(loadDatabase('linha-1')).resolves.toBeNull()
     await expect(loadDatabase('subpagina')).resolves.toBeNull()
   })
 
-  it('devolve o contexto da linha com a base e as propriedades', async () => {
+  it('returns the row context with the database and the properties', async () => {
     const context = await loadRowContext('linha-1')
 
     expect(context?.databaseId).toBe('base')
-    expect(context?.databaseTitle).toBe('Pedidos')
+    expect(context?.databaseTitle).toBe('Orders')
     expect(context?.properties).toHaveLength(2)
     expect(context?.row.title).toBe('Alfa')
   })
 
-  it('não devolve contexto para documento que não é linha', async () => {
+  it('returns no context for a document that is not a row', async () => {
     await expect(loadRowContext('subpagina')).resolves.toBeNull()
   })
 })
 
-describe('acesso das linhas', () => {
-  it('herda o compartilhamento da base de dados', async () => {
+describe('row access', () => {
+  it('inherits the sharing of the database', async () => {
     await db.insert(documentShares).values({
       id: 'share-1',
       documentId: 'base',
@@ -215,13 +215,13 @@ describe('acesso das linhas', () => {
     ).resolves.toBe('editor')
   })
 
-  it('nega a linha quando a base não foi compartilhada', async () => {
+  it('denies the row when the database was not shared', async () => {
     await expect(
       getDocumentAccess('linha-1', { user: guest }),
     ).resolves.toBeNull()
   })
 
-  it('rebaixa junto quando a base é só de leitura', async () => {
+  it('downgrades along when the database is read-only', async () => {
     await db.insert(documentShares).values({
       id: 'share-2',
       documentId: 'base',
@@ -235,26 +235,26 @@ describe('acesso das linhas', () => {
     ).resolves.toBe('viewer')
   })
 
-  it('mantém o dono da linha com acesso de dono', async () => {
+  it('keeps the row owner with owner access', async () => {
     await expect(
       getDocumentAccess('linha-1', { user: owner }),
     ).resolves.toBe('owner')
   })
 })
 
-describe('duplicar uma base de dados', () => {
+describe('duplicating a database', () => {
   beforeEach(async () => {
     await db.insert(documents).values({
       id: 'copia',
       ownerId: owner.id,
       kind: 'database',
-      title: 'Pedidos (cópia)',
+      title: 'Orders (cópia)',
       createdAt: at(10),
       updatedAt: at(10),
     })
   })
 
-  it('copia propriedades, visualizações e linhas', async () => {
+  it('copies properties, views and rows', async () => {
     const created = await copyDatabaseInto('base', 'copia', owner.id, at(10))
     const snapshot = await loadDatabase('copia')
 
@@ -264,7 +264,7 @@ describe('duplicar uma base de dados', () => {
     expect(snapshot?.rows.map((row) => row.title)).toEqual(['Alfa', 'Beta'])
   })
 
-  it('reaponta os valores das linhas para as propriedades novas', async () => {
+  it('repoints the row values at the new properties', async () => {
     await copyDatabaseInto('base', 'copia', owner.id, at(10))
     const snapshot = await loadDatabase('copia')
     const status = snapshot?.properties.find((item) => item.name === 'Status')
@@ -276,7 +276,7 @@ describe('duplicar uma base de dados', () => {
     expect(alfa?.values['prop-status']).toBeUndefined()
   })
 
-  it('reaponta a configuração da visualização copiada', async () => {
+  it('repoints the configuration of the copied view', async () => {
     await copyDatabaseInto('base', 'copia', owner.id, at(10))
     const snapshot = await loadDatabase('copia')
     const config = parseViewConfig(snapshot?.views[0]?.config ?? null)
@@ -289,10 +289,10 @@ describe('duplicar uma base de dados', () => {
     expect(config.sorts[0]?.propertyId).toBe('title')
   })
 
-  it('não leva a linha apagada para a cópia', async () => {
+  it('does not carry the deleted row into the copy', async () => {
     await copyDatabaseInto('base', 'copia', owner.id, at(10))
     const rows = await listDatabaseRows('copia')
 
-    expect(rows.map((row) => row.title)).not.toContain('Apagada')
+    expect(rows.map((row) => row.title)).not.toContain('Deleted')
   })
 })

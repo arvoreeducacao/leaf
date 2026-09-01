@@ -20,17 +20,17 @@ import {
   recordDocumentVersion,
 } from '@/lib/document-versions'
 
-const author = { id: 'user-author', email: 'autora@arvore.com.br', name: 'Ana' }
-const mate = { id: 'user-mate', email: 'colega@arvore.com.br', name: '' }
+const author = { id: 'user-author', email: 'author@arvore.com.br', name: 'Ana' }
+const mate = { id: 'user-mate', email: 'mate@arvore.com.br', name: '' }
 
-const docId = 'doc-versionado'
+const docId = 'doc-versioned'
 const start = new Date('2026-08-30T12:00:00.000Z')
 
 function at(offsetMs: number) {
   return new Date(start.getTime() + offsetMs)
 }
 
-async function setContent(content: string | null, title = 'Documento') {
+async function setContent(content: string | null, title = 'Document') {
   await db
     .update(documents)
     .set({ content, title })
@@ -57,7 +57,7 @@ beforeEach(async () => {
   await db.insert(documents).values({
     id: docId,
     ownerId: author.id,
-    title: 'Documento',
+    title: 'Document',
     content: '[{"id":"a"}]',
     createdAt: start,
     updatedAt: start,
@@ -65,7 +65,7 @@ beforeEach(async () => {
 })
 
 describe('throttle', () => {
-  it('grava a primeira versão e segura a segunda do mesmo autor dentro de 5 min', async () => {
+  it('records the first version and holds the second by the same author within 5 min', async () => {
     expect(await recordDocumentVersion(docId, author.id, { now: at(0) })).toBe(
       true,
     )
@@ -81,7 +81,7 @@ describe('throttle', () => {
     expect(await listDocumentVersions(docId)).toHaveLength(1)
   })
 
-  it('volta a gravar depois da janela de 5 min', async () => {
+  it('records again after the 5 min window', async () => {
     await recordDocumentVersion(docId, author.id, { now: at(0) })
     await setContent('[{"id":"b"}]')
 
@@ -97,7 +97,7 @@ describe('throttle', () => {
     expect(versions[0]?.createdAt).toBe(at(VERSION_THROTTLE_MS).getTime())
   })
 
-  it('a janela é por autor', async () => {
+  it('the window is per author', async () => {
     await recordDocumentVersion(docId, author.id, { now: at(0) })
     await setContent('[{"id":"b"}]')
 
@@ -107,7 +107,7 @@ describe('throttle', () => {
     expect(await listDocumentVersions(docId)).toHaveLength(2)
   })
 
-  it('force ignora a janela', async () => {
+  it('force ignores the window', async () => {
     await recordDocumentVersion(docId, author.id, { now: at(0) })
     await setContent('[{"id":"b"}]')
 
@@ -119,7 +119,7 @@ describe('throttle', () => {
     ).toBe(true)
   })
 
-  it('não grava versão quando o estado é idêntico ao da última versão', async () => {
+  it('does not record a version when the state is identical to the last one', async () => {
     await recordDocumentVersion(docId, author.id, { now: at(0) })
 
     expect(
@@ -131,20 +131,20 @@ describe('throttle', () => {
     expect(await listDocumentVersions(docId)).toHaveLength(1)
   })
 
-  it('não grava versão de documento inexistente', async () => {
-    expect(await recordDocumentVersion('doc-fantasma', author.id)).toBe(false)
+  it('does not record a version of a document that does not exist', async () => {
+    expect(await recordDocumentVersion('doc-ghost', author.id)).toBe(false)
   })
 })
 
-describe('poda', () => {
-  it('mantém apenas as 50 versões mais recentes', async () => {
+describe('pruning', () => {
+  it('keeps only the 50 most recent versions', async () => {
     const total = MAX_VERSIONS_PER_DOCUMENT + 5
 
     for (let index = 0; index < total; index += 1) {
       await db.insert(documentVersions).values({
         id: `v-${String(index).padStart(3, '0')}`,
         documentId: docId,
-        title: 'Documento',
+        title: 'Document',
         content: `[{"id":"${index}"}]`,
         authorId: author.id,
         createdAt: at(index * 1_000),
@@ -160,19 +160,19 @@ describe('poda', () => {
     expect(versions.at(-1)?.id).toBe('v-005')
   })
 
-  it('a poda acontece no insert', async () => {
+  it('the pruning happens on insert', async () => {
     for (let index = 0; index < MAX_VERSIONS_PER_DOCUMENT; index += 1) {
       await db.insert(documentVersions).values({
         id: `v-${String(index).padStart(3, '0')}`,
         documentId: docId,
-        title: 'Documento',
+        title: 'Document',
         content: `[{"id":"${index}"}]`,
         authorId: author.id,
         createdAt: at(index * 1_000),
       })
     }
 
-    await setContent('[{"id":"novo"}]')
+    await setContent('[{"id":"new"}]')
     await recordDocumentVersion(docId, mate.id, {
       now: at(MAX_VERSIONS_PER_DOCUMENT * 1_000),
     })
@@ -181,25 +181,25 @@ describe('poda', () => {
 
     expect(versions).toHaveLength(MAX_VERSIONS_PER_DOCUMENT)
     expect(await getDocumentVersion(docId, versions[0]!.id)).toMatchObject({
-      content: '[{"id":"novo"}]',
+      content: '[{"id":"new"}]',
     })
     expect(versions.some((version) => version.id === 'v-000')).toBe(false)
   })
 
-  it('a poda não toca versões de outro documento', async () => {
+  it('the pruning does not touch versions of another document', async () => {
     await db.insert(documents).values({
-      id: 'doc-vizinho',
+      id: 'doc-neighbor',
       ownerId: author.id,
-      title: 'Vizinho',
+      title: 'Neighbor',
       content: null,
       createdAt: start,
       updatedAt: start,
     })
 
     await db.insert(documentVersions).values({
-      id: 'v-vizinho',
-      documentId: 'doc-vizinho',
-      title: 'Vizinho',
+      id: 'v-neighbor',
+      documentId: 'doc-neighbor',
+      title: 'Neighbor',
       content: null,
       authorId: author.id,
       createdAt: at(0),
@@ -209,7 +209,7 @@ describe('poda', () => {
       await db.insert(documentVersions).values({
         id: `v-${String(index).padStart(3, '0')}`,
         documentId: docId,
-        title: 'Documento',
+        title: 'Document',
         content: `[{"id":"${index}"}]`,
         authorId: author.id,
         createdAt: at(index * 1_000),
@@ -218,16 +218,16 @@ describe('poda', () => {
 
     await pruneDocumentVersions(docId)
 
-    expect(await listDocumentVersions('doc-vizinho')).toHaveLength(1)
+    expect(await listDocumentVersions('doc-neighbor')).toHaveLength(1)
   })
 })
 
-describe('restauração', () => {
-  it('faz o round-trip guardando o estado atual antes de aplicar', async () => {
+describe('restore', () => {
+  it('does the round-trip keeping the current state before applying', async () => {
     await recordDocumentVersion(docId, author.id, { now: at(0) })
     const [first] = await listDocumentVersions(docId)
 
-    await setContent('[{"id":"depois"}]', 'Título novo')
+    await setContent('[{"id":"after"}]', 'New title')
 
     const restored = await applyDocumentVersion(
       docId,
@@ -243,38 +243,38 @@ describe('restauração', () => {
     })
 
     expect(document?.content).toBe('[{"id":"a"}]')
-    expect(document?.title).toBe('Documento')
+    expect(document?.title).toBe('Document')
 
     const versions = await listDocumentVersions(docId)
 
     expect(versions).toHaveLength(2)
     expect(await getDocumentVersion(docId, versions[0]!.id)).toMatchObject({
-      content: '[{"id":"depois"}]',
-      title: 'Título novo',
+      content: '[{"id":"after"}]',
+      title: 'New title',
     })
   })
 
-  it('devolve null para versão de outro documento', async () => {
+  it('returns null for a version of another document', async () => {
     await db.insert(documents).values({
-      id: 'doc-vizinho',
+      id: 'doc-neighbor',
       ownerId: author.id,
-      title: 'Vizinho',
-      content: '[{"id":"vizinho"}]',
+      title: 'Neighbor',
+      content: '[{"id":"neighbor"}]',
       createdAt: start,
       updatedAt: start,
     })
 
     await db.insert(documentVersions).values({
-      id: 'v-vizinho',
-      documentId: 'doc-vizinho',
-      title: 'Vizinho',
-      content: '[{"id":"vizinho"}]',
+      id: 'v-neighbor',
+      documentId: 'doc-neighbor',
+      title: 'Neighbor',
+      content: '[{"id":"neighbor"}]',
       authorId: author.id,
       createdAt: at(0),
     })
 
     expect(
-      await applyDocumentVersion(docId, 'v-vizinho', author.id, at(1_000)),
+      await applyDocumentVersion(docId, 'v-neighbor', author.id, at(1_000)),
     ).toBeNull()
 
     const document = await db.query.documents.findFirst({
@@ -284,11 +284,11 @@ describe('restauração', () => {
     expect(document?.content).toBe('[{"id":"a"}]')
   })
 
-  it('restaurar duas vezes seguidas não duplica o snapshot idêntico', async () => {
+  it('restoring twice in a row does not duplicate the identical snapshot', async () => {
     await recordDocumentVersion(docId, author.id, { now: at(0) })
     const [first] = await listDocumentVersions(docId)
 
-    await setContent('[{"id":"depois"}]')
+    await setContent('[{"id":"after"}]')
     await applyDocumentVersion(docId, first!.id, author.id, at(60_000))
     await applyDocumentVersion(docId, first!.id, author.id, at(120_000))
 
@@ -296,8 +296,8 @@ describe('restauração', () => {
   })
 })
 
-describe('listagem', () => {
-  it('traz o autor e cai no email quando não há nome', async () => {
+describe('listing', () => {
+  it('brings the author and falls back to the email when there is no name', async () => {
     await recordDocumentVersion(docId, author.id, { now: at(0) })
     await setContent('[{"id":"b"}]')
     await recordDocumentVersion(docId, mate.id, { now: at(1_000) })
@@ -308,7 +308,7 @@ describe('listagem', () => {
     expect(versions[1]?.authorName).toBe('Ana')
   })
 
-  it('sobrevive ao autor removido', async () => {
+  it('survives the removed author', async () => {
     await recordDocumentVersion(docId, mate.id, { now: at(0) })
     await db.delete(user).where(eq(user.id, mate.id))
 
@@ -319,7 +319,7 @@ describe('listagem', () => {
     expect(versions[0]?.authorName).toBeNull()
   })
 
-  it('as versões somem junto com o documento', async () => {
+  it('the versions vanish along with the document', async () => {
     await recordDocumentVersion(docId, author.id, { now: at(0) })
     await db.delete(documents).where(eq(documents.id, docId))
 
