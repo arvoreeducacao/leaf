@@ -4,6 +4,7 @@ import * as Y from 'yjs'
 
 import { readDocumentContent } from '@/components/editor/content'
 import { leafServerSchema } from '@/components/editor/server-schema'
+import { sanitizeBlocks } from '@/lib/markdown/sanitize'
 import { realtimeFragmentName } from '@/lib/realtime'
 
 type LeafServerEditor = ServerBlockNoteEditor<
@@ -29,7 +30,7 @@ export function seedUpdateFromContent(content: string | null): SeedResult {
 
   try {
     const doc = serverEditor().blocksToYDoc(
-      parsed.blocks as Array<PartialBlock>,
+      sanitizeBlocks(parsed.blocks) as Array<PartialBlock>,
       realtimeFragmentName,
     )
 
