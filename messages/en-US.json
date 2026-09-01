@@ -575,7 +575,10 @@
     "readingCount": "{done, plural, one {# page read} other {# pages read}}",
     "crawlTruncated": "The import stopped at {max} pages. The rest of the tree was left out.",
     "invalidLink": "That link does not look like a Notion page",
-    "notConnected": "Connect your Notion account before importing by link"
+    "notConnected": "Connect your Notion account before importing by link",
+    "commentsUnavailable": "We could not read the comments. Check that the Notion connection can read comments.",
+    "commentsImported": "{count, plural, one {# open comment came along, anchored to the page} other {# open comments came along, anchored to the page}}",
+    "commentsFailed": "The comments could not be created. The pages were imported anyway."
   },
   "notionLink": {
     "title": "Import from Notion",
@@ -593,7 +596,9 @@
     "unavailable": "Importing by link is not switched on in this Leaf yet.",
     "disconnected": "Connect your Notion account so Leaf can read the pages you already see there.",
     "invalidLink": "That link does not look like a Notion page.",
-    "unreachable": "We could not open that page. Check that you granted access to it in the Notion connection."
+    "unreachable": "We could not open that page. Check that you granted access to it in the Notion connection.",
+    "withComments": "Bring the open comments too",
+    "withCommentsHint": "Unresolved threads come anchored to the page, not to the passage. Makes the import slower."
   },
   "teamspace": {
     "sectionTitle": "Teamspaces",

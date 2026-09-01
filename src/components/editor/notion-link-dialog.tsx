@@ -19,6 +19,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Sheet, SheetContent, SheetHeader } from '@/components/ui/sheet'
+import { Switch } from '@/components/ui/switch'
 import { listImportDestinations, previewNotionLink } from '@/lib/import-actions'
 import type {
   ImportDestinationsResult,
@@ -44,6 +45,7 @@ export function NotionLinkDialog({ open, parentId, onOpenChange }: Props) {
   const [link, setLink] = useState('')
   const [preview, setPreview] = useState<NotionPreview | null>(null)
   const [checking, setChecking] = useState(false)
+  const [withComments, setWithComments] = useState(false)
   const [destinations, setDestinations] =
     useState<ImportDestinationsResult | null>(null)
   const [destination, setDestination] = useState<string | null>(null)
@@ -52,6 +54,7 @@ export function NotionLinkDialog({ open, parentId, onOpenChange }: Props) {
     if (!open) {
       setLink('')
       setPreview(null)
+      setWithComments(false)
       setDestinations(null)
       setDestination(null)
       reset()
@@ -92,7 +95,7 @@ export function NotionLinkDialog({ open, parentId, onOpenChange }: Props) {
 
     void stream.start(
       '/api/import/notion/link',
-      JSON.stringify({ destination, link, parentId }),
+      JSON.stringify({ comments: withComments, destination, link, parentId }),
       { 'Content-Type': 'application/json' },
     )
   }
@@ -141,13 +144,30 @@ export function NotionLinkDialog({ open, parentId, onOpenChange }: Props) {
         </p>
       ) : null}
 
-      {preview?.state === 'disconnected' ||
-      preview?.state === 'unavailable' ? null : ready ? (
-        <ImportDestinationPicker
-          destination={destination}
-          destinations={destinations}
-          onChange={setDestination}
-        />
+      {ready ? (
+        <>
+          <ImportDestinationPicker
+            destination={destination}
+            destinations={destinations}
+            onChange={setDestination}
+          />
+
+          <label className="flex cursor-pointer items-start gap-3 rounded-large px-3 py-2 transition-colors hover:bg-surface-hover has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-focus has-[:focus-visible]:outline-offset-2">
+            <Switch
+              checked={withComments}
+              className="mt-1"
+              onCheckedChange={setWithComments}
+            />
+            <span className="flex min-w-0 flex-1 flex-col">
+              <span className="text-body-small text-content-strong">
+                {t('withComments')}
+              </span>
+              <span className="text-body-small text-content">
+                {t('withCommentsHint')}
+              </span>
+            </span>
+          </label>
+        </>
       ) : null}
     </div>
   )

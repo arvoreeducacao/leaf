@@ -104,6 +104,7 @@ export async function POST(request: Request) {
           pageId,
           messages,
           request.signal,
+          { comments: body.comments === true },
         )) {
           if (event.type === 'page') {
             send({
@@ -122,6 +123,7 @@ export async function POST(request: Request) {
             owner,
             messages,
             request.signal,
+            event.comments,
           )) {
             if (step.type === 'done') {
               send({

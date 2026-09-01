@@ -5,6 +5,7 @@ import type {
   NotionClient,
   NotionDatabaseObject,
   NotionPageObject,
+  NotionUserObject,
 } from '@/lib/notion/api'
 import { plainText } from '@/lib/notion/api'
 import type { BlockContext, BlockNode } from '@/lib/notion/blocks'
@@ -23,11 +24,27 @@ export type CrawlMessages = Readonly<{
   assetTooLarge: (name: string, limit: string) => string
   pageFailed: (title: string) => string
   crawlTruncated: (max: number) => string
+  commentsUnavailable: string
 }>
+
+export type ImportedComment = Readonly<{
+  discussionId: string
+  body: string
+  authorEmail: string | null
+  authorName: string | null
+  createdAt: Date | null
+}>
+
+export type CrawlOptions = Readonly<{ comments?: boolean }>
 
 export type CrawlEvent =
   | Readonly<{ type: 'page'; title: string; done: number }>
-  | Readonly<{ type: 'plan'; plan: NotionPlan; warnings: Array<string> }>
+  | Readonly<{
+      type: 'plan'
+      plan: NotionPlan
+      warnings: Array<string>
+      comments: Map<string, Array<ImportedComment>>
+    }>
 
 type Pending =
   | Readonly<{ kind: 'page'; id: string; parentKey: string | null }>
@@ -177,6 +194,7 @@ export async function* crawlNotionPage(
   rootId: string,
   messages: CrawlMessages,
   signal?: AbortSignal,
+  options: CrawlOptions = {},
 ): AsyncGenerator<CrawlEvent> {
   const warnings: Array<string> = []
   const pages: Array<NotionPage> = []
@@ -191,6 +209,8 @@ export async function* crawlNotionPage(
   ]
   const seen = new Set<string>()
   const databaseIds = new Set<string>()
+  const commentsByPage = new Map<string, Array<ImportedComment>>()
+  const authors = new Map<string, NotionUserObject | null>()
 
   function pathOfPage(id: string) {
     return `${id}.md`
@@ -261,6 +281,56 @@ export async function* crawlNotionPage(
       }
 
       enqueueChildren(node.children, parentKey)
+    }
+  }
+
+  async function authorOf(id: string | undefined) {
+    if (!id) {
+      return null
+    }
+
+    if (!authors.has(id)) {
+      try {
+        authors.set(id, await client.user(id))
+      } catch {
+        authors.set(id, null)
+      }
+    }
+
+    return authors.get(id) ?? null
+  }
+
+  async function readComments(pageId: string, pageKey: string) {
+    const threads: Array<ImportedComment> = []
+
+    try {
+      for await (const comment of client.comments(pageId)) {
+        const body = plainText(comment.rich_text).trim()
+
+        if (body.length === 0) {
+          continue
+        }
+
+        const author = await authorOf(comment.created_by?.id)
+
+        threads.push({
+          authorEmail: author?.person?.email ?? null,
+          authorName: author?.name ?? null,
+          body,
+          createdAt: comment.created_time
+            ? new Date(comment.created_time)
+            : null,
+          discussionId: comment.discussion_id ?? comment.id,
+        })
+      }
+    } catch {
+      warnings.push(messages.commentsUnavailable)
+
+      return
+    }
+
+    if (threads.length > 0) {
+      commentsByPage.set(pageKey, threads)
     }
   }
 
@@ -339,6 +409,10 @@ export async function* crawlNotionPage(
         title,
       })
 
+      if (options.comments) {
+        await readComments(item.id, path)
+      }
+
       const tree = await readTree(item.id)
       markDatabases(tree)
 
@@ -386,6 +460,7 @@ export async function* crawlNotionPage(
   }
 
   yield {
+    comments: commentsByPage,
     plan: { assets, csvByPath, markdownByPath, pages, pathToPageKey },
     type: 'plan',
     warnings,
