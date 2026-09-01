@@ -38,7 +38,10 @@ const contentTypeByExtension: Record<string, string> = {
   '.csv': 'text/csv',
 }
 
-export type NotionPageKind = 'markdown' | 'csv' | 'folder'
+import type { ImportedBlock } from '@/lib/notion/convert'
+import type { ImportedProperty, ImportedValue } from '@/lib/notion/properties'
+
+export type NotionPageKind = 'markdown' | 'csv' | 'folder' | 'blocks'
 
 export type NotionPage = Readonly<{
   key: string
@@ -56,12 +59,27 @@ export type NotionAsset = Readonly<{
   fileName: string
 }>
 
+export type NotionPageMeta = Readonly<{
+  icon: string | null
+  createdAt: Date | null
+  updatedAt: Date | null
+}>
+
+export type NotionDatabaseSchema = Readonly<{
+  properties: Array<ImportedProperty>
+}>
+
 export type NotionPlan = Readonly<{
   pages: Array<NotionPage>
   assets: Array<NotionAsset>
   pathToPageKey: Map<string, string>
   markdownByPath: Map<string, string>
   csvByPath: Map<string, string>
+  blocksByPath?: Map<string, Array<ImportedBlock>>
+  databasesByKey?: Map<string, NotionDatabaseSchema>
+  rowValuesByKey?: Map<string, Array<ImportedValue>>
+  metaByKey?: Map<string, NotionPageMeta>
+  assetSourceByPath?: Map<string, string>
 }>
 
 export function contentTypeOf(path: string): string {

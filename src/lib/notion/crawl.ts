@@ -4,19 +4,36 @@ import type {
   NotionBlock,
   NotionClient,
   NotionDatabaseObject,
+  NotionIcon,
   NotionPageObject,
   NotionUserObject,
 } from '@/lib/notion/api'
 import { plainText } from '@/lib/notion/api'
-import type { BlockContext, BlockNode } from '@/lib/notion/blocks'
-import { blocksToMarkdown } from '@/lib/notion/blocks'
+import type {
+  BlockNode,
+  ConvertContext,
+  ImportedBlock,
+} from '@/lib/notion/convert'
+import { convertNodes } from '@/lib/notion/convert'
 import {
   MAX_ASSET_BYTES,
   MAX_ASSET_LABEL,
   MAX_CRAWL_PAGES,
 } from '@/lib/notion/limits'
 import { contentTypeOf, isImagePath } from '@/lib/notion/plan'
-import type { NotionAsset, NotionPage, NotionPlan } from '@/lib/notion/plan'
+import type {
+  NotionAsset,
+  NotionDatabaseSchema,
+  NotionPage,
+  NotionPageMeta,
+  NotionPlan,
+} from '@/lib/notion/plan'
+import type {
+  ImportedProperty,
+  ImportedValue,
+  PropertyResolver,
+} from '@/lib/notion/properties'
+import { importedValue, mapDatabaseProperties } from '@/lib/notion/properties'
 
 export type CrawlMessages = Readonly<{
   untitled: string
@@ -25,6 +42,7 @@ export type CrawlMessages = Readonly<{
   pageFailed: (title: string) => string
   crawlTruncated: (max: number) => string
   commentsUnavailable: string
+  unsupportedBlocks: (count: number, types: string) => string
 }>
 
 export type ImportedComment = Readonly<{
@@ -48,10 +66,12 @@ export type CrawlEvent =
 
 type Pending =
   | Readonly<{ kind: 'page'; id: string; parentKey: string | null }>
+  | Readonly<{ kind: 'database'; id: string; parentKey: string | null }>
   | Readonly<{
-      kind: 'database'
-      id: string
-      parentKey: string | null
+      kind: 'row'
+      page: NotionPageObject
+      parentKey: string
+      properties: Array<ImportedProperty>
     }>
 
 const fallbackContentType = 'application/octet-stream'
@@ -95,98 +115,42 @@ export function databaseTitle(
   return text.length > 0 ? text.slice(0, 200) : fallback
 }
 
-function titlePropertyName(database: NotionDatabaseObject): string | null {
-  for (const [name, property] of Object.entries(database.properties ?? {})) {
-    if (property?.type === 'title') {
-      return name
-    }
+function iconOf(icon: NotionIcon | null | undefined): string | null {
+  if (!icon) {
+    return null
   }
 
-  return null
+  if (typeof icon.emoji === 'string' && icon.emoji.length > 0) {
+    return icon.emoji.slice(0, 64)
+  }
+
+  const url = icon.external?.url ?? icon.file?.url ?? null
+
+  return typeof url === 'string' && url.startsWith('https://')
+    ? url.slice(0, 1024)
+    : null
 }
 
-function propertyToCell(value: unknown): string {
-  if (!value || typeof value !== 'object') {
-    return ''
+function stamp(value: string | undefined): Date | null {
+  if (!value) {
+    return null
   }
 
-  const property = value as Record<string, unknown>
+  const date = new Date(value)
 
-  switch (property.type) {
-    case 'title':
-    case 'rich_text':
-      return plainText(property[property.type as string])
-
-    case 'number':
-      return property.number === null || property.number === undefined
-        ? ''
-        : String(property.number)
-
-    case 'select':
-      return ((property.select as { name?: string } | null)?.name ?? '')
-
-    case 'status':
-      return ((property.status as { name?: string } | null)?.name ?? '')
-
-    case 'multi_select':
-      return Array.isArray(property.multi_select)
-        ? (property.multi_select as Array<{ name?: string }>)
-            .map((option) => option.name ?? '')
-            .filter((name) => name.length > 0)
-            .join(', ')
-        : ''
-
-    case 'date': {
-      const date = property.date as { start?: string; end?: string } | null
-
-      if (!date?.start) {
-        return ''
-      }
-
-      return date.end ? `${date.start} → ${date.end}` : date.start
-    }
-
-    case 'checkbox':
-      return property.checkbox ? 'Yes' : 'No'
-
-    case 'url':
-      return (property.url as string | null) ?? ''
-
-    case 'email':
-      return (property.email as string | null) ?? ''
-
-    case 'phone_number':
-      return (property.phone_number as string | null) ?? ''
-
-    case 'people':
-      return Array.isArray(property.people)
-        ? (property.people as Array<{ name?: string }>)
-            .map((person) => person.name ?? '')
-            .filter((name) => name.length > 0)
-            .join(', ')
-        : ''
-
-    case 'created_time':
-      return (property.created_time as string | null) ?? ''
-
-    case 'last_edited_time':
-      return (property.last_edited_time as string | null) ?? ''
-
-    default:
-      return ''
-  }
+  return Number.isNaN(date.getTime()) ? null : date
 }
 
-function toCsv(rows: Array<Array<string>>): string {
-  return rows
-    .map((row) =>
-      row
-        .map((cell) =>
-          /[",\n]/.test(cell) ? `"${cell.replace(/"/g, '""')}"` : cell,
-        )
-        .join(','),
-    )
-    .join('\n')
+function metaOf(source: {
+  icon?: NotionIcon | null
+  created_time?: string
+  last_edited_time?: string
+}): NotionPageMeta {
+  return {
+    createdAt: stamp(source.created_time),
+    icon: iconOf(source.icon),
+    updatedAt: stamp(source.last_edited_time),
+  }
 }
 
 export async function* crawlNotionPage(
@@ -196,21 +160,90 @@ export async function* crawlNotionPage(
   signal?: AbortSignal,
   options: CrawlOptions = {},
 ): AsyncGenerator<CrawlEvent> {
+  yield* crawlNotion(
+    client,
+    [{ id: rootId, kind: 'page', parentKey: null }],
+    messages,
+    signal,
+    options,
+  )
+}
+
+export async function* crawlNotionWorkspace(
+  client: NotionClient,
+  messages: CrawlMessages,
+  signal?: AbortSignal,
+  options: CrawlOptions = {},
+): AsyncGenerator<CrawlEvent> {
+  const found = new Map<
+    string,
+    { object: string; parentId: string | null }
+  >()
+
+  for await (const result of client.search()) {
+    if (signal?.aborted) {
+      return
+    }
+
+    const parent = (result.parent ?? {}) as {
+      type?: string
+      page_id?: string
+      database_id?: string
+      block_id?: string
+    }
+    const parentId =
+      parent.page_id ?? parent.database_id ?? parent.block_id ?? null
+
+    found.set(result.id, { object: result.object ?? 'page', parentId })
+  }
+
+  const seeds: Array<Pending> = []
+
+  for (const [id, entry] of found) {
+    const parentKnown =
+      entry.parentId !== null && found.has(entry.parentId)
+
+    if (parentKnown) {
+      continue
+    }
+
+    seeds.push(
+      entry.object === 'database'
+        ? { id, kind: 'database', parentKey: null }
+        : { id, kind: 'page', parentKey: null },
+    )
+  }
+
+  yield* crawlNotion(client, seeds, messages, signal, options)
+}
+
+async function* crawlNotion(
+  client: NotionClient,
+  seeds: Array<Pending>,
+  messages: CrawlMessages,
+  signal?: AbortSignal,
+  options: CrawlOptions = {},
+): AsyncGenerator<CrawlEvent> {
   const warnings: Array<string> = []
   const pages: Array<NotionPage> = []
   const assets: Array<NotionAsset> = []
   const markdownByPath = new Map<string, string>()
   const csvByPath = new Map<string, string>()
+  const blocksByPath = new Map<string, Array<ImportedBlock>>()
+  const databasesByKey = new Map<string, NotionDatabaseSchema>()
+  const rowValuesByKey = new Map<string, Array<ImportedValue>>()
+  const metaByKey = new Map<string, NotionPageMeta>()
+  const assetSourceByPath = new Map<string, string>()
   const pathToPageKey = new Map<string, string>()
   const assetPathByUrl = new Map<string, string>()
   const pendingAssets = new Map<string, string>()
-  const queue: Array<Pending> = [
-    { id: rootId, kind: 'page', parentKey: null },
-  ]
+  const queue: Array<Pending> = [...seeds]
   const seen = new Set<string>()
   const databaseIds = new Set<string>()
+  const titleById = new Map<string, string>()
   const commentsByPage = new Map<string, Array<ImportedComment>>()
   const authors = new Map<string, NotionUserObject | null>()
+  const unsupportedCounts = new Map<string, number>()
 
   function pathOfPage(id: string) {
     return `${id}.md`
@@ -220,23 +253,54 @@ export async function* crawlNotionPage(
     return `${id}.csv`
   }
 
-  const context: BlockContext = {
-    assetPath: (url) => {
-      const known = assetPathByUrl.get(url)
+  function registerAsset(url: string, _name: string): string | null {
+    const known = assetPathByUrl.get(url)
 
-      if (known) {
-        return known
-      }
+    if (known) {
+      return known
+    }
 
-      const path = `assets/${nanoid(12)}${extensionFromUrl(url)}`
+    const path = `assets/${nanoid(12)}${extensionFromUrl(url)}`
 
-      assetPathByUrl.set(url, path)
-      pendingAssets.set(path, url)
+    assetPathByUrl.set(url, path)
+    assetSourceByPath.set(path, url)
+    pendingAssets.set(path, url)
 
-      return path
-    },
-    pagePath: (id) =>
+    return path
+  }
+
+  const context: ConvertContext = {
+    assetPath: registerAsset,
+    pageRef: (id) =>
       databaseIds.has(id) ? pathOfDatabase(id) : pathOfPage(id),
+    unsupported: (type) => {
+      unsupportedCounts.set(type, (unsupportedCounts.get(type) ?? 0) + 1)
+    },
+  }
+
+  async function authorOf(id: string | undefined) {
+    if (!id) {
+      return null
+    }
+
+    if (!authors.has(id)) {
+      try {
+        authors.set(id, await client.user(id))
+      } catch {
+        authors.set(id, null)
+      }
+    }
+
+    return authors.get(id) ?? null
+  }
+
+  const resolver: PropertyResolver = {
+    personLabel: async (id) => {
+      const author = await authorOf(id)
+
+      return author?.person?.email ?? author?.name ?? null
+    },
+    registerAsset,
   }
 
   async function readTree(blockId: string): Promise<Array<BlockNode>> {
@@ -247,17 +311,33 @@ export async function* crawlNotionPage(
         return nodes
       }
 
-      const children =
-        block.has_children &&
-        block.type !== 'child_page' &&
-        block.type !== 'child_database'
-          ? await readTree(block.id)
-          : []
-
-      nodes.push({ block, children })
+      nodes.push({ block, children: await readChildren(block) })
     }
 
     return nodes
+  }
+
+  async function readChildren(block: NotionBlock): Promise<Array<BlockNode>> {
+    if (block.type === 'child_page' || block.type === 'child_database') {
+      return []
+    }
+
+    if (block.type === 'synced_block') {
+      const synced = block.synced_block as
+        | { synced_from?: { block_id?: string } | null }
+        | undefined
+      const original = synced?.synced_from?.block_id
+
+      if (original) {
+        try {
+          return await readTree(original)
+        } catch {
+          return []
+        }
+      }
+    }
+
+    return block.has_children ? readTree(block.id) : []
   }
 
   function markDatabases(nodes: Array<BlockNode>) {
@@ -282,22 +362,6 @@ export async function* crawlNotionPage(
 
       enqueueChildren(node.children, parentKey)
     }
-  }
-
-  async function authorOf(id: string | undefined) {
-    if (!id) {
-      return null
-    }
-
-    if (!authors.has(id)) {
-      try {
-        authors.set(id, await client.user(id))
-      } catch {
-        authors.set(id, null)
-      }
-    }
-
-    return authors.get(id) ?? null
   }
 
   async function readComments(pageId: string, pageKey: string) {
@@ -334,9 +398,44 @@ export async function* crawlNotionPage(
     }
   }
 
-  function registerPage(page: NotionPage) {
-    pages.push(page)
-    pathToPageKey.set(page.key, page.key)
+  async function downloadPending() {
+    for (const [path, url] of pendingAssets) {
+      if (signal?.aborted) {
+        return
+      }
+
+      pendingAssets.delete(path)
+
+      try {
+        const { bytes, contentType } = await client.download(url)
+
+        if (bytes.byteLength > MAX_ASSET_BYTES) {
+          warnings.push(messages.assetTooLarge(path, MAX_ASSET_LABEL))
+          continue
+        }
+
+        const known = contentTypeOf(path)
+
+        assets.push({
+          bytes,
+          contentType: known === fallbackContentType ? contentType : known,
+          fileName: path.replace('assets/', ''),
+          isImage: isImagePath(path),
+          path,
+        })
+      } catch {
+        warnings.push(messages.assetFailed(path))
+      }
+    }
+  }
+
+  async function readPageBody(id: string, path: string) {
+    const tree = await readTree(id)
+
+    markDatabases(tree)
+    blocksByPath.set(path, convertNodes(tree, context))
+    enqueueChildren(tree, path)
+    await downloadPending()
   }
 
   let done = 0
@@ -354,6 +453,57 @@ export async function* crawlNotionPage(
 
     const item = queue.shift() as Pending
 
+    if (item.kind === 'row') {
+      if (seen.has(item.page.id)) {
+        continue
+      }
+
+      seen.add(item.page.id)
+
+      const title = pageTitle(item.page, messages.untitled)
+      const path = pathOfPage(item.page.id)
+
+      titleById.set(item.page.id, title)
+      metaByKey.set(path, metaOf(item.page))
+      pages.push({
+        key: path,
+        kind: 'blocks',
+        parentKey: item.parentKey,
+        sourcePath: path,
+        title,
+      })
+      pathToPageKey.set(path, path)
+
+      const values: Array<ImportedValue> = []
+
+      for (const property of item.properties) {
+        values.push(
+          await importedValue(
+            property,
+            item.page.properties?.[property.notionName],
+            resolver,
+          ),
+        )
+      }
+
+      rowValuesByKey.set(path, values)
+
+      try {
+        if (options.comments) {
+          await readComments(item.page.id, path)
+        }
+
+        await readPageBody(item.page.id, path)
+      } catch {
+        warnings.push(messages.pageFailed(title))
+      }
+
+      done += 1
+      yield { done, title, type: 'page' }
+
+      continue
+    }
+
     if (seen.has(item.id)) {
       continue
     }
@@ -365,27 +515,28 @@ export async function* crawlNotionPage(
         const database = await client.database(item.id)
         const title = databaseTitle(database, messages.untitled)
         const path = pathOfDatabase(item.id)
-        const titleProperty = titlePropertyName(database)
-        const others = Object.keys(database.properties ?? {}).filter(
-          (name) => name !== titleProperty,
-        )
-        const names = titleProperty ? [titleProperty, ...others] : others
-        const rows: Array<Array<string>> = [names]
+        const properties = mapDatabaseProperties(database.properties ?? {})
 
-        for await (const row of client.rows(item.id)) {
-          rows.push(
-            names.map((name) => propertyToCell(row.properties?.[name])),
-          )
-        }
-
-        csvByPath.set(path, toCsv(rows))
-        registerPage({
+        databaseIds.add(item.id)
+        titleById.set(item.id, title)
+        metaByKey.set(path, metaOf(database))
+        databasesByKey.set(path, { properties })
+        pages.push({
           key: path,
           kind: 'csv',
           parentKey: item.parentKey,
           sourcePath: path,
           title,
         })
+        pathToPageKey.set(path, path)
+
+        for await (const row of client.rows(item.id)) {
+          if (signal?.aborted) {
+            return
+          }
+
+          queue.push({ kind: 'row', page: row, parentKey: path, properties })
+        }
 
         done += 1
         yield { done, title, type: 'page' }
@@ -401,25 +552,22 @@ export async function* crawlNotionPage(
       const title = pageTitle(page, messages.untitled)
       const path = pathOfPage(item.id)
 
-      registerPage({
+      titleById.set(item.id, title)
+      metaByKey.set(path, metaOf(page))
+      pages.push({
         key: path,
-        kind: 'markdown',
+        kind: 'blocks',
         parentKey: item.parentKey,
         sourcePath: path,
         title,
       })
+      pathToPageKey.set(path, path)
 
       if (options.comments) {
         await readComments(item.id, path)
       }
 
-      const tree = await readTree(item.id)
-      markDatabases(tree)
-
-      const { markdown } = blocksToMarkdown(tree, context)
-
-      markdownByPath.set(path, markdown)
-      enqueueChildren(tree, path)
+      await readPageBody(item.id, path)
 
       done += 1
       yield { done, title, type: 'page' }
@@ -432,36 +580,43 @@ export async function* crawlNotionPage(
     warnings.push(messages.crawlTruncated(MAX_CRAWL_PAGES))
   }
 
-  for (const [path, url] of pendingAssets) {
-    if (signal?.aborted) {
-      return
-    }
+  for (const values of rowValuesByKey.values()) {
+    for (const [index, value] of values.entries()) {
+      if (value && typeof value === 'object' && 'relation' in value) {
+        const titles = value.relation
+          .map((id) => titleById.get(id))
+          .filter((title): title is string => Boolean(title))
 
-    try {
-      const { bytes, contentType } = await client.download(url)
-
-      if (bytes.byteLength > MAX_ASSET_BYTES) {
-        warnings.push(messages.assetTooLarge(path, MAX_ASSET_LABEL))
-        continue
+        values[index] = titles.join(', ')
       }
-
-      const known = contentTypeOf(path)
-
-      assets.push({
-        bytes,
-        contentType: known === fallbackContentType ? contentType : known,
-        fileName: path.replace('assets/', ''),
-        isImage: isImagePath(path),
-        path,
-      })
-    } catch {
-      warnings.push(messages.assetFailed(path))
     }
+  }
+
+  if (unsupportedCounts.size > 0) {
+    const total = [...unsupportedCounts.values()].reduce(
+      (sum, count) => sum + count,
+      0,
+    )
+
+    warnings.push(
+      messages.unsupportedBlocks(total, [...unsupportedCounts.keys()].join(', ')),
+    )
   }
 
   yield {
     comments: commentsByPage,
-    plan: { assets, csvByPath, markdownByPath, pages, pathToPageKey },
+    plan: {
+      assetSourceByPath,
+      assets,
+      blocksByPath,
+      csvByPath,
+      databasesByKey,
+      markdownByPath,
+      metaByKey,
+      pages,
+      pathToPageKey,
+      rowValuesByKey,
+    },
     type: 'plan',
     warnings,
   }

@@ -7,5 +7,6 @@ export const calloutConfig = {
     backgroundColor: defaultProps.backgroundColor,
     textColor: defaultProps.textColor,
     textAlignment: defaultProps.textAlignment,
+    icon: { default: '' },
   },
 }
