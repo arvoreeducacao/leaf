@@ -21,10 +21,13 @@ import {
 import { getSession } from '@/lib/auth'
 import { registerInviteAttempt } from '@/lib/authz'
 import { emailDomainPolicy, isEmailDomainAllowed } from '@/lib/email-domain'
+import { joinTokenPattern } from '@/lib/join-link'
 import {
   attachOwnerDocuments,
   canManageOrganization,
   detachMemberDocuments,
+  getOrganizationByInviteToken,
+  joinOrganizationAsMember,
   listMemberships,
   listOrganizationEmails,
   otherOwnersInOrganization,
@@ -36,6 +39,7 @@ export type OrgActionResult = { ok: true } | { ok: false; error: string }
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
 const maxEmailLength = 254
 const maxNameLength = 80
+const inviteTokenLength = 24
 
 async function orgMessage(key: string) {
   return (await getTranslations('org'))(key)
@@ -215,6 +219,80 @@ export async function inviteToOrganization(
   }
 
   revalidatePath('/org')
+
+  return { ok: true }
+}
+
+export async function enableOrganizationInviteLink(): Promise<OrgActionResult> {
+  const session = await requireSession()
+  const membership = await getActiveMembership(session.user.id)
+
+  if (!membership || !canManageOrganization(membership.role)) {
+    return failure('errorNotAllowed')
+  }
+
+  await db
+    .update(organizations)
+    .set({ inviteToken: nanoid(inviteTokenLength) })
+    .where(eq(organizations.id, membership.orgId))
+
+  revalidatePath('/org')
+
+  return { ok: true }
+}
+
+export async function disableOrganizationInviteLink(): Promise<OrgActionResult> {
+  const session = await requireSession()
+  const membership = await getActiveMembership(session.user.id)
+
+  if (!membership || !canManageOrganization(membership.role)) {
+    return failure('errorNotAllowed')
+  }
+
+  await db
+    .update(organizations)
+    .set({ inviteToken: null })
+    .where(eq(organizations.id, membership.orgId))
+
+  revalidatePath('/org')
+
+  return { ok: true }
+}
+
+export async function joinOrganizationByLink(
+  token: string,
+): Promise<OrgActionResult> {
+  const session = await requireSession()
+
+  if (!joinTokenPattern.test(token)) {
+    return failure('errorLinkInvalid')
+  }
+
+  const decision = registerInviteAttempt(`join:${session.user.id}`)
+
+  if (!decision.allowed) {
+    return {
+      ok: false,
+      error: (await getTranslations('org'))('errorTooManyInvites', {
+        seconds: decision.retryAfterSeconds,
+      }),
+    }
+  }
+
+  const organization = await getOrganizationByInviteToken(token)
+
+  if (!organization) {
+    return failure('errorLinkInvalid')
+  }
+
+  await joinOrganizationAsMember(
+    organization.id,
+    session.user.id,
+    session.user.email,
+  )
+  await writeActiveOrgId(organization.id)
+
+  revalidatePath('/', 'layout')
 
   return { ok: true }
 }

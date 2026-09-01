@@ -17,7 +17,8 @@
     "login": "Entrar | Leaf",
     "signup": "Criar conta | Leaf",
     "document": "{title} | Leaf",
-    "org": "Organização | Leaf"
+    "org": "Organização | Leaf",
+    "join": "Convite | Leaf"
   },
   "auth": {
     "loginTitle": "Entrar na sua conta",
@@ -504,7 +505,25 @@
     "confirmRemoveCancel": "Manter na organização",
     "switcherLabel": "Organização ativa",
     "switching": "Trocando de organização",
-    "manageLink": "Gerenciar organização"
+    "manageLink": "Gerenciar organização",
+    "inviteLinkTitle": "Link de convite",
+    "inviteLinkHelp": "Qualquer pessoa com o link entra na organização como membro. Desative ou redefina o link para revogar os convites antigos.",
+    "inviteLinkAddress": "Endereço do link",
+    "inviteLinkCopy": "Copiar",
+    "inviteLinkCopied": "Link copiado",
+    "inviteLinkCopyFailed": "Não foi possível copiar o link.",
+    "inviteLinkEnabled": "Link de convite ativado",
+    "inviteLinkDisabled": "Link de convite desativado",
+    "inviteLinkResetAction": "Redefinir",
+    "inviteLinkReset": "Link redefinido. O link antigo deixou de funcionar.",
+    "errorLinkInvalid": "Este link de convite não é válido ou foi desativado.",
+    "confirmLinkDisableTitle": "Desativar o link de convite?",
+    "confirmLinkDisableDescription": "Quem tiver o link deixa de conseguir entrar na organização. Quem já entrou continua membro.",
+    "confirmLinkDisableAction": "Desativar",
+    "confirmLinkResetTitle": "Redefinir o link de convite?",
+    "confirmLinkResetDescription": "Um link novo é gerado e o link atual deixa de funcionar imediatamente.",
+    "confirmLinkResetAction": "Redefinir",
+    "confirmLinkCancel": "Cancelar"
   },
   "archiveImport": {
     "title": "Importar exportação",
@@ -606,5 +625,19 @@
     "someone": "Alguém",
     "you": "{name} (você)",
     "peopleHere": "{count, plural, one {# pessoa neste documento} other {# pessoas neste documento}}"
+  },
+  "join": {
+    "heading": "Você recebeu um convite para entrar em {org}",
+    "memberCount": "{count, plural, =0 {Ninguém participa ainda} one {# pessoa participa} other {# pessoas participam}}",
+    "join": "Entrar na organização",
+    "open": "Abrir a organização",
+    "alreadyMember": "Você já faz parte desta organização.",
+    "joined": "Você entrou na organização",
+    "signInHint": "Entre na sua conta para aceitar o convite.",
+    "signIn": "Entrar",
+    "createAccount": "Criar conta",
+    "invalidTitle": "Link de convite inválido",
+    "invalidHint": "Este link não é válido ou foi desativado. Peça um link novo para quem convidou você.",
+    "backHome": "Ir para o Leaf"
   }
 }
