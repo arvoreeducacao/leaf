@@ -13,6 +13,7 @@ import {
   emailDomainPolicy,
   isEmailDomainAllowed,
 } from '@/lib/email-domain'
+import { buildSsoSignOutUrl, requestOrigin } from '@/lib/sso-sign-out'
 
 const guardedPaths = new Set(['/sign-up/email', '/sign-in/email'])
 
@@ -81,6 +82,16 @@ export function authAccessConfig() {
     restrictedDomain: active ? primaryDomain : null,
     ssoEnabled: arvoreSsoCredentials() !== null,
   }
+}
+
+export async function ssoSignOutUrl() {
+  const credentials = arvoreSsoCredentials()
+
+  if (!credentials) {
+    return null
+  }
+
+  return buildSsoSignOutUrl(credentials.issuer, requestOrigin(await headers()))
 }
 
 function ssoUserName(profile: { email?: string | null; name?: unknown }) {

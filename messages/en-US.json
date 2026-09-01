@@ -44,7 +44,9 @@
     "ssoSubtitle": "Sign in with your Árvore account to write and share documents.",
     "ssoDomainHint": "Use your @{domain} account",
     "ssoSubmit": "Sign in with your Árvore account",
-    "ssoFailed": "We couldn't sign you in with your Árvore account. Try again."
+    "ssoFailed": "We couldn't sign you in with your Árvore account. Try again.",
+    "ssoDomainBlocked": "The account signed in to Árvore isn't @{domain}. Sign in with a different account to use Leaf.",
+    "ssoSwitchAccount": "Sign in with a different account"
   },
   "settings": {
     "account": "Account",

@@ -4,7 +4,12 @@ import { redirect } from 'next/navigation'
 
 import { AuthForm } from '@/components/auth/auth-form'
 import { SsoSignIn } from '@/components/auth/sso-sign-in'
-import { arvoreSsoProviderId, authAccessConfig, getSession } from '@/lib/auth'
+import {
+  arvoreSsoProviderId,
+  authAccessConfig,
+  getSession,
+  ssoSignOutUrl,
+} from '@/lib/auth'
 
 type Props = Readonly<{
   searchParams: Promise<Record<string, string | Array<string> | undefined>>
@@ -33,6 +38,7 @@ export default async function LoginPage({ searchParams }: Props) {
         errorCode={typeof error === 'string' ? error : null}
         providerId={arvoreSsoProviderId}
         restrictedDomain={restrictedDomain}
+        signOutUrl={await ssoSignOutUrl()}
       />
     )
   }
