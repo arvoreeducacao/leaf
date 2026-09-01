@@ -10,6 +10,7 @@ export type NotionImportMessages = Readonly<{
   csvColumn: string
   csvView: string
   csvDatabases: (count: number) => string
+  unresolvedPeople: (count: number, names: string) => string
   pageFailed: (title: string) => string
   togglesDegraded: (count: number) => string
   missingLinks: (count: number) => string
@@ -40,6 +41,8 @@ export function buildNotionImportMessages(
     csvColumn: translate('csvColumn'),
     csvView: translate('csvView'),
     csvDatabases: (count) => translate('csvDatabases', { count }),
+    unresolvedPeople: (count, names) =>
+      translate('unresolvedPeople', { count, names }),
     pageFailed: (title) => translate('pageFailed', { title }),
     togglesDegraded: (count) => translate('togglesDegraded', { count }),
     missingLinks: (count) => translate('missingLinks', { count }),

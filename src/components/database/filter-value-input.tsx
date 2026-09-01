@@ -3,7 +3,8 @@
 import { useTranslations } from 'next-intl'
 
 import type { DatabaseProperty } from '@/db/schema'
-import { type PropertyValue, parseOptions } from '@/lib/database/values'
+import { type Person, optionsFor } from '@/lib/database/people'
+import type { PropertyValue } from '@/lib/database/values'
 import type { FilterOperator } from '@/lib/database/views'
 import { operatorNeedsValue } from '@/lib/database/views'
 
@@ -13,6 +14,7 @@ type Props = Readonly<{
   property: DatabaseProperty | null
   operator: FilterOperator
   value: PropertyValue
+  people: ReadonlyArray<Person>
   onChange: (value: PropertyValue) => void
 }>
 
@@ -20,6 +22,7 @@ export function FilterValueInput({
   property,
   operator,
   value,
+  people,
   onChange,
 }: Props) {
   const t = useTranslations('database')
@@ -58,8 +61,13 @@ export function FilterValueInput({
     )
   }
 
-  if (property.type === 'select' || property.type === 'multiSelect') {
-    const options = parseOptions(property.options)
+  if (
+    property.type === 'select' ||
+    property.type === 'multiSelect' ||
+    property.type === 'status' ||
+    property.type === 'person'
+  ) {
+    const options = optionsFor(property, people)
 
     return (
       <FieldSelect

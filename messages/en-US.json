@@ -230,7 +230,19 @@
     "moveToGroup": "Move to {name}",
     "moveTo": "Move to",
     "readOnly": "Read only",
-    "cellLabel": "{property} of {row}"
+    "cellLabel": "{property} of {row}",
+    "type_person": "Person",
+    "type_status": "Status",
+    "operator_isMe": "is me",
+    "noPerson": "No assignee",
+    "noPeople": "Nobody in this organization",
+    "searchPeople": "Search people",
+    "personNeedsOrganization": "Person only works in a database inside an organization.",
+    "statusGroup": {
+      "todo": "To do",
+      "doing": "In progress",
+      "done": "Done"
+    }
   },
   "versions": {
     "menuItem": "Version history",
@@ -578,7 +590,8 @@
     "notConnected": "Connect your Notion account before importing by link",
     "commentsUnavailable": "We could not read the comments. Check that the Notion connection can read comments.",
     "commentsImported": "{count, plural, one {# open comment came along, anchored to the page} other {# open comments came along, anchored to the page}}",
-    "commentsFailed": "The comments could not be created. The pages were imported anyway."
+    "commentsFailed": "The comments could not be created. The pages were imported anyway.",
+    "unresolvedPeople": "{count, plural, one {# name in the person column matched nobody in the organization ({names}) and was left unassigned.} other {# names in the person column matched nobody in the organization ({names}) and were left unassigned.}}"
   },
   "notionLink": {
     "title": "Import from Notion",

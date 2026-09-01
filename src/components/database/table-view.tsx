@@ -4,7 +4,8 @@ import { useTranslations } from 'next-intl'
 
 import { AddIcon } from '@/components/icons'
 import type { DatabaseProperty } from '@/db/schema'
-import { parseOptions, valueOf } from '@/lib/database/values'
+import { type Person, optionsFor } from '@/lib/database/people'
+import { valueOf } from '@/lib/database/values'
 import type { DatabaseRow } from '@/lib/database/views'
 
 import { AddPropertyMenu } from './add-property-menu'
@@ -18,9 +19,16 @@ type Props = Readonly<{
   properties: ReadonlyArray<DatabaseProperty>
   canEdit: boolean
   handlers: DatabaseHandlers
+  people: ReadonlyArray<Person>
 }>
 
-export function TableView({ rows, properties, canEdit, handlers }: Props) {
+export function TableView({
+  rows,
+  properties,
+  canEdit,
+  handlers,
+  people,
+}: Props) {
   const t = useTranslations('database')
 
   return (
@@ -58,7 +66,10 @@ export function TableView({ rows, properties, canEdit, handlers }: Props) {
               <th className="w-12 px-1 py-1.5" scope="col">
                 <span className="sr-only">{t('addProperty')}</span>
                 {canEdit ? (
-                  <AddPropertyMenu onAdd={handlers.addProperty} />
+                  <AddPropertyMenu
+                    hasOrganization={people.length > 0}
+                    onAdd={handlers.addProperty}
+                  />
                 ) : null}
               </th>
             </tr>
@@ -108,6 +119,7 @@ export function TableView({ rows, properties, canEdit, handlers }: Props) {
                       onCreateOption={(name) =>
                         handlers.createOption(property.id, name)
                       }
+                      people={people}
                       property={property}
                       readOnly={!canEdit}
                       rowTitle={
@@ -118,7 +130,7 @@ export function TableView({ rows, properties, canEdit, handlers }: Props) {
                       value={valueOf(
                         row.values,
                         property,
-                        parseOptions(property.options),
+                        optionsFor(property, people),
                       )}
                     />
                   </td>

@@ -36,6 +36,13 @@
       "when": 1788272455223,
       "tag": "0004_nappy_nightcrawler",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "5",
+      "when": 1788273055223,
+      "tag": "0005_person_status",
+      "breakpoints": true
     }
   ]
 }

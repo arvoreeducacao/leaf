@@ -7,12 +7,14 @@ import {
   colorForIndex,
   emptyValueFor,
   formatNumber,
+  groupOf,
   isEmptyValue,
   normalizeValue,
   parseOptions,
   parseValues,
   serializeOptions,
   serializeValues,
+  sortByStatusGroup,
   valueOf,
   valueToText,
 } from './values'
@@ -129,5 +131,72 @@ describe('valores de propriedade', () => {
   it('gira as cores das opções sem estourar a paleta', () => {
     expect(colorForIndex(0)).toBe(colorForIndex(9))
     expect(colorForIndex(100)).toBeTruthy()
+  })
+})
+
+describe('pessoa', () => {
+  const roster = [
+    { id: 'u1', name: 'Rafael', color: 'gray' as const },
+    { id: 'u2', name: 'Raposo', color: 'blue' as const },
+  ]
+
+  it('nasce vazia', () => {
+    expect(emptyValueFor('person')).toEqual([])
+  })
+
+  it('guarda vários ids', () => {
+    expect(normalizeValue('person', ['u1', 'u2'], roster)).toEqual(['u1', 'u2'])
+  })
+
+  it('descarta quem não está na lista quando a lista foi dada', () => {
+    expect(normalizeValue('person', ['u1', 'estranho'], roster)).toEqual(['u1'])
+  })
+
+  it('deixa passar quando não há lista, porque quem valida é o servidor', () => {
+    expect(normalizeValue('person', ['u1', 'u9'])).toEqual(['u1', 'u9'])
+  })
+
+  it('escreve os nomes separados por vírgula', () => {
+    expect(valueToText(['u1', 'u2'], 'person', roster)).toBe('Rafael, Raposo')
+  })
+
+  it('conta como vazia quando ninguém está nela', () => {
+    expect(isEmptyValue(normalizeValue('person', [], roster))).toBe(true)
+  })
+})
+
+describe('status', () => {
+  const options = [
+    { id: 'p', name: 'Pendente', color: 'gray' as const, group: 'todo' as const },
+    { id: 'f', name: 'Feito', color: 'success' as const, group: 'done' as const },
+    { id: 'a', name: 'Andando', color: 'blue' as const, group: 'doing' as const },
+  ]
+
+  it('guarda um valor só, como a seleção', () => {
+    expect(normalizeValue('status', ['f', 'p'], options)).toBe('f')
+  })
+
+  it('sobrevive à ida e volta pelo json, com o grupo', () => {
+    expect(parseOptions(serializeOptions(options))).toEqual(options)
+  })
+
+  it('trata opção sem grupo como a fazer', () => {
+    expect(groupOf({ id: 'x', name: 'Velha', color: 'gray' })).toBe('todo')
+  })
+
+  it('recusa grupo que não existe', () => {
+    expect(
+      parseOptions(
+        JSON.stringify([{ id: 'x', name: 'X', color: 'gray', group: 'oops' }]),
+      ),
+    ).toEqual([])
+  })
+
+  it('ordena a fazer, fazendo e feito', () => {
+    expect(sortByStatusGroup(options).map((option) => option.id)).toEqual([
+      'p',
+      'a',
+      'f',
+    ])
   })
 })

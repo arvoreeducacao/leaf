@@ -31,6 +31,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover'
 import type { DatabaseProperty, DatabaseView, DatabaseViewType } from '@/db/schema'
+import type { Person } from '@/lib/database/people'
 import {
   MAX_FILTERS,
   MAX_SORTS,
@@ -38,6 +39,7 @@ import {
   type ViewConfig,
   type ViewFilter,
   type ViewSort,
+  isGroupableType,
   operatorNeedsValue,
   operatorsFor,
 } from '@/lib/database/views'
@@ -64,6 +66,7 @@ type Props = Readonly<{
   onRenameView: (id: string, name: string) => void
   onDeleteView: (id: string) => void
   onConfigChange: (config: ViewConfig) => void
+  people: ReadonlyArray<Person>
 }>
 
 export function ViewToolbar({
@@ -78,6 +81,7 @@ export function ViewToolbar({
   onRenameView,
   onDeleteView,
   onConfigChange,
+  people,
 }: Props) {
   const t = useTranslations('database')
   const [renaming, setRenaming] = useState<string | null>(null)
@@ -226,7 +230,7 @@ export function ViewToolbar({
             options={[
               { value: '', label: t('noGroup') },
               ...properties
-                .filter((property) => property.type === 'select')
+                .filter((property) => isGroupableType(property.type))
                 .map((property) => ({
                   value: property.id,
                   label: property.name,
@@ -311,6 +315,7 @@ export function ViewToolbar({
                             updateFilter(index, { ...filter, value })
                           }
                           operator={filter.operator}
+                          people={people}
                           property={property}
                           value={filter.value}
                         />
