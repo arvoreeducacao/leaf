@@ -2,9 +2,14 @@ import { insertOrUpdateBlockForSlashMenu } from '@blocknote/core/extensions'
 import type { DefaultReactSuggestionItem } from '@blocknote/react'
 import { getDefaultReactSlashMenuItems } from '@blocknote/react'
 
-import { FileUploadIcon, IdeaIcon, ZipArchiveIcon } from '@/components/icons'
+import {
+  DatabaseIcon,
+  FileUploadIcon,
+  IdeaIcon,
+  ZipArchiveIcon,
+} from '@/components/icons'
 
-import type { CalloutMenuItem } from './dictionary'
+import type { CalloutMenuItem, DatabaseMenuItem } from './dictionary'
 import type { LeafEditor } from './types'
 
 export type ImportMenuTexts = Readonly<{
@@ -20,11 +25,38 @@ export type ImportMenuActions = Readonly<{
   onArchive?: () => void
 }>
 
+export type DatabaseMenuAction = DatabaseMenuItem &
+  Readonly<{ onInsert: () => void }>
+
+export type MenuInsertion<T> = Readonly<{ after: string; item: T }>
+
+export function arrangeMenuItems<T extends { title: string }>(
+  defaults: ReadonlyArray<T>,
+  insertions: ReadonlyArray<MenuInsertion<T>>,
+  tail: ReadonlyArray<T>,
+): Array<T> {
+  const items = [...defaults]
+
+  for (const insertion of insertions) {
+    const index = items.findIndex((item) => item.title === insertion.after)
+
+    if (index === -1) {
+      items.push(insertion.item)
+      continue
+    }
+
+    items.splice(index + 1, 0, insertion.item)
+  }
+
+  return [...items, ...tail]
+}
+
 export function getLeafSlashMenuItems(
   editor: LeafEditor,
   calloutItem: CalloutMenuItem,
   importTexts?: ImportMenuTexts,
   importActions?: ImportMenuActions,
+  databaseItem?: DatabaseMenuAction,
 ): DefaultReactSuggestionItem[] {
   const menu = editor.dictionary.slash_menu
   const hiddenGroups = new Set([menu.video.group, menu.emoji.group])
@@ -46,10 +78,16 @@ export function getLeafSlashMenuItems(
     },
   }
 
-  const quoteIndex = defaults.findIndex(
-    (item) => item.title === menu.quote.title,
-  )
-  const insertAt = quoteIndex === -1 ? defaults.length : quoteIndex + 1
+  const database: DefaultReactSuggestionItem | null = databaseItem
+    ? {
+        title: databaseItem.title,
+        subtext: databaseItem.subtext,
+        aliases: databaseItem.aliases,
+        group: databaseItem.group,
+        icon: <DatabaseIcon aria-hidden="true" className="size-4" />,
+        onItemClick: databaseItem.onInsert,
+      }
+    : null
 
   const archiveAction = importActions?.onArchive
   const imports: DefaultReactSuggestionItem[] =
@@ -76,10 +114,12 @@ export function getLeafSlashMenuItems(
         ]
       : []
 
-  return [
-    ...defaults.slice(0, insertAt),
-    callout,
-    ...defaults.slice(insertAt),
-    ...imports,
-  ]
+  return arrangeMenuItems(
+    defaults,
+    [
+      { after: menu.quote.title, item: callout },
+      ...(database ? [{ after: menu.table.title, item: database }] : []),
+    ],
+    imports,
+  )
 }

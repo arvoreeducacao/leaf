@@ -227,3 +227,12 @@
 .bn-container .bn-suggestion-menu-label {
   @apply px-2 pt-2 pb-1 font-medium text-caption text-content-subtle;
 }
+
+.leaf-editor .leaf-database-block {
+  line-height: var(--leading-medium);
+}
+
+.leaf-editor .leaf-database-block a[href] {
+  color: inherit;
+  text-decoration: none;
+}
