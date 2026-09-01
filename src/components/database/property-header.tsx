@@ -60,7 +60,7 @@ export function PropertyHeader({
       <input
         aria-label={t('propertyNameLabel')}
         autoFocus
-        className="h-8 w-full min-w-0 rounded-medium border border-line-contrast bg-surface-card px-2 text-body-small text-content-strong outline-none focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-1"
+        className="h-8 tablet:h-7 w-full min-w-0 rounded-medium border border-line-contrast bg-surface-card px-2 text-body-small text-content-strong outline-none focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-1"
         defaultValue={property.name}
         onBlur={(event) => {
           onRename(event.target.value)

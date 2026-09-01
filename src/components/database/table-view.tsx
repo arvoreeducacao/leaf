@@ -30,14 +30,14 @@ export function TableView({ rows, properties, canEdit, handlers }: Props) {
           <thead>
             <tr className="border-line-divider border-b">
               <th
-                className="min-w-56 px-2 py-2 text-left font-bold text-content"
+                className="min-w-56 px-2 py-1.5 text-left font-medium text-caption text-content-subtle"
                 scope="col"
               >
                 {t('titleColumn')}
               </th>
               {properties.map((property) => (
                 <th
-                  className="min-w-40 px-2 py-2 text-left font-bold text-content"
+                  className="min-w-40 px-2 py-1.5 text-left font-medium text-caption text-content-subtle"
                   key={property.id}
                   scope="col"
                 >
@@ -55,7 +55,7 @@ export function TableView({ rows, properties, canEdit, handlers }: Props) {
                   />
                 </th>
               ))}
-              <th className="w-12 px-1 py-2" scope="col">
+              <th className="w-12 px-1 py-1.5" scope="col">
                 <span className="sr-only">{t('addProperty')}</span>
                 {canEdit ? (
                   <AddPropertyMenu onAdd={handlers.addProperty} />
@@ -76,7 +76,7 @@ export function TableView({ rows, properties, canEdit, handlers }: Props) {
                   <div className="flex items-center gap-1">
                     <input
                       aria-label={t('rowTitleLabel')}
-                      className="h-9 w-full min-w-0 rounded-medium bg-transparent px-2 font-bold text-body-small text-content-strong outline-none transition-colors placeholder:font-regular placeholder:text-content-subtle focus-visible:outline-2 focus-visible:outline-focus focus-visible:-outline-offset-2 disabled:text-content"
+                      className="h-9 tablet:h-8 w-full min-w-0 rounded-medium bg-transparent px-2 font-bold text-body-small text-content-strong outline-none transition-colors placeholder:font-regular placeholder:text-content-subtle focus-visible:outline-2 focus-visible:outline-focus focus-visible:-outline-offset-2 disabled:text-content"
                       defaultValue={row.title}
                       disabled={!canEdit}
                       key={`${row.id}-${row.title}`}
@@ -130,16 +130,9 @@ export function TableView({ rows, properties, canEdit, handlers }: Props) {
         </table>
       </div>
 
-      {rows.length === 0 ? (
-        <p className="px-2 py-6 text-body-small text-content">
-          {t('noRows')}{' '}
-          <span className="text-content-subtle">{t('noRowsHint')}</span>
-        </p>
-      ) : null}
-
       {canEdit ? (
         <button
-          className="flex h-11 w-full cursor-pointer items-center gap-2 rounded-medium px-2 text-body-small text-content transition-colors hover:bg-surface-hover hover:text-content-strong focus-visible:outline-2 focus-visible:outline-focus focus-visible:-outline-offset-2"
+          className="flex h-11 tablet:h-8 w-full cursor-pointer items-center gap-2 rounded-medium px-2 text-body-small text-content transition-colors hover:bg-surface-hover hover:text-content-strong focus-visible:outline-2 focus-visible:outline-focus focus-visible:-outline-offset-2"
           onClick={() => handlers.createRow()}
           type="button"
         >

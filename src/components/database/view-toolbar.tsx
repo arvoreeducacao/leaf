@@ -119,7 +119,7 @@ export function ViewToolbar({
                 <input
                   aria-label={t('viewNameLabel')}
                   autoFocus
-                  className="h-9 w-40 rounded-medium border border-line-contrast bg-surface-card px-2 text-body-small text-content-strong outline-none focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-1"
+                  className="h-9 tablet:h-7 w-40 rounded-medium border border-line-contrast bg-surface-card px-2 text-body-small text-content-strong outline-none focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-1"
                   defaultValue={view.name}
                   onBlur={(event) => {
                     onRenameView(view.id, event.target.value)
@@ -144,7 +144,7 @@ export function ViewToolbar({
               <button
                 aria-current={active ? 'true' : undefined}
                 className={cn(
-                  'flex h-9 cursor-pointer items-center gap-2 rounded-medium px-2 text-body-small transition-colors focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-1',
+                  'flex h-9 cursor-pointer items-center gap-2 rounded-medium px-2 text-body-small transition-colors tablet:h-7 focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-1',
                   active
                     ? 'bg-surface-hover font-bold text-content-strong'
                     : 'text-content hover:bg-surface-hover hover:text-content-strong',
@@ -239,7 +239,7 @@ export function ViewToolbar({
         <Popover>
           <PopoverTrigger asChild>
             <Button
-              className="h-9 px-2 font-regular text-body-small"
+              className="h-9 tablet:h-7 px-2 font-regular text-body-small"
               size="sm"
               variant="ghost"
             >
@@ -304,38 +304,40 @@ export function ViewToolbar({
                       }))}
                       value={filter.operator}
                     />
-                    <div className="min-w-0 flex-1 basis-full">
-                      <FilterValueInput
-                        onChange={(value) =>
-                          updateFilter(index, { ...filter, value })
+                    <div className="flex w-full min-w-0 basis-full items-center gap-1">
+                      <div className="min-w-0 flex-1">
+                        <FilterValueInput
+                          onChange={(value) =>
+                            updateFilter(index, { ...filter, value })
+                          }
+                          operator={filter.operator}
+                          property={property}
+                          value={filter.value}
+                        />
+                      </div>
+                      <ButtonIcon
+                        aria-label={t('removeFilter')}
+                        onClick={() =>
+                          onConfigChange({
+                            ...config,
+                            filters: config.filters.filter(
+                              (_, position) => position !== index,
+                            ),
+                          })
                         }
-                        operator={filter.operator}
-                        property={property}
-                        value={filter.value}
-                      />
+                        size="medium"
+                        variant="ghost"
+                      >
+                        <CancelIcon aria-hidden="true" />
+                      </ButtonIcon>
                     </div>
-                    <ButtonIcon
-                      aria-label={t('removeFilter')}
-                      onClick={() =>
-                        onConfigChange({
-                          ...config,
-                          filters: config.filters.filter(
-                            (_, position) => position !== index,
-                          ),
-                        })
-                      }
-                      size="medium"
-                      variant="ghost"
-                    >
-                      <CancelIcon aria-hidden="true" />
-                    </ButtonIcon>
                   </li>
                 )
               })}
             </ul>
             {config.filters.length < MAX_FILTERS ? (
               <Button
-                className="mt-2 h-9 w-full font-regular text-body-small"
+                className="mt-2 h-9 w-full font-regular text-body-small tablet:h-8"
                 onClick={() =>
                   onConfigChange({
                     ...config,
@@ -364,7 +366,7 @@ export function ViewToolbar({
         <Popover>
           <PopoverTrigger asChild>
             <Button
-              className="h-9 px-2 font-regular text-body-small"
+              className="h-9 tablet:h-7 px-2 font-regular text-body-small"
               size="sm"
               variant="ghost"
             >
@@ -436,7 +438,7 @@ export function ViewToolbar({
             </ul>
             {config.sorts.length < MAX_SORTS ? (
               <Button
-                className="mt-2 h-9 w-full font-regular text-body-small"
+                className="mt-2 h-9 w-full font-regular text-body-small tablet:h-8"
                 onClick={() =>
                   onConfigChange({
                     ...config,
@@ -462,7 +464,7 @@ export function ViewToolbar({
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
-              className="h-9 px-2 font-regular text-body-small"
+              className="h-9 tablet:h-7 px-2 font-regular text-body-small"
               size="sm"
               variant="ghost"
             >

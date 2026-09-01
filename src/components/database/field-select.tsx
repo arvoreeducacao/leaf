@@ -1,5 +1,6 @@
 'use client'
 
+import { CaretDownIcon } from '@/components/icons'
 import { cn } from '@/shared/utils'
 
 type Option = Readonly<{ value: string; label: string }>
@@ -20,20 +21,23 @@ export function FieldSelect({
   className,
 }: Props) {
   return (
-    <select
-      aria-label={label}
-      className={cn(
-        'h-9 min-w-0 cursor-pointer rounded-medium border border-line-strong bg-surface-card px-2 text-body-small text-content-strong outline-none transition-colors hover:border-line-contrast focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-1',
-        className,
-      )}
-      onChange={(event) => onChange(event.target.value)}
-      value={value}
-    >
-      {options.map((option) => (
-        <option key={option.value} value={option.value}>
-          {option.label}
-        </option>
-      ))}
-    </select>
+    <span className={cn('relative inline-flex min-w-0 items-center', className)}>
+      <select
+        aria-label={label}
+        className="h-9 w-full min-w-0 cursor-pointer appearance-none rounded-medium border border-line bg-surface-card py-0 pr-7 pl-2 text-body-small text-content-strong outline-none transition-colors tablet:h-7 hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-1"
+        onChange={(event) => onChange(event.target.value)}
+        value={value}
+      >
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+      <CaretDownIcon
+        aria-hidden="true"
+        className="pointer-events-none absolute right-2 size-3.5 text-content-subtle"
+      />
+    </span>
   )
 }

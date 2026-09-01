@@ -131,7 +131,7 @@ export function BoardView({
 
               {canEdit ? (
                 <button
-                  className="flex h-10 w-full cursor-pointer items-center gap-2 rounded-medium px-2 text-body-small text-content transition-colors hover:bg-surface-hover hover:text-content-strong focus-visible:outline-2 focus-visible:outline-focus focus-visible:-outline-offset-2"
+                  className="flex h-10 tablet:h-8 w-full cursor-pointer items-center gap-2 rounded-medium px-2 text-body-small text-content transition-colors hover:bg-surface-hover hover:text-content-strong focus-visible:outline-2 focus-visible:outline-focus focus-visible:-outline-offset-2"
                   onClick={() =>
                     handlers.createRow(
                       groupProperty && group.id
