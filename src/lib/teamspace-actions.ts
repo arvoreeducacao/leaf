@@ -16,7 +16,6 @@ import { listSubtreeIds } from '@/lib/documents'
 import {
   canManageTeamspace,
   canPlaceDocuments,
-  countTeamspaceDocuments,
   getTeamspace,
   getTeamspaceRole,
   isOrganizationMember,
@@ -157,10 +156,10 @@ export async function deleteTeamspace(
     return failure('errorNotAllowed')
   }
 
-  if ((await countTeamspaceDocuments(teamspaceId)) > 0) {
-    return failure('errorNotEmpty')
-  }
-
+  await db
+    .update(documents)
+    .set({ teamspaceId: null })
+    .where(eq(documents.teamspaceId, teamspaceId))
   await db.delete(teamspaces).where(eq(teamspaces.id, teamspaceId))
 
   revalidatePath('/', 'layout')

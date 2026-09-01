@@ -250,7 +250,7 @@ export function TeamspaceManager({ teamspaces, orgPeople }: Props) {
 
                 {teamspace.canManage && confirmingDelete !== teamspace.id ? (
                   <Button
-                    disabled={pending || teamspace.documentCount > 0}
+                    disabled={pending}
                     onClick={() => setConfirmingDelete(teamspace.id)}
                     type="button"
                     variant="destructive"
@@ -263,8 +263,12 @@ export function TeamspaceManager({ teamspaces, orgPeople }: Props) {
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="text-body-small text-content-strong">
                       {t('deleteConfirm', { name: teamspace.name })}
+                      {teamspace.documentCount > 0
+                        ? ` ${t('deleteWithDocs', { count: teamspace.documentCount })}`
+                        : ''}
                     </span>
                     <Button
+                      autoFocus
                       disabled={pending}
                       onClick={() => setConfirmingDelete(null)}
                       type="button"
@@ -289,11 +293,6 @@ export function TeamspaceManager({ teamspaces, orgPeople }: Props) {
                   </div>
                 ) : null}
 
-                {teamspace.documentCount > 0 && teamspace.canManage ? (
-                  <span className="text-body-small text-content">
-                    {t('deleteBlocked', { count: teamspace.documentCount })}
-                  </span>
-                ) : null}
               </div>
             </li>
           )

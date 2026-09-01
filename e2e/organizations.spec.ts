@@ -196,6 +196,51 @@ test.describe('organizações', () => {
     await anonContext.close()
   })
 
+  test('excluir teamspace com documento e excluir a organização', async ({
+    page,
+  }) => {
+    await signUp(page, uniqueEmail('dona'), 'Dona')
+    await createOrganization(page, 'Org Descartável')
+
+    await page.getByRole('button', { name: 'Criar teamspace' }).first().click()
+    await page.getByLabel('Nome do teamspace').fill('Time Passageiro')
+    await page.getByRole('button', { name: 'Criar teamspace' }).last().click()
+    await expect(page.getByText('Teamspace criado')).toBeVisible()
+
+    await page.goto('/')
+    await createDocument(page, 'Documento no teamspace')
+    await page.getByRole('button', { name: 'Ações do documento' }).click()
+    await page.getByRole('menuitem', { name: 'Mover para teamspace' }).click()
+    await page.getByRole('radio', { name: /Time Passageiro/ }).click()
+    await page.getByRole('button', { name: 'Mover', exact: true }).click()
+    await expect(page.getByText('Documento movido')).toBeVisible()
+
+    await page.goto('/org')
+    await page
+      .getByRole('button', { name: 'Excluir', exact: true })
+      .first()
+      .click()
+    await expect(
+      page.getByText('O 1 documento deste teamspace volta para a organização.'),
+    ).toBeVisible()
+    await page
+      .getByRole('button', { name: 'Excluir', exact: true })
+      .last()
+      .click()
+    await expect(page.getByText('Teamspace excluído')).toBeVisible()
+    await expect(page.getByText('Time Passageiro')).toHaveCount(0)
+
+    await page.getByTestId('delete-org').click()
+    await page.getByTestId('confirm-delete-org').click()
+    await expect(page.getByText('Organização excluída')).toBeVisible()
+    await expect(page.getByLabel('Nome da organização')).toBeVisible()
+
+    await page.goto('/')
+    await expect(
+      page.getByText('Documento no teamspace').first(),
+    ).toBeVisible()
+  })
+
   test('gestão da org: papel, remoção e saída', async ({ browser }) => {
     const ownerContext = await browser.newContext()
     const memberContext = await browser.newContext()
