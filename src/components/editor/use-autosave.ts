@@ -4,10 +4,17 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 
 import { updateDocumentContent } from '@/lib/document-actions'
+import {
+  dropQueuedDocument,
+  queueDocumentContent,
+  readQueuedDocument,
+} from '@/lib/offline/outbox'
+import { offlineStore } from '@/lib/offline/store'
 
 import type { SaveStatus } from './status-bridge'
 
 const DEBOUNCE_MS = 1000
+const RETRY_MS = 5000
 
 export function useAutosave(documentId: string, enabled: boolean) {
   const [status, setStatus] = useState<SaveStatus>('idle')
@@ -32,19 +39,49 @@ export function useAutosave(documentId: string, enabled: boolean) {
       timeoutRef.current = null
     }
 
+    const store = offlineStore()
+    const queuedAt = Date.now()
+
     inFlightRef.current = true
+
+    await queueDocumentContent(store, documentId, next, queuedAt)
+
+    if (!navigator.onLine) {
+      inFlightRef.current = false
+      setStatus('offline')
+
+      return
+    }
+
     setStatus('saving')
 
-    const result = await updateDocumentContent(documentId, next)
+    let result: Awaited<ReturnType<typeof updateDocumentContent>> | null = null
+
+    try {
+      result = await updateDocumentContent(documentId, next)
+    } catch {
+      inFlightRef.current = false
+      setStatus('offline')
+
+      return
+    }
 
     inFlightRef.current = false
 
     if (result.ok) {
+      const current = await readQueuedDocument(store, documentId)
+
+      if (current === null || current.queuedAt === queuedAt) {
+        await dropQueuedDocument(store, documentId)
+      }
+
       savedRef.current = next
       setStatus(pendingRef.current === next ? 'saved' : 'pending')
+
       return
     }
 
+    await dropQueuedDocument(store, documentId)
     setStatus('error')
     toast.error(result.error)
   }, [documentId, enabled])
@@ -61,7 +98,7 @@ export function useAutosave(documentId: string, enabled: boolean) {
         return
       }
 
-      setStatus('pending')
+      setStatus(navigator.onLine ? 'pending' : 'offline')
 
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current)
@@ -72,8 +109,33 @@ export function useAutosave(documentId: string, enabled: boolean) {
         void flush()
       }, DEBOUNCE_MS)
     },
-    [enabled, flush]
+    [enabled, flush],
   )
+
+  useEffect(() => {
+    if (!enabled) {
+      return
+    }
+
+    let dropped = false
+
+    void readQueuedDocument(offlineStore(), documentId).then((entry) => {
+      if (dropped || entry === null || pendingRef.current !== null) {
+        return
+      }
+
+      pendingRef.current = entry.content
+      setStatus(navigator.onLine ? 'pending' : 'offline')
+
+      if (navigator.onLine) {
+        void flush()
+      }
+    })
+
+    return () => {
+      dropped = true
+    }
+  }, [documentId, enabled, flush])
 
   useEffect(() => {
     if (!enabled) {
@@ -86,23 +148,32 @@ export function useAutosave(documentId: string, enabled: boolean) {
       }
     }
 
-    function handleBeforeUnload(event: BeforeUnloadEvent) {
-      if (
-        pendingRef.current !== null &&
-        pendingRef.current !== savedRef.current
-      ) {
-        event.preventDefault()
-      }
+    function handleOnline() {
+      void flush()
     }
 
     document.addEventListener('visibilitychange', handleVisibilityChange)
-    window.addEventListener('beforeunload', handleBeforeUnload)
+    window.addEventListener('pagehide', handleVisibilityChange)
+    window.addEventListener('online', handleOnline)
 
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange)
-      window.removeEventListener('beforeunload', handleBeforeUnload)
+      window.removeEventListener('pagehide', handleVisibilityChange)
+      window.removeEventListener('online', handleOnline)
     }
   }, [enabled, flush])
+
+  useEffect(() => {
+    if (!enabled || status !== 'offline') {
+      return
+    }
+
+    const retry = setInterval(() => void flush(), RETRY_MS)
+
+    return () => {
+      clearInterval(retry)
+    }
+  }, [enabled, flush, status])
 
   useEffect(
     () => () => {
@@ -110,8 +181,14 @@ export function useAutosave(documentId: string, enabled: boolean) {
         clearTimeout(timeoutRef.current)
       }
     },
-    []
+    [],
   )
 
-  return { status, schedule, flush }
+  const markSaved = useCallback((contentJSON: string) => {
+    savedRef.current = contentJSON
+    pendingRef.current = contentJSON
+    setStatus('idle')
+  }, [])
+
+  return { status, schedule, flush, markSaved }
 }

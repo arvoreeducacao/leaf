@@ -28,9 +28,11 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { sidebarRow } from '@/components/app/sidebar-styles'
+import { clearOfflineCaches } from '@/components/app/service-worker-registration'
 import { locales } from '@/i18n/config'
 import { setUserLocale } from '@/i18n/locale-action'
 import { authClient } from '@/lib/auth-client'
+import { wipeOfflineData } from '@/lib/offline/wipe'
 import { cn } from '@/shared/utils'
 
 type Props = Readonly<{
@@ -89,6 +91,9 @@ export function UserMenu({ name, email, locale }: Props) {
       toast.error(tAuth('signOutFailed'))
       return
     }
+
+    await wipeOfflineData()
+    await clearOfflineCaches()
 
     router.push('/login')
     router.refresh()

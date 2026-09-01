@@ -43,6 +43,13 @@
       "when": 1788273055223,
       "tag": "0005_person_status",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1788273955223,
+      "tag": "0006_realtime_state",
+      "breakpoints": true
     }
   ]
 }
