@@ -65,6 +65,22 @@ export async function getTeamspaceRole(
   return row?.role ?? null
 }
 
+export async function canPlaceDocuments(
+  teamspaceId: string,
+  userId: string,
+  orgId: string | null,
+) {
+  const teamspace = await getTeamspace(teamspaceId)
+
+  if (!teamspace || !orgId || teamspace.orgId !== orgId) {
+    return false
+  }
+
+  const role = await getTeamspaceRole(teamspaceId, userId)
+
+  return role !== null || teamspace.access === 'open'
+}
+
 export async function listTeamspacesForOrganization(
   orgId: string,
   userId: string,

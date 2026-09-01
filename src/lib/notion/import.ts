@@ -3,6 +3,7 @@ import { nanoid } from 'nanoid'
 
 import { db } from '@/db'
 import { databaseProperties, databaseViews, documents } from '@/db/schema'
+import type { OrgAccess } from '@/db/schema'
 import { inferDatabase } from '@/lib/database/csv-import'
 import {
   MAX_PROPERTY_NAME,
@@ -57,6 +58,7 @@ export type ImportOwner = Readonly<{
   id: string
   orgId?: string | null
   teamspaceId?: string | null
+  orgAccess?: OrgAccess | null
   parentId?: string | null
 }>
 
@@ -151,6 +153,7 @@ export async function* importNotionZip(
     ownerId: owner.id,
     orgId: owner.orgId ?? null,
     teamspaceId: owner.teamspaceId ?? null,
+    orgAccess: owner.orgAccess ?? null,
     parentId: page.parentKey
       ? (idByKey.get(page.parentKey) ?? owner.parentId ?? null)
       : (owner.parentId ?? null),
@@ -305,6 +308,7 @@ export async function* importNotionZip(
         parentId: databaseId,
         orgId: owner.orgId ?? null,
         teamspaceId: owner.teamspaceId ?? null,
+        orgAccess: owner.orgAccess ?? null,
         kind: 'row',
         title: row.title.slice(0, 200),
         properties: serializeValues(values),

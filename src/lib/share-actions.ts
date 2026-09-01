@@ -1,6 +1,6 @@
 'use server'
 
-import { and, asc, eq } from 'drizzle-orm'
+import { and, asc, eq, inArray } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
 import { getTranslations } from 'next-intl/server'
 import { revalidatePath } from 'next/cache'
@@ -16,6 +16,7 @@ import type { OrgAccess, ShareRole } from '@/db/schema'
 import { getSession } from '@/lib/auth'
 import type { AccessLevel } from '@/lib/authz'
 import { canManageShares, getDocumentAccess } from '@/lib/authz'
+import { listSubtreeIds } from '@/lib/documents'
 import { emailDomainPolicy, isEmailDomainAllowed } from '@/lib/email-domain'
 import {
   isMemberOf,
@@ -325,11 +326,12 @@ export async function setOrganizationAccess(
   }
 
   const next: OrgAccess | null = access === 'none' ? null : access
+  const subtree = await listSubtreeIds(documentId, document.ownerId)
 
   await db
     .update(documents)
-    .set({ orgAccess: next })
-    .where(eq(documents.id, documentId))
+    .set({ orgAccess: next, orgId: document.orgId })
+    .where(inArray(documents.id, subtree))
 
   revalidatePath('/', 'layout')
   revalidatePath(`/doc/${documentId}`)
