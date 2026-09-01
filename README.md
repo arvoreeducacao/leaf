@@ -14,6 +14,7 @@ Editor de documentos colaborativo da Árvore, no espírito do Notion: blocos, hi
 - **Histórico de versões**: snapshots automáticos com throttle, preview e restauração
 - **Busca**: `Ctrl+K` / `Alt+K` abrem a command palette (full-text via índice `FULLTEXT` do MySQL, recentes e ações rápidas), sempre filtrada por permissão no servidor
 - **Colaboração em tempo real**: Yjs + WebSocket, cursores nomeados, indicador de presença, escrita autorizada no handshake e fallback automático para edição solo
+- **Offline first**: the open document lives in the browser (Yjs in IndexedDB), stays editable with no connection and syncs on its own when the network is back; a service worker keeps the app shell and the pages you already visited, and falls back to its own screen when a page was never loaded
 - **Dois temas** (claro/escuro/sistema, contraste AA verificado) e **dois idiomas** (pt-BR e en-US)
 
 ## Stack
@@ -27,6 +28,7 @@ Editor de documentos colaborativo da Árvore, no espírito do Notion: blocos, hi
 | Auth | better-auth (email e senha; SSO da Árvore opcional via OAuth2/OIDC, restrição por domínio de email) |
 | Arquivos | API S3 (`@aws-sdk/client-s3`) — emulador s3rver em dev |
 | Realtime | Servidor WebSocket próprio (`scripts/dev-realtime.mjs`) falando o protocolo y-websocket |
+| Offline | `y-indexeddb` for the document, a dedicated IndexedDB for the outbox, module service worker in `public/sw.js` |
 
 ## Rodando localmente
 
@@ -52,6 +54,34 @@ Os testes precisam de MySQL de verdade — não há mais SQLite em memória. Cad
 A suíte E2E sobe quatro ambientes isolados: o app padrão na porta 3100 (banco `leaf_e2e`), um com realtime ligado na 3200 / ws 1235 (banco `leaf_e2e_realtime`), um com `LEAF_ALLOWED_EMAIL_DOMAINS=arvore.com.br` na 3300 (projeto `restricted`) e um com o SSO da Árvore ligado em credenciais de mentira na 3400 (projeto `sso`). Os dois primeiros derrubam as tabelas do respectivo banco e aplicam as migrações antes de subir o servidor; os outros dois reaproveitam o `leaf_e2e` já preparado (o usuário `leaf` só tem grant nos bancos existentes) e por isso não preparam nada. O `DATABASE_URL` é injetado no processo filho, então o `.env.local` do dev nunca é usado pela sandbox.
 
 A E2E roda com um worker só (`E2E_WORKERS` permite mudar). Com o banco a ~150 ms de distância, cada caso leva perto de 20 s e a suíte inteira passa de 15 minutos — para rodar em pedaços, faça o build uma vez (`LEAF_DIST_DIR=.next-e2e pnpm exec next build`) e depois `pnpm exec playwright test --project=<projeto> <specs>`.
+
+## Offline
+
+Leaf opens and edits with no network. Three independent layers, and none of them needs to be online to work:
+
+**The document.** Every open document becomes a `Y.Doc` persisted to IndexedDB by `y-indexeddb` — including when realtime is off, in which case the editor runs in collaboration mode against a local document with no provider. Closing the tab, losing the network and coming back loses nothing: the state is read from the browser's disk before any request.
+
+**The way back to the server.** While the WebSocket is connected, the collaboration server is still what writes to MySQL. When it is not (realtime off, server down, or you with no network), every change goes into an outbox in IndexedDB (`leaf-offline`, key `outbox:<id>`) *before* the server is tried. The outbox is drained when the network returns, when the app opens and after every save; a document that already has a live collaboration session is dropped from the outbox instead of sent, because Yjs already carried those edits.
+
+**The shell.** The service worker (`public/sw.js`, registered as a module) keeps the build and the fonts cache-first, and pages and navigation payloads network-first with a cache fallback. Nothing under `/api/` is cached: auth and freshness always go over the network. A page that was never loaded, with no network, falls back to `/offline`.
+
+Navigating from the sidebar is not a browser navigation — Next only fetches the payload, so the page HTML would never enter the cache. That is why the client asks the service worker to *warm* the open page (`leaf:warm-page`), on the first visit and again when the tab is hidden. It is what makes a refresh with no network still open the document instead of the offline screen.
+
+### Why the Yjs state became a table
+
+`document_realtime_state` holds the `Y.Doc` binary and an `identity`. Without it, every time a WebSocket room is recreated the server would build a fresh `Y.Doc` from the JSON — with different item IDs — and a client holding the old document in IndexedDB would add the two together on reconnect, **duplicating the content**. With the state persisted, the document identity never changes, and the merge is what Yjs promises.
+
+The `identity` is the safety belt: before connecting, the client asks `GET /api/documents/:id/snapshot` and compares it with the one it stored. If it changed (the state was lost and the room was reseeded), the local copy is discarded before the merge instead of duplicating the document. The `content` column stays the JSON projection that search, export and history read.
+
+The two representations are tie-broken by date: if `documents.updated_at` is newer than `document_realtime_state.updated_at` — which only happens when someone saved through the solo path, with no WebSocket — the room is reseeded from the JSON with a new identity, and whoever holds a local copy discards it. That is why the server writes the state *after* writing the content: the other order would rotate the identity on every save, and everyone would lose offline for no reason. For the same reason, when the client has to seed the document on its own (no WebSocket but with network), it tears down the collaboration connection for that session: a document seeded in the browser must not later join the room's, or the content shows up twice.
+
+### What still does not work offline
+
+- Creating, renaming, moving and deleting a document are server actions and need the network.
+- Image upload needs the network — the block stays empty until the next send.
+- Comments and version history are not cached.
+- The sidebar and the document **title** offline are the ones from the last page warm-up, not live data. The document body comes from the local Yjs and is always right; the title may be stale.
+- `navigator.onLine` lies (captive portal, wi-fi with no way out). That is why nothing depends on the `online` event alone: both the outbox and the collaboration reconnect retry every 5s while something is pending, and the request that fails is the probe.
 
 ## Produção
 

@@ -3,8 +3,11 @@
 import { useLocale, useTranslations } from 'next-intl'
 import dynamic from 'next/dynamic'
 
+import { WarningIcon } from '@/components/icons'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+
 import { EditorSkeleton } from './editor-skeleton'
-import { useRealtimeSession } from './use-realtime-session'
+import { useDocumentSession } from './use-document-session'
 
 const BlockNoteEditor = dynamic(() => import('./block-note-editor'), {
   ssr: false,
@@ -38,16 +41,33 @@ export function DocumentEditor({
 }: Props) {
   const locale = useLocale()
   const t = useTranslations('realtime')
-  const { phase, session, connected } = useRealtimeSession({
-    enabled: realtime !== null,
-    documentId,
-    url: realtime?.url ?? null,
-    port: realtime?.port ?? 0,
-    user: realtime?.user ?? { id: '', name: '' },
-    anonymousName: t('someone'),
-  })
+  const tOffline = useTranslations('offline')
+  const { phase, session, connection, seed, conflict, localOnly } =
+    useDocumentSession({
+      realtimeEnabled: realtime !== null,
+      documentId,
+      url: realtime?.url ?? null,
+      port: realtime?.port ?? 0,
+      user: realtime?.user ?? { id: '', name: '' },
+      anonymousName: t('someone'),
+      fallbackContent: initialContent,
+    })
 
-  if (realtime && phase === 'connecting') {
+  if (phase === 'unavailable') {
+    return (
+      <Alert variant="warning">
+        <WarningIcon aria-hidden="true" />
+        <AlertTitle>
+          <h2>{tOffline('documentUnavailableTitle')}</h2>
+        </AlertTitle>
+        <AlertDescription>
+          <p>{tOffline('documentUnavailableBody')}</p>
+        </AlertDescription>
+      </Alert>
+    )
+  }
+
+  if (session === null) {
     return <EditorSkeleton />
   }
 
@@ -55,13 +75,16 @@ export function DocumentEditor({
     <BlockNoteEditor
       canComment={canComment}
       collaboration={session}
+      conflict={conflict}
+      connection={connection}
       documentId={documentId}
       initialContent={initialContent}
       isOwner={isOwner}
-      key={locale}
+      key={`${locale}:${session.provider === null ? 'local' : 'live'}`}
+      localOnly={localOnly}
       openCommentCount={openCommentCount}
       readOnly={readOnly}
-      realtimeConnected={connected}
+      seed={seed}
     />
   )
 }

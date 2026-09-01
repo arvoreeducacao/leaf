@@ -399,7 +399,8 @@
     "saveError": "Não foi possível salvar",
     "words": "{count, plural, =0 {# palavras} one {# palavra} other {# palavras}}",
     "characters": "{count, plural, =0 {# caracteres} one {# caractere} other {# caracteres}}",
-    "uploadFailed": "Não foi possível enviar a imagem. Tente de novo."
+    "uploadFailed": "Não foi possível enviar a imagem. Tente de novo.",
+    "saveOffline": "Salvo neste aparelho"
   },
   "blocknote": {
     "placeholder": "Digite / para comandos",
@@ -679,10 +680,20 @@
   },
   "realtime": {
     "connected": "Colaboração em tempo real",
-    "reconnecting": "Sem conexão. Suas mudanças ainda não foram salvas",
+    "reconnecting": "Reconectando. Suas mudanças estão salvas aqui",
     "someone": "Alguém",
     "you": "{name} (você)",
     "peopleHere": "{count, plural, one {# pessoa neste documento} other {# pessoas neste documento}}"
+  },
+  "offline": {
+    "banner": "Sem conexão",
+    "badge": "Offline · salvo neste aparelho",
+    "conflict": "Este documento mudou em outro lugar",
+    "pageTitle": "Você está sem conexão",
+    "pageBody": "Os documentos que você já abriu continuam disponíveis. Esta página ainda não tinha sido carregada neste aparelho.",
+    "retry": "Tentar de novo",
+    "documentUnavailableTitle": "Este documento ainda não está disponível offline",
+    "documentUnavailableBody": "Abra ele uma vez com internet e ele passa a funcionar sem conexão neste aparelho."
   },
   "join": {
     "heading": "Você recebeu um convite para entrar em {org}",
