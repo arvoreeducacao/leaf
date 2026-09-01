@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, isNotNull, isNull, ne } from 'drizzle-orm'
+import { and, asc, count, desc, eq, isNotNull, isNull, ne } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
 
 import { db } from '@/db'
@@ -35,8 +35,75 @@ export type PendingInvite = Readonly<{
   createdAt: Date
 }>
 
+export type InviteLinkOrganization = Readonly<{
+  id: string
+  name: string
+  memberCount: number
+}>
+
 export function canManageOrganization(role: OrganizationRole | null) {
   return role === 'owner' || role === 'admin'
+}
+
+export async function getInviteToken(orgId: string): Promise<string | null> {
+  const row = await db.query.organizations.findFirst({
+    where: eq(organizations.id, orgId),
+  })
+
+  return row?.inviteToken ?? null
+}
+
+export async function getOrganizationByInviteToken(
+  token: string,
+): Promise<InviteLinkOrganization | null> {
+  const organization = await db.query.organizations.findFirst({
+    where: eq(organizations.inviteToken, token),
+  })
+
+  if (!organization) {
+    return null
+  }
+
+  const members = await db
+    .select({ total: count() })
+    .from(organizationMembers)
+    .where(eq(organizationMembers.orgId, organization.id))
+
+  return {
+    id: organization.id,
+    name: organization.name,
+    memberCount: members[0]?.total ?? 0,
+  }
+}
+
+export async function joinOrganizationAsMember(
+  orgId: string,
+  userId: string,
+  email: string,
+): Promise<void> {
+  const current = await listMemberships(userId)
+
+  if (current.some((membership) => membership.orgId === orgId)) {
+    return
+  }
+
+  await db
+    .insert(organizationMembers)
+    .values({ id: nanoid(12), orgId, userId, role: 'member' })
+    .onDuplicateKeyUpdate({ set: { orgId } })
+
+  if (current.length === 0) {
+    await attachOwnerDocuments(orgId, userId)
+  }
+
+  await db
+    .delete(organizationInvites)
+    .where(
+      and(
+        eq(organizationInvites.orgId, orgId),
+        eq(organizationInvites.email, email.trim().toLowerCase()),
+      ),
+    )
 }
 
 export async function listMemberships(
