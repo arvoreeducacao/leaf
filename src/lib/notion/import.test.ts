@@ -22,10 +22,11 @@ import type { PartialBlock } from '@blocknote/core'
 import { eq } from 'drizzle-orm'
 
 import { db } from '@/db'
-import { documents, user } from '@/db/schema'
+import { databaseProperties, databaseViews, documents, user } from '@/db/schema'
 import { resetDatabase } from '@/db/testing'
+import { parseValues } from '@/lib/database/values'
 import { parseContentBlocks } from '@/lib/markdown/convert'
-import { csvToMarkdownTable, parseCsv } from '@/lib/notion/csv'
+import { parseCsv } from '@/lib/notion/csv'
 import { buildNotionFixtureZip, fixtureTitles } from '@/lib/notion/fixture'
 import { importNotionZip } from '@/lib/notion/import'
 import type { ImportEvent, ImportSummary } from '@/lib/notion/import'
@@ -116,7 +117,7 @@ describe('import do export do Notion', () => {
     const { summary, error } = await runImport(buildNotionFixtureZip())
 
     expect(error).toBeNull()
-    expect(summary?.pages).toBe(5)
+    expect(summary?.pages).toBe(6)
 
     const plano = await documentByTitle(fixtureTitles.plano)
     const turma = await documentByTitle(fixtureTitles.turma)
@@ -127,20 +128,68 @@ describe('import do export do Notion', () => {
     expect(aluno.parentId).toBe(turma.id)
   })
 
-  it('põe a database csv como página filha e a linha com md como subpágina dela', async () => {
+  it('transforma a database csv do Notion em base de dados', async () => {
     await runImport(buildNotionFixtureZip())
 
     const plano = await documentByTitle(fixtureTitles.plano)
     const alunos = await documentByTitle(fixtureTitles.alunos)
-    const ana = await documentByTitle(fixtureTitles.ana)
 
     expect(alunos.parentId).toBe(plano.id)
+    expect(alunos.kind).toBe('database')
+    expect(parseContentBlocks(alunos.content)).toEqual([])
+
+    const properties = await db
+      .select()
+      .from(databaseProperties)
+      .where(eq(databaseProperties.databaseId, alunos.id))
+
+    expect(
+      properties
+        .sort((left, right) => left.position - right.position)
+        .map((property) => [property.name, property.type]),
+    ).toEqual([
+      ['Livros', 'number'],
+      ['Comentário', 'text'],
+    ])
+
+    const views = await db
+      .select()
+      .from(databaseViews)
+      .where(eq(databaseViews.databaseId, alunos.id))
+
+    expect(views).toHaveLength(1)
+    expect(views[0].type).toBe('table')
+  })
+
+  it('aproveita a página md da linha em vez de duplicá-la', async () => {
+    await runImport(buildNotionFixtureZip())
+
+    const alunos = await documentByTitle(fixtureTitles.alunos)
+    const ana = await documentByTitle(fixtureTitles.ana)
+
     expect(ana.parentId).toBe(alunos.id)
+    expect(ana.kind).toBe('row')
+    expect(textOf(parseContentBlocks(ana.content))).toContain('Ficha de leitura')
 
-    const blocks = parseContentBlocks(alunos.content)
+    const livros = (
+      await db
+        .select()
+        .from(databaseProperties)
+        .where(eq(databaseProperties.databaseId, alunos.id))
+    ).find((property) => property.name === 'Livros')
 
-    expect(blockTypes(blocks)).toContain('table')
-    expect(textOf(blocks)).toContain('biografias')
+    expect(parseValues(ana.properties)[livros?.id ?? '']).toBe(12)
+  })
+
+  it('cria a linha que só existia no csv', async () => {
+    const { summary } = await runImport(buildNotionFixtureZip())
+
+    const bruno = await documentByTitle('Bruno Lima')
+    const alunos = await documentByTitle(fixtureTitles.alunos)
+
+    expect(bruno.kind).toBe('row')
+    expect(bruno.parentId).toBe(alunos.id)
+    expect(summary?.pages).toBe(6)
   })
 
   it('envia a imagem para o storage e reescreve a url no bloco', async () => {
@@ -320,20 +369,6 @@ describe('csv do Notion', () => {
       ['a', 'b'],
       ['um, dois', 'três'],
     ])
-  })
-
-  it('trunca colunas e linhas e avisa', () => {
-    const header = Array.from({ length: 20 }, (_, index) => `c${index}`).join(',')
-    const body = Array.from({ length: 250 }, (_, index) =>
-      Array.from({ length: 20 }, () => String(index)).join(','),
-    ).join('\n')
-
-    const table = csvToMarkdownTable(`${header}\n${body}`)
-
-    expect(table?.columns).toBe(12)
-    expect(table?.rows).toBe(200)
-    expect(table?.truncatedColumns).toBe(true)
-    expect(table?.truncatedRows).toBe(true)
   })
 })
 
