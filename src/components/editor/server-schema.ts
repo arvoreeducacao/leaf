@@ -32,7 +32,7 @@ const createServerDatabaseBlock = createBlockSpec(databaseConfig, {
 
     return { dom }
   },
-  toExternalHTML: ({ block }) => {
+  toExternalHTML: (block) => {
     const dom = document.createElement('p')
     const link = document.createElement('a')
     const href = `/doc/${block.props.databaseId}`
