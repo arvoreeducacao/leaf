@@ -2,6 +2,7 @@ import { getTranslations } from 'next-intl/server'
 import Link from 'next/link'
 
 import { ArrowLeftIcon } from '@/components/icons'
+import { getSession } from '@/lib/auth'
 import { loadRowContext } from '@/lib/databases'
 
 import { RowProperties } from './row-properties'
@@ -9,7 +10,8 @@ import { RowProperties } from './row-properties'
 type Props = Readonly<{ rowId: string; canEdit: boolean }>
 
 export async function RowPropertiesSurface({ rowId, canEdit }: Props) {
-  const context = await loadRowContext(rowId)
+  const session = await getSession()
+  const context = await loadRowContext(rowId, session?.user.id ?? null)
 
   if (!context) {
     return null
@@ -28,6 +30,7 @@ export async function RowPropertiesSurface({ rowId, canEdit }: Props) {
       </Link>
       <RowProperties
         canEdit={canEdit}
+        people={context.people}
         properties={context.properties}
         row={context.row}
       />

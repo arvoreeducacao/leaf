@@ -10,10 +10,68 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
-import type { SelectOption } from '@/lib/database/values'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import {
+  type SelectOption,
+  groupOf,
+  sortByStatusGroup,
+  statusGroups,
+} from '@/lib/database/values'
 import { cn } from '@/shared/utils'
 
 import { optionChipClass } from './option-colors'
+
+export type EditorVariant = 'option' | 'person' | 'status'
+
+export function initialsOf(name: string): string {
+  const words = name.trim().split(/\s+/).filter(Boolean)
+
+  if (words.length === 0) {
+    return '?'
+  }
+
+  if (words.length === 1) {
+    return words[0].slice(0, 2).toUpperCase()
+  }
+
+  return `${words[0][0]}${words[words.length - 1][0]}`.toUpperCase()
+}
+
+export function PersonChip({
+  option,
+  onRemove,
+  removeLabel,
+}: Readonly<{
+  option: SelectOption
+  onRemove?: () => void
+  removeLabel?: string
+}>) {
+  return (
+    <span className="inline-flex h-6 max-w-full shrink-0 items-center gap-1.5 rounded-pill bg-surface-hover pr-2 pl-0.5 text-caption leading-none">
+      <Avatar className="size-5">
+        <AvatarFallback
+          className={cn('text-[9px] font-bold', optionChipClass[option.color])}
+        >
+          {initialsOf(option.name)}
+        </AvatarFallback>
+      </Avatar>
+      <span className="truncate text-content-strong">{option.name}</span>
+      {onRemove ? (
+        <button
+          aria-label={removeLabel}
+          className="-mr-1 flex size-4 shrink-0 cursor-pointer items-center justify-center rounded-circular transition-colors hover:bg-alpha-200 focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-1"
+          onClick={(event) => {
+            event.stopPropagation()
+            onRemove()
+          }}
+          type="button"
+        >
+          <CancelIcon aria-hidden="true" className="size-3" />
+        </button>
+      ) : null}
+    </span>
+  )
+}
 
 export function OptionChip({
   option,
@@ -56,6 +114,9 @@ type Props = Readonly<{
   multiple: boolean
   readOnly: boolean
   compact?: boolean
+  variant?: EditorVariant
+  creatable?: boolean
+  emptyHint?: string
   onChange: (next: Array<string>) => void
   onCreate: (name: string) => Promise<SelectOption | null>
 }>
@@ -67,6 +128,9 @@ export function SelectEditor({
   multiple,
   readOnly,
   compact = false,
+  variant = 'option',
+  creatable = true,
+  emptyHint,
   onChange,
   onCreate,
 }: Props) {
@@ -100,6 +164,9 @@ export function SelectEditor({
   const exact = options.some(
     (option) => option.name.toLowerCase() === trimmed.toLowerCase(),
   )
+
+  const Chip = variant === 'person' ? PersonChip : OptionChip
+  const canCreate = creatable && trimmed.length > 0 && !exact
 
   function toggle(id: string) {
     if (multiple) {
@@ -136,7 +203,7 @@ export function SelectEditor({
   const summary = (
     <span className="flex min-w-0 flex-1 flex-wrap items-center gap-1">
       {chosen.length > 0 ? (
-        chosen.map((option) => <OptionChip key={option.id} option={option} />)
+        chosen.map((option) => <Chip key={option.id} option={option} />)
       ) : (
         <span className="truncate text-content-subtle">
           {readOnly ? '' : t('selectPlaceholder')}
@@ -169,43 +236,65 @@ export function SelectEditor({
       </PopoverTrigger>
       <PopoverContent align="start" className="w-64 p-2">
         <Input
-          aria-label={t('searchOrCreate')}
+          aria-label={creatable ? t('searchOrCreate') : t('searchPeople')}
           className="h-9 text-body-small tablet:h-8"
           onChange={(event) => setQuery(event.target.value)}
           onKeyDown={(event) => {
-            if (event.key === 'Enter' && !exact && trimmed.length > 0) {
+            if (event.key === 'Enter' && canCreate) {
               event.preventDefault()
               void create()
             }
           }}
-          placeholder={t('searchOrCreate')}
+          placeholder={creatable ? t('searchOrCreate') : t('searchPeople')}
           value={query}
         />
         <ul className="mt-2 flex max-h-56 flex-col gap-0.5 overflow-y-auto">
-          {filtered.map((option) => {
-            const active = selected.includes(option.id)
+          {variant === 'status'
+            ? statusGroups.map((group) => {
+                const inGroup = sortByStatusGroup(filtered).filter(
+                  (option) => groupOf(option) === group,
+                )
 
-            return (
-              <li key={option.id}>
-                <button
-                  aria-pressed={active}
-                  className="flex w-full cursor-pointer items-center gap-2 rounded-medium px-2 py-1.5 text-left transition-colors hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-focus focus-visible:-outline-offset-2"
-                  onClick={() => toggle(option.id)}
-                  type="button"
-                >
-                  <OptionChip option={option} />
-                  <span className="flex-1" />
-                  {active ? (
-                    <CheckIcon
-                      aria-hidden="true"
-                      className="size-4 shrink-0 text-content-strong"
-                    />
-                  ) : null}
-                </button>
-              </li>
-            )
-          })}
-          {trimmed.length > 0 && !exact ? (
+                if (inGroup.length === 0) {
+                  return null
+                }
+
+                return (
+                  <li key={group}>
+                    <p className="px-2 pt-2 pb-1 font-bold text-caption text-content-subtle uppercase">
+                      {t(`statusGroup.${group}` as 'statusGroup.todo')}
+                    </p>
+                    <ul className="flex flex-col gap-0.5">
+                      {inGroup.map((option) => (
+                        <li key={option.id}>
+                          <OptionRow
+                            active={selected.includes(option.id)}
+                            onToggle={() => toggle(option.id)}
+                            option={option}
+                            variant={variant}
+                          />
+                        </li>
+                      ))}
+                    </ul>
+                  </li>
+                )
+              })
+            : filtered.map((option) => (
+                <li key={option.id}>
+                  <OptionRow
+                    active={selected.includes(option.id)}
+                    onToggle={() => toggle(option.id)}
+                    option={option}
+                    variant={variant}
+                  />
+                </li>
+              ))}
+          {filtered.length === 0 && !canCreate && emptyHint ? (
+            <li className="px-2 py-1.5 text-body-small text-content-subtle">
+              {emptyHint}
+            </li>
+          ) : null}
+          {canCreate ? (
             <li>
               <button
                 className="flex w-full cursor-pointer items-center gap-2 rounded-medium px-2 py-1.5 text-left text-body-small text-content transition-colors hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-focus focus-visible:-outline-offset-2"
@@ -232,5 +321,37 @@ export function SelectEditor({
         ) : null}
       </PopoverContent>
     </Popover>
+  )
+}
+
+function OptionRow({
+  option,
+  active,
+  variant,
+  onToggle,
+}: Readonly<{
+  option: SelectOption
+  active: boolean
+  variant: EditorVariant
+  onToggle: () => void
+}>) {
+  const Chip = variant === 'person' ? PersonChip : OptionChip
+
+  return (
+    <button
+      aria-pressed={active}
+      className="flex w-full cursor-pointer items-center gap-2 rounded-medium px-2 py-1.5 text-left transition-colors hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-focus focus-visible:-outline-offset-2"
+      onClick={onToggle}
+      type="button"
+    >
+      <Chip option={option} />
+      <span className="flex-1" />
+      {active ? (
+        <CheckIcon
+          aria-hidden="true"
+          className="size-4 shrink-0 text-content-strong"
+        />
+      ) : null}
+    </button>
   )
 }

@@ -230,7 +230,19 @@
     "moveToGroup": "Mover para {name}",
     "moveTo": "Mover para",
     "readOnly": "Somente leitura",
-    "cellLabel": "{property} de {row}"
+    "cellLabel": "{property} de {row}",
+    "type_person": "Pessoa",
+    "type_status": "Status",
+    "operator_isMe": "sou eu",
+    "noPerson": "Sem responsável",
+    "noPeople": "Ninguém nesta organização",
+    "searchPeople": "Buscar pessoa",
+    "personNeedsOrganization": "Pessoa só funciona em base dentro de uma organização.",
+    "statusGroup": {
+      "todo": "A fazer",
+      "doing": "Fazendo",
+      "done": "Feito"
+    }
   },
   "versions": {
     "menuItem": "Histórico de versões",
@@ -578,7 +590,8 @@
     "notConnected": "Conecte sua conta do Notion antes de importar por link",
     "commentsUnavailable": "Não foi possível ler os comentários. Confira se a conexão com o Notion tem permissão de ler comentários.",
     "commentsImported": "{count, plural, one {# comentário aberto veio junto, preso à página} other {# comentários abertos vieram junto, presos à página}}",
-    "commentsFailed": "Os comentários não puderam ser criados. As páginas foram importadas assim mesmo."
+    "commentsFailed": "Os comentários não puderam ser criados. As páginas foram importadas assim mesmo.",
+    "unresolvedPeople": "{count, plural, one {# nome da coluna de pessoa não bateu com ninguém da organização ({names}) e ficou sem responsável.} other {# nomes da coluna de pessoa não bateram com ninguém da organização ({names}) e ficaram sem responsável.}}"
   },
   "notionLink": {
     "title": "Importar do Notion",

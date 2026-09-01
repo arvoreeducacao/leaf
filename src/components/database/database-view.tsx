@@ -23,6 +23,7 @@ import {
   setDatabaseRowValue,
   updateDatabaseView,
 } from '@/lib/database-actions'
+import { personOptions } from '@/lib/database/people'
 import { parseOptions, serializeOptions } from '@/lib/database/values'
 import {
   type ViewConfig,
@@ -268,7 +269,9 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
                 ...item,
                 type,
                 options:
-                  type === 'select' || type === 'multiSelect'
+                  type === 'select' ||
+                  type === 'multiSelect' ||
+                  type === 'status'
                     ? item.options
                     : null,
               }
@@ -367,9 +370,26 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
     [config, properties],
   )
 
+  const people = useMemo(
+    () => personOptions(snapshot.people),
+    [snapshot.people],
+  )
+
   const filtered = useMemo(
-    () => applySorts(applyFilters(rows, config.filters, properties), config.sorts, properties),
-    [config.filters, config.sorts, properties, rows],
+    () =>
+      applySorts(
+        applyFilters(
+          rows,
+          config.filters,
+          properties,
+          snapshot.viewerId,
+          people,
+        ),
+        config.sorts,
+        properties,
+        people,
+      ),
+    [config.filters, config.sorts, people, properties, rows, snapshot.viewerId],
   )
 
   const groupProperty = useMemo(
@@ -383,8 +403,16 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
     : null
 
   const groups = useMemo(
-    () => groupRows(filtered, resolvedGroupProperty, t('noValue')),
-    [filtered, resolvedGroupProperty, t],
+    () =>
+      groupRows(
+        filtered,
+        resolvedGroupProperty,
+        resolvedGroupProperty?.type === 'person'
+          ? t('noPerson')
+          : t('noValue'),
+        people,
+      ),
+    [filtered, people, resolvedGroupProperty, t],
   )
 
   if (!activeView) {
@@ -405,6 +433,7 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
           activeView.type === 'board' ? (resolvedGroupProperty?.id ?? null) : null
         }
         onSelectView={setActiveViewId}
+        people={snapshot.people}
         properties={properties}
         views={views}
       />
@@ -422,12 +451,14 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
           groupProperty={resolvedGroupProperty}
           groups={groups}
           handlers={handlers}
+          people={snapshot.people}
           properties={shown}
         />
       ) : (
         <TableView
           canEdit={canEdit}
           handlers={handlers}
+          people={snapshot.people}
           properties={shown}
           rows={filtered}
         />

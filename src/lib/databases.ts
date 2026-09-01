@@ -4,6 +4,7 @@ import { nanoid } from 'nanoid'
 import { db } from '@/db'
 import { databaseProperties, databaseViews, documents } from '@/db/schema'
 import type { DatabaseProperty, DatabaseView, Document } from '@/db/schema'
+import type { Person } from '@/lib/database/people'
 import type { DatabaseRow } from '@/lib/database/views'
 import {
   TITLE_PROPERTY_ID,
@@ -11,6 +12,7 @@ import {
   serializeViewConfig,
 } from '@/lib/database/views'
 import { parseValues, serializeValues } from '@/lib/database/values'
+import { listOrganizationPeople } from '@/lib/organizations'
 
 export const MAX_DATABASE_ROWS = 5_000
 
@@ -20,6 +22,8 @@ export type DatabaseSnapshot = Readonly<{
   properties: Array<DatabaseProperty>
   views: Array<DatabaseView>
   rows: Array<DatabaseRow>
+  people: Array<Person>
+  viewerId: string | null
 }>
 
 function toIso(value: Date | string): string {
@@ -98,8 +102,28 @@ export async function listDatabaseRows(
   return rows.map(toDatabaseRow)
 }
 
+export async function listDatabasePeople(
+  orgId: string | null,
+  viewerId: string | null = null,
+): Promise<Array<Person>> {
+  if (!orgId) {
+    return []
+  }
+
+  const members = await listOrganizationPeople(orgId)
+  const insider =
+    viewerId !== null && members.some((member) => member.userId === viewerId)
+
+  return members.map((member) => ({
+    id: member.userId,
+    name: member.name,
+    email: insider ? member.email : '',
+  }))
+}
+
 export async function loadDatabase(
   databaseId: string,
+  viewerId: string | null = null,
 ): Promise<DatabaseSnapshot | null> {
   const document = await getDatabaseDocument(databaseId)
 
@@ -107,10 +131,11 @@ export async function loadDatabase(
     return null
   }
 
-  const [properties, views, rows] = await Promise.all([
+  const [properties, views, rows, people] = await Promise.all([
     listDatabaseProperties(databaseId),
     listDatabaseViews(databaseId),
     listDatabaseRows(databaseId),
+    listDatabasePeople(document.orgId, viewerId),
   ])
 
   return {
@@ -119,6 +144,8 @@ export async function loadDatabase(
     properties,
     views,
     rows,
+    people,
+    viewerId,
   }
 }
 
@@ -135,10 +162,12 @@ export type RowContext = Readonly<{
   databaseTitle: string
   properties: Array<DatabaseProperty>
   row: DatabaseRow
+  people: Array<Person>
 }>
 
 export async function loadRowContext(
   rowId: string,
+  viewerId: string | null = null,
 ): Promise<RowContext | null> {
   const row = await getRowDocument(rowId)
 
@@ -152,11 +181,17 @@ export async function loadRowContext(
     return null
   }
 
+  const [properties, people] = await Promise.all([
+    listDatabaseProperties(database.id),
+    listDatabasePeople(database.orgId, viewerId),
+  ])
+
   return {
     databaseId: database.id,
     databaseTitle: database.title,
-    properties: await listDatabaseProperties(database.id),
+    properties,
     row: toDatabaseRow(row),
+    people,
   }
 }
 

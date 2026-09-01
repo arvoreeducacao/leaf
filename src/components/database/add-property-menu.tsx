@@ -16,10 +16,16 @@ import { propertyTypes } from '@/lib/database/values'
 
 import { PropertyIcon } from './property-icon'
 
-type Props = Readonly<{ onAdd: (type: DatabasePropertyType) => void }>
+type Props = Readonly<{
+  onAdd: (type: DatabasePropertyType) => void
+  hasOrganization: boolean
+}>
 
-export function AddPropertyMenu({ onAdd }: Props) {
+export function AddPropertyMenu({ onAdd, hasOrganization }: Props) {
   const t = useTranslations('database')
+  const offered = hasOrganization
+    ? propertyTypes
+    : propertyTypes.filter((type) => type !== 'person')
 
   return (
     <DropdownMenu>
@@ -30,7 +36,7 @@ export function AddPropertyMenu({ onAdd }: Props) {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuLabel>{t('addProperty')}</DropdownMenuLabel>
-        {propertyTypes.map((type) => (
+        {offered.map((type) => (
           <DropdownMenuItem key={type} onSelect={() => onAdd(type)}>
             <PropertyIcon type={type} />
             {t(`type_${type}`)}

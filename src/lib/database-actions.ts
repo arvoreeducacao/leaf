@@ -8,7 +8,11 @@ import { redirect } from 'next/navigation'
 
 import { db } from '@/db'
 import { databaseProperties, databaseViews, documents } from '@/db/schema'
-import type { DatabasePropertyType, DatabaseViewType } from '@/db/schema'
+import type {
+  DatabaseProperty,
+  DatabasePropertyType,
+  DatabaseViewType,
+} from '@/db/schema'
 import { getActiveMembership } from '@/lib/active-org'
 import { getSession } from '@/lib/auth'
 import { canEdit, getDocumentAccess } from '@/lib/authz'
@@ -33,8 +37,11 @@ import {
   viewTypes,
 } from '@/lib/database/views'
 import type { DatabaseRow } from '@/lib/database/views'
+import { personOptions } from '@/lib/database/people'
 import {
   type DatabaseSnapshot,
+  getDatabaseDocument,
+  listDatabasePeople,
   listDatabaseProperties,
   loadDatabase,
   toDatabaseRow,
@@ -197,7 +204,7 @@ export async function readDatabase(
     return notAllowed()
   }
 
-  const snapshot = await loadDatabase(databaseId)
+  const snapshot = await loadDatabase(databaseId, session?.user.id ?? null)
 
   if (!snapshot) {
     return {
@@ -220,6 +227,13 @@ export async function addDatabaseProperty(
 
   if (!propertyTypes.includes(type)) {
     return notAllowed()
+  }
+
+  if (type === 'person' && !(await getDatabaseDocument(databaseId))?.orgId) {
+    return {
+      ok: false,
+      error: (await getTranslations('database'))('personNeedsOrganization'),
+    }
   }
 
   const existing = await listDatabaseProperties(databaseId)
@@ -292,7 +306,8 @@ export async function changeDatabasePropertyType(
     return notAllowed()
   }
 
-  const keepsOptions = type === 'select' || type === 'multiSelect'
+  const keepsOptions =
+    type === 'select' || type === 'multiSelect' || type === 'status'
 
   await db
     .update(databaseProperties)
@@ -343,7 +358,11 @@ export async function addSelectOption(
     return notAllowed()
   }
 
-  if (property.type !== 'select' && property.type !== 'multiSelect') {
+  if (
+    property.type !== 'select' &&
+    property.type !== 'multiSelect' &&
+    property.type !== 'status'
+  ) {
     return notAllowed()
   }
 
@@ -362,11 +381,19 @@ export async function addSelectOption(
     return { ok: true, option: existing }
   }
 
-  const option: SelectOption = {
-    id: nanoid(8),
-    name: trimmed,
-    color: colorForIndex(options.length),
-  }
+  const option: SelectOption =
+    property.type === 'status'
+      ? {
+          id: nanoid(8),
+          name: trimmed,
+          color: colorForIndex(options.length),
+          group: 'todo',
+        }
+      : {
+          id: nanoid(8),
+          name: trimmed,
+          color: colorForIndex(options.length),
+        }
 
   await db
     .update(databaseProperties)
@@ -400,6 +427,27 @@ export async function deleteSelectOption(
   revalidatePath(`/doc/${property.databaseId}`)
 
   return { ok: true }
+}
+
+async function normalizeForProperty(
+  property: Pick<DatabaseProperty, 'type' | 'options'>,
+  value: unknown,
+  orgId: string | null,
+  viewerId: string,
+): Promise<ReturnType<typeof normalizeValue>> {
+  if (property.type !== 'person') {
+    return normalizeValue(property.type, value, parseOptions(property.options))
+  }
+
+  if (!orgId) {
+    return []
+  }
+
+  const roster = personOptions(await listDatabasePeople(orgId, viewerId))
+
+  return roster.length === 0
+    ? []
+    : normalizeValue('person', value, roster)
 }
 
 export type RowResult =
@@ -439,10 +487,11 @@ export async function createDatabaseRow(
       continue
     }
 
-    values[property.id] = normalizeValue(
-      property.type,
+    values[property.id] = await normalizeForProperty(
+      property,
       raw,
-      parseOptions(property.options),
+      database.orgId,
+      session.user.id,
     )
   }
 
@@ -496,7 +545,9 @@ export async function setDatabaseRowValue(
     return notAllowed()
   }
 
-  if (!(await canEditDatabase(row.parentId))) {
+  const session = await canEditDatabase(row.parentId)
+
+  if (!session) {
     return notAllowed()
   }
 
@@ -513,10 +564,11 @@ export async function setDatabaseRowValue(
 
   const values = {
     ...parseValues(row.properties),
-    [propertyId]: normalizeValue(
-      property.type,
+    [propertyId]: await normalizeForProperty(
+      property,
       value,
-      parseOptions(property.options),
+      row.orgId,
+      session.user.id,
     ),
   }
 

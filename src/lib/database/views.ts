@@ -11,6 +11,7 @@ import {
   isEmptyValue,
   normalizeValue,
   parseOptions,
+  sortByStatusGroup,
   valueToText,
 } from './values'
 
@@ -33,6 +34,7 @@ export const filterOperators = [
   'after',
   'isEmpty',
   'isNotEmpty',
+  'isMe',
 ] as const
 
 export type FilterOperator = (typeof filterOperators)[number]
@@ -48,6 +50,8 @@ const operatorsByType: Record<
   multiSelect: ['contains', 'notContains', 'isEmpty', 'isNotEmpty'],
   date: ['is', 'before', 'after', 'isEmpty', 'isNotEmpty'],
   checkbox: ['is'],
+  person: ['isMe', 'contains', 'notContains', 'isEmpty', 'isNotEmpty'],
+  status: ['is', 'isNot', 'isEmpty', 'isNotEmpty'],
 }
 
 export function operatorsFor(
@@ -57,7 +61,17 @@ export function operatorsFor(
 }
 
 export function operatorNeedsValue(operator: FilterOperator): boolean {
-  return operator !== 'isEmpty' && operator !== 'isNotEmpty'
+  return (
+    operator !== 'isEmpty' && operator !== 'isNotEmpty' && operator !== 'isMe'
+  )
+}
+
+export function isMultiValueType(type: DatabasePropertyType): boolean {
+  return type === 'multiSelect' || type === 'person'
+}
+
+export function isGroupableType(type: DatabasePropertyType): boolean {
+  return type === 'select' || type === 'status' || type === 'person'
 }
 
 export type ViewFilter = Readonly<{
@@ -182,8 +196,10 @@ type PropertyLike = Pick<DatabaseProperty, 'id' | 'type' | 'options'>
 function readValue(
   row: DatabaseRow,
   property: PropertyLike,
+  people: ReadonlyArray<SelectOption> = [],
 ): { value: PropertyValue; options: Array<SelectOption> } {
-  const options = parseOptions(property.options)
+  const options =
+    property.type === 'person' ? [...people] : parseOptions(property.options)
   const raw = row.values[property.id]
 
   return {
@@ -201,6 +217,8 @@ function matchesFilter(
   row: DatabaseRow,
   filter: ViewFilter,
   properties: ReadonlyArray<PropertyLike>,
+  viewerId: string | null,
+  people: ReadonlyArray<SelectOption>,
 ): boolean {
   if (filter.propertyId === TITLE_PROPERTY_ID) {
     const title = row.title.trim().toLowerCase()
@@ -231,7 +249,7 @@ function matchesFilter(
     return true
   }
 
-  const { value, options } = readValue(row, property)
+  const { value, options } = readValue(row, property, people)
 
   if (filter.operator === 'isEmpty') {
     return isEmptyValue(value)
@@ -284,7 +302,7 @@ function matchesFilter(
     return value === target
   }
 
-  if (property.type === 'select') {
+  if (property.type === 'select' || property.type === 'status') {
     if (filter.operator === 'isNot') {
       return value !== filter.value
     }
@@ -292,8 +310,13 @@ function matchesFilter(
     return value === filter.value
   }
 
-  if (property.type === 'multiSelect') {
+  if (property.type === 'multiSelect' || property.type === 'person') {
     const selected = Array.isArray(value) ? value : []
+
+    if (filter.operator === 'isMe') {
+      return viewerId !== null && selected.includes(viewerId)
+    }
+
     const target = typeof filter.value === 'string' ? filter.value : ''
 
     if (filter.operator === 'notContains') {
@@ -321,13 +344,17 @@ export function applyFilters(
   rows: ReadonlyArray<DatabaseRow>,
   filters: ReadonlyArray<ViewFilter>,
   properties: ReadonlyArray<PropertyLike>,
+  viewerId: string | null = null,
+  people: ReadonlyArray<SelectOption> = [],
 ): Array<DatabaseRow> {
   if (filters.length === 0) {
     return [...rows]
   }
 
   return rows.filter((row) =>
-    filters.every((filter) => matchesFilter(row, filter, properties)),
+    filters.every((filter) =>
+      matchesFilter(row, filter, properties, viewerId, people),
+    ),
   )
 }
 
@@ -335,6 +362,7 @@ function comparableOf(
   row: DatabaseRow,
   propertyId: string,
   properties: ReadonlyArray<PropertyLike>,
+  people: ReadonlyArray<SelectOption>,
 ): { empty: boolean; text: string; number: number | null; flag: boolean } {
   if (propertyId === TITLE_PROPERTY_ID) {
     const title = row.title.trim()
@@ -353,7 +381,7 @@ function comparableOf(
     return { empty: true, text: '', number: null, flag: false }
   }
 
-  const { value, options } = readValue(row, property)
+  const { value, options } = readValue(row, property, people)
 
   if (property.type === 'number') {
     return {
@@ -374,7 +402,12 @@ function comparableOf(
     return { empty: text.length === 0, text, number: null, flag: false }
   }
 
-  if (property.type === 'select' || property.type === 'multiSelect') {
+  if (
+    property.type === 'select' ||
+    property.type === 'multiSelect' ||
+    property.type === 'status' ||
+    property.type === 'person'
+  ) {
     const order = new Map(options.map((option, index) => [option.id, index]))
     const first = Array.isArray(value) ? value[0] : value
 
@@ -396,6 +429,7 @@ export function applySorts(
   rows: ReadonlyArray<DatabaseRow>,
   sorts: ReadonlyArray<ViewSort>,
   properties: ReadonlyArray<PropertyLike>,
+  people: ReadonlyArray<SelectOption> = [],
 ): Array<DatabaseRow> {
   if (sorts.length === 0) {
     return [...rows]
@@ -403,8 +437,8 @@ export function applySorts(
 
   return [...rows].sort((left, right) => {
     for (const sort of sorts) {
-      const a = comparableOf(left, sort.propertyId, properties)
-      const b = comparableOf(right, sort.propertyId, properties)
+      const a = comparableOf(left, sort.propertyId, properties, people)
+      const b = comparableOf(right, sort.propertyId, properties, people)
 
       if (a.empty !== b.empty) {
         return a.empty ? 1 : -1
@@ -452,43 +486,69 @@ export function groupRows(
   rows: ReadonlyArray<DatabaseRow>,
   property: PropertyLike | null,
   emptyLabel: string,
+  options: ReadonlyArray<SelectOption> = [],
 ): Array<BoardGroup> {
   if (!property) {
     return [{ id: null, name: emptyLabel, color: null, rows: [...rows] }]
   }
 
-  const options = parseOptions(property.options)
+  const known =
+    property.type === 'person' ? [...options] : parseOptions(property.options)
+  const ordered =
+    property.type === 'status' ? sortByStatusGroup(known) : known
   const groups = new Map<string | null, Array<DatabaseRow>>()
 
   groups.set(null, [])
 
-  for (const option of options) {
+  for (const option of ordered) {
     groups.set(option.id, [])
   }
 
   for (const row of rows) {
-    const { value } = readValue(row, property)
-    const key = typeof value === 'string' && value.length > 0 ? value : null
-    const bucket = groups.get(key) ?? groups.get(null)
+    const { value } = readValue(row, property, options)
+    const keys = keysOf(value)
 
-    bucket?.push(row)
+    if (keys.length === 0) {
+      groups.get(null)?.push(row)
+      continue
+    }
+
+    for (const key of keys) {
+      const bucket = groups.get(key)
+
+      if (bucket) {
+        bucket.push(row)
+      } else {
+        groups.get(null)?.push(row)
+      }
+    }
   }
 
-  const ordered: Array<BoardGroup> = options.map((option) => ({
+  const result: Array<BoardGroup> = ordered.map((option) => ({
     id: option.id,
     name: option.name,
     color: option.color,
     rows: groups.get(option.id) ?? [],
   }))
 
-  ordered.push({
+  result.push({
     id: null,
     name: emptyLabel,
     color: null,
     rows: groups.get(null) ?? [],
   })
 
-  return ordered
+  return result
+}
+
+function keysOf(value: PropertyValue): Array<string> {
+  if (Array.isArray(value)) {
+    return value.filter(
+      (item): item is string => typeof item === 'string' && item.length > 0,
+    )
+  }
+
+  return typeof value === 'string' && value.length > 0 ? [value] : []
 }
 
 export function boardPropertyOf(
@@ -497,12 +557,12 @@ export function boardPropertyOf(
 ): PropertyLike | null {
   const chosen = properties.find(
     (property) =>
-      property.id === config.groupByPropertyId && property.type === 'select',
+      property.id === config.groupByPropertyId && isGroupableType(property.type),
   )
 
   if (chosen) {
     return chosen
   }
 
-  return properties.find((property) => property.type === 'select') ?? null
+  return properties.find((property) => isGroupableType(property.type)) ?? null
 }
