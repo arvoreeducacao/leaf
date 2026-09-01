@@ -18,14 +18,29 @@ export class NotionApiError extends Error {
 export type NotionFetch = typeof fetch
 
 export type NotionRichText = Readonly<{
+  type?: string
   plain_text?: string
   href?: string | null
   annotations?: Readonly<{
     bold?: boolean
     italic?: boolean
     strikethrough?: boolean
+    underline?: boolean
     code?: boolean
+    color?: string
   }>
+  mention?: Readonly<{
+    type?: string
+    page?: { id?: string }
+    database?: { id?: string }
+  }>
+}>
+
+export type NotionIcon = Readonly<{
+  type?: string
+  emoji?: string
+  external?: { url?: string }
+  file?: { url?: string }
 }>
 
 export type NotionFile = Readonly<{
@@ -47,14 +62,30 @@ export type NotionPageObject = Readonly<{
   object?: string
   in_trash?: boolean
   archived?: boolean
+  icon?: NotionIcon | null
+  cover?: NotionFile | null
+  created_time?: string
+  last_edited_time?: string
   properties?: Record<string, unknown>
   parent?: Record<string, unknown>
 }>
 
+export type NotionPropertyConfig = Readonly<{
+  id?: string
+  type?: string
+  name?: string
+  [key: string]: unknown
+}>
+
 export type NotionDatabaseObject = Readonly<{
   id: string
+  object?: string
   title?: Array<NotionRichText>
-  properties?: Record<string, { type?: string; name?: string }>
+  icon?: NotionIcon | null
+  created_time?: string
+  last_edited_time?: string
+  parent?: Record<string, unknown>
+  properties?: Record<string, NotionPropertyConfig>
 }>
 
 export type NotionComment = Readonly<{
@@ -77,6 +108,12 @@ export type NotionList<T> = Readonly<{
   next_cursor?: string | null
 }>
 
+export type NotionSearchResult = Readonly<{
+  id: string
+  object?: string
+  parent?: Record<string, unknown>
+}>
+
 export type NotionClient = Readonly<{
   page: (id: string) => Promise<NotionPageObject>
   database: (id: string) => Promise<NotionDatabaseObject>
@@ -84,6 +121,7 @@ export type NotionClient = Readonly<{
   rows: (databaseId: string) => AsyncGenerator<NotionPageObject>
   comments: (blockId: string) => AsyncGenerator<NotionComment>
   user: (id: string) => Promise<NotionUserObject>
+  search: () => AsyncGenerator<NotionSearchResult>
   download: (url: string) => Promise<{ bytes: Uint8Array; contentType: string }>
 }>
 
@@ -197,6 +235,18 @@ export function createNotionClient(
             method: 'POST',
           },
         ),
+      ),
+
+    search: () =>
+      paginate<NotionSearchResult>((cursor) =>
+        request<NotionList<NotionSearchResult>>('/search', {
+          body: JSON.stringify(
+            cursor
+              ? { page_size: pageSize, start_cursor: cursor }
+              : { page_size: pageSize },
+          ),
+          method: 'POST',
+        }),
       ),
   }
 }

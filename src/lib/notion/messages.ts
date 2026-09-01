@@ -9,7 +9,9 @@ export type NotionImportMessages = Readonly<{
   assetFailed: (name: string) => string
   csvColumn: string
   csvView: string
+  boardView: string
   csvDatabases: (count: number) => string
+  unsupportedBlocks: (count: number, types: string) => string
   unresolvedPeople: (count: number, names: string) => string
   pageFailed: (title: string) => string
   togglesDegraded: (count: number) => string
@@ -40,7 +42,10 @@ export function buildNotionImportMessages(
     assetFailed: (name) => translate('assetFailed', { name }),
     csvColumn: translate('csvColumn'),
     csvView: translate('csvView'),
+    boardView: translate('boardView'),
     csvDatabases: (count) => translate('csvDatabases', { count }),
+    unsupportedBlocks: (count, types) =>
+      translate('unsupportedBlocks', { count, types }),
     unresolvedPeople: (count, names) =>
       translate('unresolvedPeople', { count, names }),
     pageFailed: (title) => translate('pageFailed', { title }),

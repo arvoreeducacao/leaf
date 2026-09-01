@@ -217,6 +217,7 @@ export const documents = mysqlTable(
       .notNull()
       .default('page'),
     title: varchar('title', { length: 500 }).notNull().default('Sem título'),
+    icon: varchar('icon', { length: 1024 }),
     content: longtext('content'),
     properties: longtext('properties'),
     publicToken: varchar('public_token', { length: 64 }).unique(),
