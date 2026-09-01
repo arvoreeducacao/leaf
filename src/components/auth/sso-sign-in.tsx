@@ -8,26 +8,45 @@ import { Button } from '@/components/ui/button'
 import { authClient } from '@/lib/auth-client'
 import { emailDomainErrorCode } from '@/lib/email-domain'
 
+type ErrorKind = 'domain' | 'generic'
+
 type Props = Readonly<{
   errorCode: string | null
   providerId: string
   restrictedDomain: string | null
+  signOutUrl: string | null
 }>
 
-export function SsoSignIn({ errorCode, providerId, restrictedDomain }: Props) {
+function errorKindOf(code: string | null | undefined): ErrorKind | null {
+  if (!code) {
+    return null
+  }
+
+  return code === emailDomainErrorCode ? 'domain' : 'generic'
+}
+
+export function SsoSignIn({
+  errorCode,
+  providerId,
+  restrictedDomain,
+  signOutUrl,
+}: Props) {
   const t = useTranslations('auth')
   const hintId = useId()
   const errorId = useId()
 
-  const [error, setError] = useState<string | null>(
-    errorCode
-      ? errorCode === emailDomainErrorCode
-        ? t('domainRestricted', { domain: restrictedDomain ?? '' })
-        : t('ssoFailed')
-      : null,
+  const [errorKind, setErrorKind] = useState<ErrorKind | null>(
+    errorKindOf(errorCode),
   )
   const [pending, setPending] = useState(false)
   const alertRef = useRef<HTMLParagraphElement>(null)
+
+  const error =
+    errorKind === 'domain'
+      ? t('ssoDomainBlocked', { domain: restrictedDomain ?? '' })
+      : errorKind === 'generic'
+        ? t('ssoFailed')
+        : null
 
   useEffect(() => {
     if (errorCode) {
@@ -36,7 +55,7 @@ export function SsoSignIn({ errorCode, providerId, restrictedDomain }: Props) {
   }, [errorCode])
 
   async function handleSignIn() {
-    setError(null)
+    setErrorKind(null)
     setPending(true)
 
     const result = await authClient.signIn.social({
@@ -47,11 +66,7 @@ export function SsoSignIn({ errorCode, providerId, restrictedDomain }: Props) {
 
     if (result.error) {
       setPending(false)
-      setError(
-        result.error.code === emailDomainErrorCode
-          ? t('domainRestricted', { domain: restrictedDomain ?? '' })
-          : t('ssoFailed'),
-      )
+      setErrorKind(errorKindOf(result.error.code) ?? 'generic')
     }
   }
 
@@ -97,6 +112,12 @@ export function SsoSignIn({ errorCode, providerId, restrictedDomain }: Props) {
         >
           {t('ssoSubmit')}
         </Button>
+
+        {errorKind === 'domain' && signOutUrl ? (
+          <Button asChild className="mt-2 h-10 w-full" variant="link">
+            <a href={signOutUrl}>{t('ssoSwitchAccount')}</a>
+          </Button>
+        ) : null}
 
         {restrictedDomain ? (
           <p className="mt-3 text-body-small text-content" id={hintId}>

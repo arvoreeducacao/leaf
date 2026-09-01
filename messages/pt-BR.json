@@ -44,7 +44,9 @@
     "ssoSubtitle": "Entre com sua conta Árvore para escrever e compartilhar documentos.",
     "ssoDomainHint": "Use sua conta @{domain}",
     "ssoSubmit": "Entrar com a conta Árvore",
-    "ssoFailed": "Não foi possível entrar com a conta Árvore. Tente de novo."
+    "ssoFailed": "Não foi possível entrar com a conta Árvore. Tente de novo.",
+    "ssoDomainBlocked": "A conta conectada à Árvore não é @{domain}. Entre com outra conta para usar o Leaf.",
+    "ssoSwitchAccount": "Entrar com outra conta"
   },
   "settings": {
     "account": "Conta",
