@@ -23,23 +23,23 @@ async function openHistory(page: import('@playwright/test').Page) {
   return dialog
 }
 
-test.describe('histórico de versões', () => {
-  test('grava uma versão por janela de throttle, mostra o preview e restaura', async ({
+test.describe('version history', () => {
+  test('records one version per throttle window, shows the preview and restores', async ({
     page,
   }) => {
-    await signUp(page, uniqueEmail('versoes'), 'Dona das versões')
-    await createDocument(page, 'Documento com histórico')
+    await signUp(page, uniqueEmail('versions'), 'Versions owner')
+    await createDocument(page, 'Document with history')
 
-    await typeInEditor(page, 'primeira redacao do texto')
+    await typeInEditor(page, 'first draft of the text')
     await waitForSaved(page)
 
-    await typeInEditor(page, ' com um trecho extra')
+    await typeInEditor(page, ' with an extra passage')
     await page.waitForTimeout(3_000)
     await page.reload()
     await waitForEditorReady(page)
 
-    await expect(editorBody(page)).toContainText('primeira redacao do texto')
-    await expect(editorBody(page)).toContainText('com um trecho extra')
+    await expect(editorBody(page)).toContainText('first draft of the text')
+    await expect(editorBody(page)).toContainText('with an extra passage')
 
     const dialog = await openHistory(page)
     const items = dialog
@@ -52,16 +52,16 @@ test.describe('histórico de versões', () => {
 
     const preview = dialog.getByRole('region', { name: 'Conteúdo da versão' })
 
-    await expect(preview).toContainText('primeira redacao do texto')
-    await expect(preview).not.toContainText('com um trecho extra')
+    await expect(preview).toContainText('first draft of the text')
+    await expect(preview).not.toContainText('with an extra passage')
 
     await dialog.getByRole('button', { name: 'Restaurar' }).click()
     await expect(dialog.getByText('Restaurar esta versão?')).toBeVisible()
     await dialog.getByRole('button', { name: 'Restaurar' }).click()
 
     await waitForEditorReady(page)
-    await expect(editorBody(page)).toContainText('primeira redacao do texto')
-    await expect(editorBody(page)).not.toContainText('com um trecho extra')
+    await expect(editorBody(page)).toContainText('first draft of the text')
+    await expect(editorBody(page)).not.toContainText('with an extra passage')
 
     const reopened = await openHistory(page)
 
@@ -76,21 +76,21 @@ test.describe('histórico de versões', () => {
     ).toBeFocused()
   })
 
-  test('leitor não vê o histórico e o editor convidado vê', async ({
+  test('a viewer does not see the history and the invited editor does', async ({
     browser,
   }) => {
     const owner = await browser.newContext()
     const guest = await browser.newContext()
     const ownerPage = await owner.newPage()
     const guestPage = await guest.newPage()
-    const guestEmail = uniqueEmail('convidado-versoes')
+    const guestEmail = uniqueEmail('guest-versions')
 
-    await signUp(guestPage, guestEmail, 'Convidada')
-    await signUp(ownerPage, uniqueEmail('dona-versoes'), 'Dona')
+    await signUp(guestPage, guestEmail, 'Guest')
+    await signUp(ownerPage, uniqueEmail('owner-versions'), 'Owner')
 
-    const id = await createDocument(ownerPage, 'Documento com papéis')
+    const id = await createDocument(ownerPage, 'Document with roles')
 
-    await typeInEditor(ownerPage, 'conteudo versionado')
+    await typeInEditor(ownerPage, 'versioned content')
     await waitForSaved(ownerPage)
 
     await ownerPage.getByRole('button', { name: 'Compartilhar' }).click()

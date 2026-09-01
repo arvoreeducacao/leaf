@@ -5,16 +5,16 @@ import { arrangeMenuItems } from './slash-menu-items'
 type Item = { title: string; group: string }
 
 const defaults: Array<Item> = [
-  { title: 'Título 1', group: 'Títulos' },
-  { title: 'Citação', group: 'Blocos básicos' },
-  { title: 'Lista', group: 'Blocos básicos' },
-  { title: 'Tabela', group: 'Avançado' },
-  { title: 'Imagem', group: 'Avançado' },
+  { title: 'Heading 1', group: 'Headings' },
+  { title: 'Quote', group: 'Basic blocks' },
+  { title: 'List', group: 'Basic blocks' },
+  { title: 'Table', group: 'Advanced' },
+  { title: 'Image', group: 'Advanced' },
 ]
 
-const callout: Item = { title: 'Destaque', group: 'Blocos básicos' }
-const database: Item = { title: 'Base de dados', group: 'Avançado' }
-const importItem: Item = { title: 'Importar .md', group: 'Importar' }
+const callout: Item = { title: 'Callout', group: 'Basic blocks' }
+const database: Item = { title: 'Database', group: 'Advanced' }
+const importItem: Item = { title: 'Import .md', group: 'Import' }
 
 function groupsOf(items: ReadonlyArray<Item>) {
   return items.map((item) => item.group)
@@ -24,35 +24,35 @@ function runsOf(items: ReadonlyArray<Item>) {
   return groupsOf(items).filter((group, index, list) => group !== list[index - 1])
 }
 
-describe('ordem do menu de barra', () => {
-  it('insere cada item logo depois do irmão de grupo', () => {
+describe('slash menu order', () => {
+  it('inserts each item right after its group sibling', () => {
     const items = arrangeMenuItems(
       defaults,
       [
-        { after: 'Citação', item: callout },
-        { after: 'Tabela', item: database },
+        { after: 'Quote', item: callout },
+        { after: 'Table', item: database },
       ],
       [importItem],
     )
 
     expect(items.map((item) => item.title)).toEqual([
-      'Título 1',
-      'Citação',
-      'Destaque',
-      'Lista',
-      'Tabela',
-      'Base de dados',
-      'Imagem',
-      'Importar .md',
+      'Heading 1',
+      'Quote',
+      'Callout',
+      'List',
+      'Table',
+      'Database',
+      'Image',
+      'Import .md',
     ])
   })
 
-  it('mantém cada grupo num bloco só, senão o menu duplica a seção', () => {
+  it('keeps each group in a single run, otherwise the menu duplicates the section', () => {
     const items = arrangeMenuItems(
       defaults,
       [
-        { after: 'Citação', item: callout },
-        { after: 'Tabela', item: database },
+        { after: 'Quote', item: callout },
+        { after: 'Table', item: database },
       ],
       [importItem],
     )
@@ -60,20 +60,20 @@ describe('ordem do menu de barra', () => {
     const runs = runsOf(items)
 
     expect(runs).toEqual(new Array(...new Set(runs)))
-    expect(runs).toEqual(['Títulos', 'Blocos básicos', 'Avançado', 'Importar'])
+    expect(runs).toEqual(['Headings', 'Basic blocks', 'Advanced', 'Import'])
   })
 
-  it('joga no fim o item cujo irmão não existe mais no menu', () => {
+  it('drops at the end the item whose sibling is no longer in the menu', () => {
     const items = arrangeMenuItems(
       defaults,
-      [{ after: 'Bloco que sumiu', item: database }],
+      [{ after: 'Block that vanished', item: database }],
       [],
     )
 
-    expect(items.at(-1)?.title).toBe('Base de dados')
+    expect(items.at(-1)?.title).toBe('Database')
   })
 
-  it('não mexe no menu quando não há nada para inserir', () => {
+  it('leaves the menu alone when there is nothing to insert', () => {
     expect(arrangeMenuItems(defaults, [], [])).toEqual(defaults)
   })
 })

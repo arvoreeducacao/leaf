@@ -57,7 +57,7 @@ function EditableTag({
   className,
   children,
   onRemove,
-  removeLabel = 'Remover',
+  removeLabel = 'Remove',
   variant = 'dark',
   ...props
 }: Readonly<

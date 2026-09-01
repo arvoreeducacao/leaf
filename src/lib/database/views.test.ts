@@ -21,8 +21,8 @@ const status = {
   id: 'status',
   type: 'select' as const,
   options: serializeOptions([
-    { id: 'todo', name: 'A fazer', color: 'gray' },
-    { id: 'done', name: 'Feito', color: 'success' },
+    { id: 'todo', name: 'To do', color: 'gray' },
+    { id: 'done', name: 'Done', color: 'success' },
   ]),
 }
 
@@ -32,9 +32,9 @@ const phase = {
   id: 'phase',
   type: 'status' as const,
   options: serializeOptions([
-    { id: 'f', name: 'Feito', color: 'success', group: 'done' },
-    { id: 'p', name: 'Pendente', color: 'gray', group: 'todo' },
-    { id: 'a', name: 'Andando', color: 'blue', group: 'doing' },
+    { id: 'f', name: 'Done', color: 'success', group: 'done' },
+    { id: 'p', name: 'Pending', color: 'gray', group: 'todo' },
+    { id: 'a', name: 'Running', color: 'blue', group: 'doing' },
   ]),
 }
 
@@ -69,24 +69,24 @@ const rows = [
   row('c', 'Gama', {}),
 ]
 
-describe('configuração de visualização', () => {
-  it('devolve configuração vazia quando o json está quebrado', () => {
+describe('view configuration', () => {
+  it('returns an empty configuration when the json is broken', () => {
     expect(parseViewConfig('{')).toEqual(emptyViewConfig)
     expect(parseViewConfig('[]')).toEqual(emptyViewConfig)
     expect(parseViewConfig(null)).toEqual(emptyViewConfig)
   })
 
-  it('descarta filtro e ordenação com forma inválida', () => {
+  it('drops a filter and a sort with an invalid shape', () => {
     const parsed = parseViewConfig(
       JSON.stringify({
         filters: [
           { propertyId: 'status', operator: 'is', value: 'todo' },
-          { propertyId: 'status', operator: 'invento' },
+          { propertyId: 'status', operator: 'made-up' },
           { operator: 'is' },
         ],
         sorts: [
           { propertyId: 'points', direction: 'desc' },
-          { propertyId: 'points', direction: 'lado' },
+          { propertyId: 'points', direction: 'sideways' },
         ],
         hiddenPropertyIds: ['due', 7],
       }),
@@ -97,7 +97,7 @@ describe('configuração de visualização', () => {
     expect(parsed.hiddenPropertyIds).toEqual(['due'])
   })
 
-  it('faz ida e volta da configuração', () => {
+  it('round-trips the configuration', () => {
     const config: ViewConfig = {
       groupByPropertyId: 'status',
       filters: [{ propertyId: 'points', operator: 'greaterThan', value: 2 }],
@@ -108,7 +108,7 @@ describe('configuração de visualização', () => {
     expect(parseViewConfig(serializeViewConfig(config))).toEqual(config)
   })
 
-  it('oferece só os operadores que fazem sentido para cada tipo', () => {
+  it('offers only the operators that make sense for each type', () => {
     expect(operatorsFor('checkbox')).toEqual(['is'])
     expect(operatorsFor('date')).toContain('before')
     expect(operatorsFor('number')).toContain('greaterThan')
@@ -116,8 +116,8 @@ describe('configuração de visualização', () => {
   })
 })
 
-describe('filtros', () => {
-  it('filtra por seleção, número, data e caixa', () => {
+describe('filters', () => {
+  it('filters by select, number, date and checkbox', () => {
     expect(
       applyFilters(
         rows,
@@ -151,7 +151,7 @@ describe('filtros', () => {
     ).toEqual(['a'])
   })
 
-  it('filtra pelo título da linha', () => {
+  it('filters by the row title', () => {
     expect(
       applyFilters(
         rows,
@@ -167,7 +167,7 @@ describe('filtros', () => {
     ).toEqual(['c'])
   })
 
-  it('trata vazio e não vazio', () => {
+  it('handles empty and not empty', () => {
     expect(
       applyFilters(
         rows,
@@ -185,17 +185,17 @@ describe('filtros', () => {
     ).toEqual(['a', 'b'])
   })
 
-  it('ignora filtro de propriedade que foi excluída', () => {
+  it('ignores a filter on a property that was deleted', () => {
     expect(
       applyFilters(
         rows,
-        [{ propertyId: 'sumiu', operator: 'is', value: 'x' }],
+        [{ propertyId: 'gone', operator: 'is', value: 'x' }],
         properties,
       ),
     ).toHaveLength(3)
   })
 
-  it('exige que todos os filtros passem', () => {
+  it('requires every filter to pass', () => {
     expect(
       applyFilters(
         rows,
@@ -209,8 +209,8 @@ describe('filtros', () => {
   })
 })
 
-describe('ordenação', () => {
-  it('ordena por número e joga o vazio para o fim nos dois sentidos', () => {
+describe('sorting', () => {
+  it('sorts by number and pushes the empty one to the end both ways', () => {
     expect(
       applySorts(
         rows,
@@ -228,8 +228,8 @@ describe('ordenação', () => {
     ).toEqual(['b', 'a', 'c'])
   })
 
-  it('ordena por título respeitando acento', () => {
-    const acentuadas = [
+  it('sorts by title respecting the accent', () => {
+    const accented = [
       row('1', 'Zebra', {}),
       row('2', 'Água', {}),
       row('3', 'Banana', {}),
@@ -237,14 +237,14 @@ describe('ordenação', () => {
 
     expect(
       applySorts(
-        acentuadas,
+        accented,
         [{ propertyId: TITLE_PROPERTY_ID, direction: 'asc' }],
         properties,
       ).map((item) => item.title),
     ).toEqual(['Água', 'Banana', 'Zebra'])
   })
 
-  it('ordena seleção pela ordem das opções, não pelo texto', () => {
+  it('sorts a select by the option order, not by the text', () => {
     expect(
       applySorts(
         rows,
@@ -255,27 +255,27 @@ describe('ordenação', () => {
   })
 })
 
-describe('quadro', () => {
-  it('agrupa por seleção e guarda uma coluna para quem não tem valor', () => {
-    const groups = groupRows(rows, status, 'Sem valor')
+describe('board', () => {
+  it('groups by select and keeps a column for whoever has no value', () => {
+    const groups = groupRows(rows, status, 'No value')
 
     expect(groups.map((group) => group.name)).toEqual([
-      'A fazer',
-      'Feito',
-      'Sem valor',
+      'To do',
+      'Done',
+      'No value',
     ])
     expect(groups[0].rows.map((item) => item.id)).toEqual(['a'])
     expect(groups[2].rows.map((item) => item.id)).toEqual(['c'])
   })
 
-  it('cai para uma coluna só quando não há propriedade de agrupamento', () => {
-    const groups = groupRows(rows, null, 'Sem valor')
+  it('falls back to a single column when there is no grouping property', () => {
+    const groups = groupRows(rows, null, 'No value')
 
     expect(groups).toHaveLength(1)
     expect(groups[0].rows).toHaveLength(3)
   })
 
-  it('escolhe a primeira seleção quando a configurada não serve', () => {
+  it('picks the first select when the configured one does not fit', () => {
     expect(
       boardPropertyOf(properties, {
         ...emptyViewConfig,
@@ -287,8 +287,8 @@ describe('quadro', () => {
   })
 })
 
-describe('propriedades visíveis', () => {
-  it('tira as ocultas da visualização', () => {
+describe('visible properties', () => {
+  it('takes the hidden ones out of the view', () => {
     expect(
       visibleProperties(properties, {
         ...emptyViewConfig,
@@ -298,38 +298,38 @@ describe('propriedades visíveis', () => {
   })
 })
 
-describe('quadro por pessoa', () => {
+describe('board by person', () => {
   const shared = [
     row('a', 'Alfa', { owners: ['u1', 'u2'] }),
     row('b', 'Beta', { owners: ['u2'] }),
     row('c', 'Gama', { owners: [] }),
   ]
 
-  it('põe a linha na coluna de cada pessoa que está nela', () => {
-    const groups = groupRows(shared, owners, 'Sem responsável', people)
+  it('puts the row in the column of every person on it', () => {
+    const groups = groupRows(shared, owners, 'No owner', people)
 
     expect(groups.map((group) => group.name)).toEqual([
       'Rafael',
       'Raposo',
-      'Sem responsável',
+      'No owner',
     ])
     expect(groups[0].rows.map((item) => item.id)).toEqual(['a'])
     expect(groups[1].rows.map((item) => item.id)).toEqual(['a', 'b'])
     expect(groups[2].rows.map((item) => item.id)).toEqual(['c'])
   })
 
-  it('manda pra coluna vazia quem aponta pra gente que saiu da organização', () => {
+  it('sends to the empty column whoever points at people who left the organization', () => {
     const groups = groupRows(
-      [row('x', 'Órfã', { owners: ['sumiu'] })],
+      [row('x', 'Orphan', { owners: ['gone'] })],
       owners,
-      'Sem responsável',
+      'No owner',
       people,
     )
 
     expect(groups[groups.length - 1].rows.map((item) => item.id)).toEqual(['x'])
   })
 
-  it('aceita pessoa como propriedade de agrupamento', () => {
+  it('accepts a person as the grouping property', () => {
     expect(
       boardPropertyOf([points, owners], {
         ...emptyViewConfig,
@@ -338,23 +338,23 @@ describe('quadro por pessoa', () => {
     ).toBe('owners')
   })
 
-  it('ordena as colunas de status por a fazer, fazendo e feito', () => {
+  it('orders the status columns by todo, doing and done', () => {
     const groups = groupRows(
       [row('a', 'Alfa', { phase: 'f' }), row('b', 'Beta', { phase: 'p' })],
       phase,
-      'Sem valor',
+      'No value',
     )
 
     expect(groups.map((group) => group.name)).toEqual([
-      'Pendente',
-      'Andando',
-      'Feito',
-      'Sem valor',
+      'Pending',
+      'Running',
+      'Done',
+      'No value',
     ])
   })
 })
 
-describe('filtro sou eu', () => {
+describe('is me filter', () => {
   const mine = [
     row('a', 'Alfa', { owners: ['u1', 'u2'] }),
     row('b', 'Beta', { owners: ['u2'] }),
@@ -367,7 +367,7 @@ describe('filtro sou eu', () => {
     value: null,
   }
 
-  it('deixa passar só o que é de quem está olhando', () => {
+  it('lets through only what belongs to whoever is looking', () => {
     expect(
       applyFilters(mine, [filter], [owners], 'u1').map((item) => item.id),
     ).toEqual(['a'])
@@ -377,11 +377,11 @@ describe('filtro sou eu', () => {
     ).toEqual(['a', 'b'])
   })
 
-  it('não deixa passar nada quando ninguém está logado', () => {
+  it('lets nothing through when nobody is signed in', () => {
     expect(applyFilters(mine, [filter], [owners], null)).toEqual([])
   })
 
-  it('oferece sou eu como operador de pessoa e não de seleção', () => {
+  it('offers is me as a person operator and not a select one', () => {
     expect(operatorsFor('person')).toContain('isMe')
     expect(operatorsFor('select')).not.toContain('isMe')
   })

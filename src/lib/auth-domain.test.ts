@@ -29,13 +29,13 @@ type AuthInstance = Awaited<ReturnType<typeof loadAuth>>
 
 async function signUp(auth: AuthInstance, email: string) {
   return auth.api.signUpEmail({
-    body: { email, name: email.split('@')[0], password: 'senha-forte-123' },
+    body: { email, name: email.split('@')[0], password: 'strong-password-123' },
   })
 }
 
 async function signIn(auth: AuthInstance, email: string) {
   return auth.api.signInEmail({
-    body: { email, password: 'senha-forte-123' },
+    body: { email, password: 'strong-password-123' },
   })
 }
 
@@ -57,14 +57,14 @@ async function ssoSignIn(auth: AuthInstance, email: string) {
 
   return handleOAuthUserInfo(context as never, {
     account: {
-      accountId: `identidade-${email}`,
+      accountId: `identity-${email}`,
       issuer: 'https://auth.arvore.com.br/api-arvore',
       providerId: 'arvore',
     },
     userInfo: {
       email,
       emailVerified: true,
-      id: `identidade-${email}`,
+      id: `identity-${email}`,
       name: email.split('@')[0],
     },
   })
@@ -82,7 +82,7 @@ beforeEach(async () => {
   await db.delete(account)
   await db.delete(user)
 
-  process.env.BETTER_AUTH_SECRET ??= 'leaf-test-secret-de-trinta-e-dois-chars'
+  process.env.BETTER_AUTH_SECRET ??= 'leaf-test-secret-with-thirty-two-chars'
   process.env.BETTER_AUTH_URL ??= 'http://localhost:3000'
 })
 
@@ -90,89 +90,89 @@ afterAll(() => {
   delete process.env.LEAF_ALLOWED_EMAIL_DOMAINS
 })
 
-describe('restrição de domínio desligada', () => {
-  it('deixa criar conta com qualquer email', async () => {
+describe('domain restriction off', () => {
+  it('lets an account be created with any email', async () => {
     const auth = await loadAuth(null)
 
-    const created = await signUp(auth, 'pessoa@gmail.com')
+    const created = await signUp(auth, 'person@gmail.com')
 
-    expect(created.user.email).toBe('pessoa@gmail.com')
-    expect(await signIn(auth, 'pessoa@gmail.com')).toBeTruthy()
+    expect(created.user.email).toBe('person@gmail.com')
+    expect(await signIn(auth, 'person@gmail.com')).toBeTruthy()
   })
 })
 
-describe('restrição de domínio ligada', () => {
-  it('deixa criar conta e entrar com o domínio permitido', async () => {
+describe('domain restriction on', () => {
+  it('lets an account be created and signed in with the allowed domain', async () => {
     const auth = await loadAuth('arvore.com.br')
 
-    const created = await signUp(auth, 'pessoa@arvore.com.br')
+    const created = await signUp(auth, 'person@arvore.com.br')
 
-    expect(created.user.email).toBe('pessoa@arvore.com.br')
-    expect(await signIn(auth, 'pessoa@arvore.com.br')).toBeTruthy()
+    expect(created.user.email).toBe('person@arvore.com.br')
+    expect(await signIn(auth, 'person@arvore.com.br')).toBeTruthy()
   })
 
-  it('aceita o domínio em qualquer caixa', async () => {
+  it('accepts the domain in any case', async () => {
     const auth = await loadAuth('arvore.com.br')
 
-    const created = await signUp(auth, 'Pessoa@ARVORE.COM.BR')
+    const created = await signUp(auth, 'Person@ARVORE.COM.BR')
 
-    expect(created.user.email).toBe('pessoa@arvore.com.br')
+    expect(created.user.email).toBe('person@arvore.com.br')
   })
 
-  it('recusa o cadastro de email fora do domínio', async () => {
+  it('rejects the sign-up of an email outside the domain', async () => {
     const auth = await loadAuth('arvore.com.br')
 
-    await expectDomainRejection(signUp(auth, 'pessoa@gmail.com'))
+    await expectDomainRejection(signUp(auth, 'person@gmail.com'))
 
     expect(await db.select().from(user)).toHaveLength(0)
   })
 
-  it('recusa o login de conta criada antes da restrição', async () => {
-    const aberto = await loadAuth(null)
+  it('rejects the sign-in of an account created before the restriction', async () => {
+    const open = await loadAuth(null)
 
-    await signUp(aberto, 'antiga@gmail.com')
+    await signUp(open, 'old@gmail.com')
     await db.delete(session)
 
-    const restrito = await loadAuth('arvore.com.br')
+    const restricted = await loadAuth('arvore.com.br')
 
-    await expectDomainRejection(signIn(restrito, 'antiga@gmail.com'))
+    await expectDomainRejection(signIn(restricted, 'old@gmail.com'))
 
     expect(await db.select().from(session)).toHaveLength(0)
   })
 
-  it('aceita qualquer domínio da lista e recusa os de fora', async () => {
+  it('accepts any domain from the list and rejects the ones outside', async () => {
     const auth = await loadAuth('arvore.com.br, arvore.dev')
 
-    expect((await signUp(auth, 'um@arvore.com.br')).user.email).toBe(
-      'um@arvore.com.br',
+    expect((await signUp(auth, 'one@arvore.com.br')).user.email).toBe(
+      'one@arvore.com.br',
     )
-    expect((await signUp(auth, 'dois@arvore.dev')).user.email).toBe(
-      'dois@arvore.dev',
+    expect((await signUp(auth, 'two@arvore.dev')).user.email).toBe(
+      'two@arvore.dev',
     )
 
-    await expectDomainRejection(signUp(auth, 'tres@arvore.com'))
+    await expectDomainRejection(signUp(auth, 'three@arvore.com'))
   })
 
-  it('recusa subdomínio do domínio permitido', async () => {
+  it('rejects a subdomain of the allowed domain', async () => {
     const auth = await loadAuth('arvore.com.br')
 
-    await expectDomainRejection(signUp(auth, 'pessoa@mail.arvore.com.br'))
+    await expectDomainRejection(signUp(auth, 'person@mail.arvore.com.br'))
   })
 
-  it('deixa a conta do SSO do domínio permitido entrar', async () => {
+  it('lets the SSO account of the allowed domain sign in', async () => {
     const auth = await loadAuth('arvore.com.br')
 
-    const entrou = await ssoSignIn(auth, 'pessoa@arvore.com.br')
+    const signedIn = await ssoSignIn(auth, 'person@arvore.com.br')
 
-    expect(entrou.error).toBeNull()
-    expect(entrou.data?.user.email).toBe('pessoa@arvore.com.br')
+    expect(signedIn.error).toBeNull()
+    expect(signedIn.data?.user.email).toBe('person@arvore.com.br')
     expect(await db.select().from(session)).toHaveLength(1)
   })
 
-  it('recusa a conta do SSO fora do domínio', async () => {
+  it('rejects the SSO account outside the domain', async () => {
     const auth = await loadAuth('arvore.com.br')
 
-    await expectDomainRejection(ssoSignIn(auth, 'pessoa@gmail.com'))
+    await expectDomainRejection(ssoSignIn(auth, 'person@gmail.com'))
 
     expect(await db.select().from(user)).toHaveLength(0)
     expect(await db.select().from(session)).toHaveLength(0)

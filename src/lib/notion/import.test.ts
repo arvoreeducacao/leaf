@@ -42,22 +42,22 @@ import { NotionImportError, readZipEntries } from '@/lib/notion/zip'
 
 import { createTranslator } from 'next-intl'
 
-import ptBR from '../../../messages/pt-BR.json'
+import enUS from '../../../messages/en-US.json'
 import { buildNotionImportMessages } from '@/lib/notion/messages'
 
 const messages = buildNotionImportMessages(
   createTranslator({
-    locale: 'pt-BR',
-    messages: ptBR,
+    locale: 'en-US',
+    messages: enUS,
     namespace: 'archiveImport',
   }) as (
     key: string,
     values?: Record<string, string | number | Date>,
   ) => string,
-  ptBR.document.untitled,
+  enUS.document.untitled,
 )
 
-const owner = { id: 'user-owner', email: 'dono@arvore.com.br' }
+const owner = { id: 'user-owner', email: 'owner@arvore.com.br' }
 
 async function runImport(
   data: Uint8Array,
@@ -92,7 +92,7 @@ async function documentByTitle(title: string) {
   })
 
   if (!row) {
-    throw new Error(`documento não encontrado: ${title}`)
+    throw new Error(`document not found: ${title}`)
   }
 
   return row
@@ -118,7 +118,7 @@ beforeEach(async () => {
   await db.delete(user)
   await db.insert(user).values({
     id: owner.id,
-    name: 'Dono',
+    name: 'Owner',
     email: owner.email,
     emailVerified: false,
     createdAt: new Date(),
@@ -126,26 +126,26 @@ beforeEach(async () => {
   })
 })
 
-describe('import do export do Notion', () => {
-  it('monta a hierarquia de três níveis com títulos sem o hash', async () => {
+describe('import of the Notion export', () => {
+  it('builds the three-level hierarchy with titles without the hash', async () => {
     const { summary, error } = await runImport(buildNotionFixtureZip())
 
     expect(error).toBeNull()
     expect(summary?.pages).toBe(6)
 
-    const plano = await documentByTitle(fixtureTitles.plano)
-    const turma = await documentByTitle(fixtureTitles.turma)
-    const aluno = await documentByTitle(fixtureTitles.aluno)
+    const plan = await documentByTitle(fixtureTitles.plan)
+    const classPage = await documentByTitle(fixtureTitles.class)
+    const student = await documentByTitle(fixtureTitles.student)
 
-    expect(plano.parentId).toBeNull()
-    expect(turma.parentId).toBe(plano.id)
-    expect(aluno.parentId).toBe(turma.id)
+    expect(plan.parentId).toBeNull()
+    expect(classPage.parentId).toBe(plan.id)
+    expect(student.parentId).toBe(classPage.id)
   })
 
-  it('grava o acesso da organização em toda a árvore importada', async () => {
+  it('writes the organization access across the whole imported tree', async () => {
     await db
       .insert(organizations)
-      .values({ id: 'org-arvore', name: 'Escola Árvore', createdAt: new Date() })
+      .values({ id: 'org-arvore', name: 'Árvore School', createdAt: new Date() })
 
     const { error } = await runImport(buildNotionFixtureZip(), {
       orgAccess: 'editor',
@@ -167,7 +167,7 @@ describe('import do export do Notion', () => {
     expect(rows.every((row) => row.orgId === 'org-arvore')).toBe(true)
   })
 
-  it('sem destino escolhido a árvore importada continua privada', async () => {
+  it('with no destination chosen the imported tree stays private', async () => {
     await runImport(buildNotionFixtureZip())
 
     const rows = await db
@@ -177,78 +177,78 @@ describe('import do export do Notion', () => {
     expect(rows.every((row) => row.orgAccess === null)).toBe(true)
   })
 
-  it('transforma a database csv do Notion em base de dados', async () => {
+  it('turns the Notion csv database into a database', async () => {
     await runImport(buildNotionFixtureZip())
 
-    const plano = await documentByTitle(fixtureTitles.plano)
-    const alunos = await documentByTitle(fixtureTitles.alunos)
+    const plan = await documentByTitle(fixtureTitles.plan)
+    const students = await documentByTitle(fixtureTitles.students)
 
-    expect(alunos.parentId).toBe(plano.id)
-    expect(alunos.kind).toBe('database')
-    expect(parseContentBlocks(alunos.content)).toEqual([])
+    expect(students.parentId).toBe(plan.id)
+    expect(students.kind).toBe('database')
+    expect(parseContentBlocks(students.content)).toEqual([])
 
     const properties = await db
       .select()
       .from(databaseProperties)
-      .where(eq(databaseProperties.databaseId, alunos.id))
+      .where(eq(databaseProperties.databaseId, students.id))
 
     expect(
       properties
         .sort((left, right) => left.position - right.position)
         .map((property) => [property.name, property.type]),
     ).toEqual([
-      ['Livros', 'number'],
-      ['Comentário', 'text'],
+      ['Books', 'number'],
+      ['Comment', 'text'],
     ])
 
     const views = await db
       .select()
       .from(databaseViews)
-      .where(eq(databaseViews.databaseId, alunos.id))
+      .where(eq(databaseViews.databaseId, students.id))
 
     expect(views).toHaveLength(1)
     expect(views[0].type).toBe('table')
   })
 
-  it('aproveita a página md da linha em vez de duplicá-la', async () => {
+  it('reuses the md page of the row instead of duplicating it', async () => {
     await runImport(buildNotionFixtureZip())
 
-    const alunos = await documentByTitle(fixtureTitles.alunos)
+    const students = await documentByTitle(fixtureTitles.students)
     const ana = await documentByTitle(fixtureTitles.ana)
 
-    expect(ana.parentId).toBe(alunos.id)
+    expect(ana.parentId).toBe(students.id)
     expect(ana.kind).toBe('row')
-    expect(textOf(parseContentBlocks(ana.content))).toContain('Ficha de leitura')
+    expect(textOf(parseContentBlocks(ana.content))).toContain('Reading record')
 
-    const livros = (
+    const books = (
       await db
         .select()
         .from(databaseProperties)
-        .where(eq(databaseProperties.databaseId, alunos.id))
-    ).find((property) => property.name === 'Livros')
+        .where(eq(databaseProperties.databaseId, students.id))
+    ).find((property) => property.name === 'Books')
 
-    expect(parseValues(ana.properties)[livros?.id ?? '']).toBe(12)
+    expect(parseValues(ana.properties)[books?.id ?? '']).toBe(12)
   })
 
-  it('cria a linha que só existia no csv', async () => {
+  it('creates the row that only existed in the csv', async () => {
     const { summary } = await runImport(buildNotionFixtureZip())
 
     const bruno = await documentByTitle('Bruno Lima')
-    const alunos = await documentByTitle(fixtureTitles.alunos)
+    const students = await documentByTitle(fixtureTitles.students)
 
     expect(bruno.kind).toBe('row')
-    expect(bruno.parentId).toBe(alunos.id)
+    expect(bruno.parentId).toBe(students.id)
     expect(summary?.pages).toBe(6)
   })
 
-  it('envia a imagem para o storage e reescreve a url no bloco', async () => {
+  it('uploads the image to the storage and rewrites the url in the block', async () => {
     const { summary } = await runImport(buildNotionFixtureZip())
 
     expect(summary?.assets).toBe(2)
     expect(uploads.some((item) => item.contentType === 'image/png')).toBe(true)
 
-    const turma = await documentByTitle(fixtureTitles.turma)
-    const blocks = parseContentBlocks(turma.content)
+    const classPage = await documentByTitle(fixtureTitles.class)
+    const blocks = parseContentBlocks(classPage.content)
     const image = blocks.find((block) => block.type === 'image')
 
     expect(image).toBeDefined()
@@ -257,88 +257,88 @@ describe('import do export do Notion', () => {
     ).toMatch(/^\/api\/uploads\/u\/[\w-]+\.png$/)
   })
 
-  it('reescreve o link interno para a rota do documento criado', async () => {
+  it('rewrites the internal link to the route of the created document', async () => {
     await runImport(buildNotionFixtureZip())
 
-    const plano = await documentByTitle(fixtureTitles.plano)
-    const turma = await documentByTitle(fixtureTitles.turma)
-    const blocks = parseContentBlocks(plano.content)
+    const plan = await documentByTitle(fixtureTitles.plan)
+    const classPage = await documentByTitle(fixtureTitles.class)
+    const blocks = parseContentBlocks(plan.content)
 
-    expect(textOf(blocks)).toContain(`/doc/${turma.id}`)
+    expect(textOf(blocks)).toContain(`/doc/${classPage.id}`)
   })
 
-  it('transforma anexo que não é imagem em link', async () => {
+  it('turns an attachment that is not an image into a link', async () => {
     await runImport(buildNotionFixtureZip())
 
-    const turma = await documentByTitle(fixtureTitles.turma)
-    const blocks = parseContentBlocks(turma.content)
+    const classPage = await documentByTitle(fixtureTitles.class)
+    const blocks = parseContentBlocks(classPage.content)
     const serialized = textOf(blocks)
 
     expect(serialized).toContain('.pdf')
     expect(blockTypes(blocks)).not.toContain('file')
   })
 
-  it('converte aside e citação com emoji em bloco de destaque', async () => {
+  it('turns aside and emoji quote into a callout block', async () => {
     await runImport(buildNotionFixtureZip())
 
-    const plano = await documentByTitle(fixtureTitles.plano)
-    const turma = await documentByTitle(fixtureTitles.turma)
+    const plan = await documentByTitle(fixtureTitles.plan)
+    const classPage = await documentByTitle(fixtureTitles.class)
 
-    expect(blockTypes(parseContentBlocks(plano.content))).toContain('callout')
+    expect(blockTypes(parseContentBlocks(plan.content))).toContain('callout')
 
-    const turmaBlocks = parseContentBlocks(turma.content)
+    const classBlocks = parseContentBlocks(classPage.content)
 
-    expect(blockTypes(turmaBlocks)).toContain('callout')
-    expect(textOf(turmaBlocks)).not.toContain('💡')
+    expect(blockTypes(classBlocks)).toContain('callout')
+    expect(textOf(classBlocks)).not.toContain('💡')
   })
 
-  it('não repete o título do documento como primeiro bloco', async () => {
+  it('does not repeat the document title as the first block', async () => {
     await runImport(buildNotionFixtureZip())
 
-    const plano = await documentByTitle(fixtureTitles.plano)
-    const blocks = parseContentBlocks(plano.content)
+    const plan = await documentByTitle(fixtureTitles.plan)
+    const blocks = parseContentBlocks(plan.content)
     const first = blocks[0]
 
     expect(first.type).not.toBe('heading')
-    expect(textOf([first])).not.toContain(fixtureTitles.plano)
+    expect(textOf([first])).not.toContain(fixtureTitles.plan)
   })
 
-  it('avisa que a lista de alternância perdeu o comportamento de abrir e fechar', async () => {
+  it('warns that the toggle list lost its open and close behavior', async () => {
     const { summary } = await runImport(buildNotionFixtureZip())
 
     expect(
-      summary?.warnings.some((warning) => warning.includes('alternância')),
+      summary?.warnings.some((warning) => warning.includes('toggle list')),
     ).toBe(true)
   })
 
-  it('devolve o documento raiz para abrir depois da importação', async () => {
+  it('returns the root document to open after the import', async () => {
     const { summary } = await runImport(buildNotionFixtureZip())
-    const plano = await documentByTitle(fixtureTitles.plano)
+    const plan = await documentByTitle(fixtureTitles.plan)
 
-    expect(summary?.rootId).toBe(plano.id)
-    expect(summary?.rootTitle).toBe(fixtureTitles.plano)
+    expect(summary?.rootId).toBe(plan.id)
+    expect(summary?.rootTitle).toBe(fixtureTitles.plan)
   })
 
-  it('recusa zip sem nenhuma página', async () => {
-    const empty = zipSync({ 'leia-me.txt': new TextEncoder().encode('oi') })
+  it('rejects a zip without a single page', async () => {
+    const empty = zipSync({ 'read-me.txt': new TextEncoder().encode('hi') })
     const { error, summary } = await runImport(empty)
 
     expect(summary).toBeNull()
-    expect(error).toContain('Não encontramos páginas')
+    expect(error).toContain("didn't find any pages")
   })
 })
 
-describe('segurança do zip', () => {
-  it('rejeita caminho que sobe de diretório', () => {
+describe('zip safety', () => {
+  it('rejects a path that climbs out of the directory', () => {
     const data = zipSync({
-      'pagina.md': new TextEncoder().encode('# ok'),
-      '../fora.md': new TextEncoder().encode('# fora'),
+      'page.md': new TextEncoder().encode('# ok'),
+      '../outside.md': new TextEncoder().encode('# outside'),
     })
 
     expect(() => readZipEntries(data, messages)).toThrow(NotionImportError)
   })
 
-  it('rejeita caminho absoluto', () => {
+  it('rejects an absolute path', () => {
     const data = zipSync({
       '/etc/passwd': new TextEncoder().encode('root'),
     })
@@ -346,9 +346,9 @@ describe('segurança do zip', () => {
     expect(() => readZipEntries(data, messages)).toThrow(NotionImportError)
   })
 
-  it('rejeita quando o tamanho descompactado declarado passa do limite', () => {
+  it('rejects when the declared uncompressed size goes over the limit', () => {
     const data = zipSync({
-      'bomba.md': new Uint8Array(64 * 1024),
+      'bomb.md': new Uint8Array(64 * 1024),
     })
 
     expect(() => readZipEntries(data, messages, { maxBytes: 1024 })).toThrow(
@@ -356,7 +356,7 @@ describe('segurança do zip', () => {
     )
   })
 
-  it('rejeita quando passa do número de arquivos', () => {
+  it('rejects when it goes over the number of files', () => {
     const files: Record<string, Uint8Array> = {}
 
     for (let index = 0; index < 12; index += 1) {
@@ -368,28 +368,28 @@ describe('segurança do zip', () => {
     )
   })
 
-  it('ignora lixo do sistema operacional', () => {
+  it('ignores operating system junk', () => {
     const entries = readZipEntries(
       data({
-        '__MACOSX/._pagina.md': new TextEncoder().encode('lixo'),
-        'pagina.md': new TextEncoder().encode('# ok'),
-        '.DS_Store': new TextEncoder().encode('lixo'),
+        '__MACOSX/._page.md': new TextEncoder().encode('junk'),
+        'page.md': new TextEncoder().encode('# ok'),
+        '.DS_Store': new TextEncoder().encode('junk'),
       }),
       messages,
     )
 
-    expect(entries.map((entry) => entry.path)).toEqual(['pagina.md'])
+    expect(entries.map((entry) => entry.path)).toEqual(['page.md'])
   })
 
-  it('bloqueia a importação inteira quando o zip tem caminho inseguro', async () => {
+  it('blocks the whole import when the zip has an unsafe path', async () => {
     const { error } = await runImport(
       zipSync({
         'ok.md': new TextEncoder().encode('# ok'),
-        '../escapou.md': new TextEncoder().encode('# escapou'),
+        '../escaped.md': new TextEncoder().encode('# escaped'),
       }),
     )
 
-    expect(error).toContain('caminhos inválidos')
+    expect(error).toContain('invalid paths')
   })
 })
 
@@ -397,59 +397,58 @@ function data(files: Record<string, Uint8Array>) {
   return zipSync(files)
 }
 
-describe('nome de página do Notion', () => {
-  it('remove o hash de 32 caracteres do título', () => {
-    expect(notionTitle(
-      'Plano de aula 1111111111111111111111111111aaaa.md',
-      'Sem título',
-    )).toBe(
-      'Plano de aula',
-    )
-    expect(notionTitle('Base 4444444444444444444444444444dddd.csv', 'Sem título')).toBe('Base')
-    expect(notionTitle('Sem hash.md', 'Sem título')).toBe('Sem hash')
+describe('Notion page name', () => {
+  it('strips the 32-character hash from the title', () => {
+    expect(
+      notionTitle('Lesson plan 1111111111111111111111111111aaaa.md', 'Untitled'),
+    ).toBe('Lesson plan')
+    expect(
+      notionTitle('Base 4444444444444444444444444444dddd.csv', 'Untitled'),
+    ).toBe('Base')
+    expect(notionTitle('No hash.md', 'Untitled')).toBe('No hash')
   })
 })
 
-describe('csv do Notion', () => {
-  it('lê célula com vírgula e aspas', () => {
-    const rows = parseCsv('a,b\n"um, dois",três\n')
+describe('Notion csv', () => {
+  it('reads a cell with a comma and quotes', () => {
+    const rows = parseCsv('a,b\n"one, two",three\n')
 
     expect(rows).toEqual([
       ['a', 'b'],
-      ['um, dois', 'três'],
+      ['one, two', 'three'],
     ])
   })
 })
 
-describe('plano de importação', () => {
-  it('mantém a pasta sem md como página de agrupamento', () => {
+describe('import plan', () => {
+  it('keeps a folder without md as a grouping page', () => {
     const plan = buildImportPlan(
       readZipEntries(
         data({
-          'Caderno/Aula 1111111111111111111111111111aaaa.md':
-            new TextEncoder().encode('# Aula'),
+          'Notebook/Lesson 1111111111111111111111111111aaaa.md':
+            new TextEncoder().encode('# Lesson'),
         }),
         messages,
       ),
       messages.untitled,
     )
 
-    expect(plan.pages.map((page) => page.title)).toEqual(['Aula'])
+    expect(plan.pages.map((page) => page.title)).toEqual(['Lesson'])
   })
 
-  it('não achata a pasta raiz quando ela é uma página do Notion', () => {
+  it('does not flatten the root folder when it is a Notion page', () => {
     const plan = buildImportPlan(
       readZipEntries(
         data({
-          'Caderno 1111111111111111111111111111aaaa/Aula 2222222222222222222222222222bbbb.md':
-            new TextEncoder().encode('# Aula'),
+          'Notebook 1111111111111111111111111111aaaa/Lesson 2222222222222222222222222222bbbb.md':
+            new TextEncoder().encode('# Lesson'),
         }),
         messages,
       ),
       messages.untitled,
     )
 
-    expect(plan.pages.map((page) => page.title)).toEqual(['Caderno', 'Aula'])
+    expect(plan.pages.map((page) => page.title)).toEqual(['Notebook', 'Lesson'])
     expect(plan.pages[1].parentKey).toBe(plan.pages[0].key)
   })
 })
