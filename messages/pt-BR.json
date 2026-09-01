@@ -575,7 +575,10 @@
     "readingCount": "{done, plural, one {# página lida} other {# páginas lidas}}",
     "crawlTruncated": "A importação parou em {max} páginas. O resto da árvore ficou de fora.",
     "invalidLink": "Esse link não parece ser de uma página do Notion",
-    "notConnected": "Conecte sua conta do Notion antes de importar por link"
+    "notConnected": "Conecte sua conta do Notion antes de importar por link",
+    "commentsUnavailable": "Não foi possível ler os comentários. Confira se a conexão com o Notion tem permissão de ler comentários.",
+    "commentsImported": "{count, plural, one {# comentário aberto veio junto, preso à página} other {# comentários abertos vieram junto, presos à página}}",
+    "commentsFailed": "Os comentários não puderam ser criados. As páginas foram importadas assim mesmo."
   },
   "notionLink": {
     "title": "Importar do Notion",
@@ -593,7 +596,9 @@
     "unavailable": "A importação por link ainda não está ligada neste Leaf.",
     "disconnected": "Conecte sua conta do Notion para o Leaf ler as páginas que você já enxerga lá.",
     "invalidLink": "Esse link não parece ser de uma página do Notion.",
-    "unreachable": "Não conseguimos abrir essa página. Confira se você deu acesso a ela na conexão com o Notion."
+    "unreachable": "Não conseguimos abrir essa página. Confira se você deu acesso a ela na conexão com o Notion.",
+    "withComments": "Trazer também os comentários abertos",
+    "withCommentsHint": "As threads não resolvidas entram presas à página, não ao trecho. Deixa a importação mais lenta."
   },
   "teamspace": {
     "sectionTitle": "Teamspaces",

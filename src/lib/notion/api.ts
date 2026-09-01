@@ -57,6 +57,20 @@ export type NotionDatabaseObject = Readonly<{
   properties?: Record<string, { type?: string; name?: string }>
 }>
 
+export type NotionComment = Readonly<{
+  id: string
+  discussion_id?: string
+  created_time?: string
+  created_by?: { id?: string }
+  rich_text?: Array<NotionRichText>
+}>
+
+export type NotionUserObject = Readonly<{
+  id: string
+  name?: string | null
+  person?: { email?: string | null }
+}>
+
 export type NotionList<T> = Readonly<{
   results: Array<T>
   has_more?: boolean
@@ -68,6 +82,8 @@ export type NotionClient = Readonly<{
   database: (id: string) => Promise<NotionDatabaseObject>
   children: (id: string) => AsyncGenerator<NotionBlock>
   rows: (databaseId: string) => AsyncGenerator<NotionPageObject>
+  comments: (blockId: string) => AsyncGenerator<NotionComment>
+  user: (id: string) => Promise<NotionUserObject>
   download: (url: string) => Promise<{ bytes: Uint8Array; contentType: string }>
 }>
 
@@ -132,6 +148,22 @@ export function createNotionClient(
         )
       }),
 
+    comments: (blockId) =>
+      paginate<NotionComment>((cursor) => {
+        const query = new URLSearchParams({
+          block_id: blockId,
+          page_size: String(pageSize),
+        })
+
+        if (cursor) {
+          query.set('start_cursor', cursor)
+        }
+
+        return request<NotionList<NotionComment>>(
+          `/comments?${query.toString()}`,
+        )
+      }),
+
     database: (id) => request<NotionDatabaseObject>(`/databases/${id}`),
 
     download: async (url) => {
@@ -149,6 +181,8 @@ export function createNotionClient(
     },
 
     page: (id) => request<NotionPageObject>(`/pages/${id}`),
+
+    user: (id) => request<NotionUserObject>(`/users/${id}`),
 
     rows: (databaseId) =>
       paginate<NotionPageObject>((cursor) =>

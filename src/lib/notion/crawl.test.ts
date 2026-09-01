@@ -20,7 +20,7 @@ vi.mock('@/lib/storage', () => ({
 import { eq } from 'drizzle-orm'
 
 import { db } from '@/db'
-import { documents, user } from '@/db/schema'
+import { comments, documents, user } from '@/db/schema'
 import { resetDatabase } from '@/db/testing'
 import { parseContentBlocks } from '@/lib/markdown/convert'
 import type {
@@ -42,10 +42,61 @@ const imageUrl = 'https://prod-files.s3.amazonaws.com/foto.png?X-Amz-Expires=1'
 const messages: CrawlMessages = {
   assetFailed: (name) => `falhou ${name}`,
   assetTooLarge: (name, limit) => `grande ${name} ${limit}`,
+  commentsUnavailable: 'sem permissão de comentários',
   crawlTruncated: (max) => `parou em ${max}`,
   pageFailed: (title) => `pagina ${title}`,
   untitled: 'Sem título',
 }
+
+const importMessages = {
+  ...messages,
+  assetTooLarge: (name: string, limit: string) => `${name} ${limit}`,
+  commentsFailed: 'comentários falharam',
+  commentsImported: (count: number) => `${count} comentários`,
+  csvColumn: 'Coluna',
+  csvDatabases: (count: number) => `${count} bases`,
+  csvView: 'Tabela',
+  missingLinks: (count: number) => `${count} links`,
+  noPages: 'sem páginas',
+  togglesDegraded: (count: number) => `${count} toggles`,
+  tooManyEntries: (max: number) => `${max} itens`,
+  unreadableZip: 'zip ruim',
+  unsafePaths: 'caminho ruim',
+  unzippedTooLarge: (limit: string) => `passa de ${limit}`,
+}
+
+const notionAuthors: Record<string, { id: string; name?: string; person?: { email?: string } }> = {
+  'user-ana': {
+    id: 'user-ana',
+    name: 'Ana Souza',
+    person: { email: 'ana@arvore.com.br' },
+  },
+  'user-fora': { id: 'user-fora', name: 'Alguém de Fora' },
+}
+
+const notionComments = [
+  {
+    created_by: { id: 'user-ana' },
+    created_time: '2026-08-30T12:00:00.000Z',
+    discussion_id: 'disc-1',
+    id: 'c-1',
+    rich_text: [{ plain_text: 'Isso aqui está desatualizado' }],
+  },
+  {
+    created_by: { id: 'user-fora' },
+    created_time: '2026-08-30T12:05:00.000Z',
+    discussion_id: 'disc-1',
+    id: 'c-2',
+    rich_text: [{ plain_text: 'Concordo, vou revisar' }],
+  },
+  {
+    created_by: { id: 'user-ana' },
+    created_time: '2026-08-30T13:00:00.000Z',
+    discussion_id: 'disc-2',
+    id: 'c-3',
+    rich_text: [{ plain_text: 'Outra thread' }],
+  },
+]
 
 function titleProperty(text: string) {
   return { Name: { type: 'title', title: [{ plain_text: text }] } }
@@ -136,8 +187,32 @@ const rows: Array<NotionPageObject> = [
 
 const downloads: Array<string> = []
 
-function fakeClient(): NotionClient {
+function fakeClient(
+  options: { comments?: boolean; commentsFail?: boolean } = {},
+): NotionClient {
   return {
+    comments: async function* (id: string) {
+      if (options.commentsFail) {
+        throw new Error('403')
+      }
+
+      if (!options.comments || id !== rootId) {
+        return
+      }
+
+      for (const comment of notionComments) {
+        yield comment
+      }
+    },
+    user: async (id: string) => {
+      const author = notionAuthors[id]
+
+      if (!author) {
+        throw new Error('sem usuário')
+      }
+
+      return author
+    },
     children: async function* (id: string) {
       for (const block of blocksById[id] ?? []) {
         yield block
@@ -182,21 +257,48 @@ async function crawl(): Promise<NotionPlan> {
   return plan
 }
 
+async function crawlWithComments(options: { commentsFail?: boolean } = {}) {
+  for await (const event of crawlNotionPage(
+    fakeClient({ comments: true, commentsFail: options.commentsFail }),
+    rootId,
+    messages,
+    undefined,
+    { comments: true },
+  )) {
+    if (event.type === 'plan') {
+      return event
+    }
+  }
+
+  throw new Error('sem plano')
+}
+
 beforeEach(async () => {
   await resetDatabase()
   uploads.length = 0
   downloads.length = 0
 
+  await db.delete(comments)
   await db.delete(documents)
   await db.delete(user)
-  await db.insert(user).values({
-    id: 'user-owner',
-    name: 'Dono',
-    email: 'dono@arvore.com.br',
-    emailVerified: false,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  })
+  await db.insert(user).values([
+    {
+      id: 'user-owner',
+      name: 'Dono',
+      email: 'dono@arvore.com.br',
+      emailVerified: false,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+    {
+      id: 'user-ana',
+      name: 'Ana Souza',
+      email: 'ana@arvore.com.br',
+      emailVerified: false,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+  ])
 })
 
 describe('varredura da página do Notion', () => {
@@ -273,21 +375,7 @@ describe('importar o que a varredura montou', () => {
     for await (const event of importNotionPlan(
       plan,
       { id: 'user-owner', orgAccess: null, orgId: null },
-      {
-        ...messages,
-        csvColumn: 'Coluna',
-        csvDatabases: (count) => `${count} bases`,
-        csvView: 'Tabela',
-        missingLinks: (count) => `${count} links`,
-        noPages: 'sem páginas',
-        pageFailed: (title) => `falhou ${title}`,
-        togglesDegraded: (count) => `${count} toggles`,
-        tooManyEntries: (max) => `${max} itens`,
-        unreadableZip: 'zip ruim',
-        unsafePaths: 'caminho ruim',
-        unzippedTooLarge: (limit) => `passa de ${limit}`,
-        assetTooLarge: (name, limit) => `${name} ${limit}`,
-      },
+      importMessages,
     )) {
       expect(event.type).not.toBe('error')
     }
@@ -313,5 +401,87 @@ describe('importar o que a varredura montou', () => {
     expect(types).toContain('heading')
     expect(types).toContain('bulletListItem')
     expect(JSON.stringify(blocks)).toContain(`/doc/${child?.id}`)
+  })
+})
+
+describe('comentários abertos do Notion', () => {
+  it('não pede comentários quando a caixa fica desmarcada', async () => {
+    const event = await (async () => {
+      for await (const item of crawlNotionPage(
+        fakeClient({ comments: true }),
+        rootId,
+        messages,
+      )) {
+        if (item.type === 'plan') {
+          return item
+        }
+      }
+
+      throw new Error('sem plano')
+    })()
+
+    expect(event.comments.size).toBe(0)
+  })
+
+  it('junta as threads abertas da página', async () => {
+    const event = await crawlWithComments()
+    const threads = event.comments.get(`${rootId}.md`) ?? []
+
+    expect(threads).toHaveLength(3)
+    expect(threads[0].discussionId).toBe('disc-1')
+    expect(threads[0].authorEmail).toBe('ana@arvore.com.br')
+    expect(threads[1].authorEmail).toBeNull()
+    expect(threads[1].authorName).toBe('Alguém de Fora')
+  })
+
+  it('avisa quando a conexão não pode ler comentários', async () => {
+    const event = await crawlWithComments({ commentsFail: true })
+
+    expect(event.comments.size).toBe(0)
+    expect(event.warnings).toContain('sem permissão de comentários')
+  })
+
+  it('cria a thread no documento, com resposta e autor casado por email', async () => {
+    const event = await crawlWithComments()
+
+    for await (const step of importNotionPlan(
+      event.plan,
+      { id: 'user-owner', orgAccess: null, orgId: null },
+      importMessages,
+      undefined,
+      event.comments,
+    )) {
+      expect(step.type).not.toBe('error')
+    }
+
+    const root = await db.query.documents.findFirst({
+      where: eq(documents.title, 'Plano de leitura'),
+    })
+
+    const rows = await db
+      .select({
+        id: comments.id,
+        authorId: comments.authorId,
+        body: comments.body,
+        documentId: comments.documentId,
+        parentId: comments.parentId,
+        blockId: comments.blockId,
+        resolvedAt: comments.resolvedAt,
+      })
+      .from(comments)
+
+    expect(rows).toHaveLength(3)
+    expect(rows.every((row) => row.documentId === root?.id)).toBe(true)
+    expect(rows.every((row) => row.blockId === null)).toBe(true)
+    expect(rows.every((row) => row.resolvedAt === null)).toBe(true)
+
+    const first = rows.find((row) => row.body.includes('desatualizado'))
+    const reply = rows.find((row) => row.body.includes('vou revisar'))
+
+    expect(first?.authorId).toBe('user-ana')
+    expect(first?.parentId).toBeNull()
+    expect(reply?.parentId).toBe(first?.id)
+    expect(reply?.authorId).toBeNull()
+    expect(reply?.body).toBe('Alguém de Fora: Concordo, vou revisar')
   })
 })
