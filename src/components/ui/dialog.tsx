@@ -64,8 +64,8 @@ function DialogContent({
       <DialogOverlay />
       <DialogPrimitive.Content
         className={cn(
-          'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom fixed inset-x-0 bottom-0 z-50 grid max-h-[85dvh] w-full gap-4 overflow-y-auto rounded-t-xlarge rounded-b-none border bg-surface-card p-6 pb-[max(calc(var(--spacing)*6),env(safe-area-inset-bottom))] shadow-center-xlarge duration-200 data-[state=closed]:animate-out data-[state=open]:animate-in',
-          'tablet:data-[state=closed]:zoom-out-95 tablet:data-[state=open]:zoom-in-95 tablet:data-[state=closed]:slide-out-to-bottom-0 tablet:data-[state=open]:slide-in-from-bottom-0 tablet:inset-x-auto tablet:top-[50%] tablet:bottom-auto tablet:left-[50%] tablet:w-[calc(100%-2rem)] tablet:max-w-lg tablet:translate-x-[-50%] tablet:translate-y-[-50%] tablet:rounded-b-xlarge tablet:pb-6',
+          'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom fixed inset-x-0 bottom-0 z-50 grid max-h-[85dvh] w-full gap-4 overflow-y-auto rounded-t-xlarge rounded-b-none bg-surface-card p-5 pb-[max(calc(var(--spacing)*5),env(safe-area-inset-bottom))] shadow-center-xlarge duration-200 data-[state=closed]:animate-out data-[state=open]:animate-in',
+          'tablet:data-[state=closed]:zoom-out-95 tablet:data-[state=open]:zoom-in-95 tablet:data-[state=closed]:slide-out-to-bottom-0 tablet:data-[state=open]:slide-in-from-bottom-0 tablet:inset-x-auto tablet:top-[50%] tablet:bottom-auto tablet:left-[50%] tablet:w-[calc(100%-2rem)] tablet:max-w-lg tablet:translate-x-[-50%] tablet:translate-y-[-50%] tablet:rounded-b-xlarge tablet:pb-5',
           className
         )}
         data-slot="dialog-content"
@@ -78,7 +78,7 @@ function DialogContent({
         {children}
         {showCloseButton && (
           <DialogPrimitive.Close
-            className="absolute top-2 right-2 flex size-11 cursor-pointer items-center justify-center rounded-small opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-hidden focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0"
+            className="absolute top-3 right-3 flex size-9 cursor-pointer items-center justify-center rounded-large text-content-subtle transition-colors tablet:size-7 hover:bg-surface-hover hover:text-content-strong focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0"
             data-slot="dialog-close"
           >
             <CancelIcon />
@@ -125,7 +125,7 @@ function DialogTitle({
 }: Readonly<React.ComponentProps<typeof DialogPrimitive.Title>>) {
   return (
     <DialogPrimitive.Title
-      className={cn('font-bold text-content-strong text-[20px] leading-[1.3]', className)}
+      className={cn('font-semibold text-content-strong text-heading-medium', className)}
       data-slot="dialog-title"
       {...props}
     />
@@ -138,7 +138,7 @@ function DialogDescription({
 }: Readonly<React.ComponentProps<typeof DialogPrimitive.Description>>) {
   return (
     <DialogPrimitive.Description
-      className={cn('text-[16px] text-content leading-medium', className)}
+      className={cn('text-body-small text-content', className)}
       data-slot="dialog-description"
       {...props}
     />

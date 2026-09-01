@@ -15,15 +15,15 @@ export default function AppError({ reset }: Props) {
   const tCommon = useTranslations('common')
 
   return (
-    <div className="mx-auto flex w-full max-w-content flex-col items-center gap-4 px-4 py-10 text-center tablet:px-8">
-      <AlertIcon aria-hidden="true" className="size-10 text-danger" />
-      <h1 className="font-bold text-heading-large text-content-strong">
+    <div className="mx-auto flex w-full max-w-page flex-col gap-3 px-4 pt-20 tablet:px-[54px]">
+      <AlertIcon aria-hidden="true" className="size-7 text-danger" />
+      <h1 className="font-semibold text-content-strong text-heading-large">
         {t('appTitle')}
       </h1>
-      <p className="max-w-110 text-body-medium text-content">
+      <p className="max-w-prose-leaf text-body-medium text-content">
         {t('appBody')}
       </p>
-      <Button onClick={reset} type="button">
+      <Button className="mt-3 self-start" onClick={reset} type="button">
         {tCommon('tryAgain')}
       </Button>
     </div>

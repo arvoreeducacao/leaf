@@ -29,7 +29,7 @@ test.describe('tema', () => {
       getComputedStyle(document.body).backgroundColor,
     )
 
-    expect(background).toBe('rgb(2, 33, 42)')
+    expect(background).toBe('rgb(25, 25, 25)')
 
     await page.reload()
     await expect(html).toHaveClass(/dark/)
@@ -71,7 +71,7 @@ test.describe('tema', () => {
       return { background: styles.backgroundColor, color: styles.color }
     })
 
-    expect(colors.color).toBe('rgb(250, 253, 255)')
+    expect(colors.color).toBe('rgb(212, 212, 212)')
     expect(colors.background).not.toBe('rgb(255, 255, 255)')
   })
 })

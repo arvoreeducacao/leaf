@@ -44,7 +44,7 @@ function AlertTitle({
   return (
     <div
       className={cn(
-        'col-start-2 min-h-4 font-bold text-content-strong tracking-tight',
+        'col-start-2 min-h-4 font-semibold text-content-strong',
         className
       )}
       data-slot="alert-title"

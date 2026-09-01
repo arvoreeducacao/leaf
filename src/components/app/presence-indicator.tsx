@@ -51,12 +51,12 @@ export function PresenceIndicator() {
 
               return (
                 <li
-                  className="-ml-2 rounded-full border-2 border-surface-app first:ml-0"
+                  className="-ml-1.5 rounded-full border-2 border-surface-app first:ml-0"
                   key={peer.clientId}
                 >
                   <span
                     aria-hidden="true"
-                    className="flex size-7 items-center justify-center rounded-full font-bold text-body-small"
+                    className="flex size-5.5 items-center justify-center rounded-full font-semibold text-[10px]"
                     style={{
                       backgroundColor: color,
                       color: realtimeTextColorFor(color),
@@ -71,7 +71,7 @@ export function PresenceIndicator() {
           {overflow > 0 ? (
             <span
               aria-hidden="true"
-              className="-ml-2 flex size-7 items-center justify-center rounded-full border-2 border-surface-app bg-surface-subtle font-bold text-body-small text-content"
+              className="-ml-1.5 flex size-5.5 items-center justify-center rounded-full border-2 border-surface-app bg-surface-subtle font-semibold text-[10px] text-content"
             >
               {`+${overflow}`}
             </span>

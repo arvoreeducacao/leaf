@@ -12,7 +12,6 @@ import {
   useBlockIndex,
 } from '@/components/comments/comments-bridge'
 import { ChatIcon, TargetIcon } from '@/components/icons'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import {
@@ -307,22 +306,22 @@ export function CommentsPanel({ documentId, initialOpenCount }: Props) {
   return (
     <>
       <Button
-        className="h-12"
         data-testid="comments-button"
         onClick={() => {
           setAnchorId(null)
           setOpen(true)
         }}
+        size="sm"
         type="button"
-        variant="secondary"
+        variant="ghost"
       >
         <ChatIcon aria-hidden="true" />
-        <span className="sr-only tablet:not-sr-only">{t('open')}</span>
+        <span className="sr-only">{t('open')}</span>
         {openCount > 0 ? (
           <>
-            <Badge aria-hidden="true" variant="info">
+            <span aria-hidden="true" className="text-caption tabular-nums">
               {openCount}
-            </Badge>
+            </span>
             <span className="sr-only">{t('openCount', { count: openCount })}</span>
           </>
         ) : null}

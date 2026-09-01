@@ -72,7 +72,7 @@
     "newDocument": "Novo documento",
     "newDocumentFailed": "Não foi possível criar o documento",
     "searchLabel": "Buscar documento pelo título",
-    "searchPlaceholder": "Buscar documento",
+    "searchPlaceholder": "Filtrar por título",
     "searchResults": "Resultados da busca",
     "searchEmpty": "Nenhum documento com esse nome",
     "searchCount": "{count, plural, =0 {# documentos encontrados} one {# documento encontrado} other {# documentos encontrados}}",
