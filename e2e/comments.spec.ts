@@ -99,6 +99,65 @@ test.describe('comentários', () => {
     expect(await blockShadow(page, blockIds[0])).toBe('none')
   })
 
+  test('marcador na margem abre a conversa no próprio trecho', async ({
+    page,
+  }) => {
+    await signUp(page, uniqueEmail('margem'), 'Autora')
+    await createDocument(page, 'Documento com marcador')
+
+    await typeInEditor(page, 'primeiro paragrafo')
+    await page.keyboard.press('Enter')
+    await page.keyboard.type('segundo paragrafo')
+    await waitForSaved(page)
+
+    await selectLastWord(page, 'segundo paragrafo'.length)
+    await commentFromToolbar(page, 'Comentário na margem')
+    await page.keyboard.press('Escape')
+    await expect(page.getByTestId('comments-panel')).toHaveCount(0)
+
+    await page.reload()
+    await waitForEditorReady(page)
+
+    const marker = page.getByTestId('inline-comment-marker')
+
+    await expect(marker).toHaveCount(1)
+
+    const blockIds = await editorBody(page)
+      .locator('.bn-block-outer[data-id]')
+      .evaluateAll((elements) =>
+        elements.map((element) => element.getAttribute('data-id') ?? ''),
+      )
+
+    await expect(marker).toHaveAttribute('data-block-id', blockIds[1])
+
+    const markerBox = await marker.boundingBox()
+    const blockBox = await editorBody(page)
+      .locator(`.bn-block-outer[data-id="${blockIds[1]}"]`)
+      .boundingBox()
+
+    expect(
+      Math.abs((markerBox?.y ?? 0) - (blockBox?.y ?? 1_000)),
+    ).toBeLessThan(24)
+
+    await marker.click()
+
+    const popover = page.getByTestId('inline-comments-popover')
+
+    await expect(popover).toBeVisible()
+    await expect(popover).toContainText('Comentário na margem')
+
+    await popover
+      .getByRole('button', { name: 'Responder', exact: true })
+      .click()
+    await popover.getByLabel(/^Resposta para/).fill('Resposta na margem')
+    await popover.getByRole('button', { name: 'Enviar resposta' }).click()
+    await expect(popover).toContainText('Resposta na margem')
+
+    await popover.getByRole('button', { name: 'Resolver' }).click()
+    await expect(page.getByText('Comentário resolvido').first()).toBeVisible()
+    await expect(page.getByTestId('inline-comment-marker')).toHaveCount(0)
+  })
+
   test('responder, resolver, reabrir e filtrar resolvidos', async ({ page }) => {
     await signUp(page, uniqueEmail('thread'), 'Autora')
     await createDocument(page, 'Conversa')

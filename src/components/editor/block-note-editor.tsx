@@ -22,6 +22,7 @@ import {
   publishBlockIds,
   resetBlockIds,
 } from '@/components/comments/comments-bridge'
+import { InlineComments } from '@/components/comments/inline-comments'
 import { WarningIcon } from '@/components/icons'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { createDatabase } from '@/lib/database-actions'
@@ -61,6 +62,7 @@ type Props = Readonly<{
   readOnly: boolean
   isOwner: boolean
   canComment: boolean
+  openCommentCount: number
   collaboration?: RealtimeSession | null
   realtimeConnected?: boolean
 }>
@@ -71,6 +73,7 @@ export default function BlockNoteEditor({
   readOnly,
   isOwner,
   canComment,
+  openCommentCount,
   collaboration = null,
   realtimeConnected = false,
 }: Props) {
@@ -338,7 +341,7 @@ export default function BlockNoteEditor({
   }
 
   return (
-    <div className="flex w-full flex-col" ref={containerRef}>
+    <div className="relative flex w-full flex-col" ref={containerRef}>
       {highlightedBlock && blockIdPattern.test(highlightedBlock) ? (
         <style>{highlightRule(highlightedBlock)}</style>
       ) : null}
@@ -381,6 +384,11 @@ export default function BlockNoteEditor({
           triggerCharacter="/"
         />
       </BlockNoteView>
+      <InlineComments
+        containerRef={containerRef}
+        documentId={documentId}
+        initialOpenCount={openCommentCount}
+      />
       {isEditable ? (
         <DocumentImport
           canImportArchive={isOwner}
