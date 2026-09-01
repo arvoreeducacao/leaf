@@ -8,6 +8,7 @@ import { redirect } from 'next/navigation'
 
 import { db } from '@/db'
 import {
+  documents,
   organizationInvites,
   organizationMembers,
   organizations,
@@ -391,6 +392,34 @@ export async function removeMember(
   await db
     .delete(organizationMembers)
     .where(eq(organizationMembers.id, memberId))
+
+  revalidatePath('/', 'layout')
+
+  return { ok: true }
+}
+
+export async function deleteOrganization(): Promise<OrgActionResult> {
+  const session = await requireSession()
+  const membership = await getActiveMembership(session.user.id)
+
+  if (!membership || membership.role !== 'owner') {
+    return failure('errorNotAllowed')
+  }
+
+  await db
+    .update(documents)
+    .set({ orgAccess: null })
+    .where(eq(documents.orgId, membership.orgId))
+  await db.delete(organizations).where(eq(organizations.id, membership.orgId))
+
+  const remaining = await listMemberships(session.user.id)
+  const next = remaining[0]
+
+  if (next) {
+    await writeActiveOrgId(next.orgId)
+  } else {
+    await clearActiveOrgId()
+  }
 
   revalidatePath('/', 'layout')
 

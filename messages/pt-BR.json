@@ -537,7 +537,13 @@
     "confirmLinkResetTitle": "Redefinir o link de convite?",
     "confirmLinkResetDescription": "Um link novo é gerado e o link atual deixa de funcionar imediatamente.",
     "confirmLinkResetAction": "Redefinir",
-    "confirmLinkCancel": "Cancelar"
+    "confirmLinkCancel": "Cancelar",
+    "deleteOrgAction": "Excluir organização",
+    "deleteOrgTitle": "Excluir {name}?",
+    "deleteOrgDescription": "Todos os membros perdem o acesso, os teamspaces são removidos e os documentos voltam a ser privados de cada dono. Isso não pode ser desfeito.",
+    "deleteOrgConfirm": "Excluir organização",
+    "deleteOrgCancel": "Cancelar",
+    "deletedOrg": "Organização excluída"
   },
   "archiveImport": {
     "title": "Importar exportação",
@@ -631,7 +637,6 @@
     "delete": "Excluir teamspace",
     "deleted": "Teamspace excluído",
     "deleteConfirm": "Excluir {name}?",
-    "deleteBlocked": "{count, plural, =0 {Sem documentos} one {Mova o # documento antes de excluir} other {Mova os # documentos antes de excluir}}",
     "nameLabel": "Nome do teamspace",
     "namePlaceholder": "Time de conteúdo",
     "accessLabel": "Quem pode entrar",
@@ -665,12 +670,12 @@
     "errorNoOrganization": "Crie ou entre em uma organização antes de criar um teamspace.",
     "errorInvalidAccess": "Escolha quem pode entrar no teamspace.",
     "errorEmptyName": "Digite um nome para o teamspace.",
-    "errorNotEmpty": "Mova os documentos deste teamspace antes de excluí-lo.",
     "errorClosedTeamspace": "Este teamspace é fechado: peça um convite.",
     "errorLastOwner": "Passe o teamspace para outra pessoa antes de sair.",
     "errorMemberNotFound": "Esta pessoa não faz mais parte do teamspace.",
     "errorAlreadyMember": "Esta pessoa já faz parte do teamspace.",
-    "errorNotInOrganization": "Esta pessoa não faz parte da organização."
+    "errorNotInOrganization": "Esta pessoa não faz parte da organização.",
+    "deleteWithDocs": "{count, plural, one {O # documento deste teamspace volta para a organização.} other {Os # documentos deste teamspace voltam para a organização.}}"
   },
   "realtime": {
     "connected": "Colaboração em tempo real",
