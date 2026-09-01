@@ -1,7 +1,8 @@
 import { getTranslations } from 'next-intl/server'
 import Link from 'next/link'
 
-import { LeafIcon } from '@/components/icons'
+import { LeafMark } from '@/components/app/leaf-mark'
+
 import { Button } from '@/components/ui/button'
 
 export default async function NotFound() {
@@ -11,7 +12,7 @@ export default async function NotFound() {
   return (
     <main className="flex min-h-dvh w-full items-center justify-center px-4 py-8">
       <div className="flex w-full max-w-110 flex-col items-center gap-4 text-center">
-        <LeafIcon aria-hidden="true" className="size-8 text-brand" />
+        <LeafMark aria-hidden="true" className="size-8 text-brand" />
         <h1 className="font-semibold text-content-strong text-heading-large">
           {t('pageNotFoundTitle')}
         </h1>

@@ -6,7 +6,8 @@ import { notFound } from 'next/navigation'
 import { cache } from 'react'
 
 import { DocumentRenderer } from '@/components/editor/document-renderer'
-import { LeafIcon, LockIcon } from '@/components/icons'
+import { LeafMark } from '@/components/app/leaf-mark'
+import { LockIcon } from '@/components/icons'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { lookupPublicDocument } from '@/lib/authz'
@@ -48,7 +49,7 @@ async function ShareHeader() {
         className="flex items-center gap-2 rounded-large outline-none focus-visible:ring-2 focus-visible:ring-ring"
         href="/"
       >
-        <LeafIcon aria-hidden="true" className="size-4 text-brand" />
+        <LeafMark aria-hidden="true" className="size-4 text-brand" />
         <span className="font-semibold text-body-small text-content-strong">
           Leaf
         </span>
