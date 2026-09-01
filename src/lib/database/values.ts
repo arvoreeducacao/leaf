@@ -1,4 +1,5 @@
 import type { DatabaseProperty, DatabasePropertyType } from '@/db/schema'
+import { sanitizeUrl } from '@/lib/markdown/sanitize'
 
 export const propertyTypes: ReadonlyArray<DatabasePropertyType> = [
   'text',
@@ -260,9 +261,7 @@ export function normalizeValue(
   }
 
   if (type === 'url') {
-    const text = coerceText(value).trim()
-
-    return text
+    return sanitizeUrl(coerceText(value))
   }
 
   return coerceText(value)
@@ -300,6 +299,12 @@ export function isEmptyValue(value: PropertyValue): boolean {
   }
 
   return false
+}
+
+export function linkHrefFor(value: PropertyValue): string | null {
+  const safe = sanitizeUrl(typeof value === 'string' ? value : '')
+
+  return safe.length > 0 ? safe : null
 }
 
 export function formatNumber(value: number, locale: string): string {

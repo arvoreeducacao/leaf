@@ -221,7 +221,7 @@
     "rowCount": "{count, plural, =0 {no rows} one {# row} other {# rows}}",
     "blockTitle": "Database",
     "blockHint": "A table of pages with properties, filters and a board",
-    "blockMissing": "This database no longer exists",
+    "blockMissing": "This database can't be opened here",
     "blockLoading": "Loading the database",
     "openFullPage": "Open as full page",
     "rowProperties": "Properties",

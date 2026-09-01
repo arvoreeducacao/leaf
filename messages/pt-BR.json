@@ -221,7 +221,7 @@
     "rowCount": "{count, plural, =0 {nenhuma linha} one {# linha} other {# linhas}}",
     "blockTitle": "Base de dados",
     "blockHint": "Tabela de páginas com propriedades, filtros e quadro",
-    "blockMissing": "Esta base de dados não existe mais",
+    "blockMissing": "Não foi possível abrir esta base de dados aqui",
     "blockLoading": "Carregando a base de dados",
     "openFullPage": "Abrir em página inteira",
     "rowProperties": "Propriedades",
