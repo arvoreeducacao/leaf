@@ -1,4 +1,4 @@
-import { and, desc, eq, isNull, not } from 'drizzle-orm'
+import { and, desc, eq, isNull, ne, not, sql } from 'drizzle-orm'
 
 import { db } from '@/db'
 import { documentShares, documents } from '@/db/schema'
@@ -6,7 +6,7 @@ import type { Document } from '@/db/schema'
 
 export type DocumentSummary = Pick<
   Document,
-  'id' | 'title' | 'updatedAt' | 'deletedAt' | 'parentId'
+  'id' | 'title' | 'updatedAt' | 'deletedAt' | 'parentId' | 'kind'
 > & {
   shared: boolean
 }
@@ -28,9 +28,16 @@ export async function listOwnedDocuments(
       updatedAt: documents.updatedAt,
       deletedAt: documents.deletedAt,
       parentId: documents.parentId,
+      kind: documents.kind,
     })
     .from(documents)
-    .where(and(eq(documents.ownerId, userId), isNull(documents.deletedAt)))
+    .where(
+      and(
+        eq(documents.ownerId, userId),
+        isNull(documents.deletedAt),
+        ne(documents.kind, 'row'),
+      ),
+    )
     .orderBy(desc(documents.updatedAt))
 
   return rows.map((row) => ({ ...row, shared: false }))
@@ -46,6 +53,7 @@ export async function listPrivateDocuments(
       updatedAt: documents.updatedAt,
       deletedAt: documents.deletedAt,
       parentId: documents.parentId,
+      kind: documents.kind,
     })
     .from(documents)
     .where(
@@ -54,6 +62,7 @@ export async function listPrivateDocuments(
         isNull(documents.deletedAt),
         isNull(documents.orgAccess),
         isNull(documents.teamspaceId),
+        ne(documents.kind, 'row'),
       ),
     )
     .orderBy(desc(documents.updatedAt))
@@ -70,6 +79,7 @@ export async function listSharedDocuments(
       title: documents.title,
       updatedAt: documents.updatedAt,
       deletedAt: documents.deletedAt,
+      kind: documents.kind,
     })
     .from(documentShares)
     .innerJoin(documents, eq(documents.id, documentShares.documentId))
@@ -77,6 +87,7 @@ export async function listSharedDocuments(
       and(
         eq(documentShares.granteeEmail, email.toLowerCase()),
         isNull(documents.deletedAt),
+        ne(documents.kind, 'row'),
       ),
     )
     .orderBy(desc(documents.updatedAt))
@@ -94,9 +105,19 @@ export async function listTrashedDocuments(
       updatedAt: documents.updatedAt,
       deletedAt: documents.deletedAt,
       parentId: documents.parentId,
+      kind: documents.kind,
     })
     .from(documents)
-    .where(and(eq(documents.ownerId, userId), not(isNull(documents.deletedAt))))
+    .where(
+      and(
+        eq(documents.ownerId, userId),
+        not(isNull(documents.deletedAt)),
+        sql`(${documents.kind} <> 'row' or not exists (
+          select 1 from documents parent
+          where parent.id = ${documents.parentId} and parent.deleted_at is not null
+        ))`,
+      ),
+    )
     .orderBy(desc(documents.deletedAt))
 
   return rows.map((row) => ({ ...row, shared: false }))
