@@ -127,11 +127,12 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
     minPasswordLength: 8,
+    disableSignUp: sso !== null,
   },
   account: {
     accountLinking: {
       enabled: true,
-      requireLocalEmailVerified: false,
+      requireLocalEmailVerified: sso !== null,
       trustedProviders: [arvoreSsoProviderId],
     },
   },
