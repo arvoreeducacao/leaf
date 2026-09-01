@@ -15,6 +15,7 @@ import {
   getDocumentAccess,
   getTrashedDocumentAccess,
 } from '@/lib/authz'
+import { copyDatabaseInto } from '@/lib/databases'
 import { persistDocumentContent } from '@/lib/document-content'
 import { listOwnedDocuments, listSubtreeIds } from '@/lib/documents'
 import { indexDocument, removeDocumentFromIndex } from '@/lib/search-index'
@@ -139,13 +140,30 @@ export async function duplicateDocument(
     parentId: source.parentId,
     orgId: source.orgId,
     teamspaceId: source.teamspaceId,
+    kind: source.kind,
     title: (await getTranslations('document'))('copyTitle', {
       title: source.title,
     }).slice(0, 200),
     content: source.content,
+    properties: source.properties,
     createdAt: now,
     updatedAt: now,
   })
+
+  if (source.kind === 'database') {
+    const rowIds = await copyDatabaseInto(
+      source.id,
+      copyId,
+      session.user.id,
+      now,
+    )
+
+    for (const rowId of rowIds) {
+      await indexDocument(rowId)
+    }
+  }
+
+  await indexDocument(copyId)
 
   revalidatePath('/', 'layout')
 

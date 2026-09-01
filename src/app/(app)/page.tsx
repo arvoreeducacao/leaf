@@ -1,6 +1,7 @@
 import { getTranslations } from 'next-intl/server'
 import { redirect } from 'next/navigation'
 
+import { NewDatabaseButton } from '@/components/app/new-database-button'
 import { NewDocumentButton } from '@/components/app/new-document-button'
 import { getSession } from '@/lib/auth'
 import { listOwnedDocuments } from '@/lib/documents'
@@ -27,8 +28,9 @@ export default async function HomePage() {
       <p className="mt-4 max-w-prose-leaf text-body-medium text-content">
         {t('subtitle')}
       </p>
-      <div className="mt-6">
+      <div className="mt-6 flex flex-wrap gap-2">
         <NewDocumentButton variant="primary" />
+        <NewDatabaseButton variant="primary" />
       </div>
     </div>
   )

@@ -18,6 +18,7 @@ function node(
     updatedAt: new Date(0),
     deletedAt: null,
     parentId: null,
+    kind: 'page',
     shared: false,
     depth: 0,
     children,
@@ -31,6 +32,7 @@ function summary(id: string, title: string): DocumentSummary {
     updatedAt: new Date(0),
     deletedAt: null,
     parentId: null,
+    kind: 'page',
     shared: true,
   }
 }

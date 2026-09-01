@@ -199,6 +199,7 @@ export async function listOrganizationDocuments(
       updatedAt: documents.updatedAt,
       deletedAt: documents.deletedAt,
       parentId: documents.parentId,
+      kind: documents.kind,
     })
     .from(documents)
     .where(
@@ -207,6 +208,7 @@ export async function listOrganizationDocuments(
         isNotNull(documents.orgAccess),
         isNull(documents.teamspaceId),
         isNull(documents.deletedAt),
+        ne(documents.kind, 'row'),
       ),
     )
     .orderBy(desc(documents.updatedAt))
