@@ -188,8 +188,10 @@ export type SnapshotResult =
 export async function readDatabase(
   databaseId: string,
 ): Promise<SnapshotResult> {
-  const session = await requireSession()
-  const access = await getDocumentAccess(databaseId, session)
+  const session = await getSession()
+  const access = session
+    ? await getDocumentAccess(databaseId, session)
+    : null
 
   if (!access) {
     return notAllowed()

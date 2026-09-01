@@ -9,6 +9,7 @@ import {
   type PropertyValue,
   type SelectOption,
   formatNumber,
+  linkHrefFor,
   normalizeValue,
   parseOptions,
 } from '@/lib/database/values'
@@ -176,14 +177,24 @@ function TextualCell({
   }
 
   if (readOnly && property.type === 'url' && draft.length > 0) {
+    const safe = linkHrefFor(draft)
+
+    if (safe === null) {
+      return (
+        <span aria-label={label} className={cn(className, 'block truncate')}>
+          {draft}
+        </span>
+      )
+    }
+
     return (
       <a
         className={cn(className, 'block truncate text-link underline')}
-        href={draft}
+        href={safe}
         rel="noreferrer noopener"
         target="_blank"
       >
-        {draft}
+        {safe}
       </a>
     )
   }

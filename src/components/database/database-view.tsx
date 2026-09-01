@@ -409,6 +409,13 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
         views={views}
       />
 
+      {rows.length === 0 ? (
+        <p className="px-2 text-body-small text-content">
+          {t('noRows')}{' '}
+          <span className="text-content-subtle">{t('noRowsHint')}</span>
+        </p>
+      ) : null}
+
       {activeView.type === 'board' ? (
         <BoardView
           canEdit={canEdit}
@@ -425,13 +432,6 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
           rows={filtered}
         />
       )}
-
-      {rows.length === 0 ? (
-        <p className="px-2 text-body-small text-content">
-          {t('noRows')}{' '}
-          <span className="text-content-subtle">{t('noRowsHint')}</span>
-        </p>
-      ) : null}
 
       {filtered.length === 0 && rows.length > 0 ? (
         <p className="px-2 text-body-small text-content">{t('noResults')}</p>

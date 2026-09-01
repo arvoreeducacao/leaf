@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   type SelectOption,
   coerceDate,
+  linkHrefFor,
   colorForIndex,
   emptyValueFor,
   formatNumber,
@@ -41,6 +42,30 @@ describe('valores de propriedade', () => {
     expect(normalizeValue('checkbox', 'sim')).toBe(true)
     expect(normalizeValue('checkbox', 'No')).toBe(false)
     expect(normalizeValue('checkbox', '')).toBe(false)
+  })
+
+  it('zera url com protocolo perigoso e mantém a segura', () => {
+    expect(normalizeValue('url', 'javascript:alert(1)')).toBe('')
+    expect(normalizeValue('url', 'JaVaScRiPt:alert(1)')).toBe('')
+    expect(normalizeValue('url', 'data:text/html;base64,PHNjcmlwdD4=')).toBe('')
+    expect(normalizeValue('url', '  java\u0000script:alert(1)  ')).toBe('')
+    expect(normalizeValue('url', 'https://arvore.com.br')).toBe(
+      'https://arvore.com.br',
+    )
+    expect(normalizeValue('url', 'mailto:oi@arvore.com.br')).toBe(
+      'mailto:oi@arvore.com.br',
+    )
+    expect(normalizeValue('url', '/doc/abc')).toBe('/doc/abc')
+  })
+
+  it('só devolve href para link que o navegador pode abrir com segurança', () => {
+    expect(linkHrefFor('https://arvore.com.br')).toBe('https://arvore.com.br')
+    expect(linkHrefFor('/doc/abc')).toBe('/doc/abc')
+    expect(linkHrefFor('javascript:alert(1)')).toBeNull()
+    expect(linkHrefFor('data:text/html,<script>')).toBeNull()
+    expect(linkHrefFor('')).toBeNull()
+    expect(linkHrefFor(null)).toBeNull()
+    expect(linkHrefFor(42)).toBeNull()
   })
 
   it('descarta opção que não existe mais na propriedade', () => {
