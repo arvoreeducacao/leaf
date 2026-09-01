@@ -7,7 +7,8 @@ import { useState, useTransition } from 'react'
 import { toast } from 'sonner'
 
 import { sidebarRow } from '@/components/app/sidebar-styles'
-import { AddIcon, CaretDownIcon, LeafIcon, TeamIcon } from '@/components/icons'
+import { LeafMark } from '@/components/app/leaf-mark'
+import { AddIcon, CaretDownIcon, TeamIcon } from '@/components/icons'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -38,7 +39,7 @@ function WorkspaceMark({ name }: Readonly<{ name: string | null }>) {
       {name ? (
         name.trim().charAt(0).toUpperCase()
       ) : (
-        <LeafIcon className="size-3.5 text-brand" />
+        <LeafMark className="size-3.5 text-brand" />
       )}
     </span>
   )
