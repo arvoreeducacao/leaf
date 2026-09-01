@@ -254,7 +254,7 @@ beforeEach(async () => {
       createdAt: now,
     },
     {
-      id: 'share-org-commenter-upgrade',
+      id: 'share-org-commenter',
       documentId: 'doc-org-commenter',
       granteeEmail: orgAdmin.email,
       role: 'editor',
