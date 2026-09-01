@@ -1,9 +1,8 @@
 'use client'
 
 import { useTranslations } from 'next-intl'
-import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useEffect, useId, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 
 import { CommandPalette } from '@/components/app/command-palette'
 import { CommandPaletteTrigger } from '@/components/app/command-palette-trigger'
@@ -13,19 +12,19 @@ import { DocumentTree } from '@/components/app/document-tree'
 import { NewDocumentButton } from '@/components/app/new-document-button'
 import { OrgSwitcher } from '@/components/app/org-switcher'
 import type { OrganizationOption } from '@/components/app/org-switcher'
+import { SidebarSection } from '@/components/app/sidebar-section'
 import { TeamspaceSections } from '@/components/app/teamspace-sections'
+import { registerTopbarSlot } from '@/components/app/topbar-slot'
 import { TrashSection } from '@/components/app/trash-section'
 import { UserMenu } from '@/components/app/user-menu'
 import {
   CaretLeftIcon,
   CaretRightIcon,
-  LeafIcon,
   MenuIcon,
   TeamIcon,
 } from '@/components/icons'
 import { ButtonIcon } from '@/components/ui/button-icon'
 import { Search } from '@/components/ui/search'
-import { Separator } from '@/components/ui/separator'
 import {
   Sheet,
   SheetContent,
@@ -73,6 +72,7 @@ function NavContent({
   locale,
   onNavigate,
   searchRef,
+  headerAction,
 }: Readonly<{
   owned: Array<DocumentNode>
   organizationDocuments: Array<DocumentNode>
@@ -86,6 +86,7 @@ function NavContent({
   locale: string
   onNavigate?: () => void
   searchRef?: React.RefObject<HTMLInputElement | null>
+  headerAction?: React.ReactNode
 }>) {
   const t = useTranslations('nav')
   const searchId = useId()
@@ -115,20 +116,19 @@ function NavContent({
         : t('searchCount', { count: matches.length })
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-4 p-4">
-      <OrgSwitcher
-        activeOrgId={activeOrgId}
-        onNavigate={onNavigate}
-        organizations={organizations}
-      />
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="flex items-center gap-1 px-2 pt-2">
+        <OrgSwitcher
+          activeOrgId={activeOrgId}
+          onNavigate={onNavigate}
+          organizations={organizations}
+        />
+        {headerAction}
+      </div>
 
-      <CommandPaletteTrigger />
-
-      <NewDocumentButton />
-
-      <Separator />
-
-      <div>
+      <div className="mt-1 flex flex-col px-2">
+        <CommandPaletteTrigger />
+        <NewDocumentButton />
         <label className="sr-only" htmlFor={searchId}>
           {t('searchLabel')}
         </label>
@@ -160,15 +160,12 @@ function NavContent({
 
       <nav
         aria-label={t('documents')}
-        className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto"
+        className="mt-4 flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-2 pb-2"
       >
         {term.length > 0 ? (
-          <section className="flex flex-col gap-1">
-            <h2 className="px-3 py-2 font-bold text-caption text-content uppercase tracking-wide">
-              {t('searchResults')}
-            </h2>
+          <SidebarSection title={t('searchResults')}>
             <DocumentSearchResults matches={matches} onNavigate={onNavigate} />
-          </section>
+          </SidebarSection>
         ) : (
           <>
             {organizationName ? (
@@ -180,57 +177,45 @@ function NavContent({
             ) : null}
 
             {organizationName ? (
-              <section className="flex flex-col gap-1">
-                <h2 className="font-bold text-caption text-content uppercase tracking-wide">
-                  <Link
-                    className="flex items-center gap-2 rounded-large px-3 py-2 transition-colors hover:bg-surface-hover hover:text-content-strong focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-2"
-                    href="/org"
-                    onClick={onNavigate}
-                  >
-                    <TeamIcon aria-hidden="true" className="size-4 shrink-0" />
-                    {t('organizationSection')}
-                  </Link>
-                </h2>
+              <SidebarSection
+                href="/org"
+                icon={TeamIcon}
+                onNavigate={onNavigate}
+                title={t('organizationSection')}
+              >
                 <DocumentTree
                   emptyLabel={t('emptyOrganization')}
                   nodes={organizationDocuments}
                   onNavigate={onNavigate}
                 />
-              </section>
+              </SidebarSection>
             ) : null}
 
             {shared.length > 0 ? (
-              <section className="flex flex-col gap-1">
-                <h2 className="px-3 py-2 font-bold text-caption text-content uppercase tracking-wide">
-                  {t('sharedWithMe')}
-                </h2>
+              <SidebarSection title={t('sharedWithMe')}>
                 <DocumentList
                   documents={shared}
                   emptyLabel={t('emptyShared')}
                   onNavigate={onNavigate}
                 />
-              </section>
+              </SidebarSection>
             ) : null}
 
-            <section className="flex flex-col gap-1">
-              <h2 className="px-3 py-2 font-bold text-caption text-content uppercase tracking-wide">
-                {t('privateSection')}
-              </h2>
+            <SidebarSection title={t('privateSection')}>
               <DocumentTree
                 emptyLabel={t('emptyPrivate')}
                 nodes={owned}
                 onNavigate={onNavigate}
               />
-            </section>
-
-            <TrashSection documents={trashed} />
+            </SidebarSection>
           </>
         )}
       </nav>
 
-      <Separator />
-
-      <UserMenu email={user.email} locale={locale} name={user.name} />
+      <div className="flex flex-col gap-0.5 px-2 pt-1 pb-2">
+        <TrashSection documents={trashed} />
+        <UserMenu email={user.email} locale={locale} name={user.name} />
+      </div>
     </div>
   )
 }
@@ -258,6 +243,12 @@ export function AppShell({
   const mobileSearchRef = useRef<HTMLInputElement>(null)
   const toggled = useRef(false)
   const focusSearch = useRef(false)
+
+  const topbarRef = useCallback((node: HTMLDivElement | null) => {
+    registerTopbarSlot(node)
+
+    return () => registerTopbarSlot(null)
+  }, [])
 
   useEffect(() => {
     setCollapsed(readStoredValue(collapsedStorageKey, false))
@@ -330,36 +321,28 @@ export function AppShell({
       {collapsed ? null : (
         <aside
           aria-label={t('navigation')}
-          className="hidden w-70 shrink-0 border-line border-r bg-surface-nav tablet:block"
+          className="group/sidebar hidden w-sidebar shrink-0 bg-surface-nav tablet:block"
         >
-          <div className="sticky top-0 flex h-dvh flex-col">
-            <div className="flex items-center justify-between gap-2 px-4 pt-4">
-              <Link
-                className="flex items-center gap-2 rounded-large focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-2"
-                href="/"
-              >
-                <LeafIcon aria-hidden="true" className="size-5 text-brand" />
-                <span className="font-bold text-body-medium text-content-strong">
-                  Leaf
-                </span>
-              </Link>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <ButtonIcon
-                    aria-label={t('collapseNavigation')}
-                    onClick={() => toggleCollapsed(true)}
-                    ref={collapseRef}
-                    size="medium"
-                    variant="ghost"
-                  >
-                    <CaretLeftIcon aria-hidden="true" />
-                  </ButtonIcon>
-                </TooltipTrigger>
-                <TooltipContent>{t('collapse')}</TooltipContent>
-              </Tooltip>
-            </div>
+          <div className="sticky top-0 h-dvh">
             <NavContent
               activeOrgId={activeOrgId}
+              headerAction={
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <ButtonIcon
+                      aria-label={t('collapseNavigation')}
+                      className="opacity-0 transition-opacity group-hover/sidebar:opacity-100 focus-visible:opacity-100"
+                      onClick={() => toggleCollapsed(true)}
+                      ref={collapseRef}
+                      size="medium"
+                      variant="ghost"
+                    >
+                      <CaretLeftIcon aria-hidden="true" />
+                    </ButtonIcon>
+                  </TooltipTrigger>
+                  <TooltipContent>{t('collapse')}</TooltipContent>
+                </Tooltip>
+              }
               locale={locale}
               organizationDocuments={organizationDocuments}
               organizationName={organizationName}
@@ -378,15 +361,14 @@ export function AppShell({
       <div className="flex min-w-0 flex-1 flex-col">
         <header
           className={cn(
-            'sticky top-0 z-10 flex items-center gap-2 border-line border-b bg-surface-app px-4 py-3',
-            collapsed ? '' : 'tablet:hidden',
+            'sticky top-0 z-20 flex min-h-11 flex-wrap items-center gap-1 bg-surface-app px-3 py-1.5',
           )}
         >
           <div className="tablet:hidden">
             <ButtonIcon
               aria-label={t('openNavigation')}
               onClick={() => setMobileOpen(true)}
-              size="large"
+              size="medium"
               variant="ghost"
             >
               <MenuIcon aria-hidden="true" />
@@ -401,7 +383,7 @@ export function AppShell({
                     aria-label={t('expandNavigation')}
                     onClick={() => toggleCollapsed(false)}
                     ref={expandRef}
-                    size="large"
+                    size="medium"
                     variant="ghost"
                   >
                     <CaretRightIcon aria-hidden="true" />
@@ -412,30 +394,23 @@ export function AppShell({
             </div>
           ) : null}
 
-          <Link
-            className="flex items-center gap-2 rounded-large focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-2"
-            href="/"
-          >
-            <LeafIcon aria-hidden="true" className="size-5 text-brand" />
-            <span className="font-bold text-body-medium text-content-strong">
-              Leaf
-            </span>
-          </Link>
+          <div
+            className="flex min-w-0 flex-1 flex-wrap items-center gap-1"
+            ref={topbarRef}
+          />
         </header>
 
         <main className="min-w-0 flex-1">{children}</main>
       </div>
 
       <Sheet onOpenChange={setMobileOpen} open={mobileOpen}>
-        <SheetContent className="w-70 bg-surface-nav p-0" side="left">
-          <SheetHeader className="px-4 pt-4 pb-0">
-            <SheetTitle className="flex items-center gap-2">
-              <LeafIcon aria-hidden="true" className="size-5 text-brand" />
-              Leaf
-            </SheetTitle>
-            <SheetDescription className="sr-only">
-              {t('mobileDescription')}
-            </SheetDescription>
+        <SheetContent
+          className="w-[86vw] max-w-80 bg-surface-nav p-0 tablet:w-sidebar"
+          side="left"
+        >
+          <SheetHeader className="sr-only">
+            <SheetTitle>Leaf</SheetTitle>
+            <SheetDescription>{t('mobileDescription')}</SheetDescription>
           </SheetHeader>
           <NavContent
             activeOrgId={activeOrgId}

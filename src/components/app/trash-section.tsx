@@ -5,6 +5,11 @@ import { useState, useTransition } from 'react'
 import { toast } from 'sonner'
 
 import {
+  sidebarEmpty,
+  sidebarIcon,
+  sidebarRow,
+} from '@/components/app/sidebar-styles'
+import {
   CaretDownIcon,
   CaretRightIcon,
   DeleteIcon,
@@ -29,6 +34,7 @@ import {
 } from '@/components/ui/tooltip'
 import { deleteForever, restoreDocument } from '@/lib/document-actions'
 import type { DocumentSummary } from '@/lib/documents'
+import { cn } from '@/shared/utils'
 
 type Props = Readonly<{
   documents: Array<DocumentSummary>
@@ -73,41 +79,50 @@ export function TrashSection({ documents }: Props) {
   }
 
   return (
-    <section className="flex flex-col gap-1">
+    <section className="flex flex-col">
       <h2>
         <button
           aria-expanded={expanded}
-          className="flex min-h-11 w-full items-center gap-2 rounded-large px-3 py-2 text-left font-bold text-caption text-content uppercase tracking-wide transition-colors hover:bg-surface-hover hover:text-content-strong focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-2"
+          className={cn(sidebarRow, 'cursor-pointer')}
           onClick={() => setExpanded((value) => !value)}
           type="button"
         >
+          <span className="flex size-5 shrink-0 items-center justify-center">
+            <TrashIcon aria-hidden="true" className={sidebarIcon} />
+          </span>
+          <span className="min-w-0 flex-1 truncate">{t('title')}</span>
+          {documents.length > 0 ? (
+            <span className="shrink-0 text-caption text-content-disabled">
+              {documents.length}
+            </span>
+          ) : null}
           {expanded ? (
-            <CaretDownIcon aria-hidden="true" className="size-4 shrink-0" />
+            <CaretDownIcon
+              aria-hidden="true"
+              className="size-3.5 shrink-0 text-content-subtle"
+            />
           ) : (
-            <CaretRightIcon aria-hidden="true" className="size-4 shrink-0" />
+            <CaretRightIcon
+              aria-hidden="true"
+              className="size-3.5 shrink-0 text-content-subtle"
+            />
           )}
-          <TrashIcon aria-hidden="true" className="size-4 shrink-0" />
-          <span className="flex-1">{t('title')}</span>
-          <span className="font-normal normal-case">{documents.length}</span>
         </button>
       </h2>
 
       {expanded ? (
         documents.length === 0 ? (
-          <p className="px-3 py-2 text-body-small text-content">
-            {t('empty')}
-          </p>
+          <p className={sidebarEmpty}>{t('empty')}</p>
         ) : (
-          <ul className="flex flex-col gap-1">
+          <ul className="flex flex-col">
             {documents.map((document) => (
               <li
-                className="flex min-h-11 items-center gap-3 rounded-large px-3 py-2"
+                className="group/trash flex h-11 items-center gap-1.5 rounded-large pr-0.5 pl-1.5 hover:bg-surface-hover tablet:h-7"
                 key={document.id}
               >
-                <PageIcon
-                  aria-hidden="true"
-                  className="size-4 shrink-0 text-content-muted"
-                />
+                <span className="flex size-5 shrink-0 items-center justify-center">
+                  <PageIcon aria-hidden="true" className={sidebarIcon} />
+                </span>
                 <span className="min-w-0 flex-1 truncate text-body-small text-content">
                   {document.title}
                 </span>
@@ -115,9 +130,10 @@ export function TrashSection({ documents }: Props) {
                   <TooltipTrigger asChild>
                     <ButtonIcon
                       aria-label={t('restoreItem', { title: document.title })}
+                      className="tablet:opacity-0 tablet:group-focus-within/trash:opacity-100 tablet:group-hover/trash:opacity-100"
                       disabled={pending}
                       onClick={() => handleRestore(document.id)}
-                      size="medium"
+                      size="small"
                       variant="ghost"
                     >
                       <RotateIcon aria-hidden="true" />
@@ -129,9 +145,10 @@ export function TrashSection({ documents }: Props) {
                   <TooltipTrigger asChild>
                     <ButtonIcon
                       aria-label={t('deleteItem', { title: document.title })}
+                      className="tablet:opacity-0 tablet:group-focus-within/trash:opacity-100 tablet:group-hover/trash:opacity-100"
                       disabled={pending}
                       onClick={() => setTarget(document)}
-                      size="medium"
+                      size="small"
                       variant="ghost"
                     >
                       <DeleteIcon aria-hidden="true" />

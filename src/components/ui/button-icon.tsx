@@ -5,29 +5,28 @@ import type * as React from 'react'
 import { cn } from '@/shared/utils'
 
 const buttonIconVariants = cva(
-  "relative inline-flex shrink-0 cursor-pointer items-center justify-center whitespace-nowrap border border-transparent outline-none transition-all before:absolute before:content-[''] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-surface-card disabled:pointer-events-none disabled:cursor-not-allowed disabled:border-transparent [&_svg]:pointer-events-none [&_svg]:shrink-0",
+  "relative inline-flex shrink-0 cursor-pointer items-center justify-center whitespace-nowrap border border-transparent outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-surface-card disabled:pointer-events-none disabled:cursor-not-allowed [&_svg]:pointer-events-none [&_svg]:shrink-0",
   {
     variants: {
       variant: {
         primary:
-          'bg-primary text-primary-foreground hover:bg-primary-600 disabled:bg-muted disabled:text-content-disabled',
+          'bg-primary text-primary-foreground hover:bg-primary-600 disabled:bg-surface-subtle disabled:text-content-disabled',
         secondary:
-          'border-line-strong bg-surface-card text-content hover:border-line-contrast hover:text-content-strong disabled:bg-muted disabled:text-content-disabled',
+          'border-line-strong bg-surface-card text-content-strong hover:bg-surface-hover disabled:bg-transparent disabled:text-content-disabled',
         'secondary-reverse':
-          'border-content-inverse bg-transparent text-content-inverse hover:border-content-inverse/80 disabled:bg-muted disabled:text-content-disabled',
+          'border-content-inverse bg-transparent text-content-inverse hover:bg-surface-hover disabled:bg-transparent disabled:text-content-disabled',
         caution:
-          'bg-danger-solid text-content-inverse hover:bg-danger-solid-hover disabled:bg-muted disabled:text-content-disabled',
+          'bg-danger-solid text-white hover:bg-danger-solid-hover disabled:bg-surface-subtle disabled:text-content-disabled',
         ghost:
-          'text-content hover:bg-muted hover:text-content-strong disabled:bg-transparent disabled:text-content-disabled',
+          'text-content-subtle hover:bg-surface-hover hover:text-content-strong disabled:bg-transparent disabled:text-content-disabled',
         'filter-active':
-          'border-2 border-line-stronger bg-surface-card text-content-strong hover:border-line-contrast disabled:border-transparent disabled:bg-muted disabled:text-content-disabled',
+          'border-line-contrast bg-surface-card text-content-strong hover:bg-surface-hover disabled:border-transparent disabled:bg-surface-subtle disabled:text-content-disabled',
       },
       size: {
-        small:
-          'size-[22px] rounded-medium p-1 before:-inset-3 [&_svg]:size-3.5',
-        medium: 'size-8 rounded-large p-2 before:-inset-1.5 [&_svg]:size-4',
-        large: 'size-10 rounded-large p-3 before:-inset-0.5 [&_svg]:size-4',
-        xlarge: 'size-12 rounded-large p-3 [&_svg]:size-6',
+        small: 'size-6 rounded-small p-0.5 [&_svg]:size-3.5',
+        medium: 'size-9 rounded-large p-1.5 tablet:size-7 [&_svg]:size-4',
+        large: 'size-10 rounded-large p-2 tablet:size-8 [&_svg]:size-4',
+        xlarge: 'size-11 rounded-large p-2.5 tablet:size-10 [&_svg]:size-5',
       },
     },
     defaultVariants: {

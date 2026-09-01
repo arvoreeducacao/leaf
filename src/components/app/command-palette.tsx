@@ -370,7 +370,7 @@ export function CommandPalette({ hasOrganization }: Props) {
         <DialogOverlay />
         <DialogPrimitive.Content
           aria-describedby={undefined}
-          className="data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed inset-x-4 top-[10dvh] z-50 flex max-h-[80dvh] flex-col overflow-hidden rounded-xlarge border border-line bg-surface-card shadow-center-xlarge duration-200 data-[state=closed]:animate-out data-[state=open]:animate-in tablet:inset-x-auto tablet:left-[50%] tablet:w-[calc(100%-2rem)] tablet:max-w-2xl tablet:translate-x-[-50%]"
+          className="data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed inset-x-4 top-[12dvh] z-50 flex max-h-[70dvh] flex-col overflow-hidden rounded-lg bg-surface-card shadow-center-xlarge duration-150 data-[state=closed]:animate-out data-[state=open]:animate-in tablet:inset-x-auto tablet:left-[50%] tablet:w-[calc(100%-2rem)] tablet:max-w-180 tablet:translate-x-[-50%]"
           data-testid="command-palette"
           onOpenAutoFocus={(event) => {
             event.preventDefault()
@@ -381,10 +381,10 @@ export function CommandPalette({ hasOrganization }: Props) {
             {t('title')}
           </DialogPrimitive.Title>
 
-          <div className="flex items-center gap-3 border-line-divider border-b px-4 py-3">
+          <div className="flex items-center gap-2 border-line-divider border-b px-3 py-2.5">
             <SearchIcon
               aria-hidden="true"
-              className="size-5 shrink-0 text-content"
+              className="size-4 shrink-0 text-content-subtle"
             />
             <input
               aria-activedescendant={
@@ -395,7 +395,7 @@ export function CommandPalette({ hasOrganization }: Props) {
               aria-expanded={true}
               aria-label={t('title')}
               autoComplete="off"
-              className="min-w-0 flex-1 bg-transparent text-body-medium text-content-strong outline-hidden placeholder:text-content-muted"
+              className="min-w-0 flex-1 bg-transparent text-body-small text-content-strong outline-hidden placeholder:text-content-disabled"
               data-testid="command-palette-input"
               onChange={(event) => {
                 setQuery(event.target.value)
@@ -410,7 +410,7 @@ export function CommandPalette({ hasOrganization }: Props) {
             />
             <span
               aria-hidden="true"
-              className="shrink-0 rounded-small border border-line-muted bg-surface-subtle px-1.5 py-0.5 text-caption text-content"
+              className="shrink-0 rounded-small bg-surface-subtle px-1.5 py-0.5 font-sans text-caption text-content-subtle"
             >
               Esc
             </span>
@@ -422,14 +422,14 @@ export function CommandPalette({ hasOrganization }: Props) {
 
           <ul
             aria-label={t('resultsLabel')}
-            className="min-h-0 flex-1 overflow-y-auto py-2"
+            className="min-h-0 flex-1 overflow-y-auto p-1"
             id={listId}
             ref={listRef}
             role="listbox"
           >
             {items.length === 0 ? (
               <li
-                className="px-4 py-10 text-center text-body-small text-content"
+                className="px-3 py-10 text-center text-body-small text-content-subtle"
                 role="presentation"
               >
                 {loading ? t('loading') : t('empty')}
@@ -440,7 +440,7 @@ export function CommandPalette({ hasOrganization }: Props) {
               <li key={group.id} role="presentation">
                 <p
                   aria-hidden="true"
-                  className="px-4 py-2 font-bold text-caption text-content uppercase tracking-wide"
+                  className="px-2 pt-2 pb-1 font-medium text-caption text-content-subtle"
                 >
                   {group.label}
                 </p>
@@ -455,10 +455,8 @@ export function CommandPalette({ hasOrganization }: Props) {
                       <li
                         aria-selected={active}
                         className={cn(
-                          'flex min-h-11 cursor-pointer items-center gap-3 border-l-2 px-4 py-2.5 transition-colors',
-                          active
-                            ? 'border-brand-strong bg-surface-hover'
-                            : 'border-transparent hover:bg-surface-subtle',
+                          'flex min-h-11 cursor-pointer items-center gap-2 rounded-medium px-2 py-1 transition-colors tablet:min-h-7',
+                          active ? 'bg-surface-hover' : 'hover:bg-surface-hover',
                         )}
                         data-index={position}
                         id={`${optionPrefix}-${position}`}
@@ -469,19 +467,19 @@ export function CommandPalette({ hasOrganization }: Props) {
                       >
                         <Icon
                           aria-hidden="true"
-                          className="size-4 shrink-0 text-content"
+                          className="size-4 shrink-0 text-content-subtle"
                         />
                         <span className="min-w-0 flex-1">
                           <span className="block truncate text-body-small text-content-strong">
                             {item.label}
                           </span>
                           {item.hit && item.hit.segments.length > 0 ? (
-                            <span className="mt-0.5 block truncate text-body-small text-content">
+                            <span className="block truncate text-caption text-content-subtle">
                               {item.hit.segments.map((segment, part) => (
                                 <span
                                   className={
                                     segment.highlight
-                                      ? 'rounded-small bg-warn-surface-strong px-0.5 font-bold text-content-strong'
+                                      ? 'rounded-small bg-warn-surface px-0.5 font-semibold text-content-strong'
                                       : undefined
                                   }
                                   key={`${item.key}-${part}`}
@@ -500,21 +498,21 @@ export function CommandPalette({ hasOrganization }: Props) {
             ))}
           </ul>
 
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-line-divider border-t bg-surface-nav px-4 py-2 text-caption text-content">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-line-divider border-t px-3 py-2 text-caption text-content-subtle">
             <span>
-              <kbd className="rounded-small border border-line-muted bg-surface-card px-1 py-0.5 font-sans">
+              <kbd className="rounded-small bg-surface-subtle px-1 py-0.5 font-sans">
                 ↑↓
               </kbd>{' '}
               {t('hintNavigate')}
             </span>
             <span>
-              <kbd className="rounded-small border border-line-muted bg-surface-card px-1 py-0.5 font-sans">
+              <kbd className="rounded-small bg-surface-subtle px-1 py-0.5 font-sans">
                 ↵
               </kbd>{' '}
               {t('hintOpen')}
             </span>
             <span>
-              <kbd className="rounded-small border border-line-muted bg-surface-card px-1 py-0.5 font-sans">
+              <kbd className="rounded-small bg-surface-subtle px-1 py-0.5 font-sans">
                 {alternateShortcutLabel(mac)}
               </kbd>{' '}
               {t('hintToggle')}

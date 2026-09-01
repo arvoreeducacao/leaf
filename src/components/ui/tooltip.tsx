@@ -36,14 +36,12 @@ function TooltipTrigger({
 
 function TooltipContent({
   className,
-  sideOffset = 4,
+  sideOffset = 6,
   children,
-  arrowClassName,
   multiline = false,
   ...props
 }: Readonly<
   React.ComponentProps<typeof TooltipPrimitive.Content> & {
-    arrowClassName?: string
     multiline?: boolean
   }
 >) {
@@ -51,10 +49,10 @@ function TooltipContent({
     <TooltipPrimitive.Portal>
       <TooltipPrimitive.Content
         className={cn(
-          'fade-in-0 zoom-in-95 data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 z-50 w-fit origin-(--radix-tooltip-content-transform-origin) animate-in text-balance bg-tooltip text-sm text-tooltip-foreground data-[state=closed]:animate-out',
+          'fade-in-0 zoom-in-95 data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 z-50 w-fit origin-(--radix-tooltip-content-transform-origin) animate-in text-balance bg-tooltip font-medium text-caption text-tooltip-foreground shadow-down-small data-[state=closed]:animate-out',
           multiline
-            ? 'max-w-[240px] rounded-large px-3 py-3 leading-[1.3]'
-            : 'rounded-small px-2 py-1 leading-none',
+            ? 'max-w-60 rounded-medium px-2 py-1.5 leading-normal'
+            : 'rounded-medium px-2 py-1 leading-normal',
           className
         )}
         data-slot="tooltip-content"
@@ -62,9 +60,6 @@ function TooltipContent({
         {...props}
       >
         {children}
-        <TooltipPrimitive.Arrow
-          className={cn('fill-tooltip', arrowClassName)}
-        />
       </TooltipPrimitive.Content>
     </TooltipPrimitive.Portal>
   )

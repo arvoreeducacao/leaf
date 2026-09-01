@@ -56,29 +56,29 @@ export function SsoSignIn({ errorCode, providerId, restrictedDomain }: Props) {
   }
 
   return (
-    <main className="flex min-h-dvh w-full items-center justify-center bg-surface-sunken px-4 py-8">
-      <div className="w-full max-w-110 rounded-xlarge border border-line-subtle bg-surface-card p-6 text-center shadow-down-medium tablet:p-8">
-        <div className="flex items-center justify-center gap-2 text-brand">
-          <LeafIcon aria-hidden="true" className="size-7" />
-          <span className="font-bold text-heading-medium text-content-strong">
+    <main className="flex min-h-dvh w-full items-center justify-center bg-surface-app px-6 py-10">
+      <div className="w-full max-w-80">
+        <div className="flex items-center gap-2">
+          <LeafIcon aria-hidden="true" className="size-6 text-brand" />
+          <span className="font-semibold text-content-strong text-heading-medium">
             Leaf
           </span>
         </div>
 
-        <h1 className="mt-6 font-bold text-heading-large text-content-strong">
+        <h1 className="mt-10 font-semibold text-content-strong text-heading-large">
           {t('ssoTitle')}
         </h1>
         <p className="mt-2 text-body-small text-content">{t('ssoSubtitle')}</p>
 
         {error ? (
           <p
-            className="mt-6 flex items-start gap-2 rounded-large bg-danger-surface p-3 text-left text-body-small text-danger outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-surface-card"
+            className="mt-6 flex items-start gap-2 rounded-large bg-danger-surface p-3 text-body-small text-danger outline-none focus-visible:ring-2 focus-visible:ring-ring"
             id={errorId}
             ref={alertRef}
             role="alert"
             tabIndex={-1}
           >
-            <AlertIcon aria-hidden="true" className="mt-1 size-4 shrink-0" />
+            <AlertIcon aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
             {error}
           </p>
         ) : null}
@@ -90,16 +90,17 @@ export function SsoSignIn({ errorCode, providerId, restrictedDomain }: Props) {
               .filter(Boolean)
               .join(' ') || undefined
           }
-          className="mt-6 w-full"
+          className="mt-8 w-full"
           disabled={pending}
           onClick={handleSignIn}
+          size="lg"
           type="button"
         >
           {t('ssoSubmit')}
         </Button>
 
         {restrictedDomain ? (
-          <p className="mt-3 text-body-small text-content" id={hintId}>
+          <p className="mt-3 text-caption text-content-subtle" id={hintId}>
             {t('ssoDomainHint', { domain: restrictedDomain })}
           </p>
         ) : null}

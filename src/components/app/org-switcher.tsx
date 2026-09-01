@@ -6,7 +6,8 @@ import { useRouter } from 'next/navigation'
 import { useState, useTransition } from 'react'
 import { toast } from 'sonner'
 
-import { AddIcon, CaretDownIcon, TeamIcon } from '@/components/icons'
+import { sidebarRow } from '@/components/app/sidebar-styles'
+import { AddIcon, CaretDownIcon, LeafIcon, TeamIcon } from '@/components/icons'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,6 +19,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { setActiveOrganization } from '@/lib/org-actions'
+import { cn } from '@/shared/utils'
 
 export type OrganizationOption = Readonly<{ id: string; name: string }>
 
@@ -27,12 +29,28 @@ type Props = Readonly<{
   onNavigate?: () => void
 }>
 
+function WorkspaceMark({ name }: Readonly<{ name: string | null }>) {
+  return (
+    <span
+      aria-hidden="true"
+      className="flex size-5 shrink-0 items-center justify-center rounded-small bg-surface-subtle font-semibold text-caption text-content"
+    >
+      {name ? (
+        name.trim().charAt(0).toUpperCase()
+      ) : (
+        <LeafIcon className="size-3.5 text-brand" />
+      )}
+    </span>
+  )
+}
+
 export function OrgSwitcher({
   organizations,
   activeOrgId,
   onNavigate,
 }: Props) {
   const t = useTranslations('org')
+  const tCommon = useTranslations('common')
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   const [switchingTo, setSwitchingTo] = useState<string | null>(null)
@@ -44,14 +62,13 @@ export function OrgSwitcher({
 
   if (organizations.length === 0) {
     return (
-      <Link
-        className="flex items-center gap-2 rounded-large px-3 py-2 font-bold text-body-small text-content-strong transition-colors hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-2"
-        href="/org"
-        onClick={onNavigate}
+      <span
+        className={cn(sidebarRow, 'font-medium text-content-strong')}
+        data-testid="org-switcher"
       >
-        <AddIcon aria-hidden="true" className="size-4 shrink-0" />
-        {t('create')}
-      </Link>
+        <WorkspaceMark name={null} />
+        <span className="min-w-0 flex-1 truncate">{tCommon('appName')}</span>
+      </span>
     )
   }
 
@@ -81,20 +98,20 @@ export function OrgSwitcher({
       <DropdownMenuTrigger asChild>
         <button
           aria-label={t('switcherLabel')}
-          className="flex w-full items-center gap-2 rounded-large px-3 py-2 text-left transition-colors hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-2"
+          className={cn(
+            sidebarRow,
+            'cursor-pointer font-medium text-content-strong',
+          )}
           data-testid="org-switcher"
           type="button"
         >
-          <TeamIcon
-            aria-hidden="true"
-            className="size-4 shrink-0 text-content"
-          />
-          <span className="min-w-0 flex-1 truncate font-bold text-body-small text-content-strong">
+          <WorkspaceMark name={active?.name ?? null} />
+          <span className="min-w-0 flex-1 truncate">
             {active?.name ?? t('title')}
           </span>
           <CaretDownIcon
             aria-hidden="true"
-            className="size-4 shrink-0 text-content"
+            className="size-3.5 shrink-0 text-content-subtle"
           />
         </button>
       </DropdownMenuTrigger>
