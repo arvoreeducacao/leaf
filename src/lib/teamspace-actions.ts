@@ -13,9 +13,9 @@ import { getActiveMembership } from '@/lib/active-org'
 import { getSession } from '@/lib/auth'
 import { getDocumentAccess } from '@/lib/authz'
 import { listSubtreeIds } from '@/lib/documents'
-import type { Membership } from '@/lib/organizations'
 import {
   canManageTeamspace,
+  canPlaceDocuments,
   countTeamspaceDocuments,
   getTeamspace,
   getTeamspaceRole,
@@ -73,22 +73,6 @@ async function requireManager(teamspaceId: string) {
   }
 
   return { session, membership, teamspace, role }
-}
-
-async function canPlaceDocuments(
-  teamspaceId: string,
-  userId: string,
-  membership: Membership | null,
-) {
-  const teamspace = await getTeamspace(teamspaceId)
-
-  if (!teamspace || !membership || teamspace.orgId !== membership.orgId) {
-    return false
-  }
-
-  const role = await getTeamspaceRole(teamspaceId, userId)
-
-  return role !== null || teamspace.access === 'open'
 }
 
 export async function createTeamspace(
@@ -377,7 +361,11 @@ export async function moveDocumentToTeamspace(
 
   if (
     teamspaceId &&
-    !(await canPlaceDocuments(teamspaceId, session.user.id, membership))
+    !(await canPlaceDocuments(
+      teamspaceId,
+      session.user.id,
+      membership?.orgId ?? null,
+    ))
   ) {
     return failure('errorNotAllowed')
   }

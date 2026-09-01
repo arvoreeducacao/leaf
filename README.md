@@ -66,6 +66,8 @@ O app fala S3 e SQL por configuração — publicar é trocar env:
 | `BETTER_AUTH_URL` / `BETTER_AUTH_SECRET` | auth |
 | `LEAF_ALLOWED_EMAIL_DOMAINS` | lista separada por vírgula (ex. `arvore.com.br`). Vazia ou ausente = sem restrição (dev e testes). Setada = só esses domínios criam conta, entram e recebem convite |
 | `ARVORE_SSO_CLIENT_ID` / `ARVORE_SSO_CLIENT_SECRET` / `ARVORE_SSO_ISSUER` | habilitam o botão "Entrar com a conta Árvore"; sem o client id, o provider não é registrado e a tela continua sendo o formulário de email e senha. O issuer padrão é `https://auth.arvore.com.br/api-arvore` |
+| `NOTION_CLIENT_ID` / `NOTION_CLIENT_SECRET` / `NOTION_REDIRECT_URI` | habilitam o import por link do Notion; sem elas o caminho fica desligado e o diálogo diz isso. Em produção o redirect é `https://leaf.arvore.com.br/api/notion/callback` |
+| `NOTION_API_VERSION` | versão da API do Notion no cabeçalho `Notion-Version` (padrão `2022-06-28`) |
 
 **Acesso restrito**: com `LEAF_ALLOWED_EMAIL_DOMAINS` setada, a validação acontece
 no servidor em quatro pontos — hook `before` do better-auth em `/sign-up/email` e
@@ -73,6 +75,15 @@ no servidor em quatro pontos — hook `before` do better-auth em `/sign-up/email
 criação de conta, inclusive OAuth) e `databaseHooks.session.create.before` (cobre
 qualquer caminho de login). Os convites de documento e de organização usam a mesma
 lista. Em produção (`leaf.arvore.com.br`) a variável deve valer `arvore.com.br`.
+
+**Importar do Notion por link**: o Leaf é uma *public connection* do Notion, com
+OAuth por pessoa — cada uma conecta a própria conta e importa só o que já enxerga
+lá. A conexão se cria em `https://app.notion.com/developers/connections`, com
+escopo de instalação **"selected workspaces only"** (escolha que não se muda
+depois) e o redirect acima. As capacidades a marcar são **ler conteúdo**, **ler
+comentários** (senão `GET /v1/comments` responde 403 e as threads não vêm) e
+**ler informação de usuário com email** (é o que casa o autor do comentário com a
+conta do Leaf). O token de cada pessoa fica em `notion_connections`.
 
 **Login pelo SSO da Árvore**: o Leaf é um client OAuth2/OIDC do IdP da casa
 (`client_id` `leaf`, escopos `openid profile email`, redirect
