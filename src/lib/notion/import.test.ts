@@ -22,7 +22,13 @@ import type { PartialBlock } from '@blocknote/core'
 import { eq } from 'drizzle-orm'
 
 import { db } from '@/db'
-import { databaseProperties, databaseViews, documents, user } from '@/db/schema'
+import {
+  databaseProperties,
+  databaseViews,
+  documents,
+  organizations,
+  user,
+} from '@/db/schema'
 import { resetDatabase } from '@/db/testing'
 import { parseValues } from '@/lib/database/values'
 import { parseContentBlocks } from '@/lib/markdown/convert'
@@ -53,12 +59,19 @@ const messages = buildNotionImportMessages(
 
 const owner = { id: 'user-owner', email: 'dono@arvore.com.br' }
 
-async function runImport(data: Uint8Array) {
+async function runImport(
+  data: Uint8Array,
+  extra: { orgId?: string | null; orgAccess?: 'editor' | null } = {},
+) {
   const events: Array<ImportEvent> = []
   let summary: ImportSummary | null = null
   let error: string | null = null
 
-  for await (const event of importNotionZip(data, owner, messages)) {
+  for await (const event of importNotionZip(
+    data,
+    { ...owner, ...extra },
+    messages,
+  )) {
     events.push(event)
 
     if (event.type === 'done') {
@@ -101,6 +114,7 @@ beforeEach(async () => {
   uploads.length = 0
 
   await db.delete(documents)
+  await db.delete(organizations)
   await db.delete(user)
   await db.insert(user).values({
     id: owner.id,
@@ -126,6 +140,41 @@ describe('import do export do Notion', () => {
     expect(plano.parentId).toBeNull()
     expect(turma.parentId).toBe(plano.id)
     expect(aluno.parentId).toBe(turma.id)
+  })
+
+  it('grava o acesso da organização em toda a árvore importada', async () => {
+    await db
+      .insert(organizations)
+      .values({ id: 'org-arvore', name: 'Escola Árvore', createdAt: new Date() })
+
+    const { error } = await runImport(buildNotionFixtureZip(), {
+      orgAccess: 'editor',
+      orgId: 'org-arvore',
+    })
+
+    expect(error).toBeNull()
+
+    const rows = await db
+      .select({
+        orgAccess: documents.orgAccess,
+        orgId: documents.orgId,
+        title: documents.title,
+      })
+      .from(documents)
+
+    expect(rows.length).toBeGreaterThan(1)
+    expect(rows.every((row) => row.orgAccess === 'editor')).toBe(true)
+    expect(rows.every((row) => row.orgId === 'org-arvore')).toBe(true)
+  })
+
+  it('sem destino escolhido a árvore importada continua privada', async () => {
+    await runImport(buildNotionFixtureZip())
+
+    const rows = await db
+      .select({ orgAccess: documents.orgAccess })
+      .from(documents)
+
+    expect(rows.every((row) => row.orgAccess === null)).toBe(true)
   })
 
   it('transforma a database csv do Notion em base de dados', async () => {

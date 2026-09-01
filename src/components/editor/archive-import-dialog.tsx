@@ -4,7 +4,13 @@ import { useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
-import { AlertIcon, CheckCircleIcon } from '@/components/icons'
+import {
+  AlertIcon,
+  CheckCircleIcon,
+  PadlockIcon,
+  TeamIcon,
+  UsersIcon,
+} from '@/components/icons'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -14,9 +20,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Sheet, SheetContent, SheetHeader } from '@/components/ui/sheet'
+import { listImportDestinations } from '@/lib/import-actions'
+import type { ImportDestinationsResult } from '@/lib/import-actions'
 import type { ImportEvent, ImportSummary } from '@/lib/notion/import'
 import { useIsMobile } from '@/shared/hooks/use-mobile'
+import { cn } from '@/shared/utils'
 
 type Props = Readonly<{
   file: File | null
@@ -35,6 +45,44 @@ const phaseKeys: Record<Progress['phase'], 'phaseAssets' | 'phasePages'> = {
   pages: 'phasePages',
 }
 
+function DestinationOption({
+  value,
+  label,
+  hint,
+  icon,
+  checked,
+}: Readonly<{
+  value: string
+  label: string
+  hint: string
+  icon: React.ReactNode
+  checked: boolean
+}>) {
+  return (
+    <label
+      className={cn(
+        'flex min-h-11 cursor-pointer items-center gap-3 rounded-large px-3 py-2 transition-colors',
+        'has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-focus has-[:focus-visible]:outline-offset-2',
+        checked ? 'bg-brand-surface' : 'hover:bg-surface-hover',
+      )}
+    >
+      <RadioGroupItem value={value} />
+      {icon}
+      <span className="flex min-w-0 flex-1 flex-col">
+        <span
+          className={cn(
+            'truncate text-body-small text-content-strong',
+            checked ? 'font-bold' : '',
+          )}
+        >
+          {label}
+        </span>
+        <span className="text-body-small text-content">{hint}</span>
+      </span>
+    </label>
+  )
+}
+
 export function ArchiveImportDialog({ file, parentId, onOpenChange }: Props) {
   const t = useTranslations('archiveImport')
   const tCommon = useTranslations('common')
@@ -49,6 +97,10 @@ export function ArchiveImportDialog({ file, parentId, onOpenChange }: Props) {
   const [progress, setProgress] = useState<Progress | null>(null)
   const [summary, setSummary] = useState<ImportSummary | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [destinations, setDestinations] =
+    useState<ImportDestinationsResult | null>(null)
+  const [destination, setDestination] = useState<string | null>(null)
+  const [started, setStarted] = useState(false)
 
   const closeOrAbort = useCallback(
     (open: boolean) => {
@@ -62,10 +114,12 @@ export function ArchiveImportDialog({ file, parentId, onOpenChange }: Props) {
   )
 
   const run = useCallback(
-    async (target: File) => {
+    async (target: File, chosen: string) => {
       const controller = new AbortController()
       abortRef.current = controller
 
+      startedFor.current = target
+      setStarted(true)
       setRunning(true)
       setProgress(null)
       setSummary(null)
@@ -74,6 +128,7 @@ export function ArchiveImportDialog({ file, parentId, onOpenChange }: Props) {
       const body = new FormData()
       body.append('file', target)
       body.append('parentId', parentId)
+      body.append('destination', chosen)
 
       try {
         const response = await fetch('/api/import/notion', {
@@ -146,22 +201,104 @@ export function ArchiveImportDialog({ file, parentId, onOpenChange }: Props) {
   )
 
   useEffect(() => {
-    if (!file || startedFor.current === file) {
+    if (!file) {
+      startedFor.current = null
+      setDestinations(null)
+      setDestination(null)
+      setStarted(false)
+      setProgress(null)
+      setSummary(null)
+      setError(null)
+
       return
     }
 
-    startedFor.current = file
-    void run(file)
-  }, [file, run])
+    if (startedFor.current === file) {
+      return
+    }
+
+    let active = true
+
+    void listImportDestinations(parentId).then((result) => {
+      if (!active) {
+        return
+      }
+
+      setDestinations(result)
+      setDestination((current) => current ?? result.suggested)
+    })
+
+    return () => {
+      active = false
+    }
+  }, [file, parentId])
 
   const percent =
     progress && progress.total > 0
       ? Math.round((progress.done / progress.total) * 100)
       : 0
 
+  const parentDestination = destinations?.parentDestination ?? 'private'
+  const chosenLabel =
+    destination === 'organization'
+      ? (destinations?.organizationName ?? t('destinationOrganization'))
+      : (destinations?.teamspaces.find(
+          (option) => option.value === destination,
+        )?.label ?? t('destinationPrivate'))
+
+  const picker = (
+    <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto">
+      <p className="text-body-small text-content-strong">
+        {t('destinationTitle')}
+      </p>
+
+      <RadioGroup
+        aria-label={t('destinationLabel')}
+        className="flex flex-col gap-1"
+        onValueChange={setDestination}
+        value={destination ?? 'private'}
+      >
+        <DestinationOption
+          checked={destination === 'private'}
+          hint={t('destinationPrivateHint')}
+          icon={<PadlockIcon aria-hidden="true" className="size-4 shrink-0" />}
+          label={t('destinationPrivate')}
+          value="private"
+        />
+
+        {destinations?.organizationName ? (
+          <DestinationOption
+            checked={destination === 'organization'}
+            hint={t('destinationOrganizationHint')}
+            icon={<TeamIcon aria-hidden="true" className="size-4 shrink-0" />}
+            label={destinations.organizationName}
+            value="organization"
+          />
+        ) : null}
+
+        {destinations?.teamspaces.map((option) => (
+          <DestinationOption
+            checked={destination === option.value}
+            hint={t('destinationTeamspaceHint')}
+            icon={<UsersIcon aria-hidden="true" className="size-4 shrink-0" />}
+            key={option.value}
+            label={option.label}
+            value={option.value}
+          />
+        ))}
+      </RadioGroup>
+
+      <p className="text-body-small text-content">
+        {destination === parentDestination
+          ? t('destinationUnderParent')
+          : t('destinationAtRoot', { place: chosenLabel })}
+      </p>
+    </div>
+  )
+
   const body = (
     <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto">
-      {running || (!summary && !error) ? (
+      {started && (running || (!summary && !error)) ? (
         <div className="flex flex-col gap-2">
           <div className="flex items-baseline justify-between gap-2">
             <span className="text-body-small text-content-strong">
@@ -243,7 +380,30 @@ export function ArchiveImportDialog({ file, parentId, onOpenChange }: Props) {
     </div>
   )
 
-  const actions = summary?.rootId ? (
+  const actions = !started ? (
+    <div className="flex flex-col gap-2 tablet:flex-row-reverse">
+      <Button
+        className="w-full tablet:w-auto"
+        disabled={!file || !destination || destinations === null}
+        onClick={() => {
+          if (file && destination) {
+            void run(file, destination)
+          }
+        }}
+        type="button"
+      >
+        {t('startImport')}
+      </Button>
+      <Button
+        className="w-full tablet:w-auto"
+        onClick={() => onOpenChange(false)}
+        type="button"
+        variant="secondary"
+      >
+        {tCommon('cancel')}
+      </Button>
+    </div>
+  ) : summary?.rootId ? (
     <Button
       className="w-full tablet:w-auto"
       onClick={() => {
@@ -266,7 +426,7 @@ export function ArchiveImportDialog({ file, parentId, onOpenChange }: Props) {
   ) : error && file ? (
     <Button
       className="w-full tablet:w-auto"
-      onClick={() => void run(file)}
+      onClick={() => void run(file, destination ?? 'private')}
       type="button"
       variant="secondary"
     >
@@ -289,7 +449,7 @@ export function ArchiveImportDialog({ file, parentId, onOpenChange }: Props) {
             type="close"
           />
           <div className="flex min-h-0 flex-1 flex-col gap-4 px-4 pb-6">
-            {body}
+            {started ? body : picker}
             {actions ? <div className="flex flex-col gap-2">{actions}</div> : null}
           </div>
         </SheetContent>
@@ -306,7 +466,7 @@ export function ArchiveImportDialog({ file, parentId, onOpenChange }: Props) {
             {description}
           </DialogDescription>
         </DialogHeader>
-        {body}
+        {started ? body : picker}
         {actions ? (
           <DialogFooter className="shrink-0">{actions}</DialogFooter>
         ) : null}

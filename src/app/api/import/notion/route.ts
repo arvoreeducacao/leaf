@@ -2,10 +2,15 @@ import { getTranslations } from 'next-intl/server'
 import { revalidatePath } from 'next/cache'
 import { NextResponse } from 'next/server'
 
-import { getActiveMembership } from '@/lib/active-org'
 import { getSession } from '@/lib/auth'
 import { getDocumentAccess } from '@/lib/authz'
 import { getDocument } from '@/lib/documents'
+import {
+  destinationOfParent,
+  parseImportDestination,
+  resolveImportPlacement,
+  serializeImportDestination,
+} from '@/lib/import-destination'
 import { importNotionZip } from '@/lib/notion/import'
 import type { ImportEvent } from '@/lib/notion/import'
 import { MAX_ZIP_BYTES, MAX_ZIP_LABEL, ZIP_EXTENSIONS } from '@/lib/notion/limits'
@@ -83,14 +88,30 @@ export async function POST(request: Request) {
     )
   }
 
-  const data = new Uint8Array(await file.arrayBuffer())
-  const membership = await getActiveMembership(session.user.id)
   const parent = parentId ? await getDocument(parentId) : null
+  const destination =
+    parseImportDestination(formData.get('destination')) ??
+    destinationOfParent(parent)
+  const placement = await resolveImportPlacement(destination, session.user.id)
+
+  if (!placement) {
+    return NextResponse.json(
+      { error: (await getTranslations('errors'))('notAllowed') },
+      { status: 403 },
+    )
+  }
+
+  const staysUnderParent =
+    serializeImportDestination(destination) ===
+    serializeImportDestination(destinationOfParent(parent))
+
+  const data = new Uint8Array(await file.arrayBuffer())
   const owner = {
     id: session.user.id,
-    orgId: parent?.orgId ?? membership?.orgId ?? null,
-    teamspaceId: parent?.teamspaceId ?? null,
-    parentId,
+    orgAccess: placement.orgAccess,
+    orgId: placement.orgId,
+    parentId: staysUnderParent ? parentId : null,
+    teamspaceId: placement.teamspaceId,
   }
   const encoder = new TextEncoder()
 
