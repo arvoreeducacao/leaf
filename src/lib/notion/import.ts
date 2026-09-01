@@ -1,10 +1,19 @@
-import { eq } from 'drizzle-orm'
+import { and, eq, isNull } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
 
 import { db } from '@/db'
-import { documents } from '@/db/schema'
+import { databaseProperties, databaseViews, documents } from '@/db/schema'
+import { inferDatabase } from '@/lib/database/csv-import'
+import {
+  MAX_PROPERTY_NAME,
+  type PropertyValue,
+  serializeOptions,
+  serializeValues,
+} from '@/lib/database/values'
+import { serializeViewConfig } from '@/lib/database/views'
+import { MAX_DATABASE_ROWS } from '@/lib/databases'
 import { markdownToBlocks } from '@/lib/markdown/convert'
-import { csvToMarkdownTable } from '@/lib/notion/csv'
+import { parseCsv } from '@/lib/notion/csv'
 import { MAX_ASSET_BYTES, MAX_ASSET_LABEL } from '@/lib/notion/limits'
 import type { NotionImportMessages } from '@/lib/notion/messages'
 import {
@@ -184,23 +193,138 @@ export async function* importNotionZip(
       )
     }
 
-    if (page.kind === 'csv' && page.sourcePath) {
-      const table = csvToMarkdownTable(plan.csvByPath.get(page.sourcePath) ?? '')
+    return ''
+  }
 
-      if (!table) {
-        return ''
-      }
+  async function materializeDatabase(page: NotionPage): Promise<number> {
+    const databaseId = idByKey.get(page.key)
 
-      const notes: Array<string> = []
-
-      if (table.truncatedColumns || table.truncatedRows) {
-        notes.push(messages.tableTruncated(table.columns, table.rows))
-      }
-
-      return [table.markdown, ...notes].join('\n\n')
+    if (!databaseId || !page.sourcePath) {
+      return 0
     }
 
-    return ''
+    const inferred = inferDatabase(
+      parseCsv(plan.csvByPath.get(page.sourcePath) ?? ''),
+      messages.csvColumn,
+    )
+
+    if (!inferred) {
+      return 0
+    }
+
+    const stamp = new Date()
+
+    await db
+      .update(documents)
+      .set({ kind: 'database', content: null })
+      .where(eq(documents.id, databaseId))
+
+    const propertyIds = inferred.properties.map(() => nanoid(12))
+
+    if (inferred.properties.length > 0) {
+      await db.insert(databaseProperties).values(
+        inferred.properties.map((property, index) => ({
+          id: propertyIds[index],
+          databaseId,
+          name: property.name.slice(0, MAX_PROPERTY_NAME),
+          type: property.type,
+          options:
+            property.options.length > 0
+              ? serializeOptions(property.options)
+              : null,
+          position: index,
+          createdAt: stamp,
+        })),
+      )
+    }
+
+    await db.insert(databaseViews).values({
+      id: nanoid(12),
+      databaseId,
+      name: messages.csvView,
+      type: 'table',
+      config: serializeViewConfig({
+        groupByPropertyId: null,
+        filters: [],
+        sorts: [],
+        hiddenPropertyIds: [],
+      }),
+      position: 0,
+      createdAt: stamp,
+    })
+
+    const children = await db
+      .select({ id: documents.id, title: documents.title })
+      .from(documents)
+      .where(
+        and(eq(documents.parentId, databaseId), isNull(documents.deletedAt)),
+      )
+
+    const idByTitle = new Map<string, string>()
+
+    for (const child of children) {
+      const key = child.title.trim().toLowerCase()
+
+      if (key.length > 0 && !idByTitle.has(key)) {
+        idByTitle.set(key, child.id)
+      }
+    }
+
+    const matched = new Set<string>()
+    let added = 0
+
+    for (const row of inferred.rows.slice(0, MAX_DATABASE_ROWS)) {
+      const values: Record<string, PropertyValue> = {}
+
+      for (const [index, value] of row.values.entries()) {
+        if (value !== undefined) {
+          values[propertyIds[index]] = value as PropertyValue
+        }
+      }
+
+      const key = row.title.trim().toLowerCase()
+      const existing = key.length > 0 ? idByTitle.get(key) : undefined
+
+      if (existing && !matched.has(existing)) {
+        matched.add(existing)
+
+        await db
+          .update(documents)
+          .set({ kind: 'row', properties: serializeValues(values) })
+          .where(eq(documents.id, existing))
+
+        continue
+      }
+
+      const rowId = nanoid(12)
+      const rowStamp = new Date(stamp.getTime() + added + 1)
+
+      await db.insert(documents).values({
+        id: rowId,
+        ownerId: owner.id,
+        parentId: databaseId,
+        orgId: owner.orgId ?? null,
+        teamspaceId: owner.teamspaceId ?? null,
+        kind: 'row',
+        title: row.title.slice(0, 200),
+        properties: serializeValues(values),
+        createdAt: rowStamp,
+        updatedAt: rowStamp,
+      })
+
+      added += 1
+    }
+
+    for (const child of children) {
+      if (!matched.has(child.id)) {
+        await db
+          .update(documents)
+          .set({ kind: 'row' })
+          .where(eq(documents.id, child.id))
+      }
+    }
+
+    return added
   }
 
   let created = 0
@@ -245,6 +369,25 @@ export async function* importNotionZip(
       total: plan.pages.length,
       label: page.title,
     }
+  }
+
+  let databases = 0
+
+  for (const page of plan.pages) {
+    if (page.kind !== 'csv' || signal?.aborted) {
+      continue
+    }
+
+    try {
+      created += await materializeDatabase(page)
+      databases += 1
+    } catch {
+      warn(messages.pageFailed(page.title))
+    }
+  }
+
+  if (databases > 0) {
+    warn(messages.csvDatabases(databases))
   }
 
   if (toggles > 0) {
