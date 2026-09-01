@@ -17,7 +17,8 @@
     "login": "Sign in | Leaf",
     "signup": "Create account | Leaf",
     "document": "{title} | Leaf",
-    "org": "Organization | Leaf"
+    "org": "Organization | Leaf",
+    "join": "Invite | Leaf"
   },
   "auth": {
     "loginTitle": "Sign in to your account",
@@ -504,7 +505,25 @@
     "confirmRemoveCancel": "Keep in organization",
     "switcherLabel": "Active organization",
     "switching": "Switching organization",
-    "manageLink": "Manage organization"
+    "manageLink": "Manage organization",
+    "inviteLinkTitle": "Invite link",
+    "inviteLinkHelp": "Anyone with the link joins the organization as a member. Turn it off or reset it to revoke the existing link.",
+    "inviteLinkAddress": "Link address",
+    "inviteLinkCopy": "Copy",
+    "inviteLinkCopied": "Link copied",
+    "inviteLinkCopyFailed": "We couldn't copy the link.",
+    "inviteLinkEnabled": "Invite link enabled",
+    "inviteLinkDisabled": "Invite link disabled",
+    "inviteLinkResetAction": "Reset",
+    "inviteLinkReset": "Link reset. The old link no longer works.",
+    "errorLinkInvalid": "This invite link is not valid or was turned off.",
+    "confirmLinkDisableTitle": "Turn off the invite link?",
+    "confirmLinkDisableDescription": "People with the link will no longer be able to join the organization. Anyone who already joined stays a member.",
+    "confirmLinkDisableAction": "Turn off",
+    "confirmLinkResetTitle": "Reset the invite link?",
+    "confirmLinkResetDescription": "A new link is generated and the current link stops working immediately.",
+    "confirmLinkResetAction": "Reset",
+    "confirmLinkCancel": "Cancel"
   },
   "archiveImport": {
     "title": "Import export",
@@ -606,5 +625,19 @@
     "someone": "Someone",
     "you": "{name} (you)",
     "peopleHere": "{count, plural, one {# person in this document} other {# people in this document}}"
+  },
+  "join": {
+    "heading": "You've been invited to join {org}",
+    "memberCount": "{count, plural, =0 {No one has joined yet} one {# person has joined} other {# people have joined}}",
+    "join": "Join organization",
+    "open": "Open organization",
+    "alreadyMember": "You're already part of this organization.",
+    "joined": "You joined the organization",
+    "signInHint": "Sign in to accept the invite.",
+    "signIn": "Sign in",
+    "createAccount": "Create account",
+    "invalidTitle": "Invalid invite link",
+    "invalidHint": "This link is not valid or was turned off. Ask the person who invited you for a new link.",
+    "backHome": "Go to Leaf"
   }
 }

@@ -124,6 +124,78 @@ test.describe('organizações', () => {
     await guestContext.close()
   })
 
+  test('link de convite: entrar pela URL, fluxo deslogado e revogação', async ({
+    browser,
+  }) => {
+    const ownerContext = await browser.newContext()
+    const joinerContext = await browser.newContext()
+    const lateContext = await browser.newContext()
+    const ownerPage = await ownerContext.newPage()
+    const joinerPage = await joinerContext.newPage()
+    const latePage = await lateContext.newPage()
+
+    await signUp(ownerPage, uniqueEmail('dona'), 'Dona da Org')
+    await createOrganization(ownerPage, 'Escola do Link')
+
+    await ownerPage.getByRole('switch', { name: 'Link de convite' }).click()
+    await expect(ownerPage.getByText('Link de convite ativado')).toBeVisible()
+
+    const inviteUrl = await ownerPage
+      .getByTestId('org-invite-link')
+      .inputValue()
+
+    expect(inviteUrl).toContain('/join/')
+
+    await signUp(joinerPage, uniqueEmail('entrante'), 'Entrante')
+    await joinerPage.goto(inviteUrl)
+
+    await expect(
+      joinerPage.getByText('Você recebeu um convite para entrar em Escola do Link'),
+    ).toBeVisible()
+
+    await joinerPage.getByTestId('join-organization').click()
+
+    await expect(joinerPage.getByText('Você entrou na organização')).toBeVisible()
+    await expect(sidebarSection(joinerPage, 'Organização')).toBeVisible()
+
+    await joinerPage.goto('/org')
+    await expect(joinerPage.getByText('2 pessoas').first()).toBeVisible()
+
+    await latePage.goto(inviteUrl)
+
+    await expect(
+      latePage.getByText('Você recebeu um convite para entrar em Escola do Link'),
+    ).toBeVisible()
+    await expect(latePage.getByRole('link', { name: 'Entrar' })).toBeVisible()
+
+    await signUp(latePage, uniqueEmail('atrasada'), 'Atrasada')
+
+    await latePage.waitForURL(/\/join\//)
+    await latePage.getByTestId('join-organization').click()
+    await expect(latePage.getByText('Você entrou na organização')).toBeVisible()
+    await expect(sidebarSection(latePage, 'Organização')).toBeVisible()
+
+    await ownerPage.reload()
+    await ownerPage.getByRole('switch', { name: 'Link de convite' }).click()
+    await ownerPage
+      .getByRole('button', { name: 'Desativar', exact: true })
+      .click()
+    await expect(ownerPage.getByText('Link de convite desativado')).toBeVisible()
+
+    const anonContext = await browser.newContext()
+    const anonPage = await anonContext.newPage()
+
+    await anonPage.goto(inviteUrl)
+    await expect(
+      anonPage.getByText('Link de convite inválido'),
+    ).toBeVisible()
+
+    await ownerContext.close()
+    await joinerContext.close()
+    await lateContext.close()
+    await anonContext.close()
+  })
+
   test('gestão da org: papel, remoção e saída', async ({ browser }) => {
     const ownerContext = await browser.newContext()
     const memberContext = await browser.newContext()

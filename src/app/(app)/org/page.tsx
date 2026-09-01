@@ -10,6 +10,7 @@ import { readActiveOrgId } from '@/lib/active-org'
 import { getSession } from '@/lib/auth'
 import {
   canManageOrganization,
+  getInviteToken,
   listMemberships,
   listOrganizationPeople,
   listPendingInvites,
@@ -62,6 +63,9 @@ export default async function OrganizationPage({ searchParams }: Props) {
   ])
 
   const manageable = canManageOrganization(membership.role)
+  const inviteToken = manageable
+    ? await getInviteToken(membership.orgId)
+    : null
 
   const cards: Array<TeamspaceCard> = await Promise.all(
     teamspaces
@@ -80,6 +84,7 @@ export default async function OrganizationPage({ searchParams }: Props) {
 
       <OrganizationManager
         invites={invites}
+        inviteToken={inviteToken}
         memberId={membership.memberId}
         orgName={membership.orgName}
         people={people}

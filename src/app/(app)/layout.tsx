@@ -2,6 +2,7 @@ import { getLocale } from 'next-intl/server'
 import { redirect } from 'next/navigation'
 
 import { AppShell } from '@/components/app/app-shell'
+import { PendingJoinRedirect } from '@/components/app/pending-join-redirect'
 import { readActiveOrgId } from '@/lib/active-org'
 import { getSession } from '@/lib/auth'
 import {
@@ -76,6 +77,7 @@ export default async function AppLayout({
       trashed={trashed}
       user={{ name: session.user.name, email: session.user.email }}
     >
+      <PendingJoinRedirect />
       {children}
     </AppShell>
   )
