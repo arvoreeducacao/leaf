@@ -537,7 +537,13 @@
     "confirmLinkResetTitle": "Reset the invite link?",
     "confirmLinkResetDescription": "A new link is generated and the current link stops working immediately.",
     "confirmLinkResetAction": "Reset",
-    "confirmLinkCancel": "Cancel"
+    "confirmLinkCancel": "Cancel",
+    "deleteOrgAction": "Delete organization",
+    "deleteOrgTitle": "Delete {name}?",
+    "deleteOrgDescription": "Every member loses access, teamspaces are removed, and documents go back to being private to their owners. This cannot be undone.",
+    "deleteOrgConfirm": "Delete organization",
+    "deleteOrgCancel": "Cancel",
+    "deletedOrg": "Organization deleted"
   },
   "archiveImport": {
     "title": "Import export",
@@ -631,7 +637,6 @@
     "delete": "Delete teamspace",
     "deleted": "Teamspace deleted",
     "deleteConfirm": "Delete {name}?",
-    "deleteBlocked": "{count, plural, =0 {No documents} one {Move the # document before deleting} other {Move the # documents before deleting}}",
     "nameLabel": "Teamspace name",
     "namePlaceholder": "Content team",
     "accessLabel": "Who can join",
@@ -665,12 +670,12 @@
     "errorNoOrganization": "Create or join an organization before creating a teamspace.",
     "errorInvalidAccess": "Choose who can join the teamspace.",
     "errorEmptyName": "Type a name for the teamspace.",
-    "errorNotEmpty": "Move the documents out of this teamspace before deleting it.",
     "errorClosedTeamspace": "This teamspace is closed: ask for an invite.",
     "errorLastOwner": "Hand the teamspace to someone else before leaving.",
     "errorMemberNotFound": "This person is no longer in the teamspace.",
     "errorAlreadyMember": "This person is already in the teamspace.",
-    "errorNotInOrganization": "This person is not in the organization."
+    "errorNotInOrganization": "This person is not in the organization.",
+    "deleteWithDocs": "{count, plural, one {The # document in this teamspace goes back to the organization.} other {The # documents in this teamspace go back to the organization.}}"
   },
   "realtime": {
     "connected": "Real-time collaboration",

@@ -14,6 +14,7 @@ import {
 } from '@/components/icons'
 import { ConfirmInviteLinkChange } from '@/components/org/confirm-invite-link-change'
 import { ConfirmRemoveMember } from '@/components/org/confirm-remove-member'
+import { DeleteOrganizationDialog } from '@/components/org/delete-organization-dialog'
 import { LeaveOrganizationDialog } from '@/components/org/leave-organization-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -32,6 +33,7 @@ import { Switch } from '@/components/ui/switch'
 import type { InviteRole, OrganizationRole } from '@/db/schema'
 import {
   cancelOrganizationInvite,
+  deleteOrganization,
   disableOrganizationInviteLink,
   enableOrganizationInviteLink,
   inviteToOrganization,
@@ -86,6 +88,7 @@ export function OrganizationManager({
   const [inviteError, setInviteError] = useState<string | null>(null)
   const [nameError, setNameError] = useState<string | null>(null)
   const [leaving, setLeaving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const [removing, setRemoving] = useState<OrganizationPerson | null>(null)
   const [removingName, setRemovingName] = useState('')
   const [confirmingLink, setConfirmingLink] = useState<
@@ -223,6 +226,16 @@ export function OrganizationManager({
     const done = await run(() => leaveOrganization(), t('left'))
 
     setLeaving(false)
+
+    if (done) {
+      router.push('/org')
+    }
+  }
+
+  async function confirmDelete() {
+    const done = await run(() => deleteOrganization(), t('deletedOrg'))
+
+    setDeleting(false)
 
     if (done) {
       router.push('/org')
@@ -606,6 +619,27 @@ export function OrganizationManager({
             {t('ownerCannotLeave')}
           </p>
         )}
+
+        {role === 'owner' ? (
+          <>
+            <Button
+              data-testid="delete-org"
+              disabled={pending}
+              onClick={() => setDeleting(true)}
+              type="button"
+              variant="destructive"
+            >
+              {t('deleteOrgAction')}
+            </Button>
+            <DeleteOrganizationDialog
+              onConfirm={() => void confirmDelete()}
+              onOpenChange={setDeleting}
+              open={deleting}
+              orgName={orgName}
+              pending={pending}
+            />
+          </>
+        ) : null}
       </section>
 
       <ConfirmRemoveMember
