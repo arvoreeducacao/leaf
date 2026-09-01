@@ -11,6 +11,8 @@ import { DocumentSearchResults } from '@/components/app/document-search-results'
 import { DocumentTree } from '@/components/app/document-tree'
 import { NewDatabaseButton } from '@/components/app/new-database-button'
 import { NewDocumentButton } from '@/components/app/new-document-button'
+import { OfflineBanner } from '@/components/app/offline-banner'
+import { OfflineSync } from '@/components/app/offline-sync'
 import { OrgSwitcher } from '@/components/app/org-switcher'
 import type { OrganizationOption } from '@/components/app/org-switcher'
 import { SidebarSection } from '@/components/app/sidebar-section'
@@ -319,6 +321,7 @@ export function AppShell({
   return (
     <div className="flex min-h-dvh w-full bg-surface-app">
       <CommandPalette hasOrganization={organizationName !== null} />
+      <OfflineSync />
 
       {collapsed ? null : (
         <aside
@@ -400,6 +403,8 @@ export function AppShell({
             className="flex min-w-0 flex-1 flex-wrap items-center gap-1"
             ref={topbarRef}
           />
+
+          <OfflineBanner />
         </header>
 
         <main className="min-w-0 flex-1">{children}</main>

@@ -4,12 +4,17 @@ import type { Metadata, Viewport } from 'next'
 import { NextIntlClientProvider } from 'next-intl'
 import { getLocale, getTranslations } from 'next-intl/server'
 
+import { ServiceWorkerRegistration } from '@/components/app/service-worker-registration'
 import { ThemeProvider } from '@/components/app/theme-provider'
 import { Toaster } from '@/components/ui/sonner'
 
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
+    { media: '(prefers-color-scheme: dark)', color: '#191919' },
+  ],
 }
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -18,6 +23,8 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: t('title'),
     description: t('description'),
+    manifest: '/manifest.webmanifest',
+    icons: { icon: '/icon.svg', apple: '/icon.svg' },
   }
 }
 
@@ -35,6 +42,7 @@ export default async function RootLayout({ children }: Props) {
           <NextIntlClientProvider>
             {children}
             <Toaster />
+            <ServiceWorkerRegistration />
           </NextIntlClientProvider>
         </ThemeProvider>
       </body>
