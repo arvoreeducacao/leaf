@@ -5,7 +5,14 @@ import { useRouter } from 'next/navigation'
 import { useId, useState } from 'react'
 import { toast } from 'sonner'
 
-import { TeamIcon, TrashIcon } from '@/components/icons'
+import {
+  ClipboardIcon,
+  GlobeIcon,
+  RotateIcon,
+  TeamIcon,
+  TrashIcon,
+} from '@/components/icons'
+import { ConfirmInviteLinkChange } from '@/components/org/confirm-invite-link-change'
 import { ConfirmRemoveMember } from '@/components/org/confirm-remove-member'
 import { LeaveOrganizationDialog } from '@/components/org/leave-organization-dialog'
 import { Badge } from '@/components/ui/badge'
@@ -21,9 +28,12 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
+import { Switch } from '@/components/ui/switch'
 import type { InviteRole, OrganizationRole } from '@/db/schema'
 import {
   cancelOrganizationInvite,
+  disableOrganizationInviteLink,
+  enableOrganizationInviteLink,
   inviteToOrganization,
   leaveOrganization,
   removeMember,
@@ -39,7 +49,16 @@ type Props = Readonly<{
   memberId: string
   people: ReadonlyArray<OrganizationPerson>
   invites: ReadonlyArray<PendingInvite>
+  inviteToken: string | null
 }>
+
+function joinUrlFor(token: string) {
+  if (typeof window === 'undefined') {
+    return `/join/${token}`
+  }
+
+  return `${window.location.origin}/join/${token}`
+}
 
 export function OrganizationManager({
   orgName,
@@ -47,6 +66,7 @@ export function OrganizationManager({
   memberId,
   people,
   invites,
+  inviteToken,
 }: Props) {
   const t = useTranslations('org')
   const tCommon = useTranslations('common')
@@ -56,6 +76,8 @@ export function OrganizationManager({
   const roleId = useId()
   const inviteErrorId = useId()
   const nameErrorId = useId()
+  const inviteLinkSwitchId = useId()
+  const inviteLinkId = useId()
 
   const [name, setName] = useState(orgName)
   const [pending, setPending] = useState(false)
@@ -66,6 +88,9 @@ export function OrganizationManager({
   const [leaving, setLeaving] = useState(false)
   const [removing, setRemoving] = useState<OrganizationPerson | null>(null)
   const [removingName, setRemovingName] = useState('')
+  const [confirmingLink, setConfirmingLink] = useState<
+    'disable' | 'reset' | null
+  >(null)
 
   const canManage = role === 'owner' || role === 'admin'
   const canLeave = role !== 'owner'
@@ -166,6 +191,32 @@ export function OrganizationManager({
       },
       duration: 10_000,
     })
+  }
+
+  async function copyInviteLink(url: string) {
+    try {
+      await navigator.clipboard.writeText(url)
+      toast.success(t('inviteLinkCopied'))
+    } catch {
+      toast.error(t('inviteLinkCopyFailed'))
+    }
+  }
+
+  async function confirmLinkChange() {
+    const mode = confirmingLink
+
+    if (!mode) {
+      return
+    }
+
+    await run(
+      () =>
+        mode === 'disable'
+          ? disableOrganizationInviteLink()
+          : enableOrganizationInviteLink(),
+      mode === 'disable' ? t('inviteLinkDisabled') : t('inviteLinkReset'),
+    )
+    setConfirmingLink(null)
   }
 
   async function confirmLeave() {
@@ -404,6 +455,93 @@ export function OrganizationManager({
             ) : null}
 
             <p className="text-body-small text-content">{t('inviteHelp')}</p>
+          </section>
+
+          <section className="flex flex-col gap-3">
+            <div className="flex min-h-11 items-center justify-between gap-3">
+              <div className="flex min-w-0 items-center gap-2">
+                <GlobeIcon
+                  aria-hidden="true"
+                  className="size-4 shrink-0 text-content-muted"
+                />
+                <Label
+                  className="font-bold text-body-small text-content-strong"
+                  htmlFor={inviteLinkSwitchId}
+                >
+                  {t('inviteLinkTitle')}
+                </Label>
+              </div>
+              <Switch
+                checked={inviteToken !== null}
+                disabled={pending}
+                id={inviteLinkSwitchId}
+                onCheckedChange={(checked) => {
+                  if (!checked) {
+                    setConfirmingLink('disable')
+
+                    return
+                  }
+
+                  void run(
+                    () => enableOrganizationInviteLink(),
+                    t('inviteLinkEnabled'),
+                  )
+                }}
+              />
+            </div>
+
+            <ConfirmInviteLinkChange
+              mode={confirmingLink ?? 'disable'}
+              onConfirm={() => void confirmLinkChange()}
+              onOpenChange={(open) => {
+                if (!open) {
+                  setConfirmingLink(null)
+                }
+              }}
+              open={confirmingLink !== null}
+              pending={pending}
+            />
+
+            <p className="text-body-small text-content">
+              {t('inviteLinkHelp')}
+            </p>
+
+            {inviteToken ? (
+              <div className="flex flex-col gap-2 tablet:flex-row tablet:items-end">
+                <div className="flex min-w-0 flex-1 flex-col gap-2">
+                  <Label htmlFor={inviteLinkId}>
+                    {t('inviteLinkAddress')}
+                  </Label>
+                  <Input
+                    className="max-w-full"
+                    data-testid="org-invite-link"
+                    id={inviteLinkId}
+                    onFocus={(event) => event.currentTarget.select()}
+                    readOnly
+                    value={joinUrlFor(inviteToken)}
+                  />
+                </div>
+                <Button
+                  className="w-full tablet:w-auto"
+                  onClick={() => void copyInviteLink(joinUrlFor(inviteToken))}
+                  type="button"
+                  variant="secondary"
+                >
+                  <ClipboardIcon aria-hidden="true" />
+                  {t('inviteLinkCopy')}
+                </Button>
+                <Button
+                  className="w-full tablet:w-auto"
+                  disabled={pending}
+                  onClick={() => setConfirmingLink('reset')}
+                  type="button"
+                  variant="secondary"
+                >
+                  <RotateIcon aria-hidden="true" />
+                  {t('inviteLinkResetAction')}
+                </Button>
+              </div>
+            ) : null}
           </section>
 
           <section className="flex flex-col gap-3">
