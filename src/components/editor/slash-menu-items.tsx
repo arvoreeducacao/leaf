@@ -3,6 +3,7 @@ import type { DefaultReactSuggestionItem } from '@blocknote/react'
 import { getDefaultReactSlashMenuItems } from '@blocknote/react'
 
 import {
+  CloudDownloadIcon,
   DatabaseIcon,
   FileUploadIcon,
   IdeaIcon,
@@ -18,11 +19,14 @@ export type ImportMenuTexts = Readonly<{
   markdownHint: string
   archive: string
   archiveHint: string
+  link: string
+  linkHint: string
 }>
 
 export type ImportMenuActions = Readonly<{
   onMarkdown: () => void
   onArchive?: () => void
+  onLink?: () => void
 }>
 
 export type DatabaseMenuAction = DatabaseMenuItem &
@@ -90,6 +94,7 @@ export function getLeafSlashMenuItems(
     : null
 
   const archiveAction = importActions?.onArchive
+  const linkAction = importActions?.onLink
   const imports: DefaultReactSuggestionItem[] =
     importTexts && importActions
       ? [
@@ -108,6 +113,17 @@ export function getLeafSlashMenuItems(
                   group: importTexts.group,
                   icon: <ZipArchiveIcon aria-hidden="true" className="size-4" />,
                   onItemClick: archiveAction,
+                },
+              ]
+            : []),
+          ...(linkAction
+            ? [
+                {
+                  title: importTexts.link,
+                  subtext: importTexts.linkHint,
+                  group: importTexts.group,
+                  icon: <CloudDownloadIcon aria-hidden="true" className="size-4" />,
+                  onItemClick: linkAction,
                 },
               ]
             : []),

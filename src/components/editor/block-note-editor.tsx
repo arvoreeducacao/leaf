@@ -369,10 +369,15 @@ export default function BlockNoteEditor({
                   markdownHint: tImport('slashMarkdownHint'),
                   archive: tImport('slashArchive'),
                   archiveHint: tImport('slashArchiveHint'),
+                  link: tImport('slashLink'),
+                  linkHint: tImport('slashLinkHint'),
                 },
                 {
                   onArchive: isOwner
                     ? () => importRef.current?.pickArchive()
+                    : undefined,
+                  onLink: isOwner
+                    ? () => importRef.current?.pickLink()
                     : undefined,
                   onMarkdown: () => importRef.current?.pickMarkdown(),
                 },

@@ -13,6 +13,10 @@ export type NotionImportMessages = Readonly<{
   pageFailed: (title: string) => string
   togglesDegraded: (count: number) => string
   missingLinks: (count: number) => string
+  crawlTruncated: (max: number) => string
+  commentsUnavailable: string
+  commentsImported: (count: number) => string
+  commentsFailed: string
 }>
 
 type Translate = (
@@ -39,5 +43,9 @@ export function buildNotionImportMessages(
     pageFailed: (title) => translate('pageFailed', { title }),
     togglesDegraded: (count) => translate('togglesDegraded', { count }),
     missingLinks: (count) => translate('missingLinks', { count }),
+    crawlTruncated: (max) => translate('crawlTruncated', { max }),
+    commentsUnavailable: translate('commentsUnavailable'),
+    commentsImported: (count) => translate('commentsImported', { count }),
+    commentsFailed: translate('commentsFailed'),
   }
 }

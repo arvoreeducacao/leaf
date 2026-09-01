@@ -1,8 +1,15 @@
-import { and, eq, isNull } from 'drizzle-orm'
+import { and, eq, inArray, isNull } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
 
 import { db } from '@/db'
-import { databaseProperties, databaseViews, documents } from '@/db/schema'
+import {
+  comments,
+  databaseProperties,
+  databaseViews,
+  documents,
+  user,
+} from '@/db/schema'
+import type { OrgAccess } from '@/db/schema'
 import { inferDatabase } from '@/lib/database/csv-import'
 import {
   MAX_PROPERTY_NAME,
@@ -26,6 +33,7 @@ import {
 import type { NotionLinkTarget } from '@/lib/notion/markdown'
 import { baseNameOf, extensionOf } from '@/lib/notion/paths'
 import { buildImportPlan, isImagePath } from '@/lib/notion/plan'
+import type { ImportedComment } from '@/lib/notion/crawl'
 import type { NotionPage, NotionPlan } from '@/lib/notion/plan'
 import { NotionImportError, readZipEntries } from '@/lib/notion/zip'
 import { storage } from '@/lib/storage'
@@ -45,7 +53,7 @@ export type ImportSummary = Readonly<{
 export type ImportEvent =
   | Readonly<{
       type: 'progress'
-      phase: 'assets' | 'pages'
+      phase: 'assets' | 'pages' | 'reading'
       done: number
       total: number
       label: string
@@ -57,6 +65,7 @@ export type ImportOwner = Readonly<{
   id: string
   orgId?: string | null
   teamspaceId?: string | null
+  orgAccess?: OrgAccess | null
   parentId?: string | null
 }>
 
@@ -72,21 +81,10 @@ export async function* importNotionZip(
   messages: NotionImportMessages,
   signal?: AbortSignal,
 ): AsyncGenerator<ImportEvent> {
-  const warnings: Array<string> = []
-
-  function warn(message: string) {
-    if (warnings.length < maxWarnings) {
-      warnings.push(message)
-    }
-  }
-
   let plan: NotionPlan
 
   try {
-    plan = buildImportPlan(
-      readZipEntries(data, messages),
-      messages.untitled,
-    )
+    plan = buildImportPlan(readZipEntries(data, messages), messages.untitled)
   } catch (error) {
     yield {
       type: 'error',
@@ -97,6 +95,100 @@ export async function* importNotionZip(
     }
 
     return
+  }
+
+  yield* importNotionPlan(plan, owner, messages, signal)
+}
+
+const maxCommentBody = 2000
+
+async function importComments(
+  threadsByPageKey: ReadonlyMap<string, ReadonlyArray<ImportedComment>>,
+  idByKey: ReadonlyMap<string, string>,
+) {
+  const emails = new Set<string>()
+
+  for (const threads of threadsByPageKey.values()) {
+    for (const thread of threads) {
+      if (thread.authorEmail) {
+        emails.add(thread.authorEmail.toLowerCase())
+      }
+    }
+  }
+
+  const people = new Map<string, string>()
+
+  if (emails.size > 0) {
+    const rows = await db
+      .select({ id: user.id, email: user.email })
+      .from(user)
+      .where(inArray(user.email, [...emails]))
+
+    for (const row of rows) {
+      people.set(row.email.toLowerCase(), row.id)
+    }
+  }
+
+  let created = 0
+
+  for (const [pageKey, threads] of threadsByPageKey) {
+    const documentId = idByKey.get(pageKey)
+
+    if (!documentId) {
+      continue
+    }
+
+    const rootByDiscussion = new Map<string, string>()
+
+    for (const thread of threads) {
+      const authorId = thread.authorEmail
+        ? (people.get(thread.authorEmail.toLowerCase()) ?? null)
+        : null
+      const body = (
+        authorId || !thread.authorName
+          ? thread.body
+          : `${thread.authorName}: ${thread.body}`
+      ).slice(0, maxCommentBody)
+      const id = nanoid(12)
+      const stamp = thread.createdAt ?? new Date()
+      const parentId = rootByDiscussion.get(thread.discussionId) ?? null
+
+      await db.insert(comments).values({
+        id,
+        documentId,
+        parentId,
+        blockId: null,
+        authorId,
+        body,
+        resolvedAt: null,
+        createdAt: stamp,
+        updatedAt: stamp,
+      })
+
+      if (!parentId) {
+        rootByDiscussion.set(thread.discussionId, id)
+      }
+
+      created += 1
+    }
+  }
+
+  return created
+}
+
+export async function* importNotionPlan(
+  plan: NotionPlan,
+  owner: ImportOwner,
+  messages: NotionImportMessages,
+  signal?: AbortSignal,
+  threadsByPageKey?: ReadonlyMap<string, ReadonlyArray<ImportedComment>>,
+): AsyncGenerator<ImportEvent> {
+  const warnings: Array<string> = []
+
+  function warn(message: string) {
+    if (warnings.length < maxWarnings) {
+      warnings.push(message)
+    }
   }
 
   if (plan.pages.length === 0) {
@@ -151,6 +243,7 @@ export async function* importNotionZip(
     ownerId: owner.id,
     orgId: owner.orgId ?? null,
     teamspaceId: owner.teamspaceId ?? null,
+    orgAccess: owner.orgAccess ?? null,
     parentId: page.parentKey
       ? (idByKey.get(page.parentKey) ?? owner.parentId ?? null)
       : (owner.parentId ?? null),
@@ -305,6 +398,7 @@ export async function* importNotionZip(
         parentId: databaseId,
         orgId: owner.orgId ?? null,
         teamspaceId: owner.teamspaceId ?? null,
+        orgAccess: owner.orgAccess ?? null,
         kind: 'row',
         title: row.title.slice(0, 200),
         properties: serializeValues(values),
@@ -383,6 +477,18 @@ export async function* importNotionZip(
       databases += 1
     } catch {
       warn(messages.pageFailed(page.title))
+    }
+  }
+
+  if (threadsByPageKey && threadsByPageKey.size > 0) {
+    try {
+      const imported = await importComments(threadsByPageKey, idByKey)
+
+      if (imported > 0) {
+        warn(messages.commentsImported(imported))
+      }
+    } catch {
+      warn(messages.commentsFailed)
     }
   }
 

@@ -5,6 +5,7 @@ import { forwardRef, useImperativeHandle, useRef, useState } from 'react'
 import { toast } from 'sonner'
 
 import { ArchiveImportDialog } from '@/components/editor/archive-import-dialog'
+import { NotionLinkDialog } from '@/components/editor/notion-link-dialog'
 import { importMarkdownBlocks } from '@/lib/markdown/import-action'
 import {
   MARKDOWN_EXTENSIONS,
@@ -16,6 +17,7 @@ import { MAX_ZIP_BYTES, MAX_ZIP_LABEL, ZIP_EXTENSIONS } from '@/lib/notion/limit
 export type DocumentImportHandle = Readonly<{
   pickMarkdown: () => void
   pickArchive: () => void
+  pickLink: () => void
 }>
 
 type Props = Readonly<{
@@ -31,12 +33,18 @@ export const DocumentImport = forwardRef<DocumentImportHandle, Props>(
     const archiveRef = useRef<HTMLInputElement>(null)
     const [reading, setReading] = useState(false)
     const [archive, setArchive] = useState<File | null>(null)
+    const [linkOpen, setLinkOpen] = useState(false)
 
     useImperativeHandle(ref, () => ({
       pickMarkdown: () => markdownRef.current?.click(),
       pickArchive: () => {
         if (canImportArchive) {
           archiveRef.current?.click()
+        }
+      },
+      pickLink: () => {
+        if (canImportArchive) {
+          setLinkOpen(true)
         }
       },
     }))
@@ -131,6 +139,14 @@ export const DocumentImport = forwardRef<DocumentImportHandle, Props>(
           }}
           parentId={documentId}
         />
+
+        {canImportArchive ? (
+          <NotionLinkDialog
+            onOpenChange={setLinkOpen}
+            open={linkOpen}
+            parentId={documentId}
+          />
+        ) : null}
       </>
     )
   },

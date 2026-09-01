@@ -13,3 +13,5 @@ export const MAX_ASSET_BYTES = 20 * 1024 * 1024
 export const MAX_ASSET_LABEL = '20 MB'
 
 export const ZIP_EXTENSIONS = ['.zip']
+
+export const MAX_CRAWL_PAGES = 2000
