@@ -52,6 +52,18 @@ describe('leafSchema', () => {
     await expect(typesFor('```\ncodigo\n```')).resolves.toEqual(['codeBlock'])
   })
 
+  it('exporta o bloco de base de dados como link pelo schema do servidor', async () => {
+    const serverEditor = ServerBlockNoteEditor.create({
+      schema: leafServerSchema,
+    })
+
+    const html = await serverEditor.blocksToHTMLLossy([
+      { type: 'database', props: { databaseId: 'abc123def456' } },
+    ])
+
+    expect(html).toContain('/doc/abc123def456')
+  })
+
   it('expõe os mesmos tipos de bloco do schema do servidor', () => {
     expect(Object.keys(leafSchema.blockSchema).sort()).toEqual(
       Object.keys(leafServerSchema.blockSchema).sort()
