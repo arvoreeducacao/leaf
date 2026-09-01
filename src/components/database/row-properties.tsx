@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 
 import type { DatabaseProperty } from '@/db/schema'
 import { addSelectOption, setDatabaseRowValue } from '@/lib/database-actions'
+import { type Person, optionsFor } from '@/lib/database/people'
 import {
   type PropertyValue,
   type SelectOption,
@@ -22,9 +23,10 @@ type Props = Readonly<{
   row: DatabaseRow
   properties: ReadonlyArray<DatabaseProperty>
   canEdit: boolean
+  people: ReadonlyArray<Person>
 }>
 
-export function RowProperties({ row, properties, canEdit }: Props) {
+export function RowProperties({ row, properties, canEdit, people }: Props) {
   const t = useTranslations('database')
   const [items, setItems] = useState(properties)
   const [values, setValues] = useState(row.values)
@@ -109,16 +111,13 @@ export function RowProperties({ row, properties, canEdit }: Props) {
                 compact
                 onCommit={(value) => commit(property.id, value)}
                 onCreateOption={(name) => createOption(property.id, name)}
+                people={people}
                 property={property}
                 readOnly={!canEdit}
                 rowTitle={
                   row.title.trim().length > 0 ? row.title : t('untitledRow')
                 }
-                value={valueOf(
-                  values,
-                  property,
-                  parseOptions(property.options),
-                )}
+                value={valueOf(values, property, optionsFor(property, people))}
               />
             </dd>
           </div>

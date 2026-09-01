@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
+import { personOptions } from './people'
 import { serializeOptions } from './values'
 import {
   TITLE_PROPERTY_ID,
@@ -24,6 +25,23 @@ const status = {
     { id: 'done', name: 'Feito', color: 'success' },
   ]),
 }
+
+const owners = { id: 'owners', type: 'person' as const, options: null }
+
+const phase = {
+  id: 'phase',
+  type: 'status' as const,
+  options: serializeOptions([
+    { id: 'f', name: 'Feito', color: 'success', group: 'done' },
+    { id: 'p', name: 'Pendente', color: 'gray', group: 'todo' },
+    { id: 'a', name: 'Andando', color: 'blue', group: 'doing' },
+  ]),
+}
+
+const people = personOptions([
+  { id: 'u1', name: 'Rafael', email: 'rafael@arvore.com.br' },
+  { id: 'u2', name: 'Raposo', email: 'raposo@arvore.com.br' },
+])
 
 const points = { id: 'points', type: 'number' as const, options: null }
 const due = { id: 'due', type: 'date' as const, options: null }
@@ -277,5 +295,94 @@ describe('propriedades visíveis', () => {
         hiddenPropertyIds: ['due', 'done'],
       }).map((item) => item.id),
     ).toEqual(['status', 'points'])
+  })
+})
+
+describe('quadro por pessoa', () => {
+  const shared = [
+    row('a', 'Alfa', { owners: ['u1', 'u2'] }),
+    row('b', 'Beta', { owners: ['u2'] }),
+    row('c', 'Gama', { owners: [] }),
+  ]
+
+  it('põe a linha na coluna de cada pessoa que está nela', () => {
+    const groups = groupRows(shared, owners, 'Sem responsável', people)
+
+    expect(groups.map((group) => group.name)).toEqual([
+      'Rafael',
+      'Raposo',
+      'Sem responsável',
+    ])
+    expect(groups[0].rows.map((item) => item.id)).toEqual(['a'])
+    expect(groups[1].rows.map((item) => item.id)).toEqual(['a', 'b'])
+    expect(groups[2].rows.map((item) => item.id)).toEqual(['c'])
+  })
+
+  it('manda pra coluna vazia quem aponta pra gente que saiu da organização', () => {
+    const groups = groupRows(
+      [row('x', 'Órfã', { owners: ['sumiu'] })],
+      owners,
+      'Sem responsável',
+      people,
+    )
+
+    expect(groups[groups.length - 1].rows.map((item) => item.id)).toEqual(['x'])
+  })
+
+  it('aceita pessoa como propriedade de agrupamento', () => {
+    expect(
+      boardPropertyOf([points, owners], {
+        ...emptyViewConfig,
+        groupByPropertyId: 'owners',
+      })?.id,
+    ).toBe('owners')
+  })
+
+  it('ordena as colunas de status por a fazer, fazendo e feito', () => {
+    const groups = groupRows(
+      [row('a', 'Alfa', { phase: 'f' }), row('b', 'Beta', { phase: 'p' })],
+      phase,
+      'Sem valor',
+    )
+
+    expect(groups.map((group) => group.name)).toEqual([
+      'Pendente',
+      'Andando',
+      'Feito',
+      'Sem valor',
+    ])
+  })
+})
+
+describe('filtro sou eu', () => {
+  const mine = [
+    row('a', 'Alfa', { owners: ['u1', 'u2'] }),
+    row('b', 'Beta', { owners: ['u2'] }),
+    row('c', 'Gama', {}),
+  ]
+
+  const filter = {
+    propertyId: 'owners',
+    operator: 'isMe' as const,
+    value: null,
+  }
+
+  it('deixa passar só o que é de quem está olhando', () => {
+    expect(
+      applyFilters(mine, [filter], [owners], 'u1').map((item) => item.id),
+    ).toEqual(['a'])
+
+    expect(
+      applyFilters(mine, [filter], [owners], 'u2').map((item) => item.id),
+    ).toEqual(['a', 'b'])
+  })
+
+  it('não deixa passar nada quando ninguém está logado', () => {
+    expect(applyFilters(mine, [filter], [owners], null)).toEqual([])
+  })
+
+  it('oferece sou eu como operador de pessoa e não de seleção', () => {
+    expect(operatorsFor('person')).toContain('isMe')
+    expect(operatorsFor('select')).not.toContain('isMe')
   })
 })

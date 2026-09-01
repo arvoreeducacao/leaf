@@ -11,6 +11,8 @@ import {
 } from '@/db/schema'
 import type { OrgAccess } from '@/db/schema'
 import { inferDatabase } from '@/lib/database/csv-import'
+import type { Person } from '@/lib/database/people'
+import { listDatabasePeople } from '@/lib/databases'
 import {
   MAX_PROPERTY_NAME,
   type PropertyValue,
@@ -184,6 +186,11 @@ export async function* importNotionPlan(
   threadsByPageKey?: ReadonlyMap<string, ReadonlyArray<ImportedComment>>,
 ): AsyncGenerator<ImportEvent> {
   const warnings: Array<string> = []
+  const unresolvedPeople = new Set<string>()
+  const people: ReadonlyArray<Person> = await listDatabasePeople(
+    owner.orgId ?? null,
+    owner.id,
+  )
 
   function warn(message: string) {
     if (warnings.length < maxWarnings) {
@@ -299,10 +306,15 @@ export async function* importNotionPlan(
     const inferred = inferDatabase(
       parseCsv(plan.csvByPath.get(page.sourcePath) ?? ''),
       messages.csvColumn,
+      people,
     )
 
     if (!inferred) {
       return 0
+    }
+
+    for (const name of inferred.unresolvedPeople) {
+      unresolvedPeople.add(name)
     }
 
     const stamp = new Date()
@@ -498,6 +510,15 @@ export async function* importNotionPlan(
 
   if (toggles > 0) {
     warn(messages.togglesDegraded(toggles))
+  }
+
+  if (unresolvedPeople.size > 0) {
+    warn(
+      messages.unresolvedPeople(
+        unresolvedPeople.size,
+        [...unresolvedPeople].slice(0, 5).join(', '),
+      ),
+    )
   }
 
   if (missingLinks > 0) {

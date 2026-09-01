@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react'
 
 import { CheckboxActiveIcon, CheckboxIcon } from '@/components/icons'
 import type { DatabaseProperty } from '@/db/schema'
+import { type Person, personOptions } from '@/lib/database/people'
 import {
   type PropertyValue,
   type SelectOption,
@@ -23,6 +24,7 @@ type Props = Readonly<{
   rowTitle: string
   readOnly: boolean
   compact?: boolean
+  people?: ReadonlyArray<Person>
   onCommit: (value: PropertyValue) => void
   onCreateOption: (name: string) => Promise<SelectOption | null>
 }>
@@ -45,41 +47,58 @@ export function PropertyCell({
   rowTitle,
   readOnly,
   compact = false,
+  people = [],
   onCommit,
   onCreateOption,
 }: Props) {
   const t = useTranslations('database')
   const locale = useLocale()
   const label = t('cellLabel', { property: property.name, row: rowTitle })
-  const options = parseOptions(property.options)
+  const options =
+    property.type === 'person'
+      ? personOptions(people)
+      : parseOptions(property.options)
 
   const inputClass = cn(
     'w-full min-w-0 rounded-medium bg-transparent text-body-small text-content-strong outline-none transition-colors placeholder:text-content-subtle focus-visible:outline-2 focus-visible:outline-focus focus-visible:-outline-offset-2 disabled:text-content',
     compact ? 'h-9 px-2 tablet:h-8' : 'min-h-9 border border-line px-2 py-1',
   )
 
-  if (property.type === 'select' || property.type === 'multiSelect') {
-    const selected =
-      property.type === 'multiSelect'
-        ? Array.isArray(value)
-          ? [...value]
-          : []
-        : typeof value === 'string' && value.length > 0
-          ? [value]
-          : []
+  if (
+    property.type === 'select' ||
+    property.type === 'multiSelect' ||
+    property.type === 'person' ||
+    property.type === 'status'
+  ) {
+    const multiple =
+      property.type === 'multiSelect' || property.type === 'person'
+    const selected = multiple
+      ? Array.isArray(value)
+        ? [...value]
+        : []
+      : typeof value === 'string' && value.length > 0
+        ? [value]
+        : []
 
     return (
       <SelectEditor
         compact={compact}
+        creatable={property.type !== 'person'}
+        emptyHint={property.type === 'person' ? t('noPeople') : undefined}
         label={label}
-        multiple={property.type === 'multiSelect'}
-        onChange={(next) =>
-          onCommit(property.type === 'multiSelect' ? next : (next[0] ?? null))
-        }
+        multiple={multiple}
+        onChange={(next) => onCommit(multiple ? next : (next[0] ?? null))}
         onCreate={onCreateOption}
         options={options}
         readOnly={readOnly}
         selected={selected}
+        variant={
+          property.type === 'person'
+            ? 'person'
+            : property.type === 'status'
+              ? 'status'
+              : 'option'
+        }
       />
     )
   }
