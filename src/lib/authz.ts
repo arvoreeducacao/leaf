@@ -96,6 +96,10 @@ export async function getDocumentAccess(
     return 'owner'
   }
 
+  if (document.kind === 'row' && document.parentId) {
+    return getDocumentAccess(document.parentId, session)
+  }
+
   const share = await db.query.documentShares.findFirst({
     where: and(
       eq(documentShares.documentId, docId),

@@ -12,8 +12,4 @@ export const MAX_ASSET_BYTES = 20 * 1024 * 1024
 
 export const MAX_ASSET_LABEL = '20 MB'
 
-export const MAX_TABLE_COLUMNS = 12
-
-export const MAX_TABLE_ROWS = 200
-
 export const ZIP_EXTENSIONS = ['.zip']

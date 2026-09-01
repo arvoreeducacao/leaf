@@ -24,6 +24,7 @@ import {
 } from '@/components/comments/comments-bridge'
 import { WarningIcon } from '@/components/icons'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { createDatabase } from '@/lib/database-actions'
 import { takeSessionFlag } from '@/shared/storage'
 
 import { collectBlockIds } from './block-ids'
@@ -76,9 +77,10 @@ export default function BlockNoteEditor({
   const t = useTranslations('editor')
   const tComments = useTranslations('comments')
   const tImport = useTranslations('importFile')
+  const tDatabase = useTranslations('database')
   const tRealtime = useTranslations('realtime')
   const { resolvedTheme } = useTheme()
-  const { calloutItem, dictionary } = useLeafDictionary(readOnly)
+  const { calloutItem, databaseItem, dictionary } = useLeafDictionary(readOnly)
   const containerRef = useRef<HTMLDivElement>(null)
   const importRef = useRef<DocumentImportHandle>(null)
   const parsed = readDocumentContent(initialContent)
@@ -152,6 +154,31 @@ export default function BlockNoteEditor({
     },
     [editor, handleChange],
   )
+
+  const insertDatabase = useCallback(() => {
+    void (async () => {
+      try {
+        const result = await createDatabase(documentId)
+
+        if (!result.ok) {
+          toast.error(result.error)
+
+          return
+        }
+
+        const reference = editor.getTextCursorPosition().block
+
+        editor.insertBlocks(
+          [{ type: 'database', props: { databaseId: result.id } }],
+          reference,
+          'after',
+        )
+        handleChange()
+      } catch {
+        toast.error(tDatabase('newDatabaseFailed'))
+      }
+    })()
+  }, [documentId, editor, handleChange, tDatabase])
 
   useEffect(() => {
     const element = containerRef.current
@@ -346,6 +373,7 @@ export default function BlockNoteEditor({
                     : undefined,
                   onMarkdown: () => importRef.current?.pickMarkdown(),
                 },
+                { ...databaseItem, onInsert: insertDatabase },
               ),
               query,
             )

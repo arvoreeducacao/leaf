@@ -4,6 +4,8 @@ import { notFound, redirect } from 'next/navigation'
 
 import { DocumentBreadcrumb } from '@/components/app/document-breadcrumb'
 import { DocumentHeader } from '@/components/app/document-header'
+import { DatabaseSurface } from '@/components/database/database-surface'
+import { RowPropertiesSurface } from '@/components/database/row-properties-surface'
 import { DocumentEditor } from '@/components/editor/document-editor'
 import { authorNameOf } from '@/lib/author-name'
 import { getSession } from '@/lib/auth'
@@ -66,26 +68,41 @@ export default async function DocumentPage({ params }: Props) {
         teamspaceName={teamspace?.name ?? null}
         title={document.title}
       />
-      <DocumentEditor
-        canComment={canComment(access)}
-        documentId={document.id}
-        initialContent={document.content}
-        isOwner={access === 'owner'}
-        readOnly={!canEdit(access)}
-        realtime={
-          isRealtimeEnabled()
-            ? {
-                url: process.env.LEAF_REALTIME_URL?.trim() || null,
-                port: realtimePort(),
-                user: {
-                  id: session.user.id,
-                  name:
-                    authorNameOf(session.user.name, session.user.email) ?? '',
-                },
-              }
-            : null
-        }
-      />
+      {document.kind === 'database' ? (
+        <DatabaseSurface canEdit={canEdit(access)} databaseId={document.id} />
+      ) : (
+        <>
+          {document.kind === 'row' ? (
+            <div className="px-4 tablet:px-[54px]">
+              <RowPropertiesSurface
+                canEdit={canEdit(access)}
+                rowId={document.id}
+              />
+            </div>
+          ) : null}
+          <DocumentEditor
+            canComment={canComment(access)}
+            documentId={document.id}
+            initialContent={document.content}
+            isOwner={access === 'owner'}
+            readOnly={!canEdit(access)}
+            realtime={
+              isRealtimeEnabled()
+                ? {
+                    url: process.env.LEAF_REALTIME_URL?.trim() || null,
+                    port: realtimePort(),
+                    user: {
+                      id: session.user.id,
+                      name:
+                        authorNameOf(session.user.name, session.user.email) ??
+                        '',
+                    },
+                  }
+                : null
+            }
+          />
+        </>
+      )}
     </article>
   )
 }

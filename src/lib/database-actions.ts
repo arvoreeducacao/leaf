@@ -1,0 +1,706 @@
+'use server'
+
+import { and, asc, eq, inArray, isNull, sql } from 'drizzle-orm'
+import { nanoid } from 'nanoid'
+import { getTranslations } from 'next-intl/server'
+import { revalidatePath } from 'next/cache'
+import { redirect } from 'next/navigation'
+
+import { db } from '@/db'
+import { databaseProperties, databaseViews, documents } from '@/db/schema'
+import type { DatabasePropertyType, DatabaseViewType } from '@/db/schema'
+import { getActiveMembership } from '@/lib/active-org'
+import { getSession } from '@/lib/auth'
+import { canEdit, getDocumentAccess } from '@/lib/authz'
+import {
+  MAX_PROPERTIES,
+  MAX_PROPERTY_NAME,
+  MAX_SELECT_OPTIONS,
+  type SelectOption,
+  colorForIndex,
+  normalizeValue,
+  parseOptions,
+  parseValues,
+  propertyTypes,
+  serializeOptions,
+  serializeValues,
+} from '@/lib/database/values'
+import {
+  MAX_VIEWS,
+  type ViewConfig,
+  parseViewConfig,
+  serializeViewConfig,
+  viewTypes,
+} from '@/lib/database/views'
+import type { DatabaseRow } from '@/lib/database/views'
+import {
+  type DatabaseSnapshot,
+  listDatabaseProperties,
+  loadDatabase,
+  toDatabaseRow,
+} from '@/lib/databases'
+import { indexDocument, removeDocumentFromIndex } from '@/lib/search-index'
+
+export type DatabaseActionResult = { ok: true } | { ok: false; error: string }
+
+async function notAllowed(): Promise<{ ok: false; error: string }> {
+  return { ok: false, error: (await getTranslations('errors'))('notAllowed') }
+}
+
+async function requireSession() {
+  const session = await getSession()
+
+  if (!session) {
+    redirect('/login')
+  }
+
+  return session
+}
+
+async function databaseIdOfProperty(propertyId: string) {
+  const property = await db.query.databaseProperties.findFirst({
+    where: eq(databaseProperties.id, propertyId),
+  })
+
+  return property ?? null
+}
+
+async function databaseIdOfView(viewId: string) {
+  const view = await db.query.databaseViews.findFirst({
+    where: eq(databaseViews.id, viewId),
+  })
+
+  return view ?? null
+}
+
+async function canEditDatabase(databaseId: string) {
+  const session = await requireSession()
+  const access = await getDocumentAccess(databaseId, session)
+
+  return canEdit(access) ? session : null
+}
+
+function untitledRow(title: string) {
+  return title.trim().slice(0, 200)
+}
+
+export async function createDatabase(
+  parentId: string | null = null,
+): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
+  const session = await requireSession()
+
+  if (parentId) {
+    const parentAccess = await getDocumentAccess(parentId, session)
+
+    if (!canEdit(parentAccess)) {
+      return notAllowed()
+    }
+  }
+
+  const parent = parentId
+    ? await db.query.documents.findFirst({ where: eq(documents.id, parentId) })
+    : null
+
+  const membership = await getActiveMembership(session.user.id)
+  const t = await getTranslations('database')
+  const id = nanoid(12)
+  const now = new Date()
+
+  await db.insert(documents).values({
+    id,
+    ownerId: session.user.id,
+    parentId: parent?.id ?? null,
+    orgId: parent ? parent.orgId : (membership?.orgId ?? null),
+    teamspaceId: parent?.teamspaceId ?? null,
+    orgAccess: parent?.orgAccess ?? null,
+    kind: 'database',
+    title: t('untitled'),
+    createdAt: now,
+    updatedAt: now,
+  })
+
+  const statusOptions: Array<SelectOption> = [
+    { id: nanoid(8), name: t('defaultStatusTodo'), color: colorForIndex(0) },
+    { id: nanoid(8), name: t('defaultStatusDoing'), color: colorForIndex(2) },
+    { id: nanoid(8), name: t('defaultStatusDone'), color: colorForIndex(8) },
+  ]
+
+  const statusId = nanoid(12)
+
+  await db.insert(databaseProperties).values([
+    {
+      id: statusId,
+      databaseId: id,
+      name: t('defaultStatus'),
+      type: 'select',
+      options: serializeOptions(statusOptions),
+      position: 0,
+      createdAt: now,
+    },
+    {
+      id: nanoid(12),
+      databaseId: id,
+      name: t('defaultDate'),
+      type: 'date',
+      options: null,
+      position: 1,
+      createdAt: now,
+    },
+  ])
+
+  await db.insert(databaseViews).values([
+    {
+      id: nanoid(12),
+      databaseId: id,
+      name: t('defaultTableView'),
+      type: 'table',
+      config: serializeViewConfig({
+        groupByPropertyId: statusId,
+        filters: [],
+        sorts: [],
+        hiddenPropertyIds: [],
+      }),
+      position: 0,
+      createdAt: now,
+    },
+  ])
+
+  await indexDocument(id)
+  revalidatePath('/', 'layout')
+
+  return { ok: true, id }
+}
+
+export async function createDatabasePage() {
+  const result = await createDatabase(null)
+
+  if (!result.ok) {
+    return result
+  }
+
+  redirect(`/doc/${result.id}`)
+}
+
+export type SnapshotResult =
+  | { ok: true; snapshot: DatabaseSnapshot; canEdit: boolean }
+  | { ok: false; error: string }
+
+export async function readDatabase(
+  databaseId: string,
+): Promise<SnapshotResult> {
+  const session = await getSession()
+  const access = session
+    ? await getDocumentAccess(databaseId, session)
+    : null
+
+  if (!access) {
+    return notAllowed()
+  }
+
+  const snapshot = await loadDatabase(databaseId)
+
+  if (!snapshot) {
+    return {
+      ok: false,
+      error: (await getTranslations('errors'))('documentNotFound'),
+    }
+  }
+
+  return { ok: true, snapshot, canEdit: canEdit(access) }
+}
+
+export async function addDatabaseProperty(
+  databaseId: string,
+  type: DatabasePropertyType,
+  name: string,
+): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
+  if (!(await canEditDatabase(databaseId))) {
+    return notAllowed()
+  }
+
+  if (!propertyTypes.includes(type)) {
+    return notAllowed()
+  }
+
+  const existing = await listDatabaseProperties(databaseId)
+
+  if (existing.length >= MAX_PROPERTIES) {
+    return {
+      ok: false,
+      error: (await getTranslations('database'))('tooManyProperties', {
+        max: MAX_PROPERTIES,
+      }),
+    }
+  }
+
+  const t = await getTranslations('database')
+  const id = nanoid(12)
+  const trimmed = name.trim().slice(0, MAX_PROPERTY_NAME)
+
+  await db.insert(databaseProperties).values({
+    id,
+    databaseId,
+    name: trimmed.length > 0 ? trimmed : t(`type_${type}`),
+    type,
+    options: null,
+    position: existing.length,
+    createdAt: new Date(),
+  })
+
+  revalidatePath(`/doc/${databaseId}`)
+
+  return { ok: true, id }
+}
+
+export async function renameDatabaseProperty(
+  propertyId: string,
+  name: string,
+): Promise<DatabaseActionResult> {
+  const property = await databaseIdOfProperty(propertyId)
+
+  if (!property || !(await canEditDatabase(property.databaseId))) {
+    return notAllowed()
+  }
+
+  const trimmed = name.trim().slice(0, MAX_PROPERTY_NAME)
+
+  if (trimmed.length === 0) {
+    return notAllowed()
+  }
+
+  await db
+    .update(databaseProperties)
+    .set({ name: trimmed })
+    .where(eq(databaseProperties.id, propertyId))
+
+  revalidatePath(`/doc/${property.databaseId}`)
+
+  return { ok: true }
+}
+
+export async function changeDatabasePropertyType(
+  propertyId: string,
+  type: DatabasePropertyType,
+): Promise<DatabaseActionResult> {
+  const property = await databaseIdOfProperty(propertyId)
+
+  if (!property || !(await canEditDatabase(property.databaseId))) {
+    return notAllowed()
+  }
+
+  if (!propertyTypes.includes(type) || property.type === type) {
+    return notAllowed()
+  }
+
+  const keepsOptions = type === 'select' || type === 'multiSelect'
+
+  await db
+    .update(databaseProperties)
+    .set({ type, options: keepsOptions ? property.options : null })
+    .where(eq(databaseProperties.id, propertyId))
+
+  revalidatePath(`/doc/${property.databaseId}`)
+
+  return { ok: true }
+}
+
+export async function deleteDatabaseProperty(
+  propertyId: string,
+): Promise<DatabaseActionResult> {
+  const property = await databaseIdOfProperty(propertyId)
+
+  if (!property || !(await canEditDatabase(property.databaseId))) {
+    return notAllowed()
+  }
+
+  await db
+    .delete(databaseProperties)
+    .where(eq(databaseProperties.id, propertyId))
+
+  const remaining = await listDatabaseProperties(property.databaseId)
+
+  for (const [index, item] of remaining.entries()) {
+    if (item.position !== index) {
+      await db
+        .update(databaseProperties)
+        .set({ position: index })
+        .where(eq(databaseProperties.id, item.id))
+    }
+  }
+
+  revalidatePath(`/doc/${property.databaseId}`)
+
+  return { ok: true }
+}
+
+export async function addSelectOption(
+  propertyId: string,
+  name: string,
+): Promise<{ ok: true; option: SelectOption } | { ok: false; error: string }> {
+  const property = await databaseIdOfProperty(propertyId)
+
+  if (!property || !(await canEditDatabase(property.databaseId))) {
+    return notAllowed()
+  }
+
+  if (property.type !== 'select' && property.type !== 'multiSelect') {
+    return notAllowed()
+  }
+
+  const options = parseOptions(property.options)
+  const trimmed = name.trim().slice(0, MAX_PROPERTY_NAME)
+
+  if (trimmed.length === 0 || options.length >= MAX_SELECT_OPTIONS) {
+    return notAllowed()
+  }
+
+  const existing = options.find(
+    (option) => option.name.toLowerCase() === trimmed.toLowerCase(),
+  )
+
+  if (existing) {
+    return { ok: true, option: existing }
+  }
+
+  const option: SelectOption = {
+    id: nanoid(8),
+    name: trimmed,
+    color: colorForIndex(options.length),
+  }
+
+  await db
+    .update(databaseProperties)
+    .set({ options: serializeOptions([...options, option]) })
+    .where(eq(databaseProperties.id, propertyId))
+
+  revalidatePath(`/doc/${property.databaseId}`)
+
+  return { ok: true, option }
+}
+
+export async function deleteSelectOption(
+  propertyId: string,
+  optionId: string,
+): Promise<DatabaseActionResult> {
+  const property = await databaseIdOfProperty(propertyId)
+
+  if (!property || !(await canEditDatabase(property.databaseId))) {
+    return notAllowed()
+  }
+
+  const options = parseOptions(property.options).filter(
+    (option) => option.id !== optionId,
+  )
+
+  await db
+    .update(databaseProperties)
+    .set({ options: serializeOptions(options) })
+    .where(eq(databaseProperties.id, propertyId))
+
+  revalidatePath(`/doc/${property.databaseId}`)
+
+  return { ok: true }
+}
+
+export type RowResult =
+  | { ok: true; row: DatabaseRow }
+  | { ok: false; error: string }
+
+export async function createDatabaseRow(
+  databaseId: string,
+  seed: Readonly<Record<string, unknown>> = {},
+  title = '',
+): Promise<RowResult> {
+  const session = await canEditDatabase(databaseId)
+
+  if (!session) {
+    return notAllowed()
+  }
+
+  const database = await db.query.documents.findFirst({
+    where: and(
+      eq(documents.id, databaseId),
+      eq(documents.kind, 'database'),
+      isNull(documents.deletedAt),
+    ),
+  })
+
+  if (!database) {
+    return notAllowed()
+  }
+
+  const properties = await listDatabaseProperties(databaseId)
+  const values: Record<string, ReturnType<typeof normalizeValue>> = {}
+
+  for (const property of properties) {
+    const raw = seed[property.id]
+
+    if (raw === undefined) {
+      continue
+    }
+
+    values[property.id] = normalizeValue(
+      property.type,
+      raw,
+      parseOptions(property.options),
+    )
+  }
+
+  const id = nanoid(12)
+  const now = new Date()
+
+  await db.insert(documents).values({
+    id,
+    ownerId: database.ownerId,
+    parentId: databaseId,
+    orgId: database.orgId,
+    teamspaceId: database.teamspaceId,
+    orgAccess: database.orgAccess,
+    kind: 'row',
+    title: untitledRow(title),
+    properties: serializeValues(values),
+    createdAt: now,
+    updatedAt: now,
+  })
+
+  await db
+    .update(documents)
+    .set({ updatedAt: now })
+    .where(eq(documents.id, databaseId))
+
+  await indexDocument(id)
+  revalidatePath(`/doc/${databaseId}`)
+
+  return {
+    ok: true,
+    row: toDatabaseRow({
+      id,
+      title: untitledRow(title),
+      properties: serializeValues(values),
+      createdAt: now,
+      updatedAt: now,
+    }),
+  }
+}
+
+export async function setDatabaseRowValue(
+  rowId: string,
+  propertyId: string,
+  value: unknown,
+): Promise<DatabaseActionResult> {
+  const row = await db.query.documents.findFirst({
+    where: and(eq(documents.id, rowId), eq(documents.kind, 'row')),
+  })
+
+  if (!row || !row.parentId || row.deletedAt !== null) {
+    return notAllowed()
+  }
+
+  if (!(await canEditDatabase(row.parentId))) {
+    return notAllowed()
+  }
+
+  const property = await db.query.databaseProperties.findFirst({
+    where: and(
+      eq(databaseProperties.id, propertyId),
+      eq(databaseProperties.databaseId, row.parentId),
+    ),
+  })
+
+  if (!property) {
+    return notAllowed()
+  }
+
+  const values = {
+    ...parseValues(row.properties),
+    [propertyId]: normalizeValue(
+      property.type,
+      value,
+      parseOptions(property.options),
+    ),
+  }
+
+  await db
+    .update(documents)
+    .set({ properties: serializeValues(values), updatedAt: new Date() })
+    .where(eq(documents.id, rowId))
+
+  revalidatePath(`/doc/${row.parentId}`)
+  revalidatePath(`/doc/${rowId}`)
+
+  return { ok: true }
+}
+
+export async function renameDatabaseRow(
+  rowId: string,
+  title: string,
+): Promise<DatabaseActionResult> {
+  const row = await db.query.documents.findFirst({
+    where: and(eq(documents.id, rowId), eq(documents.kind, 'row')),
+  })
+
+  if (!row || !row.parentId || !(await canEditDatabase(row.parentId))) {
+    return notAllowed()
+  }
+
+  await db
+    .update(documents)
+    .set({ title: untitledRow(title), updatedAt: new Date() })
+    .where(eq(documents.id, rowId))
+
+  await indexDocument(rowId)
+  revalidatePath(`/doc/${row.parentId}`)
+  revalidatePath(`/doc/${rowId}`)
+
+  return { ok: true }
+}
+
+export async function deleteDatabaseRow(
+  rowId: string,
+): Promise<DatabaseActionResult> {
+  const row = await db.query.documents.findFirst({
+    where: and(eq(documents.id, rowId), eq(documents.kind, 'row')),
+  })
+
+  if (!row || !row.parentId || !(await canEditDatabase(row.parentId))) {
+    return notAllowed()
+  }
+
+  const descendants = await db
+    .select({ id: documents.id })
+    .from(documents)
+    .where(eq(documents.parentId, rowId))
+
+  const ids = [rowId, ...descendants.map((item) => item.id)]
+
+  await db
+    .update(documents)
+    .set({ deletedAt: new Date() })
+    .where(and(inArray(documents.id, ids), isNull(documents.deletedAt)))
+
+  for (const id of ids) {
+    await removeDocumentFromIndex(id)
+  }
+
+  revalidatePath(`/doc/${row.parentId}`)
+  revalidatePath('/', 'layout')
+
+  return { ok: true }
+}
+
+export async function createDatabaseView(
+  databaseId: string,
+  type: DatabaseViewType,
+  name: string,
+): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
+  if (!(await canEditDatabase(databaseId))) {
+    return notAllowed()
+  }
+
+  if (!viewTypes.includes(type)) {
+    return notAllowed()
+  }
+
+  const existing = await db
+    .select({ id: databaseViews.id })
+    .from(databaseViews)
+    .where(eq(databaseViews.databaseId, databaseId))
+    .orderBy(asc(databaseViews.position))
+
+  if (existing.length >= MAX_VIEWS) {
+    return notAllowed()
+  }
+
+  const t = await getTranslations('database')
+  const id = nanoid(12)
+  const trimmed = name.trim().slice(0, MAX_PROPERTY_NAME)
+
+  await db.insert(databaseViews).values({
+    id,
+    databaseId,
+    name: trimmed.length > 0 ? trimmed : t(`view_${type}`),
+    type,
+    config: serializeViewConfig({
+      groupByPropertyId: null,
+      filters: [],
+      sorts: [],
+      hiddenPropertyIds: [],
+    }),
+    position: existing.length,
+    createdAt: new Date(),
+  })
+
+  revalidatePath(`/doc/${databaseId}`)
+
+  return { ok: true, id }
+}
+
+export async function updateDatabaseView(
+  viewId: string,
+  changes: Readonly<{ name?: string; config?: ViewConfig }>,
+): Promise<DatabaseActionResult> {
+  const view = await databaseIdOfView(viewId)
+
+  if (!view || !(await canEditDatabase(view.databaseId))) {
+    return notAllowed()
+  }
+
+  const next: { name?: string; config?: string } = {}
+
+  if (changes.name !== undefined) {
+    const trimmed = changes.name.trim().slice(0, MAX_PROPERTY_NAME)
+
+    if (trimmed.length === 0) {
+      return notAllowed()
+    }
+
+    next.name = trimmed
+  }
+
+  if (changes.config !== undefined) {
+    next.config = serializeViewConfig(
+      parseViewConfig(serializeViewConfig(changes.config)),
+    )
+  }
+
+  if (Object.keys(next).length === 0) {
+    return { ok: true }
+  }
+
+  await db
+    .update(databaseViews)
+    .set(next)
+    .where(eq(databaseViews.id, viewId))
+
+  revalidatePath(`/doc/${view.databaseId}`)
+
+  return { ok: true }
+}
+
+export async function deleteDatabaseView(
+  viewId: string,
+): Promise<DatabaseActionResult> {
+  const view = await databaseIdOfView(viewId)
+
+  if (!view || !(await canEditDatabase(view.databaseId))) {
+    return notAllowed()
+  }
+
+  const [count] = await db
+    .select({ total: sql<number>`count(*)` })
+    .from(databaseViews)
+    .where(eq(databaseViews.databaseId, view.databaseId))
+
+  if (Number(count?.total ?? 0) <= 1) {
+    return {
+      ok: false,
+      error: (await getTranslations('database'))('lastViewKept'),
+    }
+  }
+
+  await db.delete(databaseViews).where(eq(databaseViews.id, viewId))
+
+  revalidatePath(`/doc/${view.databaseId}`)
+
+  return { ok: true }
+}

@@ -118,12 +118,14 @@ export async function listTeamspaceDocuments(
       updatedAt: documents.updatedAt,
       deletedAt: documents.deletedAt,
       parentId: documents.parentId,
+      kind: documents.kind,
     })
     .from(documents)
     .where(
       and(
         eq(documents.teamspaceId, teamspaceId),
         isNull(documents.deletedAt),
+        ne(documents.kind, 'row'),
       ),
     )
     .orderBy(desc(documents.updatedAt))

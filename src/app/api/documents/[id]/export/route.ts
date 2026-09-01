@@ -1,12 +1,17 @@
-import { getTranslations } from 'next-intl/server'
+import { getLocale, getTranslations } from 'next-intl/server'
 
 import { getSession } from '@/lib/auth'
 import { getDocumentAccess } from '@/lib/authz'
+import {
+  databaseToMarkdown,
+  expandDatabaseBlocks,
+} from '@/lib/database/export'
 import { getDocument } from '@/lib/documents'
 import {
   contentToHTML,
   contentToMarkdown,
   documentToMarkdownFile,
+  markdownToBlocks,
   parseContentBlocks,
 } from '@/lib/markdown/convert'
 import { toFileSlug } from '@/lib/markdown/filename'
@@ -32,14 +37,39 @@ export async function GET(request: Request, { params }: Params) {
   const requestUrl = new URL(request.url)
   const format = requestUrl.searchParams.get('format') === 'html' ? 'html' : 'md'
   const origin = requestUrl.origin
+  const locale = await getLocale()
+  const tDatabase = await getTranslations('database')
+  const titleColumn = tDatabase('titleColumn')
+  const emptyTitle = tDatabase('untitledRow')
+
+  const content =
+    document.kind === 'database'
+      ? JSON.stringify(
+          await markdownToBlocks(
+            (await databaseToMarkdown(
+              document.id,
+              titleColumn,
+              emptyTitle,
+              locale,
+            )) ?? '',
+          ),
+        )
+      : JSON.stringify(
+          await expandDatabaseBlocks(
+            parseContentBlocks(document.content),
+            titleColumn,
+            emptyTitle,
+            locale,
+          ),
+        )
 
   const body =
     format === 'html'
-      ? await contentToHTML(document.content, document.title, origin)
+      ? await contentToHTML(content, document.title, origin)
       : documentToMarkdownFile(
           document.title,
-          await contentToMarkdown(document.content, origin),
-          parseContentBlocks(document.content),
+          await contentToMarkdown(content, origin),
+          parseContentBlocks(content),
         )
 
   return new Response(body, {

@@ -7,7 +7,9 @@ export type NotionImportMessages = Readonly<{
   unzippedTooLarge: (limit: string) => string
   assetTooLarge: (name: string, limit: string) => string
   assetFailed: (name: string) => string
-  tableTruncated: (columns: number, rows: number) => string
+  csvColumn: string
+  csvView: string
+  csvDatabases: (count: number) => string
   pageFailed: (title: string) => string
   togglesDegraded: (count: number) => string
   missingLinks: (count: number) => string
@@ -31,8 +33,9 @@ export function buildNotionImportMessages(
     unzippedTooLarge: (limit) => translate('unzippedTooLarge', { limit }),
     assetTooLarge: (name, limit) => translate('assetTooLarge', { limit, name }),
     assetFailed: (name) => translate('assetFailed', { name }),
-    tableTruncated: (columns, rows) =>
-      translate('tableTruncated', { columns, rows }),
+    csvColumn: translate('csvColumn'),
+    csvView: translate('csvView'),
+    csvDatabases: (count) => translate('csvDatabases', { count }),
     pageFailed: (title) => translate('pageFailed', { title }),
     togglesDegraded: (count) => translate('togglesDegraded', { count }),
     missingLinks: (count) => translate('missingLinks', { count }),
