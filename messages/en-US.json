@@ -415,7 +415,9 @@
     "slashArchive": "Import .zip export",
     "slashArchiveHint": "Creates subpages of this document from the zip",
     "markdownInserted": "Markdown inserted into the document",
-    "reading": "Reading the file"
+    "reading": "Reading the file",
+    "slashLink": "Import from Notion by link",
+    "slashLinkHint": "Pulls a Notion page and everything under it, no zip export"
   },
   "uploads": {
     "notAuthenticated": "Not signed in",
@@ -568,7 +570,30 @@
     "tooLargeZip": "The file is larger than {limit}",
     "csvColumn": "Column",
     "csvView": "Table",
-    "csvDatabases": "{count, plural, one {# Notion database became a Leaf database} other {# Notion databases became Leaf databases}}"
+    "csvDatabases": "{count, plural, one {# Notion database became a Leaf database} other {# Notion databases became Leaf databases}}",
+    "phaseReading": "Reading the pages on Notion",
+    "readingCount": "{done, plural, one {# page read} other {# pages read}}",
+    "crawlTruncated": "The import stopped at {max} pages. The rest of the tree was left out.",
+    "invalidLink": "That link does not look like a Notion page",
+    "notConnected": "Connect your Notion account before importing by link"
+  },
+  "notionLink": {
+    "title": "Import from Notion",
+    "description": "Paste a Notion page link. The page and everything under it come into Leaf.",
+    "linkLabel": "Notion page link",
+    "linkPlaceholder": "https://www.notion.so/...",
+    "linkHelp": "Open the page on Notion, copy the link and paste it here.",
+    "checkLink": "Check",
+    "startImport": "Import",
+    "connect": "Connect my Notion account",
+    "openDocument": "Open document",
+    "cancelImport": "Cancel import",
+    "untitledPage": "Untitled page",
+    "previewReady": "{title} — {pages, plural, =0 {no direct subpages} one {# direct subpage} other {# direct subpages}} and {databases, plural, =0 {no databases} one {# database} other {# databases}}. The import follows the whole tree.",
+    "unavailable": "Importing by link is not switched on in this Leaf yet.",
+    "disconnected": "Connect your Notion account so Leaf can read the pages you already see there.",
+    "invalidLink": "That link does not look like a Notion page.",
+    "unreachable": "We could not open that page. Check that you granted access to it in the Notion connection."
   },
   "teamspace": {
     "sectionTitle": "Teamspaces",

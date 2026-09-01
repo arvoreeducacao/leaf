@@ -46,7 +46,7 @@ export type ImportSummary = Readonly<{
 export type ImportEvent =
   | Readonly<{
       type: 'progress'
-      phase: 'assets' | 'pages'
+      phase: 'assets' | 'pages' | 'reading'
       done: number
       total: number
       label: string
@@ -74,21 +74,10 @@ export async function* importNotionZip(
   messages: NotionImportMessages,
   signal?: AbortSignal,
 ): AsyncGenerator<ImportEvent> {
-  const warnings: Array<string> = []
-
-  function warn(message: string) {
-    if (warnings.length < maxWarnings) {
-      warnings.push(message)
-    }
-  }
-
   let plan: NotionPlan
 
   try {
-    plan = buildImportPlan(
-      readZipEntries(data, messages),
-      messages.untitled,
-    )
+    plan = buildImportPlan(readZipEntries(data, messages), messages.untitled)
   } catch (error) {
     yield {
       type: 'error',
@@ -99,6 +88,23 @@ export async function* importNotionZip(
     }
 
     return
+  }
+
+  yield* importNotionPlan(plan, owner, messages, signal)
+}
+
+export async function* importNotionPlan(
+  plan: NotionPlan,
+  owner: ImportOwner,
+  messages: NotionImportMessages,
+  signal?: AbortSignal,
+): AsyncGenerator<ImportEvent> {
+  const warnings: Array<string> = []
+
+  function warn(message: string) {
+    if (warnings.length < maxWarnings) {
+      warnings.push(message)
+    }
   }
 
   if (plan.pages.length === 0) {

@@ -359,6 +359,22 @@ export const comments = mysqlTable(
   ],
 )
 
+export const notionConnections = mysqlTable('notion_connections', {
+  userId: varchar('user_id', { length: AUTH_ID })
+    .primaryKey()
+    .references(() => user.id, { onDelete: 'cascade' }),
+  accessToken: text('access_token').notNull(),
+  workspaceId: varchar('workspace_id', { length: 64 }),
+  workspaceName: varchar('workspace_name', { length: 255 }),
+  botId: varchar('bot_id', { length: 64 }),
+  createdAt: datetime('created_at', { mode: 'date', fsp: 3 })
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP(3)`),
+  updatedAt: datetime('updated_at', { mode: 'date', fsp: 3 })
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP(3)`),
+})
+
 export type Document = typeof documents.$inferSelect
 export type DocumentKind = Document['kind']
 export type DatabaseProperty = typeof databaseProperties.$inferSelect
@@ -379,3 +395,4 @@ export type TeamspaceMember = typeof teamspaceMembers.$inferSelect
 export type TeamspaceRole = TeamspaceMember['role']
 export type DocumentVersion = typeof documentVersions.$inferSelect
 export type Comment = typeof comments.$inferSelect
+export type NotionConnection = typeof notionConnections.$inferSelect
