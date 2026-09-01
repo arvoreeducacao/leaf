@@ -9,7 +9,7 @@ export function EditorSkeleton() {
     <div
       aria-busy="true"
       aria-label={t('loading')}
-      className="flex w-full flex-col gap-3 px-8 py-4 tablet:px-14"
+      className="flex w-full flex-col gap-3 px-4 py-4 tablet:px-[54px]"
       role="status"
     >
       <Skeleton className="h-6 w-2/3" />

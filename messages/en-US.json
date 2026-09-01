@@ -70,7 +70,7 @@
     "newDocument": "New document",
     "newDocumentFailed": "We couldn't create the document",
     "searchLabel": "Search documents by title",
-    "searchPlaceholder": "Search documents",
+    "searchPlaceholder": "Filter by title",
     "searchResults": "Search results",
     "searchEmpty": "No document with that name",
     "searchCount": "{count, plural, one {# document found} other {# documents found}}",

@@ -5,8 +5,13 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
+import {
+  sidebarEmpty,
+  sidebarIcon,
+  sidebarRow,
+  sidebarRowActive,
+} from '@/components/app/sidebar-styles'
 import { CaretDownIcon, CaretRightIcon, PageIcon } from '@/components/icons'
-import { ButtonIcon } from '@/components/ui/button-icon'
 import {
   Tooltip,
   TooltipContent,
@@ -26,7 +31,7 @@ type Props = Readonly<{
 
 const maxVisualDepth = 3
 
-const indentByDepth = ['pl-3', 'pl-6', 'pl-10', 'pl-14']
+const indentByDepth = ['pl-1.5', 'pl-5', 'pl-8.5', 'pl-12']
 
 function parentsOf(nodes: Array<DocumentNode>) {
   const parents = new Map<string, string | null>()
@@ -111,7 +116,7 @@ export function DocumentTree({ nodes, emptyLabel, onNavigate }: Props) {
   }, [expanded])
 
   if (nodes.length === 0) {
-    return <p className="px-3 py-2 text-body-small text-content">{emptyLabel}</p>
+    return <p className={sidebarEmpty}>{emptyLabel}</p>
   }
 
   return (
@@ -148,7 +153,7 @@ function TreeLevel({
   const visualDepth = Math.min(depth, maxVisualDepth)
 
   return (
-    <ul className="flex flex-col gap-1">
+    <ul className="flex flex-col">
       {nodes.map((node) => {
         const open = expanded.has(node.id)
         const active = activeId === node.id
@@ -158,25 +163,11 @@ function TreeLevel({
         const link = (
           <Link
             aria-current={active ? 'page' : undefined}
-            className={cn(
-              'flex min-h-11 min-w-0 flex-1 items-center gap-2 rounded-large py-2 text-body-small transition-colors',
-              'focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-2',
-              active
-                ? 'font-bold text-content-strong'
-                : 'text-content hover:text-content-strong',
-            )}
+            className="flex h-full min-w-0 flex-1 items-center truncate rounded-large focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-1"
             href={`/doc/${node.id}`}
             onClick={onNavigate}
           >
-            <PageIcon aria-hidden="true" className="size-4 shrink-0" />
-            <span className="flex min-w-0 flex-1 flex-col">
-              <span className="truncate">{node.title}</span>
-              {deep ? (
-                <span className="truncate text-content">
-                  {ancestors.join(' / ')}
-                </span>
-              ) : null}
-            </span>
+            <span className="min-w-0 flex-1 truncate">{node.title}</span>
           </Link>
         )
 
@@ -184,33 +175,40 @@ function TreeLevel({
           <li key={node.id}>
             <div
               className={cn(
-                'flex min-h-11 items-center gap-1 rounded-large pr-1 transition-colors',
+                sidebarRow,
+                'group/row gap-1',
                 indentByDepth[visualDepth],
-                active ? 'bg-brand-surface' : 'hover:bg-surface-hover',
+                active && sidebarRowActive,
               )}
             >
-              {hasChildren ? (
-                <ButtonIcon
-                  aria-expanded={open}
-                  aria-label={
-                    open
-                      ? t('collapseNode', { title: node.title })
-                      : t('expandNode', { title: node.title })
-                  }
-                  onClick={() => onToggle(node.id)}
-                  size="medium"
-                  variant="ghost"
-                >
-                  {open ? (
-                    <CaretDownIcon aria-hidden="true" />
-                  ) : (
-                    <CaretRightIcon aria-hidden="true" />
+              <span className="relative flex size-5 shrink-0 items-center justify-center">
+                <PageIcon
+                  aria-hidden="true"
+                  className={cn(
+                    sidebarIcon,
+                    hasChildren && 'group-hover/row:opacity-0',
                   )}
-                </ButtonIcon>
-              ) : (
-                <span aria-hidden="true" className="size-8 shrink-0" />
-              )}
-
+                />
+                {hasChildren ? (
+                  <button
+                    aria-expanded={open}
+                    aria-label={
+                      open
+                        ? t('collapseNode', { title: node.title })
+                        : t('expandNode', { title: node.title })
+                    }
+                    className="absolute inset-0 flex cursor-pointer items-center justify-center rounded-small text-content-subtle opacity-0 transition-opacity hover:bg-surface-active hover:text-content group-hover/row:opacity-100 focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-focus"
+                    onClick={() => onToggle(node.id)}
+                    type="button"
+                  >
+                    {open ? (
+                      <CaretDownIcon aria-hidden="true" className="size-3.5" />
+                    ) : (
+                      <CaretRightIcon aria-hidden="true" className="size-3.5" />
+                    )}
+                  </button>
+                ) : null}
+              </span>
               {deep ? (
                 <Tooltip>
                   <TooltipTrigger asChild>{link}</TooltipTrigger>
@@ -224,17 +222,15 @@ function TreeLevel({
             </div>
 
             {hasChildren && open ? (
-              <div className="pt-1">
-                <TreeLevel
-                  activeId={activeId}
-                  ancestors={[...ancestors, node.title]}
-                  depth={depth + 1}
-                  expanded={expanded}
-                  nodes={node.children}
-                  onNavigate={onNavigate}
-                  onToggle={onToggle}
-                />
-              </div>
+              <TreeLevel
+                activeId={activeId}
+                ancestors={[...ancestors, node.title]}
+                depth={depth + 1}
+                expanded={expanded}
+                nodes={node.children}
+                onNavigate={onNavigate}
+                onToggle={onToggle}
+              />
             ) : null}
           </li>
         )

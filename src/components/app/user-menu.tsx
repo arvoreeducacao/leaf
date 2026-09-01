@@ -27,9 +27,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { sidebarRow } from '@/components/app/sidebar-styles'
 import { locales } from '@/i18n/config'
 import { setUserLocale } from '@/i18n/locale-action'
 import { authClient } from '@/lib/auth-client'
+import { cn } from '@/shared/utils'
 
 type Props = Readonly<{
   name: string
@@ -109,27 +111,28 @@ export function UserMenu({ name, email, locale }: Props) {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button
-          className="flex w-full items-center gap-3 rounded-large p-2 text-left transition-colors hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-2"
+          className={cn(sidebarRow, 'cursor-pointer')}
           data-testid="user-menu-trigger"
           type="button"
         >
-          <Avatar className="size-8 shrink-0">
-            <AvatarFallback className="bg-brand-surface-strong font-bold text-caption text-content-strong">
+          <Avatar className="size-5 shrink-0">
+            <AvatarFallback className="bg-surface-subtle font-semibold text-[10px] text-content">
               {initials(name, email)}
             </AvatarFallback>
           </Avatar>
-          <span className="min-w-0 flex-1">
-            <span className="block truncate font-bold text-body-small text-content-strong">
-              {name || email}
-            </span>
-            <span className="block truncate text-caption text-content">
-              {email}
-            </span>
-          </span>
+          <span className="min-w-0 flex-1 truncate">{name || email}</span>
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-64">
-        <DropdownMenuLabel>{t('account')}</DropdownMenuLabel>
+        <DropdownMenuLabel>
+          <span className="block truncate font-medium text-body-small text-content-strong">
+            {name || email}
+          </span>
+          <span className="block truncate font-normal text-caption text-content-subtle">
+            {email}
+          </span>
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
           <Link href="/org">
             <TeamIcon aria-hidden="true" />

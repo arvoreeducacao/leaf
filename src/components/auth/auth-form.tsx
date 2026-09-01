@@ -78,25 +78,25 @@ export function AuthForm({ mode, restrictedDomain }: Props) {
   }
 
   return (
-    <main className="flex min-h-dvh w-full items-center justify-center bg-surface-sunken px-4 py-8">
-      <div className="w-full max-w-110 rounded-xlarge border border-line-subtle bg-surface-card p-6 shadow-down-medium tablet:p-8">
-        <div className="flex items-center gap-2 text-brand">
-          <LeafIcon aria-hidden="true" className="size-6" />
-          <span className="font-bold text-heading-medium text-content-strong">
+    <main className="flex min-h-dvh w-full items-center justify-center bg-surface-app px-6 py-10">
+      <div className="w-full max-w-80">
+        <div className="flex items-center gap-2">
+          <LeafIcon aria-hidden="true" className="size-6 text-brand" />
+          <span className="font-semibold text-content-strong text-heading-medium">
             Leaf
           </span>
         </div>
 
-        <h1 className="mt-6 font-bold text-heading-large text-content-strong">
+        <h1 className="mt-10 font-semibold text-content-strong text-heading-large">
           {t(mode === 'signup' ? 'signupTitle' : 'loginTitle')}
         </h1>
         <p className="mt-2 text-body-small text-content">
           {t(mode === 'signup' ? 'signupSubtitle' : 'loginSubtitle')}
         </p>
 
-        <form className="mt-6 flex flex-col gap-4" onSubmit={handleSubmit}>
+        <form className="mt-8 flex flex-col gap-4" onSubmit={handleSubmit}>
           {mode === 'signup' ? (
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-1.5">
               <Label htmlFor={nameId}>{t('nameLabel')}</Label>
               <Input
                 autoComplete="name"
@@ -111,7 +111,7 @@ export function AuthForm({ mode, restrictedDomain }: Props) {
             </div>
           ) : null}
 
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-1.5">
             <Label htmlFor={emailId}>{t('emailLabel')}</Label>
             <Input
               aria-describedby={
@@ -131,13 +131,13 @@ export function AuthForm({ mode, restrictedDomain }: Props) {
               value={email}
             />
             {restrictedDomain ? (
-              <p className="text-body-small text-content" id={emailHintId}>
+              <p className="text-caption text-content-subtle" id={emailHintId}>
                 {t('domainHint', { domain: restrictedDomain })}
               </p>
             ) : null}
           </div>
 
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-1.5">
             <Label htmlFor={passwordId}>{t('passwordLabel')}</Label>
             <Input
               aria-describedby={
@@ -160,7 +160,7 @@ export function AuthForm({ mode, restrictedDomain }: Props) {
               value={password}
             />
             {mode === 'signup' ? (
-              <p className="text-body-small text-content" id={passwordHintId}>
+              <p className="text-caption text-content-subtle" id={passwordHintId}>
                 {t('passwordHint')}
               </p>
             ) : null}
@@ -172,25 +172,26 @@ export function AuthForm({ mode, restrictedDomain }: Props) {
               id={errorId}
               role="alert"
             >
-              <AlertIcon aria-hidden="true" className="mt-1 size-4 shrink-0" />
+              <AlertIcon aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
               {error}
             </p>
           ) : null}
 
           <Button
             aria-busy={pending}
-            className="w-full"
+            className="mt-2 w-full"
             disabled={pending}
+            size="lg"
             type="submit"
           >
             {t(mode === 'signup' ? 'signupSubmit' : 'loginSubmit')}
           </Button>
         </form>
 
-        <p className="mt-6 text-body-small text-content">
+        <p className="mt-8 text-body-small text-content">
           {t(mode === 'signup' ? 'signupSwitchText' : 'loginSwitchText')}{' '}
           <Link
-            className="font-bold text-link underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-2"
+            className="font-medium text-link underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-2"
             href={switchHref[mode]}
           >
             {t(mode === 'signup' ? 'signupSwitchLabel' : 'loginSwitchLabel')}

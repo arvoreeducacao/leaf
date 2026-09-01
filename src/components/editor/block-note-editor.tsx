@@ -9,7 +9,7 @@ import { SuggestionMenuController, useCreateBlockNote } from '@blocknote/react'
 import { BlockNoteView } from '@blocknote/shadcn'
 import { useTranslations } from 'next-intl'
 import { useTheme } from 'next-themes'
-import { useCallback, useEffect, useId, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 
 import {
@@ -22,7 +22,7 @@ import {
   publishBlockIds,
   resetBlockIds,
 } from '@/components/comments/comments-bridge'
-import { EyeIcon, WarningIcon } from '@/components/icons'
+import { WarningIcon } from '@/components/icons'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { takeSessionFlag } from '@/shared/storage'
 
@@ -30,12 +30,15 @@ import { collectBlockIds } from './block-ids'
 import { readDocumentContent } from './content'
 import { DocumentImport } from './document-import'
 import type { DocumentImportHandle } from './document-import'
-import { DocumentStats } from './document-stats'
 import { focusDocumentTitle, onEditorFocusRequest } from './focus-bridge'
 import { LeafFormattingToolbarController } from './formatting-toolbar'
 import { renderRealtimeCursor } from './realtime-cursor'
-import { RealtimeIndicator } from './realtime-indicator'
-import { SaveIndicator } from './save-indicator'
+import {
+  onSaveRetryRequest,
+  publishEditorStatus,
+  readOnlyHintId,
+  resetEditorStatus,
+} from './status-bridge'
 import type { RealtimeSession } from './use-realtime-session'
 import { leafSchema } from './schema'
 import { getLeafSlashMenuItems } from './slash-menu-items'
@@ -76,7 +79,6 @@ export default function BlockNoteEditor({
   const tRealtime = useTranslations('realtime')
   const { resolvedTheme } = useTheme()
   const { calloutItem, dictionary } = useLeafDictionary(readOnly)
-  const readOnlyHintId = useId()
   const containerRef = useRef<HTMLDivElement>(null)
   const importRef = useRef<DocumentImportHandle>(null)
   const parsed = readDocumentContent(initialContent)
@@ -194,6 +196,24 @@ export default function BlockNoteEditor({
   }, [editor])
 
   useEffect(() => {
+    publishEditorStatus({
+      ready: true,
+      readOnly,
+      save: status,
+      stats,
+      realtime: collaboration
+        ? realtimeConnected
+          ? 'connected'
+          : 'reconnecting'
+        : 'off',
+    })
+  }, [collaboration, readOnly, realtimeConnected, stats, status])
+
+  useEffect(() => resetEditorStatus, [])
+
+  useEffect(() => onSaveRetryRequest(() => void flush()), [flush])
+
+  useEffect(() => {
     if (!isEditable) {
       return
     }
@@ -291,26 +311,10 @@ export default function BlockNoteEditor({
   }
 
   return (
-    <div className="flex w-full flex-col gap-2" ref={containerRef}>
+    <div className="flex w-full flex-col" ref={containerRef}>
       {highlightedBlock && blockIdPattern.test(highlightedBlock) ? (
         <style>{highlightRule(highlightedBlock)}</style>
       ) : null}
-      <div className="flex min-h-6 flex-wrap items-center justify-end gap-x-4 gap-y-1 px-8 tablet:px-14">
-        {readOnly ? (
-          <p
-            className="flex items-center gap-2 text-body-small text-content"
-            id={readOnlyHintId}
-          >
-            <EyeIcon aria-hidden="true" className="size-4" />
-            {t('readOnly')}
-          </p>
-        ) : null}
-        {collaboration ? (
-          <RealtimeIndicator connected={realtimeConnected} />
-        ) : readOnly ? null : (
-          <SaveIndicator onRetry={() => void flush()} status={status} />
-        )}
-      </div>
       <BlockNoteView
         className="leaf-editor"
         editable={isEditable}
@@ -349,9 +353,6 @@ export default function BlockNoteEditor({
           triggerCharacter="/"
         />
       </BlockNoteView>
-      <div className="flex justify-end px-8 tablet:px-14">
-        <DocumentStats stats={stats} />
-      </div>
       {isEditable ? (
         <DocumentImport
           canImportArchive={isOwner}

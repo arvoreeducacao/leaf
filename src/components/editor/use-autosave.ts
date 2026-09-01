@@ -5,7 +5,7 @@ import { toast } from 'sonner'
 
 import { updateDocumentContent } from '@/lib/document-actions'
 
-import type { SaveStatus } from './save-indicator'
+import type { SaveStatus } from './status-bridge'
 
 const DEBOUNCE_MS = 1000
 

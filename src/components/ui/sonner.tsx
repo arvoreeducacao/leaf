@@ -11,10 +11,10 @@ const Toaster = ({ ...props }: ToasterProps) => {
       className="toaster group"
       style={
         {
-          '--normal-bg': 'var(--surface-subtle)',
+          '--normal-bg': 'var(--surface-card)',
           '--normal-text': 'var(--content-strong)',
           '--normal-border': 'var(--line-muted)',
-          '--border-radius': 'var(--radius-xlarge)',
+          '--border-radius': 'var(--radius-lg)',
           '--success-bg': 'var(--positive-surface-strong)',
           '--success-text': 'var(--content-strong)',
           '--success-border': 'var(--positive-surface-strong)',
@@ -29,12 +29,12 @@ const Toaster = ({ ...props }: ToasterProps) => {
       theme={resolvedTheme === 'dark' ? 'dark' : 'light'}
       toastOptions={{
         style: {
-          borderRadius: 'var(--radius-xlarge)',
-          padding: '16px',
+          borderRadius: 'var(--radius-lg)',
+          padding: '12px 14px',
           gap: '12px',
           fontSize: '14px',
-          fontFamily: 'var(--font-averta)',
-          boxShadow: 'var(--shadow-down-large)',
+          fontFamily: 'var(--font-ui)',
+          boxShadow: 'var(--elevation-medium)',
         },
       }}
       {...props}

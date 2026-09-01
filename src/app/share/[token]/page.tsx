@@ -42,14 +42,16 @@ async function ShareHeader() {
   const tCommon = await getTranslations('common')
 
   return (
-    <header className="sticky top-0 z-10 flex items-center justify-between gap-3 border-line border-b bg-surface-app px-4 py-3 tablet:px-8">
+    <header className="sticky top-0 z-10 flex h-11 items-center justify-between gap-3 bg-surface-app px-4 tablet:px-6">
       <Link
         aria-label={tCommon('goToLeaf')}
-        className="flex items-center gap-2 rounded-large outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        className="flex items-center gap-2 rounded-large outline-none focus-visible:ring-2 focus-visible:ring-ring"
         href="/"
       >
-        <LeafIcon aria-hidden="true" className="size-5 text-brand" />
-        <span className="font-bold text-body-medium text-content-strong">Leaf</span>
+        <LeafIcon aria-hidden="true" className="size-4 text-brand" />
+        <span className="font-semibold text-body-small text-content-strong">
+          Leaf
+        </span>
       </Link>
       <Badge variant="info">{t('readOnly')}</Badge>
     </header>
@@ -66,15 +68,15 @@ export default async function SharedDocumentPage({ params }: Props) {
     return (
       <div className="flex min-h-dvh flex-col bg-surface-app">
         <ShareHeader />
-        <main className="mx-auto flex w-full max-w-content flex-1 flex-col items-center justify-center gap-4 px-4 py-10 text-center tablet:px-8">
-          <LockIcon aria-hidden="true" className="size-10 text-content-muted" />
-          <h1 className="font-bold text-heading-large text-content-strong">
+        <main className="mx-auto flex w-full max-w-page flex-1 flex-col gap-3 px-4 pt-20 tablet:px-[54px]">
+          <LockIcon aria-hidden="true" className="size-7 text-content-subtle" />
+          <h1 className="font-semibold text-content-strong text-heading-large">
             {t('rateLimitedTitle')}
           </h1>
-          <p className="max-w-110 text-body-medium text-content">
+          <p className="max-w-prose-leaf text-body-medium text-content">
             {t('rateLimitedBody')}
           </p>
-          <Button asChild>
+          <Button asChild className="mt-3 self-start">
             <Link href="/">{tCommon('goToLeaf')}</Link>
           </Button>
         </main>
@@ -91,9 +93,9 @@ export default async function SharedDocumentPage({ params }: Props) {
   return (
     <div className="flex min-h-dvh flex-col bg-surface-app">
       <ShareHeader />
-      <main className="mx-auto w-full max-w-content flex-1 px-4 py-8 tablet:px-8 tablet:py-10">
-        <article className="mx-auto flex w-full max-w-prose-leaf flex-col gap-6">
-          <h1 className="font-bold text-heading-large text-content-strong tablet:text-display-small">
+      <main className="mx-auto w-full max-w-page flex-1 pt-10 pb-40 tablet:pt-16">
+        <article className="flex w-full flex-col gap-2">
+          <h1 className="px-4 font-heavy text-content-strong text-display-medium tablet:px-[54px]">
             {document.title}
           </h1>
           <DocumentRenderer content={document.content} />

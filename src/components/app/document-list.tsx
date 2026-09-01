@@ -3,6 +3,12 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
+import {
+  sidebarEmpty,
+  sidebarIcon,
+  sidebarRow,
+  sidebarRowActive,
+} from '@/components/app/sidebar-styles'
 import { PageIcon } from '@/components/icons'
 import type { DocumentSummary } from '@/lib/documents'
 import { cn } from '@/shared/utils'
@@ -17,15 +23,11 @@ export function DocumentList({ documents, emptyLabel, onNavigate }: Props) {
   const pathname = usePathname()
 
   if (documents.length === 0) {
-    return (
-      <p className="px-3 py-2 text-body-small text-content">
-        {emptyLabel}
-      </p>
-    )
+    return <p className={sidebarEmpty}>{emptyLabel}</p>
   }
 
   return (
-    <ul className="flex flex-col gap-1">
+    <ul className="flex flex-col">
       {documents.map((document) => {
         const active = pathname === `/doc/${document.id}`
 
@@ -34,16 +36,16 @@ export function DocumentList({ documents, emptyLabel, onNavigate }: Props) {
             <Link
               aria-current={active ? 'page' : undefined}
               className={cn(
-                'flex min-h-11 items-center gap-2 rounded-large px-3 py-2 text-body-small  transition-colors',
-                'focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-2',
-                active
-                  ? 'bg-brand-surface font-bold text-content-strong'
-                  : 'text-content hover:bg-surface-hover hover:text-content-strong',
+                sidebarRow,
+                'pl-1.5',
+                active && sidebarRowActive,
               )}
               href={`/doc/${document.id}`}
               onClick={onNavigate}
             >
-              <PageIcon aria-hidden="true" className="size-4 shrink-0" />
+              <span className="flex size-5 shrink-0 items-center justify-center">
+                <PageIcon aria-hidden="true" className={sidebarIcon} />
+              </span>
               <span className="min-w-0 flex-1 truncate">{document.title}</span>
             </Link>
           </li>

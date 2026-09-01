@@ -15,15 +15,15 @@ export function onEditorFocusRequest(handler: () => void) {
 }
 
 export function focusDocumentTitle() {
-  const input = window.document.getElementById(documentTitleInputId)
+  const field = window.document.getElementById(documentTitleInputId)
 
-  if (!(input instanceof HTMLInputElement)) {
+  if (!(field instanceof HTMLTextAreaElement)) {
     return false
   }
 
-  input.focus()
-  const end = input.value.length
-  input.setSelectionRange(end, end)
+  field.focus()
+  const end = field.value.length
+  field.setSelectionRange(end, end)
 
   return true
 }

@@ -198,8 +198,8 @@ export function SharePanel({ documentId, canManage }: Props) {
         data-testid="share-panel-loading"
         role="status"
       >
-        {canManage ? <Skeleton className="h-12 w-full" /> : null}
-        <Skeleton className="h-12 w-full" />
+        {canManage ? <Skeleton className="h-8 w-full" /> : null}
+        <Skeleton className="h-8 w-full" />
         <Skeleton className="h-10 w-2/3" />
         <span className="sr-only">{t('loading')}</span>
       </div>
@@ -230,7 +230,7 @@ export function SharePanel({ documentId, canManage }: Props) {
 
       {state.orgName ? (
         <section className="flex flex-col gap-3">
-          <h3 className="font-bold text-body-small text-content">
+          <h3 className="font-medium text-caption text-content-subtle">
             {t('orgSection')}
           </h3>
 
@@ -286,7 +286,7 @@ export function SharePanel({ documentId, canManage }: Props) {
       {state.orgName ? <Separator /> : null}
 
       <section className="flex flex-col gap-4">
-        <h3 className="font-bold text-body-small text-content">
+        <h3 className="font-medium text-caption text-content-subtle">
           {t('peopleSection')}
         </h3>
 
@@ -351,7 +351,7 @@ export function SharePanel({ documentId, canManage }: Props) {
       ) : null}
 
       <div className="flex flex-col gap-3">
-        <h4 className="font-bold text-body-small text-content">
+        <h4 className="font-medium text-caption text-content-subtle">
           {t('withAccess')}
         </h4>
 

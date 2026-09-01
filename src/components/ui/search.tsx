@@ -3,13 +3,13 @@
 import { useTranslations } from 'next-intl'
 import type * as React from 'react'
 
-import { CancelIcon, SearchIcon } from '@/components/icons'
+import { CancelIcon, FilterIcon } from '@/components/icons'
 import { cn } from '@/shared/utils'
 
 const searchVariants = {
-  'primary-desktop': 'rounded-xlarge border border-line-soft',
-  'secondary-desktop': 'rounded-large border border-line-strong',
-  mobile: 'rounded-large border border-line-strong',
+  'primary-desktop': '',
+  'secondary-desktop': '',
+  mobile: '',
 } as const
 
 type SearchVariant = keyof typeof searchVariants
@@ -29,44 +29,37 @@ function Search({
   ...props
 }: Readonly<SearchProps>) {
   const tCommon = useTranslations('common')
-  const iconRight = variant === 'primary-desktop'
   const hasValue = value !== undefined && value !== null && value !== ''
   const displayClear = (showClear ?? hasValue) && Boolean(onClear)
 
   return (
     <div
       className={cn(
-        'flex h-11 w-full items-center gap-2 bg-muted px-4 text-base text-content transition-colors focus-within:outline-2 focus-within:outline-focus focus-within:outline-offset-2 tablet:h-10',
+        'flex h-11 w-full items-center gap-1.5 rounded-large px-1.5 text-body-small text-content-strong transition-colors hover:bg-surface-hover focus-within:bg-surface-subtle tablet:h-7',
         searchVariants[variant],
         className
       )}
     >
-      {!iconRight && (
-        <SearchIcon
+      <span className="flex size-5 shrink-0 items-center justify-center">
+        <FilterIcon
           aria-hidden="true"
-          className="size-5 shrink-0 text-content-muted"
+          className="size-3.5 shrink-0 text-content-subtle"
         />
-      )}
+      </span>
       <input
-        className="h-full w-full bg-transparent outline-none placeholder:text-content [&::-webkit-search-cancel-button]:appearance-none"
+        className="h-full w-full bg-transparent outline-none placeholder:text-content-disabled [&::-webkit-search-cancel-button]:appearance-none"
         type="search"
         value={value}
         {...props}
       />
-      {iconRight && (
-        <SearchIcon
-          aria-hidden="true"
-          className="size-5 shrink-0 text-content-muted"
-        />
-      )}
       {displayClear && (
         <button
           aria-label={tCommon('clearSearch')}
-          className="-mr-3 flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-large text-content-muted hover:text-content-strong focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-2"
+          className="flex size-5 shrink-0 cursor-pointer items-center justify-center rounded-small text-content-subtle transition-colors hover:bg-surface-active hover:text-content-strong focus-visible:outline-2 focus-visible:outline-focus"
           onClick={onClear}
           type="button"
         >
-          <CancelIcon className="size-4" />
+          <CancelIcon className="size-3.5" />
         </button>
       )}
     </div>
