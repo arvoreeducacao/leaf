@@ -240,6 +240,8 @@ export const databaseProperties = mysqlTable(
       'date',
       'checkbox',
       'url',
+      'person',
+      'status',
     ])
       .notNull()
       .default('text'),

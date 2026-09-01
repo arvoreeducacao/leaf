@@ -147,3 +147,58 @@ describe('conversão da database csv em base de dados', () => {
     expect(inferDatabase([], 'Coluna')).toBeNull()
   })
 })
+
+describe('coluna de pessoa vinda do Notion', () => {
+  const people = [
+    { id: 'u1', name: 'Rafael Andrade', email: 'rafael.andrade@arvore.com.br' },
+    { id: 'u2', name: 'Ricardo raposo', email: 'ricardo.raposo@arvore.com.br' },
+    { id: 'u3', name: 'Mateus', email: 'mateus.coutinho@arvore.com.br' },
+  ]
+
+  const table = [
+    ['Bloco', 'Responsavel'],
+    ['Acervo', 'Rafael'],
+    ['Busca', 'Raposo,Coutinho'],
+    ['Relatório', 'Carlinhos'],
+  ]
+
+  it('vira pessoa quando o texto casa com gente da organização', () => {
+    const inferred = inferDatabase(table, 'Coluna', people)
+
+    expect(inferred?.properties[0].type).toBe('person')
+  })
+
+  it('guarda o id de quem casou e não inventa quem não casou', () => {
+    const inferred = inferDatabase(table, 'Coluna', people)
+
+    expect(inferred?.rows[0].values[0]).toEqual(['u1'])
+    expect(inferred?.rows[1].values[0]).toEqual(['u2', 'u3'])
+    expect(inferred?.rows[2].values[0]).toEqual([])
+  })
+
+  it('lista o que ficou sem dono para alguém resolver', () => {
+    expect(inferDatabase(table, 'Coluna', people)?.unresolvedPeople).toEqual([
+      'Carlinhos',
+    ])
+  })
+
+  it('nunca vira pessoa quando não há organização', () => {
+    expect(inferDatabase(table, 'Coluna')?.properties[0].type).not.toBe(
+      'person',
+    )
+  })
+
+  it('não confunde coluna de texto qualquer com gente', () => {
+    const inferred = inferDatabase(
+      [
+        ['Bloco', 'Notas'],
+        ['Acervo', 'precisa revisar o contrato antes do prazo'],
+        ['Busca', 'depende do time de dados'],
+      ],
+      'Coluna',
+      people,
+    )
+
+    expect(inferred?.properties[0].type).not.toBe('person')
+  })
+})

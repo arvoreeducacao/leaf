@@ -1,5 +1,6 @@
 import { getTranslations } from 'next-intl/server'
 
+import { getSession } from '@/lib/auth'
 import { loadDatabase } from '@/lib/databases'
 
 import { DatabaseView } from './database-view'
@@ -15,7 +16,8 @@ export async function DatabaseSurface({
   canEdit,
   compact = false,
 }: Props) {
-  const snapshot = await loadDatabase(databaseId)
+  const session = await getSession()
+  const snapshot = await loadDatabase(databaseId, session?.user.id ?? null)
 
   if (!snapshot) {
     const t = await getTranslations('database')

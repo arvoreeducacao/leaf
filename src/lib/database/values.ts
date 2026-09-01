@@ -9,6 +9,8 @@ export const propertyTypes: ReadonlyArray<DatabasePropertyType> = [
   'date',
   'checkbox',
   'url',
+  'person',
+  'status',
 ]
 
 export const optionColors = [
@@ -25,10 +27,15 @@ export const optionColors = [
 
 export type OptionColor = (typeof optionColors)[number]
 
+export const statusGroups = ['todo', 'doing', 'done'] as const
+
+export type StatusGroup = (typeof statusGroups)[number]
+
 export type SelectOption = Readonly<{
   id: string
   name: string
   color: OptionColor
+  group?: StatusGroup
 }>
 
 export type PropertyValue =
@@ -45,6 +52,7 @@ export const MAX_TEXT_VALUE = 2_000
 export const MAX_MULTI_SELECT_VALUES = 40
 export const MAX_PROPERTIES = 60
 export const MAX_SELECT_OPTIONS = 100
+export const MAX_PEOPLE_PER_VALUE = 20
 
 const datePattern = /^\d{4}-\d{2}-\d{2}$/
 
@@ -62,7 +70,22 @@ export function isSelectOption(value: unknown): value is SelectOption {
   return (
     typeof candidate.id === 'string' &&
     typeof candidate.name === 'string' &&
-    optionColors.includes(candidate.color as OptionColor)
+    optionColors.includes(candidate.color as OptionColor) &&
+    (candidate.group === undefined ||
+      statusGroups.includes(candidate.group as StatusGroup))
+  )
+}
+
+export function groupOf(option: SelectOption): StatusGroup {
+  return option.group ?? 'todo'
+}
+
+export function sortByStatusGroup(
+  options: ReadonlyArray<SelectOption>,
+): Array<SelectOption> {
+  return [...options].sort(
+    (left, right) =>
+      statusGroups.indexOf(groupOf(left)) - statusGroups.indexOf(groupOf(right)),
   )
 }
 
@@ -115,7 +138,7 @@ export function emptyValueFor(type: DatabasePropertyType): PropertyValue {
     return false
   }
 
-  if (type === 'multiSelect') {
+  if (type === 'multiSelect' || type === 'person') {
     return []
   }
 
@@ -235,6 +258,22 @@ function coerceOptionIds(
     .slice(0, MAX_MULTI_SELECT_VALUES)
 }
 
+function coercePersonIds(
+  value: unknown,
+  options: ReadonlyArray<SelectOption>,
+): Array<string> {
+  if (options.length > 0) {
+    return coerceOptionIds(value, options).slice(0, MAX_PEOPLE_PER_VALUE)
+  }
+
+  const list = Array.isArray(value) ? value : [value]
+
+  return list
+    .filter((item): item is string => typeof item === 'string')
+    .filter((item) => item.length > 0)
+    .slice(0, MAX_PEOPLE_PER_VALUE)
+}
+
 export function normalizeValue(
   type: DatabasePropertyType,
   value: unknown,
@@ -252,12 +291,16 @@ export function normalizeValue(
     return coerceDate(value)
   }
 
-  if (type === 'select') {
+  if (type === 'select' || type === 'status') {
     return coerceOptionIds(value, options)[0] ?? null
   }
 
   if (type === 'multiSelect') {
     return coerceOptionIds(value, options)
+  }
+
+  if (type === 'person') {
+    return coercePersonIds(value, options)
   }
 
   if (type === 'url') {
@@ -352,11 +395,11 @@ export function valueToText(
 
   const names = new Map(options.map((option) => [option.id, option.name]))
 
-  if (type === 'select') {
+  if (type === 'select' || type === 'status') {
     return typeof value === 'string' ? (names.get(value) ?? '') : ''
   }
 
-  if (type === 'multiSelect') {
+  if (type === 'multiSelect' || type === 'person') {
     return Array.isArray(value)
       ? value.map((id) => names.get(id) ?? '').filter(Boolean).join(', ')
       : ''

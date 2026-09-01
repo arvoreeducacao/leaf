@@ -6,14 +6,16 @@ import { useState } from 'react'
 
 import { AddIcon } from '@/components/icons'
 import type { DatabaseProperty } from '@/db/schema'
-import { parseOptions, valueOf, valueToText } from '@/lib/database/values'
+import { type Person, optionsFor } from '@/lib/database/people'
+import { valueOf, valueToText } from '@/lib/database/values'
 import type { BoardGroup, DatabaseRow } from '@/lib/database/views'
+import { isMultiValueType } from '@/lib/database/views'
 import { cn } from '@/shared/utils'
 
 import { PropertyIcon } from './property-icon'
 import { RowMenu } from './row-menu'
 import type { RowMoveTarget } from './row-menu'
-import { OptionChip } from './select-editor'
+import { OptionChip, PersonChip } from './select-editor'
 import type { DatabaseHandlers } from './types'
 
 type Props = Readonly<{
@@ -22,6 +24,7 @@ type Props = Readonly<{
   properties: ReadonlyArray<DatabaseProperty>
   canEdit: boolean
   handlers: DatabaseHandlers
+  people: ReadonlyArray<Person>
 }>
 
 export function BoardView({
@@ -30,10 +33,14 @@ export function BoardView({
   properties,
   canEdit,
   handlers,
+  people,
 }: Props) {
   const t = useTranslations('database')
   const locale = useLocale()
-  const [dragging, setDragging] = useState<string | null>(null)
+  const [dragging, setDragging] = useState<{
+    rowId: string
+    fromGroupId: string | null
+  } | null>(null)
   const [over, setOver] = useState<string | null>(null)
 
   const cardProperties = properties.filter(
@@ -45,12 +52,26 @@ export function BoardView({
       ? groups.map((group) => ({ id: group.id, name: group.name }))
       : undefined
 
-  function move(rowId: string, groupId: string | null) {
-    if (!groupProperty || !canEdit) {
+  function move(row: DatabaseRow, from: string | null, to: string | null) {
+    if (!groupProperty || !canEdit || from === to) {
       return
     }
 
-    handlers.commitValue(rowId, groupProperty.id, groupId)
+    if (!isMultiValueType(groupProperty.type)) {
+      handlers.commitValue(row.id, groupProperty.id, to)
+
+      return
+    }
+
+    const current = row.values[groupProperty.id]
+    const held = Array.isArray(current)
+      ? current.filter((item): item is string => typeof item === 'string')
+      : []
+    const without = from === null ? held : held.filter((item) => item !== from)
+    const next =
+      to !== null && !without.includes(to) ? [...without, to] : without
+
+    handlers.commitValue(row.id, groupProperty.id, next)
   }
 
   return (
@@ -83,20 +104,39 @@ export function BoardView({
                 setOver(null)
 
                 if (dragging) {
-                  move(dragging, group.id)
+                  const held = groups
+                    .flatMap((item) =>
+                      item.rows.map((row) => ({ row, groupId: item.id })),
+                    )
+                    .find((item) => item.row.id === dragging.rowId)
+
+                  if (held) {
+                    move(held.row, dragging.fromGroupId, group.id)
+                  }
+
                   setDragging(null)
                 }
               }}
             >
               <header className="flex items-center gap-2 px-1">
                 {group.id && group.color ? (
-                  <OptionChip
-                    option={{
-                      id: group.id,
-                      name: group.name,
-                      color: group.color,
-                    }}
-                  />
+                  groupProperty?.type === 'person' ? (
+                    <PersonChip
+                      option={{
+                        id: group.id,
+                        name: group.name,
+                        color: group.color,
+                      }}
+                    />
+                  ) : (
+                    <OptionChip
+                      option={{
+                        id: group.id,
+                        name: group.name,
+                        color: group.color,
+                      }}
+                    />
+                  )
                 ) : (
                   <span className="font-bold text-body-small text-content">
                     {group.name}
@@ -119,8 +159,11 @@ export function BoardView({
                         setDragging(null)
                         setOver(null)
                       }}
-                      onDragStart={() => setDragging(row.id)}
-                      onMove={(groupId) => move(row.id, groupId)}
+                      onDragStart={() =>
+                        setDragging({ rowId: row.id, fromGroupId: group.id })
+                      }
+                      onMove={(groupId) => move(row, group.id, groupId)}
+                      people={people}
                       properties={cardProperties}
                       row={row}
                       sortable={groupProperty !== null && canEdit}
@@ -161,6 +204,7 @@ function BoardCard({
   sortable,
   locale,
   handlers,
+  people,
   onMove,
   onDragStart,
   onDragEnd,
@@ -172,6 +216,7 @@ function BoardCard({
   sortable: boolean
   locale: string
   handlers: DatabaseHandlers
+  people: ReadonlyArray<Person>
   onMove: (groupId: string | null) => void
   onDragStart: () => void
   onDragEnd: () => void
@@ -209,7 +254,7 @@ function BoardCard({
 
       <dl className="flex flex-col gap-1">
         {properties.map((property) => {
-          const options = parseOptions(property.options)
+          const options = optionsFor(property, people)
           const value = valueOf(row.values, property, options)
           const text = valueToText(value, property.type, options, locale)
 
@@ -224,13 +269,22 @@ function BoardCard({
                 <span className="sr-only">{property.name}</span>
               </dt>
               <dd className="min-w-0 flex-1 truncate text-caption text-content">
-                {property.type === 'select' || property.type === 'multiSelect'
+                {property.type === 'select' ||
+                property.type === 'multiSelect' ||
+                property.type === 'status' ||
+                property.type === 'person'
                   ? (Array.isArray(value) ? value : [value]).map((id) => {
                       const option = options.find((item) => item.id === id)
 
-                      return option ? (
+                      if (!option) {
+                        return null
+                      }
+
+                      return property.type === 'person' ? (
+                        <PersonChip key={option.id} option={option} />
+                      ) : (
                         <OptionChip key={option.id} option={option} />
-                      ) : null
+                      )
                     })
                   : text}
               </dd>

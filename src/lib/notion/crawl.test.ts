@@ -55,6 +55,8 @@ const importMessages = {
   commentsImported: (count: number) => `${count} comentários`,
   csvColumn: 'Coluna',
   csvDatabases: (count: number) => `${count} bases`,
+  unresolvedPeople: (count: number, names: string) =>
+    `${count} sem responsável: ${names}`,
   csvView: 'Tabela',
   missingLinks: (count: number) => `${count} links`,
   noPages: 'sem páginas',
