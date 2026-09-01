@@ -11,7 +11,12 @@ import {
   sidebarRow,
   sidebarRowActive,
 } from '@/components/app/sidebar-styles'
-import { CaretDownIcon, CaretRightIcon, PageIcon } from '@/components/icons'
+import {
+  CaretDownIcon,
+  CaretRightIcon,
+  DatabaseIcon,
+  PageIcon,
+} from '@/components/icons'
 import {
   Tooltip,
   TooltipContent,
@@ -159,6 +164,7 @@ function TreeLevel({
         const active = activeId === node.id
         const hasChildren = node.children.length > 0
         const deep = depth > maxVisualDepth
+        const NodeIcon = node.kind === 'database' ? DatabaseIcon : PageIcon
 
         const link = (
           <Link
@@ -182,7 +188,7 @@ function TreeLevel({
               )}
             >
               <span className="relative flex size-5 shrink-0 items-center justify-center">
-                <PageIcon
+                <NodeIcon
                   aria-hidden="true"
                   className={cn(
                     sidebarIcon,

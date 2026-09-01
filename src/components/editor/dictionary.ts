@@ -15,6 +15,8 @@ export type CalloutMenuItem = Readonly<{
   group: string
 }>
 
+export type DatabaseMenuItem = CalloutMenuItem
+
 const ptSlashMenu: Dictionary['slash_menu'] = {
   ...pt.slash_menu,
   heading: {

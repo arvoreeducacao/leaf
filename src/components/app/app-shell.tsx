@@ -9,6 +9,7 @@ import { CommandPaletteTrigger } from '@/components/app/command-palette-trigger'
 import { DocumentList } from '@/components/app/document-list'
 import { DocumentSearchResults } from '@/components/app/document-search-results'
 import { DocumentTree } from '@/components/app/document-tree'
+import { NewDatabaseButton } from '@/components/app/new-database-button'
 import { NewDocumentButton } from '@/components/app/new-document-button'
 import { OrgSwitcher } from '@/components/app/org-switcher'
 import type { OrganizationOption } from '@/components/app/org-switcher'
@@ -129,6 +130,7 @@ function NavContent({
       <div className="mt-1 flex flex-col px-2">
         <CommandPaletteTrigger />
         <NewDocumentButton />
+        <NewDatabaseButton />
         <label className="sr-only" htmlFor={searchId}>
           {t('searchLabel')}
         </label>

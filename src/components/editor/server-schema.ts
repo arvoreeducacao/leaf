@@ -5,6 +5,7 @@ import {
 } from '@blocknote/core'
 
 import { calloutConfig } from './callout-config'
+import { databaseConfig } from './database-config'
 
 const createServerCalloutBlock = createBlockSpec(calloutConfig, {
   render: () => {
@@ -25,9 +26,29 @@ const createServerCalloutBlock = createBlockSpec(calloutConfig, {
   },
 })
 
+const createServerDatabaseBlock = createBlockSpec(databaseConfig, {
+  render: () => {
+    const dom = document.createElement('div')
+
+    return { dom }
+  },
+  toExternalHTML: ({ block }) => {
+    const dom = document.createElement('p')
+    const link = document.createElement('a')
+    const href = `/doc/${block.props.databaseId}`
+
+    link.setAttribute('href', href)
+    link.textContent = href
+    dom.appendChild(link)
+
+    return { dom }
+  },
+})
+
 export const leafServerSchema = BlockNoteSchema.create({
   blockSpecs: {
     ...defaultBlockSpecs,
     callout: createServerCalloutBlock(),
+    database: createServerDatabaseBlock(),
   },
 })

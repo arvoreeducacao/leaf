@@ -3,7 +3,7 @@
 import { useLocale, useTranslations } from 'next-intl'
 import { useMemo } from 'react'
 
-import type { CalloutMenuItem } from './dictionary'
+import type { CalloutMenuItem, DatabaseMenuItem } from './dictionary'
 import { createLeafDictionary, toReadOnlyDictionary } from './dictionary'
 
 export function useLeafDictionary(readOnly: boolean) {
@@ -28,8 +28,19 @@ export function useLeafDictionary(readOnly: boolean) {
       group: dictionary.slash_menu.paragraph.group ?? '',
     }
 
+    const databaseItem: DatabaseMenuItem = {
+      title: t('databaseTitle'),
+      subtext: t('databaseSubtext'),
+      aliases: t('databaseAliases')
+        .split(',')
+        .map((alias) => alias.trim())
+        .filter(Boolean),
+      group: dictionary.slash_menu.table.group ?? '',
+    }
+
     return {
       calloutItem,
+      databaseItem,
       dictionary: readOnly ? toReadOnlyDictionary(dictionary) : dictionary,
     }
   }, [locale, readOnly, t])
