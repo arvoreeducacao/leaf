@@ -13,7 +13,7 @@ async function typesFor(markdown: string) {
 }
 
 describe('leafSchema', () => {
-  it('expõe os blocos usados pelos atalhos de markdown', () => {
+  it('exposes the blocks used by the markdown shortcuts', () => {
     expect(Object.keys(leafSchema.blockSchema)).toEqual(
       expect.arrayContaining([
         'paragraph',
@@ -31,28 +31,28 @@ describe('leafSchema', () => {
     )
   })
 
-  it('converte títulos de markdown em heading', async () => {
-    await expect(typesFor('# Título')).resolves.toEqual(['heading'])
+  it('turns markdown titles into heading blocks', async () => {
+    await expect(typesFor('# Title')).resolves.toEqual(['heading'])
   })
 
-  it('converte listas de markdown nos blocos de lista', async () => {
-    await expect(typesFor('- um\n- dois')).resolves.toEqual([
+  it('turns markdown lists into list blocks', async () => {
+    await expect(typesFor('- one\n- two')).resolves.toEqual([
       'bulletListItem',
       'bulletListItem',
     ])
-    await expect(typesFor('1. um\n2. dois')).resolves.toEqual([
+    await expect(typesFor('1. one\n2. two')).resolves.toEqual([
       'numberedListItem',
       'numberedListItem',
     ])
-    await expect(typesFor('- [ ] tarefa')).resolves.toEqual(['checkListItem'])
+    await expect(typesFor('- [ ] task')).resolves.toEqual(['checkListItem'])
   })
 
-  it('converte citação e bloco de código de markdown', async () => {
-    await expect(typesFor('> citação')).resolves.toEqual(['quote'])
-    await expect(typesFor('```\ncodigo\n```')).resolves.toEqual(['codeBlock'])
+  it('turns markdown quote and code fence into their blocks', async () => {
+    await expect(typesFor('> quote')).resolves.toEqual(['quote'])
+    await expect(typesFor('```\ncode\n```')).resolves.toEqual(['codeBlock'])
   })
 
-  it('exporta o bloco de base de dados como link pelo schema do servidor', async () => {
+  it('exports the database block as a link through the server schema', async () => {
     const serverEditor = ServerBlockNoteEditor.create({
       schema: leafServerSchema,
     })
@@ -64,7 +64,7 @@ describe('leafSchema', () => {
     expect(html).toContain('/doc/abc123def456')
   })
 
-  it('expõe os mesmos tipos de bloco do schema do servidor', () => {
+  it('exposes the same block types as the server schema', () => {
     expect(Object.keys(leafSchema.blockSchema).sort()).toEqual(
       Object.keys(leafServerSchema.blockSchema).sort()
     )

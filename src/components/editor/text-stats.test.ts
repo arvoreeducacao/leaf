@@ -7,12 +7,12 @@ import {
 } from '@/components/editor/text-stats'
 
 describe('countTextStats', () => {
-  it('conta zero num texto vazio', () => {
+  it('counts zero on an empty text', () => {
     expect(countTextStats('   \n  ')).toEqual({ words: 0, characters: 0 })
   })
 
-  it('colapsa espaços repetidos antes de contar', () => {
-    expect(countTextStats('  uma   frase  curta ')).toEqual({
+  it('collapses repeated whitespace before counting', () => {
+    expect(countTextStats('  one   tiny  phrase ')).toEqual({
       words: 3,
       characters: 15,
     })
@@ -20,39 +20,39 @@ describe('countTextStats', () => {
 })
 
 describe('blocksToPlainText', () => {
-  it('junta o texto de blocos aninhados e de links', () => {
+  it('joins the text of nested blocks and links', () => {
     const blocks = [
       {
         type: 'paragraph',
         content: [
-          { type: 'text', text: 'Leia o ' },
+          { type: 'text', text: 'Read the ' },
           {
             type: 'link',
             href: 'https://arvore.com.br',
-            content: [{ type: 'text', text: 'guia' }],
+            content: [{ type: 'text', text: 'guide' }],
           },
         ],
         children: [
           {
             type: 'bulletListItem',
-            content: [{ type: 'text', text: 'primeiro item' }],
+            content: [{ type: 'text', text: 'first item' }],
           },
         ],
       },
     ]
 
     expect(blocksToPlainText(blocks).replace(/\s+/g, ' ').trim()).toBe(
-      'Leia o guia primeiro item',
+      'Read the guide first item',
     )
   })
 
-  it('não quebra em bloco sem conteúdo', () => {
+  it('does not break on a block without content', () => {
     expect(statsFromBlocks([{ type: 'image', props: { url: '/a.png' } }])).toEqual(
       { words: 0, characters: 0 },
     )
   })
 
-  it('conta o texto das células de uma tabela', () => {
+  it('counts the text of the cells of a table', () => {
     const blocks = [
       {
         type: 'table',
@@ -61,8 +61,8 @@ describe('blocksToPlainText', () => {
           rows: [
             {
               cells: [
-                [{ type: 'text', text: 'Nome' }],
-                [{ type: 'text', text: 'Turma' }],
+                [{ type: 'text', text: 'Name' }],
+                [{ type: 'text', text: 'Group' }],
               ],
             },
           ],

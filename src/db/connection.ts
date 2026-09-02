@@ -13,7 +13,7 @@ export function databaseUrl() {
   const url = process.env.DATABASE_URL?.trim()
 
   if (!url) {
-    throw new Error('DATABASE_URL não está definida')
+    throw new Error('DATABASE_URL is not defined')
   }
 
   return url
@@ -64,7 +64,7 @@ async function withMigrationLock<T>(
   if (acquired[0]?.granted !== 1) {
     connection.release()
 
-    throw new Error(`não foi possível obter o lock de migração ${lock}`)
+    throw new Error(`could not acquire the migration lock ${lock}`)
   }
 
   try {

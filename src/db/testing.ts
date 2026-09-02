@@ -11,7 +11,7 @@ export function testDatabaseUrl(): string {
   const base = process.env.LEAF_TEST_DATABASE_URL?.trim()
 
   if (!base) {
-    throw new Error('LEAF_TEST_DATABASE_URL não está definida')
+    throw new Error('LEAF_TEST_DATABASE_URL is not defined')
   }
 
   const worker = process.env.VITEST_POOL_ID ?? '1'

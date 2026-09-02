@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest'
 
 import { sanitizeBlocks } from '@/lib/markdown/sanitize'
 
-describe('sanitizeBlocks nos blocos que viram âncora clicável', () => {
-  it('zera a url de um bloco de arquivo com protocolo javascript', () => {
+describe('sanitizeBlocks on the blocks that become a clickable anchor', () => {
+  it('blanks the url of a file block with the javascript protocol', () => {
     const blocks = [
       { type: 'file', props: { name: 'x', url: 'javascript:alert(document.cookie)' } },
     ]
@@ -11,7 +11,7 @@ describe('sanitizeBlocks nos blocos que viram âncora clicável', () => {
     expect(sanitizeBlocks(blocks)[0].props.url).toBe('')
   })
 
-  it('zera a url de blocos de vídeo e áudio com protocolo perigoso', () => {
+  it('blanks the url of video and audio blocks with a dangerous protocol', () => {
     const blocks = [
       { type: 'video', props: { url: 'javascript:alert(1)' } },
       { type: 'audio', props: { url: 'data:text/html,<script>alert(1)</script>' } },
@@ -23,19 +23,19 @@ describe('sanitizeBlocks nos blocos que viram âncora clicável', () => {
     expect(cleaned[1].props.url).toBe('')
   })
 
-  it('preserva urls seguras e assets internos', () => {
+  it('preserves safe urls and internal assets', () => {
     const blocks = [
-      { type: 'image', props: { url: 'https://exemplo.com.br/a.png' } },
+      { type: 'image', props: { url: 'https://example.com/a.png' } },
       { type: 'file', props: { url: '/api/uploads/u/abc.png' } },
     ]
 
     const cleaned = sanitizeBlocks(blocks)
 
-    expect(cleaned[0].props.url).toBe('https://exemplo.com.br/a.png')
+    expect(cleaned[0].props.url).toBe('https://example.com/a.png')
     expect(cleaned[1].props.url).toBe('/api/uploads/u/abc.png')
   })
 
-  it('desce em blocos aninhados', () => {
+  it('walks into nested blocks', () => {
     const blocks = [
       {
         type: 'paragraph',

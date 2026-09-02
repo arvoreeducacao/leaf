@@ -60,16 +60,16 @@ async function invite(page: Page, email: string, role: string) {
   await page.keyboard.press('Escape')
 }
 
-test.describe('comentários', () => {
-  test('âncora em bloco, contador no header e rolagem até o trecho', async ({
+test.describe('comments', () => {
+  test('block anchor, counter in the header and scroll to the passage', async ({
     page,
   }) => {
-    await signUp(page, uniqueEmail('comentador'), 'Autora')
-    await createDocument(page, 'Documento comentado')
+    await signUp(page, uniqueEmail('commenter'), 'Author')
+    await createDocument(page, 'Commented document')
 
-    await typeInEditor(page, 'primeiro paragrafo')
+    await typeInEditor(page, 'first paragraph')
     await page.keyboard.press('Enter')
-    await page.keyboard.type('segundo paragrafo')
+    await page.keyboard.type('second paragraph')
     await waitForSaved(page)
 
     const blockIds = await editorBody(page)
@@ -78,13 +78,13 @@ test.describe('comentários', () => {
         elements.map((element) => element.getAttribute('data-id') ?? ''),
       )
 
-    await selectLastWord(page, 'segundo paragrafo'.length)
-    await commentFromToolbar(page, 'Este trecho precisa de fonte')
+    await selectLastWord(page, 'second paragraph'.length)
+    await commentFromToolbar(page, 'This passage needs a source')
 
     const thread = page.getByTestId('comment-thread').first()
 
-    await expect(thread).toContainText('Este trecho precisa de fonte')
-    await expect(thread).toContainText('Autora')
+    await expect(thread).toContainText('This passage needs a source')
+    await expect(thread).toContainText('Author')
 
     await page.keyboard.press('Escape')
     await expect(page.getByTestId('comments-panel')).toHaveCount(0)
@@ -99,19 +99,19 @@ test.describe('comentários', () => {
     expect(await blockShadow(page, blockIds[0])).toBe('none')
   })
 
-  test('marcador na margem abre a conversa no próprio trecho', async ({
+  test('the margin marker opens the thread on the passage itself', async ({
     page,
   }) => {
-    await signUp(page, uniqueEmail('margem'), 'Autora')
-    await createDocument(page, 'Documento com marcador')
+    await signUp(page, uniqueEmail('margin'), 'Author')
+    await createDocument(page, 'Document with a marker')
 
-    await typeInEditor(page, 'primeiro paragrafo')
+    await typeInEditor(page, 'first paragraph')
     await page.keyboard.press('Enter')
-    await page.keyboard.type('segundo paragrafo')
+    await page.keyboard.type('second paragraph')
     await waitForSaved(page)
 
-    await selectLastWord(page, 'segundo paragrafo'.length)
-    await commentFromToolbar(page, 'Comentário na margem')
+    await selectLastWord(page, 'second paragraph'.length)
+    await commentFromToolbar(page, 'Comment in the margin')
     await page.keyboard.press('Escape')
     await expect(page.getByTestId('comments-panel')).toHaveCount(0)
 
@@ -144,37 +144,37 @@ test.describe('comentários', () => {
     const popover = page.getByTestId('inline-comments-popover')
 
     await expect(popover).toBeVisible()
-    await expect(popover).toContainText('Comentário na margem')
+    await expect(popover).toContainText('Comment in the margin')
 
     await popover
       .getByRole('button', { name: 'Responder', exact: true })
       .click()
-    await popover.getByLabel(/^Resposta para/).fill('Resposta na margem')
+    await popover.getByLabel(/^Resposta para/).fill('Reply in the margin')
     await popover.getByRole('button', { name: 'Enviar resposta' }).click()
-    await expect(popover).toContainText('Resposta na margem')
+    await expect(popover).toContainText('Reply in the margin')
 
     await popover.getByRole('button', { name: 'Resolver' }).click()
     await expect(page.getByText('Comentário resolvido').first()).toBeVisible()
     await expect(page.getByTestId('inline-comment-marker')).toHaveCount(0)
   })
 
-  test('responder, resolver, reabrir e filtrar resolvidos', async ({ page }) => {
-    await signUp(page, uniqueEmail('thread'), 'Autora')
-    await createDocument(page, 'Conversa')
+  test('reply, resolve, reopen and filter resolved', async ({ page }) => {
+    await signUp(page, uniqueEmail('thread'), 'Author')
+    await createDocument(page, 'Thread')
 
-    await typeInEditor(page, 'texto base')
+    await typeInEditor(page, 'base text')
     await waitForSaved(page)
 
-    await selectLastWord(page, 'texto base'.length)
-    await commentFromToolbar(page, 'Pergunta inicial')
+    await selectLastWord(page, 'base text'.length)
+    await commentFromToolbar(page, 'Opening question')
 
     await page.getByRole('button', { name: 'Responder', exact: true }).click()
-    await page.getByLabel(/^Resposta para/).fill('Resposta da autora')
+    await page.getByLabel(/^Resposta para/).fill('Reply from the author')
     await page.getByRole('button', { name: 'Enviar resposta' }).click()
 
     await expect(
       page.getByTestId('comment-thread').first(),
-    ).toContainText('Resposta da autora')
+    ).toContainText('Reply from the author')
 
     await page.getByRole('button', { name: 'Resolver' }).click()
     await expect(page.getByText('Comentário resolvido').first()).toBeVisible()
@@ -196,24 +196,24 @@ test.describe('comentários', () => {
     await expect(page.getByTestId('comments-button')).toContainText('1')
   })
 
-  test('editar e excluir só valem para o autor', async ({ browser }) => {
+  test('edit and delete only work for the author', async ({ browser }) => {
     const ownerContext = await browser.newContext()
     const guestContext = await browser.newContext()
     const ownerPage = await ownerContext.newPage()
     const guestPage = await guestContext.newPage()
-    const guestEmail = uniqueEmail('coautor')
+    const guestEmail = uniqueEmail('coauthor')
 
-    await signUp(guestPage, guestEmail, 'Convidado')
-    await signUp(ownerPage, uniqueEmail('dono'), 'Dono')
+    await signUp(guestPage, guestEmail, 'Guest')
+    await signUp(ownerPage, uniqueEmail('owner'), 'Owner')
 
-    const id = await createDocument(ownerPage, 'Comentários com dois autores')
+    const id = await createDocument(ownerPage, 'Comments with two authors')
 
-    await typeInEditor(ownerPage, 'texto do dono')
+    await typeInEditor(ownerPage, 'owner text')
     await waitForSaved(ownerPage)
     await invite(ownerPage, guestEmail, 'Pode editar')
 
-    await selectLastWord(ownerPage, 'texto do dono'.length)
-    await commentFromToolbar(ownerPage, 'Comentário do dono')
+    await selectLastWord(ownerPage, 'owner text'.length)
+    await commentFromToolbar(ownerPage, 'Comment from the owner')
 
     await guestPage.goto(`/doc/${id}`)
     await waitForEditorReady(guestPage)
@@ -221,7 +221,7 @@ test.describe('comentários', () => {
 
     await expect(
       guestPage.getByTestId('comment-thread').first(),
-    ).toContainText('Comentário do dono')
+    ).toContainText('Comment from the owner')
     await expect(
       guestPage.getByRole('button', { name: 'Editar' }),
     ).toHaveCount(0)
@@ -233,12 +233,12 @@ test.describe('comentários', () => {
     ).toHaveCount(1)
 
     await ownerPage.getByRole('button', { name: 'Editar' }).click()
-    await ownerPage.getByLabel('Editar comentário').fill('Comentário revisado')
+    await ownerPage.getByLabel('Editar comentário').fill('Revised comment')
     await ownerPage.getByRole('button', { name: 'Salvar' }).click()
 
     await expect(
       ownerPage.getByTestId('comment-thread').first(),
-    ).toContainText('Comentário revisado')
+    ).toContainText('Revised comment')
     await expect(
       ownerPage.getByTestId('comment-thread').first(),
     ).toContainText('editado')
@@ -256,21 +256,21 @@ test.describe('comentários', () => {
     await guestContext.close()
   })
 
-  test('papel Pode comentar comenta sem editar o documento', async ({
+  test('the commenter role comments without editing the document', async ({
     browser,
   }) => {
     const ownerContext = await browser.newContext()
     const guestContext = await browser.newContext()
     const ownerPage = await ownerContext.newPage()
     const guestPage = await guestContext.newPage()
-    const guestEmail = uniqueEmail('revisor')
+    const guestEmail = uniqueEmail('reviewer')
 
-    await signUp(guestPage, guestEmail, 'Revisor')
-    await signUp(ownerPage, uniqueEmail('dono'), 'Dono')
+    await signUp(guestPage, guestEmail, 'Reviewer')
+    await signUp(ownerPage, uniqueEmail('owner'), 'Owner')
 
-    const id = await createDocument(ownerPage, 'Documento em revisão')
+    const id = await createDocument(ownerPage, 'Document under review')
 
-    await typeInEditor(ownerPage, 'texto para revisar')
+    await typeInEditor(ownerPage, 'text to review')
     await waitForSaved(ownerPage)
     await invite(ownerPage, guestEmail, 'Pode comentar')
 
@@ -281,7 +281,7 @@ test.describe('comentários', () => {
     await expect(editorBody(guestPage)).toHaveCount(0)
 
     await openPanel(guestPage)
-    await guestPage.getByLabel('Novo comentário').fill('Sugestão do revisor')
+    await guestPage.getByLabel('Novo comentário').fill('Suggestion from the reviewer')
     await guestPage.getByTestId('submit-comment').click()
 
     await expect(
@@ -289,7 +289,7 @@ test.describe('comentários', () => {
     ).toBeVisible()
     await expect(
       guestPage.getByTestId('comment-thread').first(),
-    ).toContainText('Sugestão do revisor')
+    ).toContainText('Suggestion from the reviewer')
 
     await ownerPage.reload()
     await waitForEditorReady(ownerPage)
@@ -299,24 +299,24 @@ test.describe('comentários', () => {
     await guestContext.close()
   })
 
-  test('leitor vê as conversas mas não comenta', async ({ browser }) => {
+  test('a viewer sees the threads but does not comment', async ({ browser }) => {
     const ownerContext = await browser.newContext()
     const guestContext = await browser.newContext()
     const ownerPage = await ownerContext.newPage()
     const guestPage = await guestContext.newPage()
-    const guestEmail = uniqueEmail('leitor')
+    const guestEmail = uniqueEmail('viewer')
 
-    await signUp(guestPage, guestEmail, 'Leitor')
-    await signUp(ownerPage, uniqueEmail('dono'), 'Dono')
+    await signUp(guestPage, guestEmail, 'Viewer')
+    await signUp(ownerPage, uniqueEmail('owner'), 'Owner')
 
-    const id = await createDocument(ownerPage, 'Documento só de leitura')
+    const id = await createDocument(ownerPage, 'Read-only document')
 
-    await typeInEditor(ownerPage, 'texto publicado')
+    await typeInEditor(ownerPage, 'published text')
     await waitForSaved(ownerPage)
     await invite(ownerPage, guestEmail, 'Pode ver')
 
-    await selectLastWord(ownerPage, 'texto publicado'.length)
-    await commentFromToolbar(ownerPage, 'Nota interna')
+    await selectLastWord(ownerPage, 'published text'.length)
+    await commentFromToolbar(ownerPage, 'Internal note')
 
     await guestPage.goto(`/doc/${id}`)
     await waitForEditorReady(guestPage)
@@ -324,7 +324,7 @@ test.describe('comentários', () => {
 
     await expect(
       guestPage.getByTestId('comment-thread').first(),
-    ).toContainText('Nota interna')
+    ).toContainText('Internal note')
     await expect(guestPage.getByLabel('Novo comentário')).toHaveCount(0)
     await expect(guestPage.getByTestId('submit-comment')).toHaveCount(0)
     await expect(
@@ -340,17 +340,17 @@ test.describe('comentários', () => {
     await guestContext.close()
   })
 
-  test('bloco apagado transforma a conversa em sem âncora', async ({ page }) => {
-    await signUp(page, uniqueEmail('ancora'), 'Autora')
-    await createDocument(page, 'Documento com âncora perdida')
+  test('a deleted block turns the thread into an unanchored one', async ({ page }) => {
+    await signUp(page, uniqueEmail('anchor'), 'Author')
+    await createDocument(page, 'Document with a lost anchor')
 
-    await typeInEditor(page, 'primeira linha')
+    await typeInEditor(page, 'first line')
     await page.keyboard.press('Enter')
-    await page.keyboard.type('linha que vai sumir')
+    await page.keyboard.type('line that will vanish')
     await waitForSaved(page)
 
-    await selectLastWord(page, 'linha que vai sumir'.length)
-    await commentFromToolbar(page, 'Comentário órfão')
+    await selectLastWord(page, 'line that will vanish'.length)
+    await commentFromToolbar(page, 'Orphan comment')
 
     await expect(page.getByTestId('comment-anchor')).toHaveCount(1)
 
@@ -359,11 +359,11 @@ test.describe('comentários', () => {
 
     await focusEditorEnd(page)
 
-    for (let index = 0; index <= 'linha que vai sumir'.length; index += 1) {
+    for (let index = 0; index <= 'line that will vanish'.length; index += 1) {
       await page.keyboard.press('Backspace')
     }
 
-    await expect(editorBody(page)).not.toContainText('linha que vai sumir')
+    await expect(editorBody(page)).not.toContainText('line that will vanish')
     await waitForSaved(page)
 
     await openPanel(page)
@@ -372,23 +372,23 @@ test.describe('comentários', () => {
     await expect(page.getByTestId('comment-anchor')).toHaveCount(0)
     await expect(
       page.getByTestId('comment-thread').first(),
-    ).toContainText('Comentário órfão')
+    ).toContainText('Orphan comment')
   })
 
-  test('a página pública não mostra comentários', async ({ browser }) => {
+  test('the public page does not show comments', async ({ browser }) => {
     const ownerContext = await browser.newContext()
     const anonContext = await browser.newContext()
     const ownerPage = await ownerContext.newPage()
     const anonPage = await anonContext.newPage()
 
-    await signUp(ownerPage, uniqueEmail('publico'), 'Dono')
-    await createDocument(ownerPage, 'Documento público comentado')
+    await signUp(ownerPage, uniqueEmail('public'), 'Owner')
+    await createDocument(ownerPage, 'Commented public document')
 
-    await typeInEditor(ownerPage, 'conteudo publico')
+    await typeInEditor(ownerPage, 'public content')
     await waitForSaved(ownerPage)
 
-    await selectLastWord(ownerPage, 'conteudo publico'.length)
-    await commentFromToolbar(ownerPage, 'Comentário privado da equipe')
+    await selectLastWord(ownerPage, 'public content'.length)
+    await commentFromToolbar(ownerPage, 'Private team comment')
     await ownerPage.keyboard.press('Escape')
 
     await ownerPage.getByRole('button', { name: 'Compartilhar' }).click()
@@ -402,11 +402,11 @@ test.describe('comentários', () => {
 
     await anonPage.goto(url)
 
-    await expect(anonPage.getByText('conteudo publico')).toBeVisible()
+    await expect(anonPage.getByText('public content')).toBeVisible()
     await expect(anonPage.getByTestId('comments-button')).toHaveCount(0)
     await expect(anonPage.getByTestId('comments-panel')).toHaveCount(0)
     await expect(
-      anonPage.getByText('Comentário privado da equipe'),
+      anonPage.getByText('Private team comment'),
     ).toHaveCount(0)
 
     await ownerContext.close()

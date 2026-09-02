@@ -25,5 +25,5 @@ export function toFileSlug(title: string): string {
     .slice(0, 80)
     .replace(/-+$/g, '')
 
-  return slug.length > 0 ? slug : 'documento'
+  return slug.length > 0 ? slug : 'document'
 }

@@ -9,64 +9,64 @@ import {
 } from './helpers'
 
 test.describe('sidebar', () => {
-  test('busca filtra por título, atalho foca o campo e o vazio é sinalizado', async ({
+  test('the search filters by title, the shortcut focuses the field and the empty state shows', async ({
     page,
   }) => {
-    await signUp(page, uniqueEmail('busca'))
-    await createDocument(page, 'Relatório de férias')
-    await createDocument(page, 'Plano de leitura')
+    await signUp(page, uniqueEmail('search'))
+    await createDocument(page, 'Vacation report')
+    await createDocument(page, 'Reading plan')
 
     const search = page.getByLabel('Buscar documento pelo título')
 
-    await search.fill('relat')
+    await search.fill('vacat')
 
     const nav = page.getByRole('navigation', { name: 'Documentos' })
 
-    await expect(nav.getByRole('link', { name: /Relatório de férias/ })).toBeVisible()
-    await expect(nav.getByRole('link', { name: /Plano de leitura/ })).toHaveCount(0)
+    await expect(nav.getByRole('link', { name: /Vacation report/ })).toBeVisible()
+    await expect(nav.getByRole('link', { name: /Reading plan/ })).toHaveCount(0)
 
-    await search.fill('coisa que não existe')
+    await search.fill('something that does not exist')
     await expect(
       nav.getByText('Nenhum documento com esse nome').first(),
     ).toBeVisible()
 
     await page.getByRole('button', { name: 'Limpar busca' }).click()
     await expect(search).toHaveValue('')
-    await expect(nav.getByRole('link', { name: /Plano de leitura/ })).toBeVisible()
+    await expect(nav.getByRole('link', { name: /Reading plan/ })).toBeVisible()
 
     await page.keyboard.press('Control+p')
     await expect(page.getByLabel('Buscar documento pelo título')).toBeFocused()
   })
 
-  test('duplicar copia título e conteúdo sem tocar no original', async ({
+  test('duplicating copies title and content without touching the original', async ({
     page,
   }) => {
-    await signUp(page, uniqueEmail('duplicar'))
-    await createDocument(page, 'Modelo de ata')
-    await typeInEditor(page, 'texto original da ata')
+    await signUp(page, uniqueEmail('duplicate'))
+    await createDocument(page, 'Minutes template')
+    await typeInEditor(page, 'original text of the minutes')
     await waitForSaved(page)
 
     await page.getByRole('button', { name: 'Ações do documento' }).click()
     await page.getByRole('menuitem', { name: 'Duplicar documento' }).click()
 
     await expect(page.getByLabel('Título do documento')).toHaveValue(
-      'Modelo de ata (cópia)',
+      'Minutes template (cópia)',
     )
     await expect(
       page.locator('.leaf-editor [contenteditable="true"]').first(),
-    ).toContainText('texto original da ata')
+    ).toContainText('original text of the minutes')
 
     const nav = page.getByRole('navigation', { name: 'Documentos' })
 
-    await expect(nav.getByRole('link', { name: /Modelo de ata$/ })).toBeVisible()
+    await expect(nav.getByRole('link', { name: /Minutes template$/ })).toBeVisible()
     await expect(
-      nav.getByRole('link', { name: /Modelo de ata \(cópia\)/ }),
+      nav.getByRole('link', { name: /Minutes template \(cópia\)/ }),
     ).toBeVisible()
   })
 
-  test('mover para a lixeira oferece desfazer no toast', async ({ page }) => {
-    await signUp(page, uniqueEmail('lixeira'))
-    const id = await createDocument(page, 'Some e volta')
+  test('moving to the trash offers undo in the toast', async ({ page }) => {
+    await signUp(page, uniqueEmail('trash'))
+    const id = await createDocument(page, 'Vanishes and returns')
 
     await page.getByRole('button', { name: 'Ações do documento' }).click()
     await page.getByRole('menuitem', { name: 'Mover para a lixeira' }).click()
@@ -78,18 +78,18 @@ test.describe('sidebar', () => {
     await expect(page.getByText('Documento restaurado')).toBeVisible()
     await expect(page).toHaveURL(new RegExp(`/doc/${id}$`))
     await expect(page.getByLabel('Título do documento')).toHaveValue(
-      'Some e volta',
+      'Vanishes and returns',
     )
   })
 
-  test('estado da árvore sobrevive ao reload', async ({ page }) => {
-    await signUp(page, uniqueEmail('arvore'))
-    const parent = await createDocument(page, 'Pai')
-    const child = await createDocument(page, 'Filho')
+  test('the tree state survives the reload', async ({ page }) => {
+    await signUp(page, uniqueEmail('tree'))
+    const parent = await createDocument(page, 'Parent')
+    const child = await createDocument(page, 'Child')
 
     await page.getByRole('button', { name: 'Ações do documento' }).click()
     await page.getByRole('menuitem', { name: 'Mover para outra página' }).click()
-    await page.getByRole('radio', { name: /Pai/ }).click()
+    await page.getByRole('radio', { name: /Parent/ }).click()
     await page.getByRole('button', { name: 'Mover' }).click()
 
     await expect(page.getByText('Documento movido')).toBeVisible()
@@ -97,16 +97,16 @@ test.describe('sidebar', () => {
     const nav = page.getByRole('navigation', { name: 'Documentos' })
 
     await page.goto(`/doc/${parent}`)
-    await expect(nav.getByRole('button', { name: 'Expandir Pai' })).toBeVisible()
-    await expect(nav.getByRole('link', { name: /Filho/ })).toHaveCount(0)
+    await expect(nav.getByRole('button', { name: 'Expandir Parent' })).toBeVisible()
+    await expect(nav.getByRole('link', { name: /Child/ })).toHaveCount(0)
 
-    await nav.getByRole('button', { name: 'Expandir Pai' }).click()
-    await expect(nav.getByRole('link', { name: /Filho/ })).toBeVisible()
+    await nav.getByRole('button', { name: 'Expandir Parent' }).click()
+    await expect(nav.getByRole('link', { name: /Child/ })).toBeVisible()
 
     await page.reload()
 
-    await expect(nav.getByRole('button', { name: 'Recolher Pai' })).toBeVisible()
-    await expect(nav.getByRole('link', { name: /Filho/ })).toBeVisible()
+    await expect(nav.getByRole('button', { name: 'Recolher Parent' })).toBeVisible()
+    await expect(nav.getByRole('link', { name: /Child/ })).toBeVisible()
 
     expect(child).toBeTruthy()
   })

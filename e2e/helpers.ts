@@ -5,10 +5,10 @@ let counter = 0
 export function uniqueEmail(prefix = 'leaf') {
   counter += 1
 
-  return `${prefix}-${Date.now()}-${process.pid}-${counter}@exemplo.test`
+  return `${prefix}-${Date.now()}-${process.pid}-${counter}@example.test`
 }
 
-export const password = 'senha-de-teste-123'
+export const password = 'test-password-123'
 
 async function submitUntilLeaves(page: Page, buttonName: string) {
   for (let attempt = 0; attempt < 4; attempt += 1) {
@@ -25,15 +25,15 @@ async function submitUntilLeaves(page: Page, buttonName: string) {
       const alert = page.getByRole('alert')
 
       if (await alert.isVisible().catch(() => false)) {
-        throw new Error(`Falha na autenticação: ${await alert.innerText()}`)
+        throw new Error(`Authentication failed: ${await alert.innerText()}`)
       }
     }
   }
 
-  throw new Error(`Não saiu da tela de autenticação depois de clicar em ${buttonName}`)
+  throw new Error(`Did not leave the auth screen after clicking ${buttonName}`)
 }
 
-export async function signUp(page: Page, email: string, name = 'Pessoa Teste') {
+export async function signUp(page: Page, email: string, name = 'Test Person') {
   await page.goto('/signup')
   await page.getByLabel('Nome (opcional)').fill(name)
   await page.getByLabel('Email').fill(email)
