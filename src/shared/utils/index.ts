@@ -7,6 +7,7 @@ const fontSizes = [
   'body-medium',
   'heading-medium',
   'heading-large',
+  'display-compact',
   'display-small',
   'display-medium',
   'display-large',

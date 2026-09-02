@@ -70,11 +70,14 @@ export default async function DocumentPage({ params }: Props) {
         canEdit={canEdit(access)}
         canMoveToTeamspace={access === 'owner' && document.orgId !== null}
         documentId={document.id}
+        icon={document.icon}
         isOwner={access === 'owner'}
+        kind={document.kind}
         openComments={openComments}
         sharedWithOrganization={document.orgAccess !== null}
         teamspaceName={teamspace?.name ?? null}
         title={document.title}
+        updatedAt={document.updatedAt}
         wide={isDatabase}
       />
       {isDatabase ? (

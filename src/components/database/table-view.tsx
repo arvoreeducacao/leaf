@@ -2,7 +2,10 @@
 
 import { useTranslations } from 'next-intl'
 
-import { AddIcon, FormatTextIcon, PageIcon } from '@/components/icons'
+import Link from 'next/link'
+
+import { DocumentIcon } from '@/components/app/document-icon'
+import { AddIcon, ArrowExpandIcon, FormatTextIcon } from '@/components/icons'
 import type { DatabaseProperty } from '@/db/schema'
 import { type Person, optionsFor } from '@/lib/database/people'
 import { valueOf } from '@/lib/database/values'
@@ -48,9 +51,12 @@ export function TableView({
                   className={cn(cellFrame, 'w-70 border-t-0 border-l-0')}
                   scope="col"
                 >
-                  <div className="flex h-9 items-center gap-1.5 px-2 font-regular text-content">
-                    <FormatTextIcon aria-hidden="true" className="size-4" />
-                    {t('titleColumn')}
+                  <div className="flex h-9 w-70 min-w-0 items-center gap-1.5 px-2 font-regular text-content">
+                    <FormatTextIcon
+                      aria-hidden="true"
+                      className="size-4 shrink-0"
+                    />
+                    <span className="min-w-0 truncate">{t('titleColumn')}</span>
                   </div>
                 </th>
                 {properties.map((property) => (
@@ -59,7 +65,7 @@ export function TableView({
                     key={property.id}
                     scope="col"
                   >
-                    <div className="flex h-9 items-center px-2 font-regular text-content">
+                    <div className="group/head flex h-9 w-50 min-w-0 items-center px-2 font-regular text-content">
                       <PropertyHeader
                         canEdit={canEdit}
                         onChangeType={(type) =>
@@ -99,9 +105,9 @@ export function TableView({
                     scope="row"
                   >
                     <div className="flex h-9 items-center gap-1 px-2">
-                      <PageIcon
-                        aria-hidden="true"
-                        className="size-4 shrink-0 text-content-subtle"
+                      <DocumentIcon
+                        className="size-4 text-content-subtle"
+                        icon={row.icon}
                       />
                       <input
                         aria-label={t('rowTitleLabel')}
@@ -119,6 +125,13 @@ export function TableView({
                         }}
                         placeholder={t('untitledRow')}
                       />
+                      <Link
+                        className="hidden h-6 shrink-0 cursor-pointer items-center gap-1 rounded-large px-1.5 font-medium text-caption text-content uppercase transition-colors hover:bg-surface-hover hover:text-content-strong group-hover/row:inline-flex focus-visible:inline-flex focus-visible:outline-2 focus-visible:outline-focus"
+                        href={`/doc/${row.id}`}
+                      >
+                        <ArrowExpandIcon aria-hidden="true" className="size-3.5" />
+                        {t('openRowShort')}
+                      </Link>
                       <div className="shrink-0 opacity-0 transition-opacity group-hover/row:opacity-100 focus-within:opacity-100">
                         <RowMenu
                           canEdit={canEdit}
