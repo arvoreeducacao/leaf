@@ -37,34 +37,34 @@ import type { NotionPlan } from '@/lib/notion/plan'
 const rootId = '11111111-1111-1111-1111-111111111111'
 const childId = '22222222-2222-2222-2222-222222222222'
 const databaseId = '33333333-3333-3333-3333-333333333333'
-const imageUrl = 'https://prod-files.s3.amazonaws.com/foto.png?X-Amz-Expires=1'
+const imageUrl = 'https://prod-files.s3.amazonaws.com/photo.png?X-Amz-Expires=1'
 
 const messages: CrawlMessages = {
-  assetFailed: (name) => `falhou ${name}`,
-  assetTooLarge: (name, limit) => `grande ${name} ${limit}`,
-  commentsUnavailable: 'sem permissão de comentários',
-  crawlTruncated: (max) => `parou em ${max}`,
-  pageFailed: (title) => `pagina ${title}`,
-  untitled: 'Sem título',
+  assetFailed: (name) => `failed ${name}`,
+  assetTooLarge: (name, limit) => `too large ${name} ${limit}`,
+  commentsUnavailable: 'no permission to read comments',
+  crawlTruncated: (max) => `stopped at ${max}`,
+  pageFailed: (title) => `page ${title}`,
+  untitled: 'Untitled',
 }
 
 const importMessages = {
   ...messages,
   assetTooLarge: (name: string, limit: string) => `${name} ${limit}`,
-  commentsFailed: 'comentários falharam',
-  commentsImported: (count: number) => `${count} comentários`,
-  csvColumn: 'Coluna',
-  csvDatabases: (count: number) => `${count} bases`,
+  commentsFailed: 'comments failed',
+  commentsImported: (count: number) => `${count} comments`,
+  csvColumn: 'Column',
+  csvDatabases: (count: number) => `${count} databases`,
   unresolvedPeople: (count: number, names: string) =>
-    `${count} sem responsável: ${names}`,
-  csvView: 'Tabela',
+    `${count} without an owner: ${names}`,
+  csvView: 'Table',
   missingLinks: (count: number) => `${count} links`,
-  noPages: 'sem páginas',
+  noPages: 'no pages',
   togglesDegraded: (count: number) => `${count} toggles`,
-  tooManyEntries: (max: number) => `${max} itens`,
-  unreadableZip: 'zip ruim',
-  unsafePaths: 'caminho ruim',
-  unzippedTooLarge: (limit: string) => `passa de ${limit}`,
+  tooManyEntries: (max: number) => `${max} items`,
+  unreadableZip: 'bad zip',
+  unsafePaths: 'bad path',
+  unzippedTooLarge: (limit: string) => `over ${limit}`,
 }
 
 const notionAuthors: Record<string, { id: string; name?: string; person?: { email?: string } }> = {
@@ -73,7 +73,7 @@ const notionAuthors: Record<string, { id: string; name?: string; person?: { emai
     name: 'Ana Souza',
     person: { email: 'ana@arvore.com.br' },
   },
-  'user-fora': { id: 'user-fora', name: 'Alguém de Fora' },
+  'user-outside': { id: 'user-outside', name: 'Someone from Outside' },
 }
 
 const notionComments = [
@@ -82,21 +82,21 @@ const notionComments = [
     created_time: '2026-08-30T12:00:00.000Z',
     discussion_id: 'disc-1',
     id: 'c-1',
-    rich_text: [{ plain_text: 'Isso aqui está desatualizado' }],
+    rich_text: [{ plain_text: 'This one here is out of date' }],
   },
   {
-    created_by: { id: 'user-fora' },
+    created_by: { id: 'user-outside' },
     created_time: '2026-08-30T12:05:00.000Z',
     discussion_id: 'disc-1',
     id: 'c-2',
-    rich_text: [{ plain_text: 'Concordo, vou revisar' }],
+    rich_text: [{ plain_text: 'Agreed, I will review it' }],
   },
   {
     created_by: { id: 'user-ana' },
     created_time: '2026-08-30T13:00:00.000Z',
     discussion_id: 'disc-2',
     id: 'c-3',
-    rich_text: [{ plain_text: 'Outra thread' }],
+    rich_text: [{ plain_text: 'Another thread' }],
   },
 ]
 
@@ -109,34 +109,34 @@ function richText(text: string, extra: Record<string, unknown> = {}) {
 }
 
 const pages: Record<string, NotionPageObject> = {
-  [childId]: { id: childId, properties: titleProperty('Turma A') },
-  [rootId]: { id: rootId, properties: titleProperty('Plano de leitura') },
+  [childId]: { id: childId, properties: titleProperty('Class A') },
+  [rootId]: { id: rootId, properties: titleProperty('Reading plan') },
 }
 
 const blocksById: Record<string, Array<NotionBlock>> = {
   [childId]: [
     {
       id: 'b-child-text',
-      paragraph: { rich_text: richText('Conteúdo da turma') },
+      paragraph: { rich_text: richText('Class content') },
       type: 'paragraph',
     },
   ],
   [rootId]: [
     {
-      heading_1: { rich_text: richText('Objetivos') },
+      heading_1: { rich_text: richText('Goals') },
       id: 'b-heading',
       type: 'heading_1',
     },
     {
-      bulleted_list_item: { rich_text: richText('Ler todo dia') },
+      bulleted_list_item: { rich_text: richText('Read every day') },
       id: 'b-item',
       type: 'bulleted_list_item',
     },
     {
       id: 'b-link',
       paragraph: {
-        rich_text: richText('ver a turma', {
-          href: `https://www.notion.so/Turma-${childId.replace(/-/g, '')}`,
+        rich_text: richText('see the class', {
+          href: `https://www.notion.so/Class-${childId.replace(/-/g, '')}`,
         }),
       },
       type: 'paragraph',
@@ -147,9 +147,9 @@ const blocksById: Record<string, Array<NotionBlock>> = {
       type: 'image',
     },
     { id: 'b-table', table: {}, type: 'table', has_children: true },
-    { child_page: { title: 'Turma A' }, id: childId, type: 'child_page' },
+    { child_page: { title: 'Class A' }, id: childId, type: 'child_page' },
     {
-      child_database: { title: 'Alunos' },
+      child_database: { title: 'Students' },
       id: databaseId,
       type: 'child_database',
     },
@@ -157,7 +157,7 @@ const blocksById: Record<string, Array<NotionBlock>> = {
   'b-table': [
     {
       id: 'b-row-1',
-      table_row: { cells: [richText('Aluno'), richText('Nota')] },
+      table_row: { cells: [richText('Student'), richText('Grade')] },
       type: 'table_row',
     },
     {
@@ -171,18 +171,18 @@ const blocksById: Record<string, Array<NotionBlock>> = {
 const database: NotionDatabaseObject = {
   id: databaseId,
   properties: {
-    Nome: { name: 'Nome', type: 'title' },
-    Turma: { name: 'Turma', type: 'rich_text' },
+    Name: { name: 'Name', type: 'title' },
+    Class: { name: 'Class', type: 'rich_text' },
   },
-  title: [{ plain_text: 'Alunos' }],
+  title: [{ plain_text: 'Students' }],
 }
 
 const rows: Array<NotionPageObject> = [
   {
     id: 'row-1',
     properties: {
-      Nome: { type: 'title', title: [{ plain_text: 'Ana Souza' }] },
-      Turma: { type: 'rich_text', rich_text: [{ plain_text: '5º ano' }] },
+      Name: { type: 'title', title: [{ plain_text: 'Ana Souza' }] },
+      Class: { type: 'rich_text', rich_text: [{ plain_text: '5th grade' }] },
     },
   },
 ]
@@ -210,7 +210,7 @@ function fakeClient(
       const author = notionAuthors[id]
 
       if (!author) {
-        throw new Error('sem usuário')
+        throw new Error('no user')
       }
 
       return author
@@ -230,7 +230,7 @@ function fakeClient(
       const page = pages[id]
 
       if (!page) {
-        throw new Error(`sem página ${id}`)
+        throw new Error(`no page ${id}`)
       }
 
       return page
@@ -253,7 +253,7 @@ async function crawl(): Promise<NotionPlan> {
   }
 
   if (!plan) {
-    throw new Error('sem plano')
+    throw new Error('no plan')
   }
 
   return plan
@@ -272,7 +272,7 @@ async function crawlWithComments(options: { commentsFail?: boolean } = {}) {
     }
   }
 
-  throw new Error('sem plano')
+  throw new Error('no plan')
 }
 
 beforeEach(async () => {
@@ -286,8 +286,8 @@ beforeEach(async () => {
   await db.insert(user).values([
     {
       id: 'user-owner',
-      name: 'Dono',
-      email: 'dono@arvore.com.br',
+      name: 'Owner',
+      email: 'owner@arvore.com.br',
       emailVerified: false,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -303,25 +303,25 @@ beforeEach(async () => {
   ])
 })
 
-describe('varredura da página do Notion', () => {
-  it('desce da página para as subpáginas e para a database', async () => {
+describe('crawl of the Notion page', () => {
+  it('walks down from the page into the subpages and the database', async () => {
     const plan = await crawl()
 
     expect(plan.pages.map((page) => page.title)).toEqual([
-      'Plano de leitura',
-      'Turma A',
-      'Alunos',
+      'Reading plan',
+      'Class A',
+      'Students',
     ])
 
-    const child = plan.pages.find((page) => page.title === 'Turma A')
-    const base = plan.pages.find((page) => page.title === 'Alunos')
+    const child = plan.pages.find((page) => page.title === 'Class A')
+    const base = plan.pages.find((page) => page.title === 'Students')
 
     expect(child?.parentKey).toBe(`${rootId}.md`)
     expect(base?.parentKey).toBe(`${rootId}.md`)
     expect(base?.kind).toBe('csv')
   })
 
-  it('conta a página lida enquanto anda', async () => {
+  it('reports each page read while walking', async () => {
     const seen: Array<string> = []
 
     for await (const event of crawlNotionPage(fakeClient(), rootId, messages)) {
@@ -330,28 +330,28 @@ describe('varredura da página do Notion', () => {
       }
     }
 
-    expect(seen).toEqual(['Plano de leitura', 'Turma A', 'Alunos'])
+    expect(seen).toEqual(['Reading plan', 'Class A', 'Students'])
   })
 
-  it('escreve o markdown com título, lista e tabela', async () => {
+  it('writes the markdown with heading, list and table', async () => {
     const plan = await crawl()
     const markdown = plan.markdownByPath.get(`${rootId}.md`) ?? ''
 
-    expect(markdown).toContain('# Objetivos')
-    expect(markdown).toContain('- Ler todo dia')
-    expect(markdown).toContain('| Aluno | Nota |')
+    expect(markdown).toContain('# Goals')
+    expect(markdown).toContain('- Read every day')
+    expect(markdown).toContain('| Student | Grade |')
     expect(markdown).toContain('| --- | --- |')
     expect(markdown).toContain('| Ana | 9 |')
   })
 
-  it('aponta o link interno para o arquivo da subpágina', async () => {
+  it('points the internal link at the file of the subpage', async () => {
     const plan = await crawl()
     const markdown = plan.markdownByPath.get(`${rootId}.md`) ?? ''
 
-    expect(markdown).toContain(`[ver a turma](${childId}.md)`)
+    expect(markdown).toContain(`[see the class](${childId}.md)`)
   })
 
-  it('baixa a imagem e guarda o caminho local no markdown', async () => {
+  it('downloads the image and keeps the local path in the markdown', async () => {
     const plan = await crawl()
     const markdown = plan.markdownByPath.get(`${rootId}.md`) ?? ''
 
@@ -361,17 +361,17 @@ describe('varredura da página do Notion', () => {
     expect(markdown).toContain(`![](${plan.assets[0].path})`)
   })
 
-  it('vira csv com o título na primeira coluna', async () => {
+  it('becomes a csv with the title in the first column', async () => {
     const plan = await crawl()
     const csv = plan.csvByPath.get(`${databaseId}.csv`) ?? ''
 
-    expect(csv.split('\n')[0]).toBe('Nome,Turma')
-    expect(csv).toContain('Ana Souza,5º ano')
+    expect(csv.split('\n')[0]).toBe('Name,Class')
+    expect(csv).toContain('Ana Souza,5th grade')
   })
 })
 
-describe('importar o que a varredura montou', () => {
-  it('cria os documentos com hierarquia, conteúdo e destino', async () => {
+describe('importing what the crawl assembled', () => {
+  it('creates the documents with hierarchy, content and destination', async () => {
     const plan = await crawl()
 
     for await (const event of importNotionPlan(
@@ -383,13 +383,13 @@ describe('importar o que a varredura montou', () => {
     }
 
     const root = await db.query.documents.findFirst({
-      where: eq(documents.title, 'Plano de leitura'),
+      where: eq(documents.title, 'Reading plan'),
     })
     const child = await db.query.documents.findFirst({
-      where: eq(documents.title, 'Turma A'),
+      where: eq(documents.title, 'Class A'),
     })
     const base = await db.query.documents.findFirst({
-      where: eq(documents.title, 'Alunos'),
+      where: eq(documents.title, 'Students'),
     })
 
     expect(root?.parentId).toBeNull()
@@ -406,8 +406,8 @@ describe('importar o que a varredura montou', () => {
   })
 })
 
-describe('comentários abertos do Notion', () => {
-  it('não pede comentários quando a caixa fica desmarcada', async () => {
+describe('open Notion comments', () => {
+  it('does not ask for comments when the box is left unchecked', async () => {
     const event = await (async () => {
       for await (const item of crawlNotionPage(
         fakeClient({ comments: true }),
@@ -419,13 +419,13 @@ describe('comentários abertos do Notion', () => {
         }
       }
 
-      throw new Error('sem plano')
+      throw new Error('no plan')
     })()
 
     expect(event.comments.size).toBe(0)
   })
 
-  it('junta as threads abertas da página', async () => {
+  it('gathers the open threads of the page', async () => {
     const event = await crawlWithComments()
     const threads = event.comments.get(`${rootId}.md`) ?? []
 
@@ -433,17 +433,17 @@ describe('comentários abertos do Notion', () => {
     expect(threads[0].discussionId).toBe('disc-1')
     expect(threads[0].authorEmail).toBe('ana@arvore.com.br')
     expect(threads[1].authorEmail).toBeNull()
-    expect(threads[1].authorName).toBe('Alguém de Fora')
+    expect(threads[1].authorName).toBe('Someone from Outside')
   })
 
-  it('avisa quando a conexão não pode ler comentários', async () => {
+  it('warns when the connection cannot read comments', async () => {
     const event = await crawlWithComments({ commentsFail: true })
 
     expect(event.comments.size).toBe(0)
-    expect(event.warnings).toContain('sem permissão de comentários')
+    expect(event.warnings).toContain('no permission to read comments')
   })
 
-  it('cria a thread no documento, com resposta e autor casado por email', async () => {
+  it('creates the thread on the document, with a reply and the author matched by email', async () => {
     const event = await crawlWithComments()
 
     for await (const step of importNotionPlan(
@@ -457,7 +457,7 @@ describe('comentários abertos do Notion', () => {
     }
 
     const root = await db.query.documents.findFirst({
-      where: eq(documents.title, 'Plano de leitura'),
+      where: eq(documents.title, 'Reading plan'),
     })
 
     const rows = await db
@@ -477,13 +477,13 @@ describe('comentários abertos do Notion', () => {
     expect(rows.every((row) => row.blockId === null)).toBe(true)
     expect(rows.every((row) => row.resolvedAt === null)).toBe(true)
 
-    const first = rows.find((row) => row.body.includes('desatualizado'))
-    const reply = rows.find((row) => row.body.includes('vou revisar'))
+    const first = rows.find((row) => row.body.includes('out of date'))
+    const reply = rows.find((row) => row.body.includes('will review'))
 
     expect(first?.authorId).toBe('user-ana')
     expect(first?.parentId).toBeNull()
     expect(reply?.parentId).toBe(first?.id)
     expect(reply?.authorId).toBeNull()
-    expect(reply?.body).toBe('Alguém de Fora: Concordo, vou revisar')
+    expect(reply?.body).toBe('Someone from Outside: Agreed, I will review it')
   })
 })

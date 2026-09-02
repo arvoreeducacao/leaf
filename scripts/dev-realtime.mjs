@@ -35,7 +35,7 @@ const enabled =
     : flag === '1' || flag === 'true' || flag === 'on'
 
 if (!enabled) {
-  console.log('[realtime] LEAF_REALTIME desligado, servidor não vai subir')
+  console.log('[realtime] LEAF_REALTIME is off, the server will not start')
   process.exit(0)
 }
 
@@ -92,7 +92,7 @@ async function authorize(documentId, cookie) {
       userId: typeof payload.user?.id === 'string' ? payload.user.id : null,
     }
   } catch (error) {
-    log('falha ao autorizar', documentId, error.message)
+    log('failed to authorize', documentId, error.message)
 
     return null
   }
@@ -180,11 +180,11 @@ async function persistOnce(room) {
       return true
     }
 
-    log('falha ao salvar', room.documentId, response.status)
+    log('failed to save', room.documentId, response.status)
 
     return false
   } catch (error) {
-    log('falha ao salvar', room.documentId, error.message)
+    log('failed to save', room.documentId, error.message)
 
     return false
   }
@@ -263,13 +263,13 @@ function scheduleRoomShutdown(room) {
     }
 
     if (room.dirty) {
-      log('desistindo de salvar', room.documentId)
+      log('giving up on saving', room.documentId)
     }
 
     rooms.delete(room.documentId)
     room.awareness.destroy()
     room.doc.destroy()
-    log('sala encerrada', room.documentId)
+    log('room closed', room.documentId)
   }, idleRoomMs)
 }
 
@@ -335,7 +335,7 @@ async function createRoom(documentId) {
     broadcast(room, encodeAwareness(awareness, changed))
   })
 
-  log('sala aberta', documentId)
+  log('room opened', documentId)
 
   return { status: 'ok', room }
 }
@@ -440,7 +440,7 @@ function setupConnection(connection, room, access) {
     try {
       handleMessage(room, connection, entry, data)
     } catch (error) {
-      log('mensagem inválida', room.documentId, error.message)
+      log('invalid message', room.documentId, error.message)
     }
   })
 
@@ -487,10 +487,10 @@ const server = createServer((request, response) => {
 const wss = new WebSocketServer({ noServer: true })
 
 const closeReasons = {
-  [closeNotFound]: 'documento não encontrado',
-  [closeForbidden]: 'sem acesso',
-  [closeUnreadable]: 'conteúdo ilegível',
-  [closeUnavailable]: 'indisponível',
+  [closeNotFound]: 'document not found',
+  [closeForbidden]: 'no access',
+  [closeUnreadable]: 'unreadable content',
+  [closeUnavailable]: 'unavailable',
 }
 
 async function admit(request) {
@@ -513,7 +513,7 @@ async function admit(request) {
   try {
     result = await getRoom(documentId)
   } catch (error) {
-    log('falha ao abrir sala', documentId, error.message)
+    log('failed to open room', documentId, error.message)
 
     return { closeCode: closeUnavailable }
   }
@@ -556,7 +556,7 @@ server.on('upgrade', async (request, socket, head) => {
 })
 
 server.listen(port, process.env.LEAF_REALTIME_HOST, () => {
-  log(`servidor de colaboração na porta ${port} (app ${appUrl})`)
+  log(`collaboration server on port ${port} (app ${appUrl})`)
 })
 
 async function shutdown() {

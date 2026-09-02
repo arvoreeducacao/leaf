@@ -29,10 +29,10 @@ import {
   searchAccessibleDocuments,
 } from '@/lib/search-index'
 
-const owner = { id: 'user-owner', email: 'dono@arvore.com.br' }
-const guest = { id: 'user-guest', email: 'convidado@arvore.com.br' }
-const member = { id: 'user-member', email: 'membro@arvore.com.br' }
-const stranger = { id: 'user-stranger', email: 'fora@arvore.com.br' }
+const owner = { id: 'user-owner', email: 'owner@arvore.com.br' }
+const guest = { id: 'user-guest', email: 'guest@arvore.com.br' }
+const member = { id: 'user-member', email: 'member@arvore.com.br' }
+const stranger = { id: 'user-stranger', email: 'outside@arvore.com.br' }
 
 const org = 'org-arvore'
 
@@ -62,7 +62,7 @@ async function seed() {
 
   await db
     .insert(organizations)
-    .values({ id: org, name: 'Escola Árvore', createdAt: now })
+    .values({ id: org, name: 'Árvore School', createdAt: now })
 
   await db.insert(organizationMembers).values([
     { id: 'm-owner', orgId: org, userId: owner.id, role: 'owner', createdAt: now },
@@ -80,9 +80,9 @@ async function seed() {
       id: 'doc-private',
       ownerId: owner.id,
       orgId: org,
-      title: 'Plano de leitura',
+      title: 'Reading plan',
       content: paragraph(
-        'O relatório da educação básica trata de avaliação e de leitura crítica.',
+        'The résumé of basic education covers assessment and critical reading.',
       ),
       createdAt: now,
       updatedAt: now,
@@ -91,8 +91,8 @@ async function seed() {
       id: 'doc-shared',
       ownerId: owner.id,
       orgId: org,
-      title: 'Ata da reunião',
-      content: paragraph('Combinamos o cronograma do trimestre.'),
+      title: 'Meeting minutes',
+      content: paragraph('We agreed on the schedule of the term.'),
       createdAt: now,
       updatedAt: now,
     },
@@ -101,16 +101,16 @@ async function seed() {
       ownerId: owner.id,
       orgId: org,
       orgAccess: 'viewer',
-      title: 'Manual da equipe',
-      content: paragraph('Rotinas de onboarding e cultura.'),
+      title: 'Team manual',
+      content: paragraph('Onboarding routines and culture.'),
       createdAt: now,
       updatedAt: now,
     },
     {
       id: 'doc-trashed',
       ownerId: owner.id,
-      title: 'Rascunho antigo',
-      content: paragraph('Texto sobre leitura que foi descartado.'),
+      title: 'Old draft',
+      content: paragraph('Text about reading that was discarded.'),
       createdAt: now,
       updatedAt: now,
       deletedAt: now,
@@ -133,7 +133,7 @@ beforeEach(async () => {
 
 describe('buildMatchExpression', () => {
   it('turns each word into a required prefix term', () => {
-    expect(buildMatchExpression('plano leitura')).toBe('+plano* +leitura*')
+    expect(buildMatchExpression('reading plan')).toBe('+reading* +plan*')
   })
 
   it('drops punctuation and boolean operators', () => {
@@ -150,97 +150,97 @@ describe('buildMatchExpression', () => {
 
 describe('parseSnippet', () => {
   it('splits highlighted and plain segments', () => {
-    const value = `antes ${HIGHLIGHT_START}termo${HIGHLIGHT_END} depois`
+    const value = `before ${HIGHLIGHT_START}term${HIGHLIGHT_END} after`
 
     expect(parseSnippet(value)).toEqual([
-      { text: 'antes ', highlight: false },
-      { text: 'termo', highlight: true },
-      { text: ' depois', highlight: false },
+      { text: 'before ', highlight: false },
+      { text: 'term', highlight: true },
+      { text: ' after', highlight: false },
     ])
   })
 
   it('keeps plain text without markers', () => {
-    expect(parseSnippet('só texto')).toEqual([
-      { text: 'só texto', highlight: false },
+    expect(parseSnippet('plain text')).toEqual([
+      { text: 'plain text', highlight: false },
     ])
   })
 })
 
 describe('documentBodyText', () => {
   it('extracts the plain text of the blocks', () => {
-    expect(documentBodyText(paragraph('Olá  mundo'))).toBe('Olá mundo')
+    expect(documentBodyText(paragraph('Hello  world'))).toBe('Hello world')
   })
 
   it('survives content that is not valid json', () => {
-    expect(documentBodyText('{isto nao e json')).toBe('')
+    expect(documentBodyText('{this is not json')).toBe('')
     expect(documentBodyText(null)).toBe('')
   })
 })
 
 describe('buildSnippet', () => {
   it('highlights the whole matched word ignoring accents', () => {
-    const snippet = buildSnippet('trata de avaliação e de leitura', ['avali'])
+    const snippet = buildSnippet('covers the résumé and the reading', ['resum'])
 
     expect(parseSnippet(snippet)).toEqual([
-      { text: 'trata de ', highlight: false },
-      { text: 'avaliação', highlight: true },
-      { text: ' e de leitura', highlight: false },
+      { text: 'covers the ', highlight: false },
+      { text: 'résumé', highlight: true },
+      { text: ' and the reading', highlight: false },
     ])
   })
 
   it('trims long bodies around the match', () => {
-    const body = `${'palavra '.repeat(20)}alvo ${'depois '.repeat(20)}`.trim()
-    const snippet = buildSnippet(body, ['alvo'])
+    const body = `${'word '.repeat(20)}target ${'after '.repeat(20)}`.trim()
+    const snippet = buildSnippet(body, ['target'])
 
     expect(snippet.startsWith('…')).toBe(true)
     expect(snippet.endsWith('…')).toBe(true)
-    expect(snippet).toContain(`${HIGHLIGHT_START}alvo${HIGHLIGHT_END}`)
+    expect(snippet).toContain(`${HIGHLIGHT_START}target${HIGHLIGHT_END}`)
   })
 
   it('returns an empty snippet for an empty body', () => {
-    expect(buildSnippet('', ['alvo'])).toBe('')
+    expect(buildSnippet('', ['target'])).toBe('')
   })
 })
 
 describe('searchAccessibleDocuments', () => {
   it('finds a document by a word in the title', async () => {
-    const hits = await searchAccessibleDocuments(viewerOf(owner), 'plano')
+    const hits = await searchAccessibleDocuments(viewerOf(owner), 'plan')
 
     expect(hits.map((hit) => hit.id)).toEqual(['doc-private'])
   })
 
   it('finds a document by a word in the body and ignores accents', async () => {
-    const hits = await searchAccessibleDocuments(viewerOf(owner), 'relatorio')
+    const hits = await searchAccessibleDocuments(viewerOf(owner), 'resume')
 
     expect(hits.map((hit) => hit.id)).toEqual(['doc-private'])
   })
 
   it('marks the matched term inside the excerpt', async () => {
-    const [hit] = await searchAccessibleDocuments(viewerOf(owner), 'educacao')
+    const [hit] = await searchAccessibleDocuments(viewerOf(owner), 'resume')
 
     expect(hit.segments.some((segment) => segment.highlight)).toBe(true)
     expect(
       hit.segments
         .filter((segment) => segment.highlight)
         .map((segment) => segment.text),
-    ).toEqual(['educação'])
+    ).toEqual(['résumé'])
   })
 
   it('never returns a private document of someone else', async () => {
     expect(
-      await searchAccessibleDocuments(viewerOf(stranger), 'plano'),
+      await searchAccessibleDocuments(viewerOf(stranger), 'plan'),
     ).toEqual([])
     expect(
-      await searchAccessibleDocuments(viewerOf(stranger), 'leitura'),
+      await searchAccessibleDocuments(viewerOf(stranger), 'reading'),
     ).toEqual([])
-    expect(await searchAccessibleDocuments(viewerOf(guest), 'plano')).toEqual([])
-    expect(await searchAccessibleDocuments(viewerOf(member), 'plano')).toEqual(
+    expect(await searchAccessibleDocuments(viewerOf(guest), 'plan')).toEqual([])
+    expect(await searchAccessibleDocuments(viewerOf(member), 'plan')).toEqual(
       [],
     )
   })
 
   it('returns a document shared directly with the person', async () => {
-    const hits = await searchAccessibleDocuments(viewerOf(guest), 'cronograma')
+    const hits = await searchAccessibleDocuments(viewerOf(guest), 'schedule')
 
     expect(hits.map((hit) => hit.id)).toEqual(['doc-shared'])
   })
@@ -258,22 +258,22 @@ describe('searchAccessibleDocuments', () => {
   })
 
   it('skips documents in the trash', async () => {
-    const hits = await searchAccessibleDocuments(viewerOf(owner), 'leitura')
+    const hits = await searchAccessibleDocuments(viewerOf(owner), 'reading')
 
     expect(hits.map((hit) => hit.id)).toEqual(['doc-private'])
   })
 
   it('requires every word of the query to match', async () => {
     expect(
-      await searchAccessibleDocuments(viewerOf(owner), 'plano leitura'),
+      await searchAccessibleDocuments(viewerOf(owner), 'reading plan'),
     ).toHaveLength(1)
     expect(
-      await searchAccessibleDocuments(viewerOf(owner), 'plano cronograma'),
+      await searchAccessibleDocuments(viewerOf(owner), 'plan schedule'),
     ).toEqual([])
   })
 
   it('matches by prefix', async () => {
-    const hits = await searchAccessibleDocuments(viewerOf(owner), 'avali')
+    const hits = await searchAccessibleDocuments(viewerOf(owner), 'assess')
 
     expect(hits.map((hit) => hit.id)).toEqual(['doc-private'])
   })
@@ -285,12 +285,12 @@ describe('searchAccessibleDocuments', () => {
 
 describe('index maintenance', () => {
   it('reindexes a document after the content changes', async () => {
-    await searchAccessibleDocuments(viewerOf(owner), 'plano')
+    await searchAccessibleDocuments(viewerOf(owner), 'plan')
 
     await db
       .update(documents)
       .set({
-        content: paragraph('Agora fala de astronomia.'),
+        content: paragraph('Now it talks about astronomy.'),
         updatedAt: new Date(Date.now() + 60_000),
       })
       .where(sql`id = 'doc-private'`)
@@ -299,12 +299,12 @@ describe('index maintenance', () => {
 
     const found = await searchAccessibleDocuments(
       viewerOf(owner),
-      'astronomia',
+      'astronomy',
     )
 
     expect(found.map((hit) => hit.id)).toEqual(['doc-private'])
     expect(
-      await searchAccessibleDocuments(viewerOf(owner), 'relatorio'),
+      await searchAccessibleDocuments(viewerOf(owner), 'resume'),
     ).toEqual([])
   })
 
@@ -318,7 +318,7 @@ describe('index maintenance', () => {
     await indexDocument('doc-private')
     await db.delete(documents).where(sql`id = 'doc-private'`)
 
-    expect(await searchAccessibleDocuments(viewerOf(owner), 'plano')).toEqual([])
+    expect(await searchAccessibleDocuments(viewerOf(owner), 'plan')).toEqual([])
   })
 
   it('removes a single document from the index', async () => {

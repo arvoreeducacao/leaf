@@ -38,67 +38,67 @@ function summary(id: string, title: string): DocumentSummary {
 }
 
 describe('normalizeSearchTerm', () => {
-  it('remove acentos e caixa', () => {
+  it('strips accents and case', () => {
     expect(normalizeSearchTerm('  Ação Educação ')).toBe('acao educacao')
   })
 })
 
 describe('searchDocumentTree', () => {
   const tree = [
-    node('a', 'Planejamento', [
-      node('b', 'Aulas de leitura', [node('c', 'Semana 1')]),
+    node('a', 'Planning', [
+      node('b', 'Reading classes', [node('c', 'Class week')]),
     ]),
     node('d', 'Relatório de férias'),
   ]
 
-  it('devolve nada quando o termo é vazio', () => {
+  it('returns nothing when the term is empty', () => {
     expect(searchDocumentTree(tree, '   ')).toEqual([])
   })
 
-  it('acha em qualquer nível e devolve o caminho dos ancestrais', () => {
-    const found = searchDocumentTree(tree, 'semana')
+  it('finds at any level and returns the ancestor path', () => {
+    const found = searchDocumentTree(tree, 'week')
 
     expect(found).toEqual([
       {
         id: 'c',
-        title: 'Semana 1',
-        path: 'Planejamento / Aulas de leitura',
+        title: 'Class week',
+        path: 'Planning / Reading classes',
         shared: false,
       },
     ])
   })
 
-  it('ignora acento e caixa', () => {
+  it('ignores accent and case', () => {
     const found = searchDocumentTree(tree, 'RELATORIO')
 
     expect(found.map((item) => item.id)).toEqual(['d'])
   })
 
-  it('ordena os resultados pelo título', () => {
+  it('sorts the results by title', () => {
     const found = searchDocumentTree(tree, 'a')
 
     expect(found.map((item) => item.title)).toEqual([
-      'Aulas de leitura',
-      'Planejamento',
+      'Class week',
+      'Planning',
+      'Reading classes',
       'Relatório de férias',
-      'Semana 1',
     ])
   })
 })
 
 describe('searchDocumentList', () => {
-  it('marca os resultados como compartilhados', () => {
+  it('marks the results as shared', () => {
     const found = searchDocumentList(
-      [summary('x', 'Plano da escola'), summary('y', 'Outra coisa')],
-      'plano',
+      [summary('x', 'School plan'), summary('y', 'Something else')],
+      'plan',
     )
 
     expect(found).toEqual([
-      { id: 'x', title: 'Plano da escola', path: '', shared: true },
+      { id: 'x', title: 'School plan', path: '', shared: true },
     ])
   })
 
-  it('devolve nada quando o termo é vazio', () => {
-    expect(searchDocumentList([summary('x', 'Plano')], '')).toEqual([])
+  it('returns nothing when the term is empty', () => {
+    expect(searchDocumentList([summary('x', 'Plan')], '')).toEqual([])
   })
 })

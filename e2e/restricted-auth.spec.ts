@@ -10,15 +10,15 @@ function allowedEmail(prefix: string) {
   return `${prefix}-${Date.now()}-${process.pid}-${counter}@arvore.com.br`
 }
 
-test.describe('restrição de domínio', () => {
-  test('só a conta da Árvore entra e só ela pode ser convidada', async ({
+test.describe('domain restriction', () => {
+  test('only the Árvore account signs in and only it can be invited', async ({
     page,
   }) => {
     await page.goto('/signup')
 
     await expect(page.getByText('Use seu email @arvore.com.br')).toBeVisible()
 
-    await page.getByLabel('Email').fill('pessoa@gmail.com')
+    await page.getByLabel('Email').fill('person@gmail.com')
     await page.getByLabel('Senha').fill(password)
     await page.getByRole('button', { name: 'Criar conta' }).click()
 
@@ -27,7 +27,7 @@ test.describe('restrição de domínio', () => {
     ).toBeVisible()
     await expect(page).toHaveURL(/\/signup$/)
 
-    const email = allowedEmail('dona')
+    const email = allowedEmail('owner')
 
     await page.getByLabel('Email').fill(email)
     await page.getByLabel('Senha').fill(password)
@@ -35,18 +35,18 @@ test.describe('restrição de domínio', () => {
     await page.waitForURL((url) => !/\/(signup|login)$/.test(url.pathname))
 
     await page.goto('/org')
-    await page.getByLabel('Nome da organização').fill('Escola Restrita')
+    await page.getByLabel('Nome da organização').fill('Restricted School')
     await page.getByRole('button', { name: 'Criar organização' }).click()
     await expect(page.getByRole('heading', { name: 'Membros' })).toBeVisible()
 
-    await page.getByLabel('Email', { exact: true }).fill('externa@gmail.com')
+    await page.getByLabel('Email', { exact: true }).fill('external@gmail.com')
     await page.getByRole('button', { name: 'Convidar', exact: true }).click()
 
     await expect(
       page.getByText('Somente contas @arvore.com.br.').first(),
     ).toBeVisible()
 
-    const invited = allowedEmail('convidada')
+    const invited = allowedEmail('guest')
 
     await page.getByLabel('Email', { exact: true }).fill(invited)
     await page.getByRole('button', { name: 'Convidar', exact: true }).click()

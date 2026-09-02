@@ -9,22 +9,22 @@ import {
   waitForSaved,
 } from './helpers'
 
-test.describe('compartilhamento', () => {
-  test('convidado vê como leitor e depois consegue editar', async ({
+test.describe('sharing', () => {
+  test('the guest sees it as a viewer and then can edit', async ({
     browser,
   }) => {
     const owner = await browser.newContext()
     const guest = await browser.newContext()
     const ownerPage = await owner.newPage()
     const guestPage = await guest.newPage()
-    const guestEmail = uniqueEmail('convidado')
+    const guestEmail = uniqueEmail('guest')
 
-    await signUp(guestPage, guestEmail, 'Convidado')
+    await signUp(guestPage, guestEmail, 'Guest')
 
-    await signUp(ownerPage, uniqueEmail('dono'), 'Dono')
-    const id = await createDocument(ownerPage, 'Documento compartilhado')
+    await signUp(ownerPage, uniqueEmail('owner'), 'Owner')
+    const id = await createDocument(ownerPage, 'Shared document')
 
-    await typeInEditor(ownerPage, 'texto do dono')
+    await typeInEditor(ownerPage, 'owner text')
     await waitForSaved(ownerPage)
 
     await ownerPage.getByRole('button', { name: 'Compartilhar' }).click()
@@ -50,7 +50,7 @@ test.describe('compartilhamento', () => {
     await guest.close()
   })
 
-  test('link público abre sem sessão e para de funcionar quando desativado', async ({
+  test('the public link opens without a session and stops working once disabled', async ({
     browser,
   }) => {
     const owner = await browser.newContext()
@@ -58,9 +58,9 @@ test.describe('compartilhamento', () => {
     const ownerPage = await owner.newPage()
     const anonPage = await anon.newPage()
 
-    await signUp(ownerPage, uniqueEmail('publico'), 'Dono')
-    await createDocument(ownerPage, 'Documento público')
-    await typeInEditor(ownerPage, 'conteúdo visível para todos')
+    await signUp(ownerPage, uniqueEmail('public'), 'Owner')
+    await createDocument(ownerPage, 'Public document')
+    await typeInEditor(ownerPage, 'content visible to everyone')
     await waitForSaved(ownerPage)
 
     await ownerPage.getByRole('button', { name: 'Compartilhar' }).click()
@@ -72,7 +72,7 @@ test.describe('compartilhamento', () => {
     const shareUrl = await linkField.inputValue()
 
     await anonPage.goto(shareUrl)
-    await expect(anonPage.getByText('conteúdo visível para todos')).toBeVisible()
+    await expect(anonPage.getByText('content visible to everyone')).toBeVisible()
     await expect(anonPage.getByText('Digite / para comandos')).toHaveCount(0)
 
     await ownerPage.getByRole('switch', { name: 'Link público' }).click()

@@ -41,13 +41,13 @@ import {
   otherOwnersInOrganization,
 } from '@/lib/organizations'
 
-const owner = { id: 'user-owner', email: 'dono@arvore.com.br' }
+const owner = { id: 'user-owner', email: 'owner@arvore.com.br' }
 const editor = { id: 'user-editor', email: 'editor@arvore.com.br' }
-const viewer = { id: 'user-viewer', email: 'leitor@arvore.com.br' }
-const stranger = { id: 'user-stranger', email: 'fora@arvore.com.br' }
+const viewer = { id: 'user-viewer', email: 'reader@arvore.com.br' }
+const stranger = { id: 'user-stranger', email: 'outside@arvore.com.br' }
 const orgAdmin = { id: 'user-org-admin', email: 'admin@arvore.com.br' }
-const orgMember = { id: 'user-org-member', email: 'membro@arvore.com.br' }
-const outsider = { id: 'user-outsider', email: 'externo@outraescola.com.br' }
+const orgMember = { id: 'user-org-member', email: 'member@arvore.com.br' }
+const outsider = { id: 'user-outsider', email: 'external@otherschool.com.br' }
 
 const liveToken = 'kQ4nPz7bLxRfT2aWmC9uVhJ8'
 const trashedToken = 'Zt6yBn3kQwEr8sDf1gHj5LpM'
@@ -57,7 +57,7 @@ function sessionFor(person: { id: string; email: string }) {
 }
 
 const mainOrg = 'org-arvore'
-const otherOrg = 'org-outra-escola'
+const otherOrg = 'org-other-school'
 
 beforeEach(async () => {
   await resetDatabase()
@@ -87,8 +87,8 @@ beforeEach(async () => {
   )
 
   await db.insert(organizations).values([
-    { id: mainOrg, name: 'Escola Árvore', createdAt: now },
-    { id: otherOrg, name: 'Outra Escola', createdAt: now },
+    { id: mainOrg, name: 'Árvore School', createdAt: now },
+    { id: otherOrg, name: 'Other School', createdAt: now },
   ])
 
   await db.insert(organizationMembers).values([
@@ -126,7 +126,7 @@ beforeEach(async () => {
     {
       id: 'doc-live',
       ownerId: owner.id,
-      title: 'Documento vivo',
+      title: 'Live document',
       content: null,
       publicToken: liveToken,
       createdAt: now,
@@ -136,7 +136,7 @@ beforeEach(async () => {
     {
       id: 'doc-private',
       ownerId: owner.id,
-      title: 'Documento privado',
+      title: 'Private document',
       content: null,
       publicToken: null,
       createdAt: now,
@@ -146,7 +146,7 @@ beforeEach(async () => {
     {
       id: 'doc-trashed',
       ownerId: owner.id,
-      title: 'Documento na lixeira',
+      title: 'Trashed document',
       content: null,
       publicToken: trashedToken,
       createdAt: now,
@@ -158,7 +158,7 @@ beforeEach(async () => {
       ownerId: orgMember.id,
       orgId: mainOrg,
       orgAccess: null,
-      title: 'Rascunho do membro',
+      title: 'Member draft',
       createdAt: now,
       updatedAt: now,
     },
@@ -167,7 +167,7 @@ beforeEach(async () => {
       ownerId: orgMember.id,
       orgId: mainOrg,
       orgAccess: 'viewer',
-      title: 'Plano de aula',
+      title: 'Lesson plan',
       createdAt: now,
       updatedAt: now,
     },
@@ -176,7 +176,7 @@ beforeEach(async () => {
       ownerId: orgMember.id,
       orgId: mainOrg,
       orgAccess: 'editor',
-      title: 'Ata da reunião',
+      title: 'Meeting minutes',
       createdAt: now,
       updatedAt: now,
     },
@@ -185,7 +185,7 @@ beforeEach(async () => {
       ownerId: orgMember.id,
       orgId: mainOrg,
       orgAccess: 'editor',
-      title: 'Ata antiga',
+      title: 'Old minutes',
       createdAt: now,
       updatedAt: now,
       deletedAt: now,
@@ -195,7 +195,7 @@ beforeEach(async () => {
       ownerId: outsider.id,
       orgId: otherOrg,
       orgAccess: 'editor',
-      title: 'Documento da outra escola',
+      title: 'Document of the other school',
       createdAt: now,
       updatedAt: now,
     },
@@ -204,14 +204,14 @@ beforeEach(async () => {
       ownerId: orgMember.id,
       orgId: mainOrg,
       orgAccess: 'commenter',
-      title: 'Proposta em revisão',
+      title: 'Proposal under review',
       createdAt: now,
       updatedAt: now,
     },
     {
       id: 'doc-commenter',
       ownerId: owner.id,
-      title: 'Documento com revisor',
+      title: 'Document with a reviewer',
       createdAt: now,
       updatedAt: now,
     },
@@ -264,25 +264,25 @@ beforeEach(async () => {
 })
 
 describe('getDocumentAccess', () => {
-  it('reconhece o dono', async () => {
+  it('recognizes the owner', async () => {
     await expect(getDocumentAccess('doc-live', sessionFor(owner))).resolves.toBe(
       'owner',
     )
   })
 
-  it('reconhece convidado editor', async () => {
+  it('recognizes an invited editor', async () => {
     await expect(
       getDocumentAccess('doc-live', sessionFor(editor)),
     ).resolves.toBe('editor')
   })
 
-  it('reconhece convidado leitor', async () => {
+  it('recognizes an invited viewer', async () => {
     await expect(
       getDocumentAccess('doc-live', sessionFor(viewer)),
     ).resolves.toBe('viewer')
   })
 
-  it('resolve o convite ignorando caixa do email', async () => {
+  it('resolves the invite ignoring the email case', async () => {
     await expect(
       getDocumentAccess('doc-live', {
         user: { id: editor.id, email: editor.email.toUpperCase() },
@@ -290,7 +290,7 @@ describe('getDocumentAccess', () => {
     ).resolves.toBe('editor')
   })
 
-  it('reconhece convidado com papel de comentar', async () => {
+  it('recognizes an invited person with the commenter role', async () => {
     await expect(
       getDocumentAccess('doc-commenter', sessionFor(viewer)),
     ).resolves.toBe('commenter')
@@ -299,29 +299,29 @@ describe('getDocumentAccess', () => {
     ).resolves.toBeNull()
   })
 
-  it('nega quem não foi convidado', async () => {
+  it('denies whoever was not invited', async () => {
     await expect(
       getDocumentAccess('doc-live', sessionFor(stranger)),
     ).resolves.toBeNull()
   })
 
-  it('nega visitante sem sessão', async () => {
+  it('denies a visitor without a session', async () => {
     await expect(getDocumentAccess('doc-live', null)).resolves.toBeNull()
   })
 
-  it('nega documento na lixeira mesmo para o dono', async () => {
+  it('denies a trashed document even to the owner', async () => {
     await expect(
       getDocumentAccess('doc-trashed', sessionFor(owner)),
     ).resolves.toBeNull()
   })
 
-  it('nega documento inexistente', async () => {
+  it('denies a document that does not exist', async () => {
     await expect(
-      getDocumentAccess('doc-ausente', sessionFor(owner)),
+      getDocumentAccess('doc-missing', sessionFor(owner)),
     ).resolves.toBeNull()
   })
 
-  it('não vaza acesso de um documento para outro', async () => {
+  it('does not leak access from one document to another', async () => {
     await expect(
       getDocumentAccess('doc-private', sessionFor(editor)),
     ).resolves.toBeNull()
@@ -329,21 +329,21 @@ describe('getDocumentAccess', () => {
 })
 
 describe('getTrashedDocumentAccess', () => {
-  it('libera o dono', async () => {
+  it('allows the owner', async () => {
     await expect(
       getTrashedDocumentAccess('doc-trashed', sessionFor(owner)),
     ).resolves.toBe('owner')
   })
 
-  it('nega convidado', async () => {
+  it('denies an invited person', async () => {
     await expect(
       getTrashedDocumentAccess('doc-trashed', sessionFor(editor)),
     ).resolves.toBeNull()
   })
 })
 
-describe('hierarquia de papéis', () => {
-  it('canEdit vale para dono e editor', () => {
+describe('role hierarchy', () => {
+  it('canEdit holds for owner and editor', () => {
     expect(canEdit('owner')).toBe(true)
     expect(canEdit('editor')).toBe(true)
     expect(canEdit('commenter')).toBe(false)
@@ -351,7 +351,7 @@ describe('hierarquia de papéis', () => {
     expect(canEdit(null)).toBe(false)
   })
 
-  it('canComment vale de commenter para cima', () => {
+  it('canComment holds from commenter upwards', () => {
     expect(canComment('owner')).toBe(true)
     expect(canComment('editor')).toBe(true)
     expect(canComment('commenter')).toBe(true)
@@ -359,7 +359,7 @@ describe('hierarquia de papéis', () => {
     expect(canComment(null)).toBe(false)
   })
 
-  it('a precedência é viewer < commenter < editor < owner', () => {
+  it('the precedence is viewer < commenter < editor < owner', () => {
     expect(atLeast('commenter', 'viewer')).toBe(true)
     expect(atLeast('viewer', 'commenter')).toBe(false)
     expect(atLeast('editor', 'commenter')).toBe(true)
@@ -368,7 +368,7 @@ describe('hierarquia de papéis', () => {
     expect(atLeast('commenter', 'commenter')).toBe(true)
   })
 
-  it('canManageShares vale só para o dono', () => {
+  it('canManageShares holds only for the owner', () => {
     expect(canManageShares('owner')).toBe(true)
     expect(canManageShares('editor')).toBe(false)
     expect(canManageShares('viewer')).toBe(false)
@@ -376,21 +376,21 @@ describe('hierarquia de papéis', () => {
   })
 })
 
-describe('link público', () => {
-  it('aceita token válido', async () => {
+describe('public link', () => {
+  it('accepts a valid token', async () => {
     const result = await lookupPublicDocument(liveToken, 'ip-1')
 
     expect(result.status).toBe('ok')
     expect(result.status === 'ok' && result.document.id).toBe('doc-live')
   })
 
-  it('recusa token de documento na lixeira', async () => {
+  it('rejects the token of a trashed document', async () => {
     const result = await lookupPublicDocument(trashedToken, 'ip-1')
 
     expect(result.status).toBe('not-found')
   })
 
-  it('recusa token revogado', async () => {
+  it('rejects a revoked token', async () => {
     await db
       .update(documents)
       .set({ publicToken: null })
@@ -401,19 +401,19 @@ describe('link público', () => {
     expect(result.status).toBe('not-found')
   })
 
-  it('recusa token com formato inválido sem consultar o banco', async () => {
-    expect(isPublicTokenShaped('curto')).toBe(false)
+  it('rejects a malformed token without hitting the database', async () => {
+    expect(isPublicTokenShaped('short')).toBe(false)
     expect(isPublicTokenShaped("' OR 1=1 --")).toBe(false)
     expect(isPublicTokenShaped(liveToken)).toBe(true)
 
-    const result = await lookupPublicDocument('curto', 'ip-1')
+    const result = await lookupPublicDocument('short', 'ip-1')
 
     expect(result.status).toBe('not-found')
   })
 })
 
-describe('rate limit do lookup público', () => {
-  it('bloqueia depois de 30 tentativas na mesma janela', () => {
+describe('rate limit of the public lookup', () => {
+  it('blocks after 30 attempts in the same window', () => {
     const now = Date.now()
 
     for (let attempt = 0; attempt < 30; attempt += 1) {
@@ -426,17 +426,17 @@ describe('rate limit do lookup público', () => {
     expect(blocked.retryAfterSeconds).toBeGreaterThan(0)
   })
 
-  it('não penaliza outra origem', () => {
+  it('does not penalize another origin', () => {
     const now = Date.now()
 
     for (let attempt = 0; attempt < 30; attempt += 1) {
       registerPublicLookupAttempt('ip-flood', now)
     }
 
-    expect(registerPublicLookupAttempt('ip-outro', now).allowed).toBe(true)
+    expect(registerPublicLookupAttempt('ip-other', now).allowed).toBe(true)
   })
 
-  it('libera de novo depois da janela', () => {
+  it('allows again after the window', () => {
     const now = Date.now()
 
     for (let attempt = 0; attempt < 30; attempt += 1) {
@@ -449,7 +449,7 @@ describe('rate limit do lookup público', () => {
     ).toBe(true)
   })
 
-  it('devolve rate-limited no lookup quando a janela estoura', async () => {
+  it('returns rate-limited on the lookup when the window overflows', async () => {
     for (let attempt = 0; attempt < 30; attempt += 1) {
       registerPublicLookupAttempt('ip-lookup')
     }
@@ -460,44 +460,44 @@ describe('rate limit do lookup público', () => {
   })
 })
 
-describe('precedência com organização', () => {
-  it('membro da org lê documento com org_access viewer', async () => {
+describe('precedence with an organization', () => {
+  it('an org member reads a document with org_access viewer', async () => {
     await expect(
       getDocumentAccess('doc-org-viewer', sessionFor(orgAdmin)),
     ).resolves.toBe('viewer')
   })
 
-  it('membro da org edita documento com org_access editor', async () => {
+  it('an org member edits a document with org_access editor', async () => {
     await expect(
       getDocumentAccess('doc-org-editor', sessionFor(owner)),
     ).resolves.toBe('editor')
   })
 
-  it('admin da org não enxerga documento privado de membro', async () => {
+  it('an org admin does not see the private document of a member', async () => {
     await expect(
       getDocumentAccess('doc-org-private', sessionFor(orgAdmin)),
     ).resolves.toBeNull()
   })
 
-  it('dona da org não enxerga documento privado de membro', async () => {
+  it('the org owner does not see the private document of a member', async () => {
     await expect(
       getDocumentAccess('doc-org-private', sessionFor(owner)),
     ).resolves.toBeNull()
   })
 
-  it('dono do documento continua owner mesmo com org_access menor', async () => {
+  it('the document owner stays owner even with a lower org_access', async () => {
     await expect(
       getDocumentAccess('doc-org-viewer', sessionFor(orgMember)),
     ).resolves.toBe('owner')
   })
 
-  it('share explícito vence org_access mais permissivo', async () => {
+  it('an explicit share beats a more permissive org_access', async () => {
     await expect(
       getDocumentAccess('doc-org-editor', sessionFor(orgAdmin)),
     ).resolves.toBe('viewer')
   })
 
-  it('convidado externo só alcança o documento compartilhado com ele', async () => {
+  it('an external guest only reaches the document shared with them', async () => {
     await expect(
       getDocumentAccess('doc-org-private', sessionFor(outsider)),
     ).resolves.toBe('viewer')
@@ -506,7 +506,7 @@ describe('precedência com organização', () => {
     ).resolves.toBeNull()
   })
 
-  it('membro de outra org não alcança documento da org alheia', async () => {
+  it('a member of another org does not reach a document of the other org', async () => {
     await expect(
       getDocumentAccess('doc-other-org', sessionFor(orgMember)),
     ).resolves.toBeNull()
@@ -515,37 +515,37 @@ describe('precedência com organização', () => {
     ).resolves.toBeNull()
   })
 
-  it('usuário sem organização nenhuma não alcança documento de org', async () => {
+  it('a user without any organization does not reach an org document', async () => {
     await expect(
       getDocumentAccess('doc-org-editor', sessionFor(stranger)),
     ).resolves.toBeNull()
   })
 
-  it('documento na lixeira não volta pelo org_access', async () => {
+  it('a trashed document does not come back through org_access', async () => {
     await expect(
       getDocumentAccess('doc-org-trashed', sessionFor(orgAdmin)),
     ).resolves.toBeNull()
   })
 
-  it('documento sem org_id ignora a organização de quem pede', async () => {
+  it('a document without org_id ignores the organization of the requester', async () => {
     await expect(
       getDocumentAccess('doc-private', sessionFor(orgAdmin)),
     ).resolves.toBeNull()
   })
 
-  it('membro da org comenta documento com org_access commenter', async () => {
+  it('an org member comments on a document with org_access commenter', async () => {
     await expect(
       getDocumentAccess('doc-org-commenter', sessionFor(owner)),
     ).resolves.toBe('commenter')
   })
 
-  it('share explícito vence org_access menos permissivo', async () => {
+  it('an explicit share beats a less permissive org_access', async () => {
     await expect(
       getDocumentAccess('doc-org-commenter', sessionFor(orgAdmin)),
     ).resolves.toBe('editor')
   })
 
-  it('org_access nulo não dá acesso nem com org_id preenchido', async () => {
+  it('a null org_access grants no access even with org_id filled in', async () => {
     await db
       .update(documents)
       .set({ orgAccess: null })
@@ -557,11 +557,11 @@ describe('precedência com organização', () => {
   })
 })
 
-describe('organizações', () => {
-  it('devolve a organização e o papel de cada pessoa', async () => {
+describe('organizations', () => {
+  it('returns the organization and the role of each person', async () => {
     await expect(getMembership(owner.id)).resolves.toMatchObject({
       orgId: mainOrg,
-      orgName: 'Escola Árvore',
+      orgName: 'Árvore School',
       role: 'owner',
     })
     await expect(getMembership(orgMember.id)).resolves.toMatchObject({
@@ -570,14 +570,14 @@ describe('organizações', () => {
     await expect(getMembership(stranger.id)).resolves.toBeNull()
   })
 
-  it('canManageOrganization vale para dona e admin', () => {
+  it('canManageOrganization holds for owner and admin', () => {
     expect(canManageOrganization('owner')).toBe(true)
     expect(canManageOrganization('admin')).toBe(true)
     expect(canManageOrganization('member')).toBe(false)
     expect(canManageOrganization(null)).toBe(false)
   })
 
-  it('lista os emails da organização em caixa baixa', async () => {
+  it('lists the organization emails in lower case', async () => {
     const emails = await listOrganizationEmails(mainOrg)
 
     expect(emails).toEqual(
@@ -586,7 +586,7 @@ describe('organizações', () => {
     expect(emails).not.toContain(outsider.email)
   })
 
-  it('lista só os documentos da org que não são privados nem da lixeira', async () => {
+  it('lists only the org documents that are neither private nor trashed', async () => {
     const list = await listOrganizationDocuments(mainOrg)
     const ids = list.map((item) => item.id)
 
@@ -598,14 +598,14 @@ describe('organizações', () => {
     expect(ids).not.toContain('doc-other-org')
   })
 
-  it('conta as outras pessoas donas da organização', async () => {
+  it('counts the other owners of the organization', async () => {
     await expect(otherOwnersInOrganization(mainOrg, owner.id)).resolves.toBe(0)
     await expect(otherOwnersInOrganization(mainOrg, orgMember.id)).resolves.toBe(
       1,
     )
   })
 
-  it('sair da org devolve os documentos da pessoa para privado', async () => {
+  it('leaving the org turns the documents of the person back to private', async () => {
     await detachMemberDocuments(mainOrg, orgMember.id)
 
     await expect(
@@ -616,7 +616,7 @@ describe('organizações', () => {
     ).resolves.toBe('owner')
   })
 
-  it('sair da org não mexe no share explícito que a pessoa já tinha dado', async () => {
+  it('leaving the org does not touch the explicit share the person had given', async () => {
     await detachMemberDocuments(mainOrg, orgMember.id)
 
     await expect(
@@ -625,8 +625,8 @@ describe('organizações', () => {
   })
 })
 
-describe('convites de organização', () => {
-  it('transforma o convite em participação no primeiro acesso', async () => {
+describe('organization invites', () => {
+  it('turns the invite into a membership on the first access', async () => {
     await db.insert(organizationInvites).values({
       id: 'invite-1',
       orgId: mainOrg,
@@ -646,7 +646,7 @@ describe('convites de organização', () => {
     expect(remaining).toBeUndefined()
   })
 
-  it('quem já tem organização entra também na segunda', async () => {
+  it('someone who already has an organization also joins the second one', async () => {
     await db.insert(organizationInvites).values({
       id: 'invite-2',
       orgId: otherOrg,
@@ -671,20 +671,20 @@ describe('convites de organização', () => {
     expect(remaining).toBeUndefined()
   })
 
-  it('sem convite, o acesso não cria organização nenhuma', async () => {
+  it('without an invite, the access creates no organization', async () => {
     await expect(
       acceptPendingInvites(stranger.id, stranger.email),
     ).resolves.toEqual([])
   })
 
-  it('limita a rajada de convites por pessoa', () => {
+  it('limits the burst of invites per person', () => {
     const now = Date.now()
 
     for (let attempt = 0; attempt < 20; attempt += 1) {
-      expect(registerInviteAttempt('org:pessoa', now).allowed).toBe(true)
+      expect(registerInviteAttempt('org:person', now).allowed).toBe(true)
     }
 
-    expect(registerInviteAttempt('org:pessoa', now).allowed).toBe(false)
-    expect(registerInviteAttempt('org:outra-pessoa', now).allowed).toBe(true)
+    expect(registerInviteAttempt('org:person', now).allowed).toBe(false)
+    expect(registerInviteAttempt('org:other-person', now).allowed).toBe(true)
   })
 })

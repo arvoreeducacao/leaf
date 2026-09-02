@@ -29,18 +29,18 @@ async function appendLine(page: Page, text: string) {
   await page.keyboard.type(text)
 }
 
-test.describe('colaboração em tempo real', () => {
-  test('dois contextos convergem no mesmo documento', async ({ browser }) => {
+test.describe('realtime collaboration', () => {
+  test('two contexts converge on the same document', async ({ browser }) => {
     const owner = await browser.newContext()
     const guest = await browser.newContext()
     const ownerPage = await owner.newPage()
     const guestPage = await guest.newPage()
-    const guestEmail = uniqueEmail('colab')
+    const guestEmail = uniqueEmail('collab')
 
-    await signUp(guestPage, guestEmail, 'Convidada')
-    await signUp(ownerPage, uniqueEmail('dono'), 'Dono')
+    await signUp(guestPage, guestEmail, 'Guest')
+    await signUp(ownerPage, uniqueEmail('owner'), 'Owner')
 
-    const id = await createDocument(ownerPage, 'Documento colaborativo')
+    const id = await createDocument(ownerPage, 'Collaborative document')
 
     await waitForCollaboration(ownerPage)
 
@@ -70,14 +70,14 @@ test.describe('colaboração em tempo real', () => {
       { timeout: 20_000 },
     )
 
-    await typeInEditor(ownerPage, 'linha escrita pelo dono')
+    await typeInEditor(ownerPage, 'line written by the owner')
     await expect(editorBody(guestPage)).toContainText(
-      'linha escrita pelo dono',
+      'line written by the owner',
       { timeout: 20_000 },
     )
 
-    await appendLine(guestPage, 'resposta da convidada')
-    await expect(editorBody(ownerPage)).toContainText('resposta da convidada', {
+    await appendLine(guestPage, 'reply from the guest')
+    await expect(editorBody(ownerPage)).toContainText('reply from the guest', {
       timeout: 20_000,
     })
 
@@ -85,20 +85,20 @@ test.describe('colaboração em tempo real', () => {
     await guest.close()
   })
 
-  test('o servidor grava o conteúdo da sala e ele sobrevive ao fechamento', async ({
+  test('the server stores the room content and it survives the close', async ({
     browser,
   }) => {
     const first = await browser.newContext()
     const firstPage = await first.newPage()
-    const email = uniqueEmail('persistencia')
+    const email = uniqueEmail('persistence')
 
-    await signUp(firstPage, email, 'Autor')
-    const id = await createDocument(firstPage, 'Documento persistido')
+    await signUp(firstPage, email, 'Author')
+    const id = await createDocument(firstPage, 'Persisted document')
 
     await waitForCollaboration(firstPage)
-    await typeInEditor(firstPage, 'texto gravado pelo servidor')
+    await typeInEditor(firstPage, 'text stored by the server')
     await expect(editorBody(firstPage)).toContainText(
-      'texto gravado pelo servidor',
+      'text stored by the server',
     )
 
     await first.close()
@@ -113,14 +113,14 @@ test.describe('colaboração em tempo real', () => {
     await backPage.goto(`/doc/${id}`)
     await waitForEditorReady(backPage)
     await expect(editorBody(backPage)).toContainText(
-      'texto gravado pelo servidor',
+      'text stored by the server',
       { timeout: 20_000 },
     )
 
     await back.close()
   })
 
-  test('com o servidor de colaboração mudo o editor cai no autosave', async ({
+  test('with the collaboration server silent the editor falls back to autosave', async ({
     browser,
   }) => {
     const context = await browser.newContext()
@@ -129,18 +129,18 @@ test.describe('colaboração em tempo real', () => {
     await page.routeWebSocket(collaborationServerPattern, () => {})
 
     await signUp(page, uniqueEmail('offline'), 'Offline')
-    const id = await createDocument(page, 'Documento sem colaboração')
+    const id = await createDocument(page, 'Document without collaboration')
 
     await waitForEditorReady(page)
     await expect(page.getByText('Colaboração em tempo real')).toHaveCount(0)
 
-    await typeInEditor(page, 'escrito sem o servidor de colaboração')
+    await typeInEditor(page, 'written without the collaboration server')
     await waitForSaved(page)
 
     await page.goto(`/doc/${id}`)
     await waitForEditorReady(page)
     await expect(editorBody(page)).toContainText(
-      'escrito sem o servidor de colaboração',
+      'written without the collaboration server',
     )
 
     await context.close()

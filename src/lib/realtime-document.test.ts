@@ -9,17 +9,17 @@ import {
 
 const sample = JSON.stringify([
   {
-    id: 'bloco-1',
+    id: 'block-1',
     type: 'heading',
     props: { level: 1 },
-    content: [{ type: 'text', text: 'Colaboração', styles: {} }],
+    content: [{ type: 'text', text: 'Collaboration', styles: {} }],
     children: [],
   },
   {
-    id: 'bloco-2',
+    id: 'block-2',
     type: 'paragraph',
     props: {},
-    content: [{ type: 'text', text: 'Duas pessoas no mesmo texto', styles: {} }],
+    content: [{ type: 'text', text: 'Two people on the same text', styles: {} }],
     children: [],
   },
 ])
@@ -28,23 +28,23 @@ function roundTrip(content: string | null) {
   const seed = seedUpdateFromContent(content)
 
   if (seed.status !== 'ok') {
-    throw new Error('semente inesperadamente ilegível')
+    throw new Error('seed unexpectedly unreadable')
   }
 
   return contentFromRealtimeState(seed.update)
 }
 
 describe('seedUpdateFromContent', () => {
-  it('gera o mesmo documento para o mesmo conteúdo', () => {
+  it('generates the same document for the same content', () => {
     expect(roundTrip(sample)).toBe(roundTrip(sample))
   })
 
-  it('duplica o conteúdo se duas sementes forem aplicadas na mesma sala', () => {
+  it('duplicates the content when two seeds are applied to the same room', () => {
     const first = seedUpdateFromContent(sample)
     const second = seedUpdateFromContent(sample)
 
     if (first.status !== 'ok' || second.status !== 'ok') {
-      throw new Error('semente inesperadamente ilegível')
+      throw new Error('seed unexpectedly unreadable')
     }
 
     const doc = new Y.Doc({ gc: true })
@@ -59,7 +59,7 @@ describe('seedUpdateFromContent', () => {
     expect(fragment.split('<blockgroup>').length - 1).toBe(2)
   })
 
-  it('preserva texto e tipos no ida e volta', () => {
+  it('preserves text and types on the round trip', () => {
     const result = roundTrip(sample)
 
     expect(result).not.toBeNull()
@@ -70,11 +70,11 @@ describe('seedUpdateFromContent', () => {
     }>
 
     expect(blocks.map((block) => block.type)).toEqual(['heading', 'paragraph'])
-    expect(blocks[0].content[0].text).toBe('Colaboração')
-    expect(blocks[1].content[0].text).toBe('Duas pessoas no mesmo texto')
+    expect(blocks[0].content[0].text).toBe('Collaboration')
+    expect(blocks[1].content[0].text).toBe('Two people on the same text')
   })
 
-  it('semeia um parágrafo vazio para documento sem conteúdo', () => {
+  it('seeds an empty paragraph for a document without content', () => {
     const result = roundTrip(null)
 
     expect(result).not.toBeNull()
@@ -85,13 +85,13 @@ describe('seedUpdateFromContent', () => {
     expect(blocks[0].type).toBe('paragraph')
   })
 
-  it('recusa conteúdo ilegível em vez de apagar o documento', () => {
-    expect(seedUpdateFromContent('{ nao é json').status).toBe('unreadable')
+  it('rejects unreadable content instead of wiping the document', () => {
+    expect(seedUpdateFromContent('{ not json').status).toBe('unreadable')
   })
 })
 
 describe('contentFromRealtimeState', () => {
-  it('devolve null quando o estado não é um update do Yjs', () => {
+  it('returns null when the state is not a Yjs update', () => {
     expect(contentFromRealtimeState(new Uint8Array([9, 9, 9, 9]))).toBeNull()
   })
 })
