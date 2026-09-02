@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 
 import { AppShell } from '@/components/app/app-shell'
 import { PendingJoinRedirect } from '@/components/app/pending-join-redirect'
+import { isAiEnabled } from '@/lib/ai-config'
 import { readActiveOrgId } from '@/lib/active-org'
 import { getSession } from '@/lib/auth'
 import {
@@ -66,6 +67,7 @@ export default async function AppLayout({
   return (
     <AppShell
       activeOrgId={membership?.orgId ?? null}
+      aiEnabled={isAiEnabled()}
       locale={locale}
       organizationDocuments={buildDocumentTree(organizationDocuments)}
       organizationName={membership?.orgName ?? null}
