@@ -5,7 +5,7 @@ import { useTransition } from 'react'
 import { toast } from 'sonner'
 
 import { sidebarIcon, sidebarRow } from '@/components/app/sidebar-styles'
-import { AddIcon, PageAddIcon } from '@/components/icons'
+import { ComposeIcon, PlusIcon } from '@/components/icons/outline'
 import { Button } from '@/components/ui/button'
 import { ButtonIcon } from '@/components/ui/button-icon'
 import { createDocument } from '@/lib/document-actions'
@@ -41,7 +41,7 @@ export function NewDocumentButton({ variant = 'sidebar' }: Props) {
         size="medium"
         variant="ghost"
       >
-        <PageAddIcon aria-hidden="true" />
+        <ComposeIcon aria-hidden="true" />
       </ButtonIcon>
     )
   }
@@ -54,7 +54,7 @@ export function NewDocumentButton({ variant = 'sidebar' }: Props) {
         onClick={handleClick}
         type="button"
       >
-        <AddIcon aria-hidden="true" />
+        <PlusIcon aria-hidden="true" />
         {t('newDocument')}
       </Button>
     )
@@ -69,7 +69,7 @@ export function NewDocumentButton({ variant = 'sidebar' }: Props) {
       type="button"
     >
       <span className="flex size-5 shrink-0 items-center justify-center">
-        <AddIcon aria-hidden="true" className={sidebarIcon} />
+        <PlusIcon aria-hidden="true" className={sidebarIcon} />
       </span>
       <span className="min-w-0 flex-1 truncate">{t('newDocument')}</span>
     </button>

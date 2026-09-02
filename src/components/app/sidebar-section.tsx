@@ -6,7 +6,7 @@ import { useId } from 'react'
 
 import { sidebarHeading } from '@/components/app/sidebar-styles'
 import { useSidebarCollapse } from '@/components/app/use-sidebar-collapse'
-import { CaretDownIcon, CaretRightIcon } from '@/components/icons'
+import { ChevronDownIcon, ChevronRightIcon } from '@/components/icons/outline'
 import { cn } from '@/shared/utils'
 
 type Props = Readonly<{
@@ -125,7 +125,7 @@ export function SidebarCollapseMarker({
   groupName: 'section' | 'teamspace'
   icon?: React.ComponentType<{ 'aria-hidden'?: boolean; className?: string }>
 }>) {
-  const Caret = collapsed ? CaretRightIcon : CaretDownIcon
+  const Caret = collapsed ? ChevronRightIcon : ChevronDownIcon
   const revealCaret =
     groupName === 'section'
       ? 'opacity-0 group-hover/section:opacity-100'
