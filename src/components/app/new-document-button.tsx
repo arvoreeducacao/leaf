@@ -5,12 +5,13 @@ import { useTransition } from 'react'
 import { toast } from 'sonner'
 
 import { sidebarIcon, sidebarRow } from '@/components/app/sidebar-styles'
-import { AddIcon } from '@/components/icons'
+import { AddIcon, PageAddIcon } from '@/components/icons'
 import { Button } from '@/components/ui/button'
+import { ButtonIcon } from '@/components/ui/button-icon'
 import { createDocument } from '@/lib/document-actions'
 import { cn } from '@/shared/utils'
 
-type Props = Readonly<{ variant?: 'sidebar' | 'primary' }>
+type Props = Readonly<{ variant?: 'sidebar' | 'primary' | 'icon' }>
 
 export function NewDocumentButton({ variant = 'sidebar' }: Props) {
   const t = useTranslations('nav')
@@ -28,6 +29,21 @@ export function NewDocumentButton({ variant = 'sidebar' }: Props) {
         toast.error(t('newDocumentFailed'))
       }
     })
+  }
+
+  if (variant === 'icon') {
+    return (
+      <ButtonIcon
+        aria-busy={pending}
+        aria-label={t('newDocument')}
+        disabled={pending}
+        onClick={handleClick}
+        size="medium"
+        variant="ghost"
+      >
+        <PageAddIcon aria-hidden="true" />
+      </ButtonIcon>
+    )
   }
 
   if (variant === 'primary') {

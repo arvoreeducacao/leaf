@@ -7,10 +7,11 @@ import { toast } from 'sonner'
 import { sidebarIcon, sidebarRow } from '@/components/app/sidebar-styles'
 import { DatabaseIcon } from '@/components/icons'
 import { Button } from '@/components/ui/button'
+import { ButtonIcon } from '@/components/ui/button-icon'
 import { createDatabasePage } from '@/lib/database-actions'
 import { cn } from '@/shared/utils'
 
-type Props = Readonly<{ variant?: 'sidebar' | 'primary' }>
+type Props = Readonly<{ variant?: 'sidebar' | 'primary' | 'icon' }>
 
 export function NewDatabaseButton({ variant = 'sidebar' }: Props) {
   const t = useTranslations('nav')
@@ -28,6 +29,21 @@ export function NewDatabaseButton({ variant = 'sidebar' }: Props) {
         toast.error(t('newDatabaseFailed'))
       }
     })
+  }
+
+  if (variant === 'icon') {
+    return (
+      <ButtonIcon
+        aria-busy={pending}
+        aria-label={t('newDatabase')}
+        disabled={pending}
+        onClick={handleClick}
+        size="medium"
+        variant="ghost"
+      >
+        <DatabaseIcon aria-hidden="true" />
+      </ButtonIcon>
+    )
   }
 
   if (variant === 'primary') {
