@@ -8,7 +8,7 @@ import {
   isMacPlatform,
   primaryShortcutLabel,
 } from '@/components/app/palette-shortcut'
-import { SearchIcon } from '@/components/icons'
+import { SearchIcon } from '@/components/icons/outline'
 import { cn } from '@/shared/utils'
 
 export function CommandPaletteTrigger() {

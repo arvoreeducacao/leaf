@@ -3,7 +3,7 @@
 import { useTranslations } from 'next-intl'
 import type * as React from 'react'
 
-import { CancelIcon, FilterIcon } from '@/components/icons'
+import { CloseIcon, FilterIcon } from '@/components/icons/outline'
 import { cn } from '@/shared/utils'
 
 const searchVariants = {
@@ -59,7 +59,7 @@ function Search({
           onClick={onClear}
           type="button"
         >
-          <CancelIcon className="size-3.5" />
+          <CloseIcon className="size-3.5" />
         </button>
       )}
     </div>

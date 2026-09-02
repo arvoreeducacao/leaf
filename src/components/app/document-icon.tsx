@@ -1,4 +1,4 @@
-import { DatabaseIcon, PageIcon } from '@/components/icons'
+import { PageIcon, TableIcon } from '@/components/icons/outline'
 import { cn } from '@/shared/utils'
 
 type Props = Readonly<{
@@ -40,7 +40,7 @@ export function DocumentIcon({
     )
   }
 
-  const Fallback = kind === 'database' ? DatabaseIcon : PageIcon
+  const Fallback = kind === 'database' ? TableIcon : PageIcon
 
   return <Fallback aria-hidden="true" className={cn('shrink-0', className)} />
 }

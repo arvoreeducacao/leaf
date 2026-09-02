@@ -10,13 +10,12 @@ import {
   sidebarRow,
 } from '@/components/app/sidebar-styles'
 import {
-  CaretDownIcon,
-  CaretRightIcon,
-  DeleteIcon,
+  ChevronDownIcon,
+  ChevronRightIcon,
   PageIcon,
-  RotateIcon,
+  RestoreIcon,
   TrashIcon,
-} from '@/components/icons'
+} from '@/components/icons/outline'
 import { Button } from '@/components/ui/button'
 import { ButtonIcon } from '@/components/ui/button-icon'
 import {
@@ -103,12 +102,12 @@ export function TrashSection({ documents }: Props) {
             </span>
           ) : null}
           {expanded ? (
-            <CaretDownIcon
+            <ChevronDownIcon
               aria-hidden="true"
               className="size-3.5 shrink-0 text-content-subtle"
             />
           ) : (
-            <CaretRightIcon
+            <ChevronRightIcon
               aria-hidden="true"
               className="size-3.5 shrink-0 text-content-subtle"
             />
@@ -141,7 +140,7 @@ export function TrashSection({ documents }: Props) {
                           size="small"
                           variant="ghost"
                         >
-                          <RotateIcon aria-hidden="true" />
+                          <RestoreIcon aria-hidden="true" />
                         </ButtonIcon>
                       </TooltipTrigger>
                       <TooltipContent>{t('restore')}</TooltipContent>
@@ -156,7 +155,7 @@ export function TrashSection({ documents }: Props) {
                           size="small"
                           variant="ghost"
                         >
-                          <DeleteIcon aria-hidden="true" />
+                          <TrashIcon aria-hidden="true" />
                         </ButtonIcon>
                       </TooltipTrigger>
                       <TooltipContent>{t('deleteForever')}</TooltipContent>
@@ -168,14 +167,14 @@ export function TrashSection({ documents }: Props) {
                     entries={[
                       {
                         disabled: pending,
-                        icon: RotateIcon,
+                        icon: RestoreIcon,
                         key: 'restore',
                         label: t('restore'),
                         onSelect: () => handleRestore(document.id),
                       },
                       {
                         disabled: pending,
-                        icon: DeleteIcon,
+                        icon: TrashIcon,
                         key: 'delete',
                         label: t('deleteForever'),
                         onSelect: () => setTarget(document),
