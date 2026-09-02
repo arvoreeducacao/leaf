@@ -21,6 +21,7 @@ import { sidebarIcon, sidebarRow } from '@/components/app/sidebar-styles'
 import { TeamspaceSections } from '@/components/app/teamspace-sections'
 import { registerTopbarSlot } from '@/components/app/topbar-slot'
 import { TrashSection } from '@/components/app/trash-section'
+import { useSidebarWidth } from '@/components/app/use-sidebar-width'
 import { UserMenu } from '@/components/app/user-menu'
 import { HomeIcon, PeopleIcon, SidebarIcon } from '@/components/icons/outline'
 import { ButtonIcon } from '@/components/ui/button-icon'
@@ -266,6 +267,15 @@ export function AppShell({
   const pathname = usePathname()
   const [collapsed, setCollapsed] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
+  const {
+    handleResizeKeyDown,
+    maxWidth,
+    minWidth,
+    resetWidth,
+    resizing,
+    startResize,
+    width,
+  } = useSidebarWidth()
   const collapseRef = useRef<HTMLButtonElement>(null)
   const expandRef = useRef<HTMLButtonElement>(null)
   const desktopSearchRef = useRef<HTMLInputElement>(null)
@@ -354,8 +364,27 @@ export function AppShell({
       {collapsed ? null : (
         <aside
           aria-label={t('navigation')}
-          className="group/sidebar hidden w-sidebar shrink-0 bg-surface-nav tablet:block"
+          className="group/sidebar relative hidden shrink-0 border-line border-r bg-surface-nav tablet:block"
+          style={{ width }}
         >
+          <div
+            aria-label={t('resizeNavigation')}
+            aria-orientation="vertical"
+            aria-valuemax={maxWidth}
+            aria-valuemin={minWidth}
+            aria-valuenow={width}
+            className={cn(
+              'absolute inset-y-0 -right-1 z-30 w-2 cursor-col-resize touch-none',
+              "after:absolute after:inset-y-0 after:left-1/2 after:w-0.5 after:-translate-x-1/2 after:bg-transparent after:transition-colors after:content-[''] hover:after:bg-line-contrast",
+              'focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-0',
+              resizing && 'after:bg-line-contrast',
+            )}
+            onDoubleClick={resetWidth}
+            onKeyDown={handleResizeKeyDown}
+            onPointerDown={startResize}
+            role="separator"
+            tabIndex={0}
+          />
           <div className="sticky top-0 h-dvh">
             <NavContent
               activeOrgId={activeOrgId}
