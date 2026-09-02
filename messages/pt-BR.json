@@ -604,7 +604,8 @@
     "commentsFailed": "Os comentários não puderam ser criados. As páginas foram importadas assim mesmo.",
     "unresolvedPeople": "{count, plural, one {# nome da coluna de pessoa não bateu com ninguém da organização ({names}) e ficou sem responsável.} other {# nomes da coluna de pessoa não bateram com ninguém da organização ({names}) e ficaram sem responsável.}}",
     "boardView": "Quadro",
-    "unsupportedBlocks": "Blocos sem equivalente foram pulados: {count} ({types})."
+    "unsupportedBlocks": "Blocos sem equivalente foram pulados: {count} ({types}).",
+    "skippedUnchanged": "{count} páginas já estavam em dia e foram puladas."
   },
   "notionLink": {
     "title": "Importar do Notion",

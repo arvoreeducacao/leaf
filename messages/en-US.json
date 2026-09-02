@@ -604,7 +604,8 @@
     "commentsFailed": "The comments could not be created. The pages were imported anyway.",
     "unresolvedPeople": "{count, plural, one {# name in the person column matched nobody in the organization ({names}) and was left unassigned.} other {# names in the person column matched nobody in the organization ({names}) and were left unassigned.}}",
     "boardView": "Board",
-    "unsupportedBlocks": "Blocks without an equivalent were skipped: {count} ({types})."
+    "unsupportedBlocks": "Blocks without an equivalent were skipped: {count} ({types}).",
+    "skippedUnchanged": "{count} pages were already up to date and were skipped."
   },
   "notionLink": {
     "title": "Import from Notion",
