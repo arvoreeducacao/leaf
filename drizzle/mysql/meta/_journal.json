@@ -50,6 +50,13 @@
       "when": 1788273955223,
       "tag": "0006_realtime_state",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "5",
+      "when": 1788352689763,
+      "tag": "0007_documents_icon",
+      "breakpoints": true
     }
   ]
 }

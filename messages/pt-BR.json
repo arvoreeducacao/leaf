@@ -598,7 +598,9 @@
     "commentsUnavailable": "Não foi possível ler os comentários. Confira se a conexão com o Notion tem permissão de ler comentários.",
     "commentsImported": "{count, plural, one {# comentário aberto veio junto, preso à página} other {# comentários abertos vieram junto, presos à página}}",
     "commentsFailed": "Os comentários não puderam ser criados. As páginas foram importadas assim mesmo.",
-    "unresolvedPeople": "{count, plural, one {# nome da coluna de pessoa não bateu com ninguém da organização ({names}) e ficou sem responsável.} other {# nomes da coluna de pessoa não bateram com ninguém da organização ({names}) e ficaram sem responsável.}}"
+    "unresolvedPeople": "{count, plural, one {# nome da coluna de pessoa não bateu com ninguém da organização ({names}) e ficou sem responsável.} other {# nomes da coluna de pessoa não bateram com ninguém da organização ({names}) e ficaram sem responsável.}}",
+    "boardView": "Quadro",
+    "unsupportedBlocks": "Blocos sem equivalente foram pulados: {count} ({types})."
   },
   "notionLink": {
     "title": "Importar do Notion",
@@ -618,7 +620,9 @@
     "invalidLink": "Esse link não parece ser de uma página do Notion.",
     "unreachable": "Não conseguimos abrir essa página. Confira se você deu acesso a ela na conexão com o Notion.",
     "withComments": "Trazer também os comentários abertos",
-    "withCommentsHint": "As threads não resolvidas entram presas à página, não ao trecho. Deixa a importação mais lenta."
+    "withCommentsHint": "As threads não resolvidas entram presas à página, não ao trecho. Deixa a importação mais lenta.",
+    "workspaceOption": "Importar o workspace inteiro",
+    "workspaceOptionHint": "Tudo que a conexão do Notion enxerga, com a hierarquia preservada. Pode levar bastante tempo."
   },
   "teamspace": {
     "sectionTitle": "Teamspaces",

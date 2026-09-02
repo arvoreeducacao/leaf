@@ -13,7 +13,7 @@ import {
 } from '@/lib/import-destination'
 import { createNotionClient } from '@/lib/notion/api'
 import { getNotionConnection } from '@/lib/notion/connection'
-import { crawlNotionPage } from '@/lib/notion/crawl'
+import { crawlNotionPage, crawlNotionWorkspace } from '@/lib/notion/crawl'
 import { importNotionPlan } from '@/lib/notion/import'
 import type { ImportEvent } from '@/lib/notion/import'
 import { notionIdFromLink } from '@/lib/notion/link'
@@ -21,7 +21,7 @@ import { buildNotionImportMessages } from '@/lib/notion/messages'
 
 export const runtime = 'nodejs'
 
-export const maxDuration = 300
+export const maxDuration = 3600
 
 export async function POST(request: Request) {
   const t = await getTranslations('archiveImport')
@@ -38,9 +38,12 @@ export async function POST(request: Request) {
 
   const payload: unknown = await request.json().catch(() => null)
   const body = (payload ?? {}) as Record<string, unknown>
-  const pageId = notionIdFromLink(String(body.link ?? ''))
+  const wholeWorkspace = body.workspace === true
+  const pageId = wholeWorkspace
+    ? null
+    : notionIdFromLink(String(body.link ?? ''))
 
-  if (!pageId) {
+  if (!wholeWorkspace && !pageId) {
     return NextResponse.json({ error: t('invalidLink') }, { status: 400 })
   }
 
@@ -99,13 +102,15 @@ export async function POST(request: Request) {
           signal: request.signal,
         })
 
-        for await (const event of crawlNotionPage(
-          client,
-          pageId,
-          messages,
-          request.signal,
-          { comments: body.comments === true },
-        )) {
+        const crawl = wholeWorkspace
+          ? crawlNotionWorkspace(client, messages, request.signal, {
+              comments: body.comments === true,
+            })
+          : crawlNotionPage(client, pageId as string, messages, request.signal, {
+              comments: body.comments === true,
+            })
+
+        for await (const event of crawl) {
           if (event.type === 'page') {
             send({
               done: event.done,

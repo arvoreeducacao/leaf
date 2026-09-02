@@ -3,6 +3,7 @@ import {
   createBlockSpec,
   defaultBlockSpecs,
 } from '@blocknote/core'
+import { withMultiColumn } from '@blocknote/xl-multi-column'
 
 import { calloutConfig } from './callout-config'
 import { databaseConfig } from './database-config'
@@ -45,10 +46,12 @@ const createServerDatabaseBlock = createBlockSpec(databaseConfig, {
   },
 })
 
-export const leafServerSchema = BlockNoteSchema.create({
-  blockSpecs: {
-    ...defaultBlockSpecs,
-    callout: createServerCalloutBlock(),
-    database: createServerDatabaseBlock(),
-  },
-})
+export const leafServerSchema = withMultiColumn(
+  BlockNoteSchema.create({
+    blockSpecs: {
+      ...defaultBlockSpecs,
+      callout: createServerCalloutBlock(),
+      database: createServerDatabaseBlock(),
+    },
+  }),
+)
