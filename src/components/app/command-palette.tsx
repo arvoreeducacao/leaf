@@ -22,6 +22,7 @@ import {
 } from '@/components/app/palette-bridge'
 import {
   alternateShortcutLabel,
+  isLetterK,
   isMacPlatform,
   shouldTogglePalette,
 } from '@/components/app/palette-shortcut'
@@ -38,8 +39,7 @@ import {
 import { Dialog, DialogOverlay } from '@/components/ui/dialog'
 import { askQuestionMinLength } from '@/lib/ai-ask'
 import { createDocument } from '@/lib/document-actions'
-import { searchWorkspace } from '@/lib/search-actions'
-import type { SearchHit } from '@/lib/search-index'
+import type { SearchHit, WorkspaceSearchResult } from '@/lib/search-index'
 import { writeSessionFlag } from '@/shared/storage'
 import { cn } from '@/shared/utils'
 
@@ -62,6 +62,22 @@ type PaletteGroup = Readonly<{
 type Props = Readonly<{ hasOrganization: boolean; aiEnabled: boolean }>
 
 const searchDebounce = 200
+
+async function fetchWorkspaceSearch(
+  term: string,
+  signal: AbortSignal,
+): Promise<WorkspaceSearchResult> {
+  const response = await fetch(`/api/search?q=${encodeURIComponent(term)}`, {
+    headers: { accept: 'application/json' },
+    signal,
+  })
+
+  if (!response.ok) {
+    throw new Error(`search failed with ${response.status}`)
+  }
+
+  return (await response.json()) as WorkspaceSearchResult
+}
 
 function hasEditorSelection() {
   const selection = window.getSelection()
@@ -88,7 +104,6 @@ export function CommandPalette({ hasOrganization, aiEnabled }: Props) {
   const optionPrefix = useId()
   const inputRef = useRef<HTMLInputElement>(null)
   const listRef = useRef<HTMLUListElement>(null)
-  const requestId = useRef(0)
   const importAvailable = useImportAvailability()
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
@@ -108,6 +123,10 @@ export function CommandPalette({ hasOrganization, aiEnabled }: Props) {
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
+      if (!isLetterK({ key: event.key, code: event.code })) {
+        return
+      }
+
       if (
         !shouldTogglePalette({
           key: event.key,
@@ -149,31 +168,25 @@ export function CommandPalette({ hasOrganization, aiEnabled }: Props) {
     }
 
     const term = query.trim()
-    const current = requestId.current + 1
-    requestId.current = current
+    const controller = new AbortController()
 
     setLoading(true)
 
     const timer = window.setTimeout(
       () => {
-        searchWorkspace(term)
+        fetchWorkspaceSearch(term, controller.signal)
           .then((result) => {
-            if (requestId.current !== current) {
+            setDocuments(result.documents)
+            setRecent(result.recent)
+            setLoading(false)
+          })
+          .catch(() => {
+            if (controller.signal.aborted) {
               return
             }
 
-            setDocuments(result.documents)
-            setRecent(result.recent)
-          })
-          .catch(() => {
-            if (requestId.current === current) {
-              setDocuments([])
-            }
-          })
-          .finally(() => {
-            if (requestId.current === current) {
-              setLoading(false)
-            }
+            setDocuments([])
+            setLoading(false)
           })
       },
       term.length === 0 ? 0 : searchDebounce,
@@ -181,6 +194,7 @@ export function CommandPalette({ hasOrganization, aiEnabled }: Props) {
 
     return () => {
       window.clearTimeout(timer)
+      controller.abort()
     }
   }, [open, query])
 
