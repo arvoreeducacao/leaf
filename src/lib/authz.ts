@@ -230,6 +230,7 @@ const publicLookupLimiter = createRateLimiter(60_000, 30)
 const inviteLimiter = createRateLimiter(60_000, 20)
 const commentLimiter = createRateLimiter(60_000, 30)
 const aiLimiter = createRateLimiter(60_000, 20)
+const unsplashLimiter = createRateLimiter(60_000, 30)
 
 export function registerPublicLookupAttempt(
   key: string,
@@ -273,6 +274,17 @@ export function registerAiAttempt(
 
 export function resetAiLimiter() {
   aiLimiter.reset()
+}
+
+export function registerUnsplashAttempt(
+  key: string,
+  now: number = Date.now(),
+): RateLimitDecision {
+  return unsplashLimiter.register(key, now)
+}
+
+export function resetUnsplashLimiter() {
+  unsplashLimiter.reset()
 }
 
 export type PublicLookupResult =
