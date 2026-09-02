@@ -13,6 +13,7 @@ import { documents, user } from '@/db/schema'
 import { resetDatabase } from '@/db/testing'
 import {
   buildDocumentTree,
+  capDocumentTree,
   listAncestors,
   listOwnedDocuments,
   listSubtreeIds,
@@ -98,5 +99,68 @@ describe('document hierarchy', () => {
 
   it('treats a document without children as a one-item subtree', async () => {
     expect(await listSubtreeIds('other', owner.id)).toEqual(['other'])
+  })
+})
+
+describe('sidebar tree cap', () => {
+  function roots(count: number) {
+    return buildDocumentTree(
+      Array.from({ length: count }, (_, index) => ({
+        id: `doc-${index}`,
+        title: `Document ${index}`,
+        updatedAt: new Date(),
+        deletedAt: null,
+        parentId: null,
+        kind: 'page' as const,
+        icon: null,
+        shared: false,
+        owned: true,
+      })),
+    )
+  }
+
+  it('keeps every root when the list is within the limit', () => {
+    const capped = capDocumentTree(roots(5), 20)
+
+    expect(capped.nodes).toHaveLength(5)
+    expect(capped.hidden).toBe(0)
+  })
+
+  it('keeps the limit and reports how many stayed out', () => {
+    const capped = capDocumentTree(roots(3216), 20)
+
+    expect(capped.nodes).toHaveLength(20)
+    expect(capped.hidden).toBe(3196)
+  })
+
+  it('keeps the children of the roots it does keep', () => {
+    const nodes = buildDocumentTree([
+      {
+        id: 'root',
+        title: 'Root',
+        updatedAt: new Date(),
+        deletedAt: null,
+        parentId: null,
+        kind: 'page' as const,
+        icon: null,
+        shared: false,
+        owned: true,
+      },
+      {
+        id: 'child',
+        title: 'Child',
+        updatedAt: new Date(),
+        deletedAt: null,
+        parentId: 'root',
+        kind: 'page' as const,
+        icon: null,
+        shared: false,
+        owned: true,
+      },
+    ])
+
+    const capped = capDocumentTree(nodes, 1)
+
+    expect(capped.nodes[0]?.children.map((node) => node.id)).toEqual(['child'])
   })
 })

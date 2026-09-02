@@ -110,7 +110,7 @@ export function SidebarSection({
         ) : null}
       </div>
       <div hidden={collapsed} id={contentId}>
-        {children}
+        {collapsed ? null : children}
       </div>
     </section>
   )
