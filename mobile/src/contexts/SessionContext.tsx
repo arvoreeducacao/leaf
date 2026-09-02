@@ -9,6 +9,7 @@ import {
 } from 'react'
 
 import { arvoreSsoProviderId, authClient } from '@/lib/auth-client'
+import { hasStoredSession } from '@/lib/session-store'
 
 export type SessionStatus = 'loading' | 'signed-out' | 'signed-in'
 
@@ -25,9 +26,7 @@ type SessionContextValue = Readonly<{
 const SessionContext = createContext<SessionContextValue | null>(null)
 
 async function restoreSession(): Promise<SessionStatus> {
-  const cookieHeader = await authClient.getCookie()
-
-  return cookieHeader ? 'signed-in' : 'signed-out'
+  return (await hasStoredSession()) ? 'signed-in' : 'signed-out'
 }
 
 export function SessionProvider({ children }: { children: ReactNode }) {
@@ -54,15 +53,14 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     const result = await authClient.signIn.social({
       provider: arvoreSsoProviderId,
       callbackURL: '/',
+      errorCallbackURL: '/login',
     })
 
     if (result.error) {
       return 'failed'
     }
 
-    const cookieHeader = await authClient.getCookie()
-
-    if (!cookieHeader) {
+    if (!(await hasStoredSession())) {
       return 'cancelled'
     }
 
@@ -73,7 +71,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const sessionDropped = useCallback(async () => {
-    setStatus('signed-out')
+    setStatus((current) => (current === 'signed-out' ? current : 'signed-out'))
     await authClient.signOut().catch(() => undefined)
   }, [])
 
