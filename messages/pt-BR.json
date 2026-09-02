@@ -89,7 +89,13 @@
     "organizationLink": "Organização",
     "newDatabase": "Nova base de dados",
     "newDatabaseFailed": "Não foi possível criar a base de dados",
-    "home": "Página inicial"
+    "home": "Página inicial",
+    "showAll": "Ver todos (+{count})",
+    "showingCount": "{count, plural, one {# documento} other {# documentos}}",
+    "allDocuments": "Todos os documentos",
+    "filterPlaceholder": "Filtrar por título",
+    "filterLabel": "Filtrar documentos por título",
+    "filterEmpty": "Nenhum documento com esse nome"
   },
   "palette": {
     "title": "Busca e comandos",

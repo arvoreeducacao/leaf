@@ -8,6 +8,7 @@ import { readActiveOrgId } from '@/lib/active-org'
 import { getSession } from '@/lib/auth'
 import {
   buildDocumentTree,
+  capDocumentTree,
   listPrivateDocuments,
   listSharedDocuments,
   listTrashedDocuments,
@@ -63,10 +64,22 @@ export default async function AppLayout({
   )
 
   const teamspaceSections: Array<TeamspaceSection> = visibleTeamspaces.map(
-    (teamspace, index) => ({
-      ...teamspace,
-      documents: buildDocumentTree(teamspaceDocuments[index] ?? []),
-    }),
+    (teamspace, index) => {
+      const tree = capDocumentTree(
+        buildDocumentTree(teamspaceDocuments[index] ?? []),
+      )
+
+      return {
+        ...teamspace,
+        documents: tree.nodes,
+        hiddenDocuments: tree.hidden,
+      }
+    },
+  )
+
+  const ownedTree = capDocumentTree(buildDocumentTree(privateDocuments))
+  const organizationTree = capDocumentTree(
+    buildDocumentTree(organizationDocuments),
   )
 
   const recents = pickRecentDocuments(
@@ -81,13 +94,15 @@ export default async function AppLayout({
       activeOrgId={membership?.orgId ?? null}
       aiEnabled={isAiEnabled()}
       locale={locale}
-      organizationDocuments={buildDocumentTree(organizationDocuments)}
+      hiddenOrganizationDocuments={organizationTree.hidden}
+      hiddenOwnedDocuments={ownedTree.hidden}
+      organizationDocuments={organizationTree.nodes}
       organizationName={membership?.orgName ?? null}
       organizations={memberships.map((item) => ({
         id: item.orgId,
         name: item.orgName,
       }))}
-      owned={buildDocumentTree(privateDocuments)}
+      owned={ownedTree.nodes}
       recents={recents}
       shared={shared}
       teamspaces={teamspaceSections}

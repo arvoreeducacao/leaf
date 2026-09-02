@@ -188,6 +188,46 @@ export function buildDocumentTree(
   return roots
 }
 
+export function normalizeTitle(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .toLowerCase()
+    .trim()
+}
+
+export type BrowsableDocument = Pick<
+  DocumentSummary,
+  'id' | 'title' | 'icon' | 'kind'
+>
+
+export function toBrowsable(document: DocumentSummary): BrowsableDocument {
+  return {
+    id: document.id,
+    title: document.title,
+    icon: document.icon,
+    kind: document.kind,
+  }
+}
+
+export const sidebarBranchLimit = 20
+
+export type CappedTree = Readonly<{
+  nodes: Array<DocumentNode>
+  hidden: number
+}>
+
+export function capDocumentTree(
+  roots: Array<DocumentNode>,
+  limit: number = sidebarBranchLimit,
+): CappedTree {
+  if (roots.length <= limit) {
+    return { nodes: roots, hidden: 0 }
+  }
+
+  return { nodes: roots.slice(0, limit), hidden: roots.length - limit }
+}
+
 export async function getDocument(docId: string) {
   const document = await db.query.documents.findFirst({
     where: eq(documents.id, docId),
