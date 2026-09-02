@@ -1,6 +1,7 @@
 'use client'
 
 import { useTranslations } from 'next-intl'
+import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 
@@ -16,6 +17,7 @@ import { OfflineSync } from '@/components/app/offline-sync'
 import { OrgSwitcher } from '@/components/app/org-switcher'
 import type { OrganizationOption } from '@/components/app/org-switcher'
 import { SidebarSection } from '@/components/app/sidebar-section'
+import { sidebarIcon, sidebarRow } from '@/components/app/sidebar-styles'
 import { TeamspaceSections } from '@/components/app/teamspace-sections'
 import { registerTopbarSlot } from '@/components/app/topbar-slot'
 import { TrashSection } from '@/components/app/trash-section'
@@ -23,6 +25,7 @@ import { UserMenu } from '@/components/app/user-menu'
 import {
   CaretLeftIcon,
   CaretRightIcon,
+  HomeIcon,
   MenuIcon,
   TeamIcon,
 } from '@/components/icons'
@@ -120,19 +123,26 @@ function NavContent({
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="flex items-center gap-1 px-2 pt-2">
-        <OrgSwitcher
-          activeOrgId={activeOrgId}
-          onNavigate={onNavigate}
-          organizations={organizations}
-        />
+      <div className="flex h-9 items-center gap-1 px-2 pt-2">
         {headerAction}
+        <span className="flex-1" />
+        <NewDatabaseButton variant="icon" />
+        <NewDocumentButton variant="icon" />
       </div>
 
       <div className="mt-1 flex flex-col px-2">
         <CommandPaletteTrigger />
-        <NewDocumentButton />
-        <NewDatabaseButton />
+      </div>
+
+      <div className="mt-1 flex flex-col px-2">
+        <Link
+          className={cn(sidebarRow, 'font-medium')}
+          href="/"
+          onClick={onNavigate}
+        >
+          <HomeIcon aria-hidden="true" className={sidebarIcon} />
+          <span className="min-w-0 flex-1 truncate">{t('home')}</span>
+        </Link>
         <label className="sr-only" htmlFor={searchId}>
           {t('searchLabel')}
         </label>
@@ -218,7 +228,21 @@ function NavContent({
 
       <div className="flex flex-col gap-0.5 px-2 pt-1 pb-2">
         <TrashSection documents={trashed} />
-        <UserMenu email={user.email} locale={locale} name={user.name} />
+        <div className="flex min-w-0 items-center gap-1">
+          <div className="min-w-0 flex-1">
+            <OrgSwitcher
+              activeOrgId={activeOrgId}
+              onNavigate={onNavigate}
+              organizations={organizations}
+            />
+          </div>
+          <UserMenu
+            compact
+            email={user.email}
+            locale={locale}
+            name={user.name}
+          />
+        </div>
       </div>
     </div>
   )
@@ -336,7 +360,6 @@ export function AppShell({
                   <TooltipTrigger asChild>
                     <ButtonIcon
                       aria-label={t('collapseNavigation')}
-                      className="opacity-0 transition-opacity group-hover/sidebar:opacity-100 focus-visible:opacity-100"
                       onClick={() => toggleCollapsed(true)}
                       ref={collapseRef}
                       size="medium"

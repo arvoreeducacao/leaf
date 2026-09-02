@@ -59,7 +59,7 @@ export default async function DocumentPage({ params }: Props) {
     <article
       className={
         isDatabase
-          ? 'flex w-full flex-col gap-1 pt-6 pb-40 tablet:pt-9'
+          ? 'flex w-full min-w-0 flex-col gap-1 pt-6 pb-40 tablet:pt-9'
           : 'mx-auto flex w-full max-w-page flex-col gap-2 pt-10 pb-40 tablet:pt-20'
       }
     >
