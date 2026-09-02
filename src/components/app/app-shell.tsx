@@ -187,6 +187,7 @@ function NavContent({
 
             {organizationName ? (
               <SidebarSection
+                collapseId="organization"
                 href="/org"
                 icon={PeopleIcon}
                 onNavigate={onNavigate}
@@ -202,7 +203,7 @@ function NavContent({
             ) : null}
 
             {shared.length > 0 ? (
-              <SidebarSection title={t('sharedWithMe')}>
+              <SidebarSection collapseId="shared" title={t('sharedWithMe')}>
                 <DocumentList
                   documents={shared}
                   emptyLabel={t('emptyShared')}
@@ -212,7 +213,7 @@ function NavContent({
               </SidebarSection>
             ) : null}
 
-            <SidebarSection title={t('privateSection')}>
+            <SidebarSection collapseId="private" title={t('privateSection')}>
               <DocumentTree
                 emptyLabel={t('emptyPrivate')}
                 hasOrganization={organizationName !== null}

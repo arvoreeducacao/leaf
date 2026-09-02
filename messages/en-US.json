@@ -59,7 +59,8 @@
     "language": "Language",
     "localePtBR": "Português (Brasil)",
     "localeEnUS": "English (US)",
-    "switchingLanguage": "Switching language"
+    "switchingLanguage": "Switching language",
+    "installApp": "Install Leaf"
   },
   "nav": {
     "navigation": "Navigation",
