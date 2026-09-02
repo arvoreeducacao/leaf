@@ -12,6 +12,7 @@ export type NotionImportMessages = Readonly<{
   boardView: string
   csvDatabases: (count: number) => string
   unsupportedBlocks: (count: number, types: string) => string
+  skippedUnchanged: (count: number) => string
   unresolvedPeople: (count: number, names: string) => string
   pageFailed: (title: string) => string
   togglesDegraded: (count: number) => string
@@ -46,6 +47,7 @@ export function buildNotionImportMessages(
     csvDatabases: (count) => translate('csvDatabases', { count }),
     unsupportedBlocks: (count, types) =>
       translate('unsupportedBlocks', { count, types }),
+    skippedUnchanged: (count) => translate('skippedUnchanged', { count }),
     unresolvedPeople: (count, names) =>
       translate('unresolvedPeople', { count, names }),
     pageFailed: (title) => translate('pageFailed', { title }),

@@ -13,12 +13,12 @@ import {
 } from '@/lib/import-destination'
 import { createNotionClient } from '@/lib/notion/api'
 import { getNotionConnection } from '@/lib/notion/connection'
-import { crawlNotionPage, crawlNotionWorkspace } from '@/lib/notion/crawl'
-import { assetKeyFor, importNotionPlan } from '@/lib/notion/import'
-import { storage } from '@/lib/storage'
+import { assetKeyFor } from '@/lib/notion/import'
 import type { ImportEvent } from '@/lib/notion/import'
 import { notionIdFromLink } from '@/lib/notion/link'
 import { buildNotionImportMessages } from '@/lib/notion/messages'
+import { syncNotion } from '@/lib/notion/sync'
+import { storage } from '@/lib/storage'
 
 export const runtime = 'nodejs'
 
@@ -103,65 +103,29 @@ export async function POST(request: Request) {
           signal: request.signal,
         })
 
-        const crawlOptions = {
-          assetSink: async (asset: {
-            path: string
-            bytes: Uint8Array
-            contentType: string
-          }) => {
-            const key = assetKeyFor(asset.path)
+        for await (const event of syncNotion(
+          client,
+          wholeWorkspace
+            ? 'workspace'
+            : [{ id: pageId as string, kind: 'page' }],
+          owner,
+          messages,
+          request.signal,
+          {
+            comments: body.comments === true,
+            storeAsset: async (bytes, contentType, fileName) => {
+              const key = assetKeyFor(fileName)
 
-            await storage.put(key, Buffer.from(asset.bytes), asset.contentType)
+              await storage.put(key, Buffer.from(bytes), contentType)
 
-            return `/api/uploads/${key}`
+              return `/api/uploads/${key}`
+            },
           },
-          comments: body.comments === true,
-        }
+        )) {
+          send(event)
 
-        const crawl = wholeWorkspace
-          ? crawlNotionWorkspace(client, messages, request.signal, crawlOptions)
-          : crawlNotionPage(
-              client,
-              pageId as string,
-              messages,
-              request.signal,
-              crawlOptions,
-            )
-
-        for await (const event of crawl) {
-          if (event.type === 'page') {
-            send({
-              done: event.done,
-              label: event.title,
-              phase: 'reading',
-              total: 0,
-              type: 'progress',
-            })
-
-            continue
-          }
-
-          for await (const step of importNotionPlan(
-            event.plan,
-            owner,
-            messages,
-            request.signal,
-            event.comments,
-          )) {
-            if (step.type === 'done') {
-              send({
-                summary: {
-                  ...step.summary,
-                  warnings: [...event.warnings, ...step.summary.warnings],
-                },
-                type: 'done',
-              })
-              revalidatePath('/', 'layout')
-
-              continue
-            }
-
-            send(step)
+          if (event.type === 'done') {
+            revalidatePath('/', 'layout')
           }
         }
       } catch {
@@ -180,3 +144,4 @@ export async function POST(request: Request) {
     },
   })
 }
+
