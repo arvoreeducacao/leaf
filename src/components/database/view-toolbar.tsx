@@ -66,7 +66,9 @@ type Props = Readonly<{
   onRenameView: (id: string, name: string) => void
   onDeleteView: (id: string) => void
   onConfigChange: (config: ViewConfig) => void
+  onCreateRow: () => void
   people: ReadonlyArray<Person>
+  compact?: boolean
 }>
 
 export function ViewToolbar({
@@ -81,7 +83,9 @@ export function ViewToolbar({
   onRenameView,
   onDeleteView,
   onConfigChange,
+  onCreateRow,
   people,
+  compact = false,
 }: Props) {
   const t = useTranslations('database')
   const [renaming, setRenaming] = useState<string | null>(null)
@@ -111,7 +115,12 @@ export function ViewToolbar({
   }
 
   return (
-    <div className="flex flex-col gap-2 border-line-divider border-b pb-2 tablet:flex-row tablet:items-center">
+    <div
+      className={cn(
+        'flex flex-col gap-2 py-1 tablet:flex-row tablet:items-center',
+        compact ? '' : 'px-4 tablet:px-24',
+      )}
+    >
       <ul className="-mx-1 flex min-w-0 flex-1 items-center gap-1 overflow-x-auto px-1">
         {views.map((view) => {
           const Icon = viewIcon[view.type]
@@ -242,14 +251,13 @@ export function ViewToolbar({
 
         <Popover>
           <PopoverTrigger asChild>
-            <Button
-              className="h-9 tablet:h-7 px-2 font-regular text-body-small"
-              size="sm"
-              variant="ghost"
+            <ButtonIcon
+              aria-label={t('filtersActive', { count: config.filters.length })}
+              size="medium"
+              variant={config.filters.length > 0 ? 'filter-active' : 'ghost'}
             >
               <FilterIcon aria-hidden="true" />
-              {t('filtersActive', { count: config.filters.length })}
-            </Button>
+            </ButtonIcon>
           </PopoverTrigger>
           <PopoverContent align="end" className="w-[22rem] p-3">
             <ul className="flex flex-col gap-2">
@@ -370,14 +378,13 @@ export function ViewToolbar({
 
         <Popover>
           <PopoverTrigger asChild>
-            <Button
-              className="h-9 tablet:h-7 px-2 font-regular text-body-small"
-              size="sm"
-              variant="ghost"
+            <ButtonIcon
+              aria-label={t('sortsActive', { count: config.sorts.length })}
+              size="medium"
+              variant={config.sorts.length > 0 ? 'filter-active' : 'ghost'}
             >
               <ListReorderIcon aria-hidden="true" />
-              {t('sortsActive', { count: config.sorts.length })}
-            </Button>
+            </ButtonIcon>
           </PopoverTrigger>
           <PopoverContent align="end" className="w-80 p-3">
             <ul className="flex flex-col gap-2">
@@ -468,14 +475,13 @@ export function ViewToolbar({
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button
-              className="h-9 tablet:h-7 px-2 font-regular text-body-small"
-              size="sm"
+            <ButtonIcon
+              aria-label={t('properties')}
+              size="medium"
               variant="ghost"
             >
               <EyeIcon aria-hidden="true" />
-              {t('properties')}
-            </Button>
+            </ButtonIcon>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>{t('properties')}</DropdownMenuLabel>
@@ -502,6 +508,16 @@ export function ViewToolbar({
             ))}
           </DropdownMenuContent>
         </DropdownMenu>
+
+        {canEdit ? (
+          <Button
+            className="ml-1 h-9 px-2 tablet:h-7"
+            onClick={onCreateRow}
+            size="sm"
+          >
+            {t('newRowShort')}
+          </Button>
+        ) : null}
       </div>
     </div>
   )

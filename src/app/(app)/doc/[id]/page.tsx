@@ -53,8 +53,16 @@ export default async function DocumentPage({ params }: Props) {
     ? await getTeamspace(document.teamspaceId)
     : null
 
+  const isDatabase = document.kind === 'database'
+
   return (
-    <article className="mx-auto flex w-full max-w-page flex-col gap-2 pt-10 pb-40 tablet:pt-20">
+    <article
+      className={
+        isDatabase
+          ? 'flex w-full flex-col gap-1 pt-6 pb-40 tablet:pt-9'
+          : 'mx-auto flex w-full max-w-page flex-col gap-2 pt-10 pb-40 tablet:pt-20'
+      }
+    >
       <DocumentHeader
         breadcrumb={
           crumbs.length > 0 ? <DocumentBreadcrumb crumbs={crumbs} /> : null
@@ -67,8 +75,9 @@ export default async function DocumentPage({ params }: Props) {
         sharedWithOrganization={document.orgAccess !== null}
         teamspaceName={teamspace?.name ?? null}
         title={document.title}
+        wide={isDatabase}
       />
-      {document.kind === 'database' ? (
+      {isDatabase ? (
         <DatabaseSurface canEdit={canEdit(access)} databaseId={document.id} />
       ) : (
         <>

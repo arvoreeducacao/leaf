@@ -18,6 +18,7 @@ import { CaretRightIcon, TeamIcon, UsersIcon } from '@/components/icons'
 import { ShareButton } from '@/components/sharing/share-button'
 import { Badge } from '@/components/ui/badge'
 import { renameDocument } from '@/lib/document-actions'
+import { cn } from '@/shared/utils'
 
 type Props = Readonly<{
   documentId: string
@@ -29,6 +30,7 @@ type Props = Readonly<{
   sharedWithOrganization: boolean
   openComments: number
   breadcrumb: React.ReactNode
+  wide?: boolean
 }>
 
 export function DocumentHeader({
@@ -41,6 +43,7 @@ export function DocumentHeader({
   sharedWithOrganization,
   openComments,
   breadcrumb,
+  wide = false,
 }: Props) {
   const t = useTranslations('document')
   const tTeamspace = useTranslations('teamspace')
@@ -129,14 +132,19 @@ export function DocumentHeader({
     <>
       {slot ? createPortal(topbar, slot) : null}
 
-      <div className="px-4 tablet:px-[54px]">
+      <div className={cn('px-4', wide ? 'tablet:px-24' : 'tablet:px-[54px]')}>
         {canEdit ? (
           <h1>
             <label className="sr-only" htmlFor={titleId}>
               {t('titleLabel')}
             </label>
             <textarea
-              className="block w-full resize-none overflow-hidden bg-transparent font-heavy text-content-strong text-display-small outline-none tablet:text-display-medium placeholder:text-content-disabled disabled:opacity-60"
+              className={cn(
+                'block w-full resize-none overflow-hidden bg-transparent font-heavy text-content-strong outline-none placeholder:text-content-disabled disabled:opacity-60',
+                wide
+                  ? 'text-display-compact'
+                  : 'text-display-small tablet:text-display-medium',
+              )}
               disabled={saving}
               id={titleId}
               onBlur={persist}
@@ -163,7 +171,14 @@ export function DocumentHeader({
             </span>
           </h1>
         ) : (
-          <h1 className="font-heavy text-content-strong text-display-small tablet:text-display-medium">
+          <h1
+            className={cn(
+              'font-heavy text-content-strong',
+              wide
+                ? 'text-display-compact'
+                : 'text-display-small tablet:text-display-medium',
+            )}
+          >
             {title}
           </h1>
         )}
