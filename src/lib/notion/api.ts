@@ -125,6 +125,35 @@ export type NotionClient = Readonly<{
   download: (url: string) => Promise<{ bytes: Uint8Array; contentType: string }>
 }>
 
+const maxAttempts = 5
+
+const retryableStatuses = new Set([409, 429, 500, 502, 503, 504])
+
+function retryDelayMs(response: Response | null, attempt: number): number {
+  const retryAfter = Number(response?.headers.get('retry-after'))
+
+  if (Number.isFinite(retryAfter) && retryAfter > 0) {
+    return Math.min(retryAfter * 1000, 60_000)
+  }
+
+  return Math.min(1000 * 2 ** attempt, 30_000)
+}
+
+function sleep(ms: number, signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(resolve, ms)
+
+    signal?.addEventListener(
+      'abort',
+      () => {
+        clearTimeout(timer)
+        reject(new Error('aborted'))
+      },
+      { once: true },
+    )
+  })
+}
+
 export function createNotionClient(
   token: string,
   options: { fetch?: NotionFetch; signal?: AbortSignal } = {},
@@ -135,25 +164,46 @@ export function createNotionClient(
     path: string,
     init: RequestInit = {},
   ): Promise<T> {
-    const response = await call(`${NOTION_API_BASE}${path}`, {
-      ...init,
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-        'Notion-Version': NOTION_API_VERSION,
-        ...(init.headers ?? {}),
-      },
-      signal: options.signal,
-    })
+    for (let attempt = 0; ; attempt += 1) {
+      let response: Response | null = null
 
-    if (!response.ok) {
+      try {
+        response = await call(`${NOTION_API_BASE}${path}`, {
+          ...init,
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+            'Notion-Version': NOTION_API_VERSION,
+            ...(init.headers ?? {}),
+          },
+          signal: options.signal,
+        })
+      } catch (error) {
+        if (options.signal?.aborted || attempt >= maxAttempts - 1) {
+          throw error
+        }
+
+        await sleep(retryDelayMs(null, attempt), options.signal)
+        continue
+      }
+
+      if (response.ok) {
+        return (await response.json()) as T
+      }
+
+      if (
+        retryableStatuses.has(response.status) &&
+        attempt < maxAttempts - 1
+      ) {
+        await sleep(retryDelayMs(response, attempt), options.signal)
+        continue
+      }
+
       throw new NotionApiError(
         response.status,
         `${init.method ?? 'GET'} ${path} devolveu ${response.status}`,
       )
     }
-
-    return (await response.json()) as T
   }
 
   async function* paginate<T>(
@@ -205,16 +255,35 @@ export function createNotionClient(
     database: (id) => request<NotionDatabaseObject>(`/databases/${id}`),
 
     download: async (url) => {
-      const response = await call(url, { signal: options.signal })
+      for (let attempt = 0; ; attempt += 1) {
+        let response: Response | null = null
 
-      if (!response.ok) {
+        try {
+          response = await call(url, { signal: options.signal })
+        } catch (error) {
+          if (options.signal?.aborted || attempt >= 2) {
+            throw error
+          }
+
+          await sleep(retryDelayMs(null, attempt), options.signal)
+          continue
+        }
+
+        if (response.ok) {
+          return {
+            bytes: new Uint8Array(await response.arrayBuffer()),
+            contentType:
+              response.headers.get('content-type') ??
+              'application/octet-stream',
+          }
+        }
+
+        if (response.status >= 500 && attempt < 2) {
+          await sleep(retryDelayMs(response, attempt), options.signal)
+          continue
+        }
+
         throw new NotionApiError(response.status, `download ${response.status}`)
-      }
-
-      return {
-        bytes: new Uint8Array(await response.arrayBuffer()),
-        contentType:
-          response.headers.get('content-type') ?? 'application/octet-stream',
       }
     },
 
