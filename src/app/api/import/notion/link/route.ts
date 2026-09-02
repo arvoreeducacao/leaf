@@ -113,6 +113,7 @@ export async function POST(request: Request) {
           request.signal,
           {
             comments: body.comments === true,
+            force: body.force === true,
             storeAsset: async (bytes, contentType, fileName) => {
               const key = assetKeyFor(fileName)
 
