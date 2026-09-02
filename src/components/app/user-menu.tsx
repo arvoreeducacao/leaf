@@ -9,6 +9,7 @@ import { toast } from 'sonner'
 
 import {
   ArrowRightIcon,
+  DownloadIcon,
   GlobeIcon,
   MoonFirstQuarterIcon,
   MoonIcon,
@@ -33,6 +34,7 @@ import { locales } from '@/i18n/config'
 import { setUserLocale } from '@/i18n/locale-action'
 import { authClient } from '@/lib/auth-client'
 import { wipeOfflineData } from '@/lib/offline/wipe'
+import { useInstallPrompt } from '@/shared/hooks/use-install-prompt'
 import { cn } from '@/shared/utils'
 
 type Props = Readonly<{
@@ -74,6 +76,7 @@ export function UserMenu({ name, email, locale, compact = false }: Props) {
   const tNav = useTranslations('nav')
   const router = useRouter()
   const { theme, setTheme } = useTheme()
+  const { offer: installOffer, install } = useInstallPrompt()
   const [mounted, setMounted] = useState(false)
   const [pending, setPending] = useState(false)
   const [switching, startSwitching] = useTransition()
@@ -98,6 +101,15 @@ export function UserMenu({ name, email, locale, compact = false }: Props) {
 
     router.push('/login')
     router.refresh()
+  }
+
+  async function handleInstall() {
+    if (installOffer === 'ios-hint') {
+      toast(t('installIosTitle'), { description: t('installIosBody') })
+      return
+    }
+
+    await install()
   }
 
   function handleLocaleChange(next: string) {
@@ -157,6 +169,12 @@ export function UserMenu({ name, email, locale, compact = false }: Props) {
             {tNav('organizationLink')}
           </Link>
         </DropdownMenuItem>
+        {installOffer !== 'none' ? (
+          <DropdownMenuItem data-testid="install-app" onSelect={handleInstall}>
+            <DownloadIcon aria-hidden="true" />
+            {t('installApp')}
+          </DropdownMenuItem>
+        ) : null}
         <DropdownMenuItem disabled={pending} onSelect={handleSignOut}>
           <ArrowRightIcon aria-hidden="true" />
           {t('signOut')}

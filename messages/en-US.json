@@ -59,7 +59,10 @@
     "language": "Language",
     "localePtBR": "Português (Brasil)",
     "localeEnUS": "English (US)",
-    "switchingLanguage": "Switching language"
+    "switchingLanguage": "Switching language",
+    "installApp": "Install Leaf",
+    "installIosTitle": "Add Leaf to your Home Screen",
+    "installIosBody": "In Safari, tap Share and then \"Add to Home Screen\"."
   },
   "nav": {
     "navigation": "Navigation",
