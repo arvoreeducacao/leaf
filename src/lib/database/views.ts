@@ -102,6 +102,7 @@ export const emptyViewConfig: ViewConfig = {
 export type DatabaseRow = Readonly<{
   id: string
   title: string
+  icon: string | null
   values: PropertyValues
   createdAt: string
   updatedAt: string

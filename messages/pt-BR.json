@@ -132,7 +132,10 @@
     "trashed": "Documento movido para a lixeira",
     "restored": "Documento restaurado",
     "orgTag": "Organização",
-    "orgTagHint": "Este documento não é privado: quem faz parte da organização tem acesso"
+    "orgTagHint": "Este documento não é privado: quem faz parte da organização tem acesso",
+    "editedAt": "Editada {time}",
+    "copyLink": "Copiar link",
+    "linkCopied": "Link copiado"
   },
   "database": {
     "untitled": "Base sem título",
@@ -156,7 +159,7 @@
     "titleColumn": "Nome",
     "untitledRow": "Sem título",
     "rowTitleLabel": "Nome da linha",
-    "newRow": "Nova linha",
+    "newRow": "Nova página",
     "newRowShort": "Nova",
     "addProperty": "Nova propriedade",
     "propertyNameLabel": "Nome da propriedade",
@@ -242,7 +245,8 @@
       "todo": "A fazer",
       "doing": "Fazendo",
       "done": "Feito"
-    }
+    },
+    "openRowShort": "Abrir"
   },
   "versions": {
     "menuItem": "Histórico de versões",

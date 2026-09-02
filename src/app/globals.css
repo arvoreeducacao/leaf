@@ -242,6 +242,8 @@
   --text-heading-large--line-height: 1.3;
   --text-display-small: 30px;
   --text-display-small--line-height: 1.3;
+  --text-display-compact: 32px;
+  --text-display-compact--line-height: 1.2;
   --text-display-medium: 40px;
   --text-display-medium--line-height: 1.2;
   --text-display-large: 48px;
@@ -253,8 +255,8 @@
 
   --radius-small: 3px;
   --radius-medium: 4px;
-  --radius-large: 4px;
-  --radius-xlarge: 8px;
+  --radius-large: 6px;
+  --radius-xlarge: 10px;
   --radius-pill: 500px;
   --radius-circular: 50%;
 
