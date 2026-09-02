@@ -28,6 +28,8 @@ import {
   lookupPublicDocument,
   registerInviteAttempt,
   registerPublicLookupAttempt,
+  registerAiAttempt,
+  resetAiLimiter,
   resetInviteLimiter,
   resetPublicLookupLimiter,
 } from '@/lib/authz'
@@ -63,6 +65,7 @@ beforeEach(async () => {
   await resetDatabase()
   resetPublicLookupLimiter()
   resetInviteLimiter()
+  resetAiLimiter()
 
   await db.delete(documentShares)
   await db.delete(documents)
@@ -457,6 +460,23 @@ describe('rate limit of the public lookup', () => {
     const result = await lookupPublicDocument(liveToken, 'ip-lookup')
 
     expect(result.status).toBe('rate-limited')
+  })
+})
+
+describe('rate limit of the AI requests', () => {
+  it('blocks the twenty-first request of the same person in the window', () => {
+    const now = Date.now()
+
+    for (let attempt = 0; attempt < 20; attempt += 1) {
+      expect(registerAiAttempt('user-flood', now).allowed).toBe(true)
+    }
+
+    const blocked = registerAiAttempt('user-flood', now)
+
+    expect(blocked.allowed).toBe(false)
+    expect(blocked.retryAfterSeconds).toBeGreaterThan(0)
+    expect(registerAiAttempt('user-other', now).allowed).toBe(true)
+    expect(registerAiAttempt('user-flood', now + 61_000).allowed).toBe(true)
   })
 })
 

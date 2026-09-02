@@ -28,6 +28,7 @@ type Props = Readonly<{
   canComment: boolean
   openCommentCount: number
   realtime: RealtimeConfig | null
+  aiEnabled: boolean
 }>
 
 export function DocumentEditor({
@@ -38,6 +39,7 @@ export function DocumentEditor({
   canComment,
   openCommentCount,
   realtime,
+  aiEnabled,
 }: Props) {
   const locale = useLocale()
   const t = useTranslations('realtime')
@@ -73,6 +75,7 @@ export function DocumentEditor({
 
   return (
     <BlockNoteEditor
+      aiEnabled={aiEnabled}
       canComment={canComment}
       collaboration={session}
       conflict={conflict}

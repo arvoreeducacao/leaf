@@ -61,6 +61,7 @@ export function getLeafSlashMenuItems(
   importTexts?: ImportMenuTexts,
   importActions?: ImportMenuActions,
   databaseItem?: DatabaseMenuAction,
+  aiItems: ReadonlyArray<DefaultReactSuggestionItem> = [],
 ): DefaultReactSuggestionItem[] {
   const menu = editor.dictionary.slash_menu
   const hiddenGroups = new Set([menu.video.group, menu.emoji.group])
@@ -130,12 +131,15 @@ export function getLeafSlashMenuItems(
         ]
       : []
 
-  return arrangeMenuItems(
-    defaults,
-    [
-      { after: menu.quote.title, item: callout },
-      ...(database ? [{ after: menu.table.title, item: database }] : []),
-    ],
-    imports,
-  )
+  return [
+    ...aiItems,
+    ...arrangeMenuItems(
+      defaults,
+      [
+        { after: menu.quote.title, item: callout },
+        ...(database ? [{ after: menu.table.title, item: database }] : []),
+      ],
+      imports,
+    ),
+  ]
 }
