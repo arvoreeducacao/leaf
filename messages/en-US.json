@@ -108,7 +108,15 @@
     "resultCount": "{count, plural, =0 {# results} one {# result} other {# results}}",
     "hintNavigate": "navigate",
     "hintOpen": "open",
-    "hintToggle": "open or close"
+    "hintToggle": "open or close",
+    "askSection": "AI",
+    "askActionWithQuery": "Ask AI: “{query}”",
+    "askAnswerLabel": "AI answer",
+    "askThinking": "Reading your documents…",
+    "askSources": "Where I found it",
+    "askEmpty": "I found nothing about that in the documents you can see.",
+    "askError": "Could not answer right now.",
+    "askBack": "Back to search"
   },
   "home": {
     "title": "Create your first document",
