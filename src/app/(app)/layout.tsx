@@ -11,6 +11,7 @@ import {
   listPrivateDocuments,
   listSharedDocuments,
   listTrashedDocuments,
+  pickRecentDocuments,
 } from '@/lib/documents'
 import {
   acceptPendingInvites,
@@ -18,6 +19,8 @@ import {
 } from '@/lib/organizations'
 import type { TeamspaceSection } from '@/lib/teamspaces'
 import { listTeamspaceDocuments, listVisibleTeamspaces } from '@/lib/teamspaces'
+
+const recentLimit = 15
 
 export default async function AppLayout({
   children,
@@ -53,13 +56,22 @@ export default async function AppLayout({
     ? await listVisibleTeamspaces(membership.orgId, session.user.id)
     : []
 
-  const teamspaceSections: Array<TeamspaceSection> = await Promise.all(
-    visibleTeamspaces.map(async (teamspace) => ({
+  const teamspaceDocuments = await Promise.all(
+    visibleTeamspaces.map((teamspace) =>
+      listTeamspaceDocuments(teamspace.id, session.user.id),
+    ),
+  )
+
+  const teamspaceSections: Array<TeamspaceSection> = visibleTeamspaces.map(
+    (teamspace, index) => ({
       ...teamspace,
-      documents: buildDocumentTree(
-        await listTeamspaceDocuments(teamspace.id, session.user.id),
-      ),
-    })),
+      documents: buildDocumentTree(teamspaceDocuments[index] ?? []),
+    }),
+  )
+
+  const recents = pickRecentDocuments(
+    [privateDocuments, organizationDocuments, shared, ...teamspaceDocuments],
+    recentLimit,
   )
 
   const locale = await getLocale()
@@ -76,6 +88,7 @@ export default async function AppLayout({
         name: item.orgName,
       }))}
       owned={buildDocumentTree(privateDocuments)}
+      recents={recents}
       shared={shared}
       teamspaces={teamspaceSections}
       trashed={trashed}

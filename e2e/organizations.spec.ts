@@ -84,7 +84,9 @@ test.describe('organizations', () => {
     await expect(memberPage.getByText('Somente leitura')).toBeVisible()
     await expect(editorBody(memberPage)).toHaveCount(0)
     await expect(
-      memberPage.getByRole('link', { name: 'Team plan' }),
+      memberPage
+        .getByRole('region', { name: 'Organização' })
+        .getByRole('link', { name: 'Team plan' }),
     ).toBeVisible()
 
     await ownerPage.goto(`/doc/${id}`)
