@@ -1,24 +1,22 @@
-'use server'
-
 import { getSession } from '@/lib/auth'
-import type { SearchHit } from '@/lib/search-index'
+import type { WorkspaceSearchResult } from '@/lib/search-index'
 import {
   listRecentAccessibleDocuments,
+  scheduleSearchIndexReconcile,
   searchAccessibleDocuments,
 } from '@/lib/search-index'
 
-export type WorkspaceSearchResult = Readonly<{
-  documents: Array<SearchHit>
-  recent: boolean
-}>
+function json(result: WorkspaceSearchResult) {
+  return Response.json(result, {
+    headers: { 'Cache-Control': 'no-store' },
+  })
+}
 
-export async function searchWorkspace(
-  query: string,
-): Promise<WorkspaceSearchResult> {
+export async function GET(request: Request) {
   const session = await getSession()
 
   if (!session) {
-    return { documents: [], recent: false }
+    return json({ documents: [], recent: false })
   }
 
   const viewer = {
@@ -26,17 +24,19 @@ export async function searchWorkspace(
     email: session.user.email,
   }
 
-  const term = query.trim()
+  const term = (new URL(request.url).searchParams.get('q') ?? '').trim()
+
+  scheduleSearchIndexReconcile()
 
   if (term.length === 0) {
-    return {
+    return json({
       documents: await listRecentAccessibleDocuments(viewer),
       recent: true,
-    }
+    })
   }
 
-  return {
+  return json({
     documents: await searchAccessibleDocuments(viewer, term),
     recent: false,
-  }
+  })
 }

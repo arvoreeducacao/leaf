@@ -8,7 +8,7 @@ export type ShortcutSignal = Readonly<{
   editorSelection: boolean
 }>
 
-function isLetterK(signal: ShortcutSignal) {
+export function isLetterK(signal: Pick<ShortcutSignal, 'key' | 'code'>) {
   return signal.code === 'KeyK' || signal.key.toLowerCase() === 'k'
 }
 

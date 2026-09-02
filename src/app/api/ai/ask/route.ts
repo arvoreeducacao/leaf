@@ -12,6 +12,7 @@ import { getSession } from '@/lib/auth'
 import { registerAiAttempt } from '@/lib/authz'
 import {
   askTokens,
+  scheduleSearchIndexReconcile,
   searchAccessibleDocumentBodies,
 } from '@/lib/search-index'
 
@@ -50,6 +51,8 @@ export async function POST(request: Request) {
       },
     )
   }
+
+  scheduleSearchIndexReconcile()
 
   const passages = await searchAccessibleDocumentBodies(
     { userId: session.user.id, email: session.user.email },

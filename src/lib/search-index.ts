@@ -19,6 +19,7 @@ const SNIPPET_WORDS = 12
 const SNIPPET_LEAD_WORDS = 4
 const ELLIPSIS = '…'
 const WORD_PATTERN = /[\p{L}\p{N}]+/gu
+const RECONCILE_INTERVAL = 5 * 60 * 1000
 
 export type SearchSegment = Readonly<{ text: string; highlight: boolean }>
 
@@ -26,6 +27,11 @@ export type SearchHit = Readonly<{
   id: string
   title: string
   segments: Array<SearchSegment>
+}>
+
+export type WorkspaceSearchResult = Readonly<{
+  documents: Array<SearchHit>
+  recent: boolean
 }>
 
 export function queryTokens(query: string): Array<string> {
@@ -257,6 +263,24 @@ export async function indexDocument(documentId: string) {
   await writeIndexRow(row)
 }
 
+let reconcileDueAt = 0
+let reconcileInFlight: Promise<void> | null = null
+
+export function scheduleSearchIndexReconcile() {
+  const now = Date.now()
+
+  if (reconcileInFlight || now < reconcileDueAt) {
+    return
+  }
+
+  reconcileDueAt = now + RECONCILE_INTERVAL
+  reconcileInFlight = reconcileSearchIndex()
+    .catch(() => undefined)
+    .finally(() => {
+      reconcileInFlight = null
+    })
+}
+
 export async function reconcileSearchIndex() {
   await db.execute(
     sql`delete f from documents_fts f left join documents d on d.id = f.document_id where d.id is null`,
@@ -320,8 +344,6 @@ export async function searchAccessibleDocuments(
     return []
   }
 
-  await reconcileSearchIndex()
-
   const rows = await selectRows<HitRow>(sql`
     select
       d.id as id,
@@ -364,8 +386,6 @@ export async function searchAccessibleDocumentBodies(
   if (!match) {
     return []
   }
-
-  await reconcileSearchIndex()
 
   const rows = await selectRows<HitRow>(sql`
     select
