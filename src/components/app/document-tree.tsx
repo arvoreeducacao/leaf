@@ -13,7 +13,7 @@ import {
   sidebarRow,
   sidebarRowActive,
 } from '@/components/app/sidebar-styles'
-import { CaretDownIcon, CaretRightIcon } from '@/components/icons'
+import { ChevronDownIcon, ChevronRightIcon } from '@/components/icons/outline'
 import {
   Tooltip,
   TooltipContent,
@@ -219,9 +219,9 @@ function TreeLevel({
                     type="button"
                   >
                     {open ? (
-                      <CaretDownIcon aria-hidden="true" className="size-3.5" />
+                      <ChevronDownIcon aria-hidden="true" className="size-3.5" />
                     ) : (
-                      <CaretRightIcon aria-hidden="true" className="size-3.5" />
+                      <ChevronRightIcon aria-hidden="true" className="size-3.5" />
                     )}
                   </button>
                 ) : null}

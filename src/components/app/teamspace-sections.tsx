@@ -13,7 +13,7 @@ import {
 import { sidebarHeading } from '@/components/app/sidebar-styles'
 import { TeamspaceFormDialog } from '@/components/app/teamspace-form-dialog'
 import { useSidebarCollapse } from '@/components/app/use-sidebar-collapse'
-import { AddIcon, PadlockIcon, UsersIcon } from '@/components/icons'
+import { LockIcon, PeopleIcon, PlusIcon } from '@/components/icons/outline'
 import { Button } from '@/components/ui/button'
 import { ButtonIcon } from '@/components/ui/button-icon'
 import type { TeamspaceSection } from '@/lib/teamspaces'
@@ -68,7 +68,7 @@ export function TeamspaceSections({
             size="small"
             variant="ghost"
           >
-            <AddIcon aria-hidden="true" />
+            <PlusIcon aria-hidden="true" />
           </ButtonIcon>
         ) : null
       }
@@ -115,7 +115,7 @@ function TeamspaceGroup({
   const t = useTranslations('teamspace')
   const contentId = useId()
   const { collapsed, toggle } = useSidebarCollapse(`teamspace:${teamspace.id}`)
-  const AccessIcon = teamspace.access === 'closed' ? PadlockIcon : UsersIcon
+  const AccessIcon = teamspace.access === 'closed' ? LockIcon : PeopleIcon
 
   return (
     <div className="group/teamspace flex flex-col">
