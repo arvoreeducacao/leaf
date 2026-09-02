@@ -19,10 +19,16 @@ import { cn } from '@/shared/utils'
 type Props = Readonly<{
   teamspaces: ReadonlyArray<TeamspaceSection>
   canCreate: boolean
+  hasOrganization: boolean
   onNavigate?: () => void
 }>
 
-export function TeamspaceSections({ teamspaces, canCreate, onNavigate }: Props) {
+export function TeamspaceSections({
+  teamspaces,
+  canCreate,
+  hasOrganization,
+  onNavigate,
+}: Props) {
   const t = useTranslations('teamspace')
   const router = useRouter()
   const [creating, setCreating] = useState(false)
@@ -105,6 +111,7 @@ export function TeamspaceSections({ teamspaces, canCreate, onNavigate }: Props) 
 
           <DocumentTree
             emptyLabel={t('empty')}
+            hasOrganization={hasOrganization}
             nodes={teamspace.documents}
             onNavigate={onNavigate}
           />

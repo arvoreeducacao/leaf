@@ -21,6 +21,7 @@ function node(
     kind: 'page',
     icon: null,
     shared: false,
+    owned: true,
     depth: 0,
     children,
   }
@@ -36,6 +37,7 @@ function summary(id: string, title: string): DocumentSummary {
     kind: 'page',
     icon: null,
     shared: true,
+    owned: false,
   }
 }
 

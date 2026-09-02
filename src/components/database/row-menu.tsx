@@ -1,12 +1,16 @@
 'use client'
 
 import { useTranslations } from 'next-intl'
-import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useState } from 'react'
+import { toast } from 'sonner'
 
 import {
   ArrowExpandIcon,
+  ArrowUpRightIcon,
+  ClipboardContentIcon,
   EllipsisVerticalIcon,
+  HierarchyIcon,
   TrashIcon,
 } from '@/components/icons'
 import {
@@ -21,14 +25,20 @@ import {
 } from '@/components/ui/alert-dialog'
 import { ButtonIcon } from '@/components/ui/button-icon'
 import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuTrigger,
+} from '@/components/ui/context-menu'
+import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import {
+  ContextEntries,
+  DropdownEntries,
+  type MenuEntry,
+} from '@/components/ui/menu-entries'
 
 export type RowMoveTarget = Readonly<{ id: string | null; name: string }>
 
@@ -41,7 +51,7 @@ type Props = Readonly<{
   onDelete: () => void
 }>
 
-export function RowMenu({
+function useRowActions({
   rowId,
   title,
   canEdit,
@@ -51,8 +61,87 @@ export function RowMenu({
 }: Props) {
   const t = useTranslations('database')
   const tCommon = useTranslations('common')
+  const tDocument = useTranslations('document')
+  const router = useRouter()
   const [confirming, setConfirming] = useState(false)
   const label = title.trim().length > 0 ? title : t('untitledRow')
+  const rowPath = `/doc/${rowId}`
+
+  const entries: Array<MenuEntry> = [
+    {
+      icon: ArrowExpandIcon,
+      key: 'open',
+      label: t('openRow'),
+      onSelect: () => router.push(rowPath),
+    },
+    {
+      icon: ArrowUpRightIcon,
+      key: 'open-new-tab',
+      label: tDocument('openInNewTab'),
+      onSelect: () => window.open(rowPath, '_blank', 'noopener,noreferrer'),
+    },
+    {
+      icon: ClipboardContentIcon,
+      key: 'copy-link',
+      label: tDocument('copyLink'),
+      onSelect: () => {
+        void navigator.clipboard
+          .writeText(new URL(rowPath, window.location.origin).toString())
+          .then(() => toast.success(tDocument('linkCopied')))
+          .catch(() => toast.error(tDocument('linkCopyFailed')))
+      },
+    },
+  ]
+
+  if (canEdit && onMove && moveTargets && moveTargets.length > 0) {
+    entries.push({
+      icon: HierarchyIcon,
+      items: moveTargets.map((target) => ({
+        key: target.id ?? 'none',
+        label: target.name,
+        onSelect: () => onMove(target.id),
+      })),
+      key: 'move',
+      label: t('moveTo'),
+    })
+  }
+
+  if (canEdit) {
+    entries.push({ key: 'separator-delete', separator: true })
+    entries.push({
+      icon: TrashIcon,
+      key: 'delete',
+      label: t('deleteRow'),
+      onSelect: () => setConfirming(true),
+      variant: 'destructive',
+    })
+  }
+
+  const dialogs = (
+    <AlertDialog onOpenChange={setConfirming} open={confirming}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>
+            {t('deleteRowTitle', { title: label })}
+          </AlertDialogTitle>
+          <AlertDialogDescription>{t('deleteRowBody')}</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>{tCommon('cancel')}</AlertDialogCancel>
+          <AlertDialogAction onClick={onDelete}>
+            {t('deleteRow')}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  )
+
+  return { entries, dialogs, label }
+}
+
+export function RowMenu(props: Props) {
+  const t = useTranslations('database')
+  const { entries, dialogs, label } = useRowActions(props)
 
   return (
     <>
@@ -67,55 +156,31 @@ export function RowMenu({
           </ButtonIcon>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuItem asChild>
-            <Link href={`/doc/${rowId}`}>
-              <ArrowExpandIcon aria-hidden="true" />
-              {t('openRow')}
-            </Link>
-          </DropdownMenuItem>
-          {canEdit && onMove && moveTargets && moveTargets.length > 0 ? (
-            <DropdownMenuSub>
-              <DropdownMenuSubTrigger>{t('moveTo')}</DropdownMenuSubTrigger>
-              <DropdownMenuSubContent>
-                {moveTargets.map((target) => (
-                  <DropdownMenuItem
-                    key={target.id ?? 'none'}
-                    onSelect={() => onMove(target.id)}
-                  >
-                    {target.name}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuSubContent>
-            </DropdownMenuSub>
-          ) : null}
-          {canEdit ? (
-            <DropdownMenuItem
-              onSelect={() => setConfirming(true)}
-              variant="destructive"
-            >
-              <TrashIcon aria-hidden="true" />
-              {t('deleteRow')}
-            </DropdownMenuItem>
-          ) : null}
+          <DropdownEntries entries={entries} />
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <AlertDialog onOpenChange={setConfirming} open={confirming}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {t('deleteRowTitle', { title: label })}
-            </AlertDialogTitle>
-            <AlertDialogDescription>{t('deleteRowBody')}</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{tCommon('cancel')}</AlertDialogCancel>
-            <AlertDialogAction onClick={onDelete}>
-              {t('deleteRow')}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {dialogs}
+    </>
+  )
+}
+
+export function RowContextMenu({
+  children,
+  ...props
+}: Props & Readonly<{ children: React.ReactNode }>) {
+  const { entries, dialogs } = useRowActions(props)
+
+  return (
+    <>
+      <ContextMenu>
+        <ContextMenuTrigger asChild>{children}</ContextMenuTrigger>
+        <ContextMenuContent className="w-60">
+          <ContextEntries entries={entries} />
+        </ContextMenuContent>
+      </ContextMenu>
+
+      {dialogs}
     </>
   )
 }

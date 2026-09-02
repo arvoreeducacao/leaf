@@ -120,6 +120,12 @@
     "savingTitle": "Salvando título",
     "breadcrumbLabel": "Caminho do documento",
     "menuLabel": "Ações do documento",
+    "rowMenuLabel": "Ações de {title}",
+    "rename": "Renomear",
+    "renameDescription": "O novo nome aparece na barra lateral e no topo da página.",
+    "renameFieldLabel": "Novo nome da página",
+    "renameSubmit": "Renomear",
+    "openInNewTab": "Abrir em nova aba",
     "moveToPage": "Mover para outra página",
     "duplicate": "Duplicar documento",
     "exportMarkdown": "Exportar como Markdown",
@@ -136,7 +142,8 @@
     "orgTagHint": "Este documento não é privado: quem faz parte da organização tem acesso",
     "editedAt": "Editada {time}",
     "copyLink": "Copiar link",
-    "linkCopied": "Link copiado"
+    "linkCopied": "Link copiado",
+    "linkCopyFailed": "Não foi possível copiar o link"
   },
   "database": {
     "untitled": "Base sem título",
@@ -336,6 +343,7 @@
     "empty": "A lixeira está vazia",
     "restore": "Restaurar",
     "restoreItem": "Restaurar {title}",
+    "restored": "Documento restaurado",
     "deleteForever": "Excluir de vez",
     "deleteItem": "Excluir {title} de vez",
     "confirmDescription": "O documento {title} será apagado sem possibilidade de recuperação.",
@@ -405,7 +413,10 @@
     "words": "{count, plural, =0 {# palavras} one {# palavra} other {# palavras}}",
     "characters": "{count, plural, =0 {# caracteres} one {# caractere} other {# caracteres}}",
     "uploadFailed": "Não foi possível enviar a imagem. Tente de novo.",
-    "saveOffline": "Salvo neste aparelho"
+    "saveOffline": "Salvo neste aparelho",
+    "blockTurnInto": "Transformar em",
+    "blockDuplicate": "Duplicar bloco",
+    "blockRemove": "Excluir bloco"
   },
   "blocknote": {
     "placeholder": "Digite / para comandos",
