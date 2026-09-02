@@ -195,7 +195,7 @@
     "unsplashTooFast": "Você buscou muitas vezes seguidas. Espere um minuto.",
     "unsplashPhotoBy": "Foto de {name}",
     "unsplashFooter": "Fotos do",
-    "creditLabel": "Foto de {name} no Unsplash",
+    "creditLabel": "Foto de <photographer>{name}</photographer> no <unsplash>Unsplash</unsplash>",
     "notAuthenticated": "Não autenticado",
     "gradients": {
       "red": "Vermelho",
