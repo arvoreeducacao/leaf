@@ -219,23 +219,37 @@ function makeClient(world: World): NotionClient {
         yield rows[norm(rowTwoId)]()
       }
     },
-    search: async function* () {},
+    search: async function* () {
+      yield { id: rootId, object: 'page', parent: { type: 'workspace' } }
+      yield {
+        id: childId,
+        object: 'page',
+        parent: { block_id: 'col-1', type: 'block_id' },
+      }
+    },
     user: async () => ({ id: 'u1', name: 'Someone' }),
   }
 }
 
 const owner = { id: 'user-owner', orgAccess: null, orgId: null }
 
-async function run(world: World) {
+async function run(
+  world: World,
+  roots:
+    | Array<{ id: string; kind: 'page' | 'database' }>
+    | 'workspace' = [{ id: rootId, kind: 'page' }],
+  extra: { force?: boolean } = {},
+) {
   const events: Array<Record<string, unknown>> = []
 
   for await (const event of syncNotion(
     makeClient(world),
-    [{ id: rootId, kind: 'page' }],
+    roots,
     owner,
     messages,
     undefined,
     {
+      ...extra,
       storeAsset: async (_bytes, _contentType, fileName) =>
         `/api/uploads/u/${fileName}`,
     },
@@ -338,6 +352,47 @@ describe('resumable Notion sync', () => {
     expect(childAfter?.updatedAt.getTime()).toBe(
       childBefore?.updatedAt.getTime(),
     )
+
+    const all = await db.select({ id: documents.id }).from(documents)
+
+    expect(all).toHaveLength(5)
+  })
+
+  it('nests block-parented pages under their ancestor in workspace mode', async () => {
+    await run(makeWorld(), 'workspace')
+
+    const root = await db.query.documents.findFirst({
+      where: eq(documents.title, 'Reading plan'),
+    })
+    const child = await db.query.documents.findFirst({
+      where: eq(documents.title, 'Class A'),
+    })
+
+    expect(root?.parentId).toBeNull()
+    expect(child?.parentId).toBe(root?.id)
+  })
+
+  it('adopts the structural parent on a forced repair run', async () => {
+    const world = makeWorld()
+
+    await run(world, [{ id: childId, kind: 'page' }])
+
+    const flattened = await db.query.documents.findFirst({
+      where: eq(documents.title, 'Class A'),
+    })
+
+    expect(flattened?.parentId).toBeNull()
+
+    await run(world, [{ id: rootId, kind: 'page' }], { force: true })
+
+    const root = await db.query.documents.findFirst({
+      where: eq(documents.title, 'Reading plan'),
+    })
+    const child = await db.query.documents.findFirst({
+      where: eq(documents.title, 'Class A'),
+    })
+
+    expect(child?.parentId).toBe(root?.id)
 
     const all = await db.select({ id: documents.id }).from(documents)
 
