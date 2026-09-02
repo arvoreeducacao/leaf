@@ -525,6 +525,7 @@ export async function createDatabaseRow(
     row: toDatabaseRow({
       id,
       title: untitledRow(title),
+      icon: null,
       properties: serializeValues(values),
       createdAt: now,
       updatedAt: now,
