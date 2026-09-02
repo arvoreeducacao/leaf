@@ -44,7 +44,7 @@ export default async function AppLayout({
       listSharedDocuments(session.user.email),
       listTrashedDocuments(session.user.id),
       membership
-        ? listOrganizationDocuments(membership.orgId)
+        ? listOrganizationDocuments(membership.orgId, session.user.id)
         : Promise.resolve([]),
     ])
 
@@ -55,7 +55,9 @@ export default async function AppLayout({
   const teamspaceSections: Array<TeamspaceSection> = await Promise.all(
     visibleTeamspaces.map(async (teamspace) => ({
       ...teamspace,
-      documents: buildDocumentTree(await listTeamspaceDocuments(teamspace.id)),
+      documents: buildDocumentTree(
+        await listTeamspaceDocuments(teamspace.id, session.user.id),
+      ),
     })),
   )
 

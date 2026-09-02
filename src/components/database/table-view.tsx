@@ -15,7 +15,7 @@ import { cn } from '@/shared/utils'
 import { AddPropertyMenu } from './add-property-menu'
 import { PropertyCell } from './property-cell'
 import { PropertyHeader } from './property-header'
-import { RowMenu } from './row-menu'
+import { RowContextMenu, RowMenu } from './row-menu'
 import type { DatabaseHandlers } from './types'
 
 type Props = Readonly<{
@@ -96,88 +96,96 @@ export function TableView({
             </thead>
             <tbody>
               {rows.map((row) => (
-                <tr className="group/row" key={row.id}>
-                  <th
-                    className={cn(
-                      cellFrame,
-                      'border-l-0 text-left font-regular transition-colors group-hover/row:bg-surface-hover',
-                    )}
-                    scope="row"
-                  >
-                    <div className="flex h-9 items-center gap-1 px-2">
-                      <DocumentIcon
-                        className="size-4 text-content-subtle"
-                        icon={row.icon}
-                      />
-                      <input
-                        aria-label={t('rowTitleLabel')}
-                        className="h-full w-full min-w-0 bg-transparent font-regular text-body-small text-content-strong outline-none transition-colors placeholder:text-content-subtle focus-visible:outline-2 focus-visible:outline-focus focus-visible:-outline-offset-2 disabled:text-content"
-                        defaultValue={row.title}
-                        disabled={!canEdit}
-                        key={`${row.id}-${row.title}`}
-                        onBlur={(event) =>
-                          handlers.renameRow(row.id, event.target.value)
-                        }
-                        onKeyDown={(event) => {
-                          if (event.key === 'Enter') {
-                            event.currentTarget.blur()
-                          }
-                        }}
-                        placeholder={t('untitledRow')}
-                      />
-                      <Link
-                        className="hidden h-6 shrink-0 cursor-pointer items-center gap-1 rounded-large px-1.5 font-medium text-caption text-content uppercase transition-colors hover:bg-surface-hover hover:text-content-strong group-hover/row:inline-flex focus-visible:inline-flex focus-visible:outline-2 focus-visible:outline-focus"
-                        href={`/doc/${row.id}`}
-                      >
-                        <ArrowExpandIcon aria-hidden="true" className="size-3.5" />
-                        {t('openRowShort')}
-                      </Link>
-                      <div className="shrink-0 opacity-0 transition-opacity group-hover/row:opacity-100 focus-within:opacity-100">
-                        <RowMenu
-                          canEdit={canEdit}
-                          onDelete={() => handlers.deleteRow(row.id)}
-                          rowId={row.id}
-                          title={row.title}
-                        />
-                      </div>
-                    </div>
-                  </th>
-                  {properties.map((property) => (
-                    <td
+                <RowContextMenu
+                  canEdit={canEdit}
+                  key={row.id}
+                  onDelete={() => handlers.deleteRow(row.id)}
+                  rowId={row.id}
+                  title={row.title}
+                >
+                  <tr className="group/row">
+                    <th
                       className={cn(
                         cellFrame,
-                        'transition-colors group-hover/row:bg-surface-hover',
+                        'border-l-0 text-left font-regular transition-colors group-hover/row:bg-surface-hover',
                       )}
-                      key={property.id}
+                      scope="row"
                     >
-                      <div className="flex h-9 items-center px-2">
-                        <PropertyCell
-                          compact
-                          onCommit={(value) =>
-                            handlers.commitValue(row.id, property.id, value)
-                          }
-                          onCreateOption={(name) =>
-                            handlers.createOption(property.id, name)
-                          }
-                          people={people}
-                          property={property}
-                          readOnly={!canEdit}
-                          rowTitle={
-                            row.title.trim().length > 0
-                              ? row.title
-                              : t('untitledRow')
-                          }
-                          value={valueOf(
-                            row.values,
-                            property,
-                            optionsFor(property, people),
-                          )}
+                      <div className="flex h-9 items-center gap-1 px-2">
+                        <DocumentIcon
+                          className="size-4 text-content-subtle"
+                          icon={row.icon}
                         />
+                        <input
+                          aria-label={t('rowTitleLabel')}
+                          className="h-full w-full min-w-0 bg-transparent font-regular text-body-small text-content-strong outline-none transition-colors placeholder:text-content-subtle focus-visible:outline-2 focus-visible:outline-focus focus-visible:-outline-offset-2 disabled:text-content"
+                          defaultValue={row.title}
+                          disabled={!canEdit}
+                          key={`${row.id}-${row.title}`}
+                          onBlur={(event) =>
+                            handlers.renameRow(row.id, event.target.value)
+                          }
+                          onKeyDown={(event) => {
+                            if (event.key === 'Enter') {
+                              event.currentTarget.blur()
+                            }
+                          }}
+                          placeholder={t('untitledRow')}
+                        />
+                        <Link
+                          className="hidden h-6 shrink-0 cursor-pointer items-center gap-1 rounded-large px-1.5 font-medium text-caption text-content uppercase transition-colors hover:bg-surface-hover hover:text-content-strong group-hover/row:inline-flex focus-visible:inline-flex focus-visible:outline-2 focus-visible:outline-focus"
+                          href={`/doc/${row.id}`}
+                        >
+                          <ArrowExpandIcon aria-hidden="true" className="size-3.5" />
+                          {t('openRowShort')}
+                        </Link>
+                        <div className="shrink-0 opacity-0 transition-opacity group-hover/row:opacity-100 focus-within:opacity-100">
+                          <RowMenu
+                            canEdit={canEdit}
+                            onDelete={() => handlers.deleteRow(row.id)}
+                            rowId={row.id}
+                            title={row.title}
+                          />
+                        </div>
                       </div>
-                    </td>
-                  ))}
-                  <td className="w-32 border-line-divider border-b" />
-                </tr>
+                    </th>
+                    {properties.map((property) => (
+                      <td
+                        className={cn(
+                          cellFrame,
+                          'transition-colors group-hover/row:bg-surface-hover',
+                        )}
+                        key={property.id}
+                      >
+                        <div className="flex h-9 items-center px-2">
+                          <PropertyCell
+                            compact
+                            onCommit={(value) =>
+                              handlers.commitValue(row.id, property.id, value)
+                            }
+                            onCreateOption={(name) =>
+                              handlers.createOption(property.id, name)
+                            }
+                            people={people}
+                            property={property}
+                            readOnly={!canEdit}
+                            rowTitle={
+                              row.title.trim().length > 0
+                                ? row.title
+                                : t('untitledRow')
+                            }
+                            value={valueOf(
+                              row.values,
+                              property,
+                              optionsFor(property, people),
+                            )}
+                          />
+                        </div>
+                      </td>
+                    ))}
+                    <td className="w-32 border-line-divider border-b transition-colors group-hover/row:bg-surface-hover" />
+                  </tr>
+                </RowContextMenu>
               ))}
             </tbody>
           </table>
