@@ -5,12 +5,15 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { cache } from 'react'
 
-import { DocumentRenderer } from '@/components/editor/document-renderer'
+import { DocumentCover } from '@/components/app/document-cover'
 import { LeafMark } from '@/components/app/leaf-mark'
+import { DocumentRenderer } from '@/components/editor/document-renderer'
 import { LockIcon } from '@/components/icons'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { lookupPublicDocument } from '@/lib/authz'
+import { parseCoverCredit } from '@/lib/document-cover'
+import { cn } from '@/shared/utils'
 
 type Props = Readonly<{ params: Promise<{ token: string }> }>
 
@@ -94,7 +97,22 @@ export default async function SharedDocumentPage({ params }: Props) {
   return (
     <div className="flex min-h-dvh flex-col bg-surface-app">
       <ShareHeader />
-      <main className="mx-auto w-full max-w-page flex-1 pt-10 pb-40 tablet:pt-16">
+      {document.cover ? (
+        <DocumentCover
+          canEdit={false}
+          cover={document.cover}
+          credit={parseCoverCredit(document.coverCredit)}
+          documentId={document.id}
+          position={document.coverPosition}
+          unsplashEnabled={false}
+        />
+      ) : null}
+      <main
+        className={cn(
+          'mx-auto w-full max-w-page flex-1 pb-40',
+          document.cover ? 'pt-6 tablet:pt-10' : 'pt-10 tablet:pt-16',
+        )}
+      >
         <article className="flex w-full flex-col gap-2">
           <h1 className="px-4 font-heavy text-content-strong text-display-medium tablet:px-[54px]">
             {document.title}
