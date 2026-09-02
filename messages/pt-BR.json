@@ -8,7 +8,6 @@
     "backHome": "Voltar para o início",
     "goToLeaf": "Ir para o Leaf",
     "close": "Fechar",
-    "clearSearch": "Limpar busca",
     "step": "Etapa {current} de {total}"
   },
   "metadata": {
@@ -73,11 +72,10 @@
     "expand": "Expandir",
     "newDocument": "Novo documento",
     "newDocumentFailed": "Não foi possível criar o documento",
-    "searchLabel": "Buscar documento pelo título",
-    "searchPlaceholder": "Filtrar por título",
-    "searchResults": "Resultados da busca",
-    "searchEmpty": "Nenhum documento com esse nome",
-    "searchCount": "{count, plural, =0 {# documentos encontrados} one {# documento encontrado} other {# documentos encontrados}}",
+    "recentsSection": "Recentes",
+    "emptyRecents": "Nada aberto ainda",
+    "more": "Mais",
+    "less": "Menos",
     "sharedWithMe": "Compartilhados comigo",
     "emptyShared": "Nada compartilhado com você",
     "sharedBadge": "Compartilhado comigo",

@@ -8,7 +8,6 @@
     "backHome": "Back home",
     "goToLeaf": "Go to Leaf",
     "close": "Close",
-    "clearSearch": "Clear search",
     "step": "Step {current} of {total}"
   },
   "metadata": {
@@ -73,11 +72,10 @@
     "expand": "Expand",
     "newDocument": "New document",
     "newDocumentFailed": "We couldn't create the document",
-    "searchLabel": "Search documents by title",
-    "searchPlaceholder": "Filter by title",
-    "searchResults": "Search results",
-    "searchEmpty": "No document with that name",
-    "searchCount": "{count, plural, one {# document found} other {# documents found}}",
+    "recentsSection": "Recent",
+    "emptyRecents": "Nothing here yet",
+    "more": "More",
+    "less": "Less",
     "sharedWithMe": "Shared with me",
     "emptyShared": "Nothing shared with you",
     "sharedBadge": "Shared with me",

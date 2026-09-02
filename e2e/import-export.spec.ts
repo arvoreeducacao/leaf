@@ -131,9 +131,9 @@ test.describe('import and export', () => {
 
     await page.reload()
 
-    const nav = page.getByRole('navigation', { name: 'Documentos' })
+    const privateSection = page.getByRole('region', { name: 'Privado' })
 
-    await expect(nav.getByRole('link')).toHaveCount(1)
+    await expect(privateSection.getByRole('link')).toHaveCount(1)
     await expect(editorBody(page)).toHaveText('')
   })
 

@@ -39,7 +39,7 @@ test.describe('Notion export import', () => {
       page.getByRole('navigation', { name: 'Caminho do documento' }),
     ).toContainText('Migration')
 
-    const nav = page.getByRole('navigation', { name: 'Documentos' })
+    const nav = page.getByRole('region', { name: 'Privado' })
 
     await nav
       .getByRole('button', { name: `Expandir ${fixtureTitles.plan}` })
@@ -73,8 +73,8 @@ test.describe('Notion export import', () => {
     await page.keyboard.press('Escape')
     await expect(page.getByRole('dialog')).toHaveCount(0)
 
-    const nav = page.getByRole('navigation', { name: 'Documentos' })
+    const privateSection = page.getByRole('region', { name: 'Privado' })
 
-    await expect(nav.getByRole('link')).toHaveCount(1)
+    await expect(privateSection.getByRole('link')).toHaveCount(1)
   })
 })
