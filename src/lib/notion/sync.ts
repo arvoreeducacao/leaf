@@ -45,6 +45,7 @@ const maxWarnings = 40
 
 export type SyncOptions = Readonly<{
   comments?: boolean
+  force?: boolean
   storeAsset: (
     bytes: Uint8Array,
     contentType: string,
@@ -397,6 +398,7 @@ export async function* syncNotion(
           kind,
           title: title.slice(0, 200),
           updatedAt: updatedAt ?? new Date(),
+          ...(parentDocId ? { parentId: parentDocId } : {}),
         })
         .where(eq(documents.id, existing.documentId))
 
@@ -638,8 +640,13 @@ export async function* syncNotion(
   const seen = new Set<string>()
   const queue: Array<QueueItem> = []
 
+  const deferredRoots: Array<QueueItem> = []
+
   if (roots === 'workspace') {
-    const found = new Map<string, { object: string; parentId: string | null }>()
+    const found = new Map<
+      string,
+      { object: string; parentId: string | null; parentType: string }
+    >()
 
     for await (const result of client.search()) {
       if (signal?.aborted) {
@@ -647,6 +654,7 @@ export async function* syncNotion(
       }
 
       const parent = (result.parent ?? {}) as {
+        type?: string
         page_id?: string
         database_id?: string
         block_id?: string
@@ -654,20 +662,27 @@ export async function* syncNotion(
       const parentId =
         parent.page_id ?? parent.database_id ?? parent.block_id ?? null
 
-      found.set(result.id, { object: result.object ?? 'page', parentId })
+      found.set(result.id, {
+        object: result.object ?? 'page',
+        parentId,
+        parentType: parent.type ?? 'workspace',
+      })
     }
 
     for (const [id, entry] of found) {
-      if (entry.parentId !== null && found.has(entry.parentId)) {
-        continue
-      }
-
-      queue.push({
+      const item: QueueItem = {
         id,
         kind: entry.object === 'database' ? 'database' : 'page',
         parentDocId: null,
         parentNotionId: null,
-      })
+      }
+
+      if (entry.parentType === 'workspace' || entry.parentId === null) {
+        queue.push(item)
+        continue
+      }
+
+      deferredRoots.push(item)
     }
   } else {
     for (const root of roots) {
@@ -729,9 +744,27 @@ export async function* syncNotion(
   let rootDocId: string | null = null
   let rootTitle: string | null = null
 
-  while (queue.length > 0) {
+  let seedingPhase = 0
+
+  while (true) {
     if (signal?.aborted) {
       return
+    }
+
+    if (queue.length === 0) {
+      if (seedingPhase === 0 && deferredRoots.length > 0) {
+        seedingPhase = 1
+
+        for (const deferred of deferredRoots) {
+          if (!seen.has(normalizeNotionId(deferred.id))) {
+            queue.push(deferred)
+          }
+        }
+
+        continue
+      }
+
+      break
     }
 
     if (processed >= MAX_CRAWL_PAGES) {
@@ -806,6 +839,7 @@ export async function* syncNotion(
           const rowEdited = stamp(row.last_edited_time)
           const rowMapping = mappings.get(rowKey)
           const unchanged =
+            !options?.force &&
             rowMapping?.lastEditedAt &&
             rowEdited &&
             rowMapping.lastEditedAt.getTime() >= rowEdited.getTime()
@@ -924,6 +958,7 @@ export async function* syncNotion(
       const edited = stamp(page.last_edited_time)
       const mapping = mappings.get(idKey)
       const unchanged =
+        !options?.force &&
         mapping?.lastEditedAt &&
         edited &&
         mapping.lastEditedAt.getTime() >= edited.getTime()
