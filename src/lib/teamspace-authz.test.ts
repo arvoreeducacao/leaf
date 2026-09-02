@@ -26,7 +26,10 @@ import {
   listOrganizationDocuments,
   resolveMembership,
 } from '@/lib/organizations'
-import { listVisibleTeamspaces } from '@/lib/teamspaces'
+import {
+  listTeamspaceDocuments,
+  listVisibleTeamspaces,
+} from '@/lib/teamspaces'
 
 const owner = { id: 'ts-owner', email: 'owner@arvore.com.br' }
 const teamMember = { id: 'ts-member', email: 'team@arvore.com.br' }
@@ -310,6 +313,44 @@ describe('sidebar lists', () => {
 
     expect(privateDocuments.map((item) => item.id)).toEqual(['doc-private'])
     expect(organizationDocuments).toHaveLength(0)
+  })
+
+  it('tells apart the organization rows the person owns from the rest', async () => {
+    await insertDocument({
+      id: 'doc-org-mine',
+      orgAccess: 'editor',
+      ownerId: owner.id,
+    })
+    await insertDocument({
+      id: 'doc-org-theirs',
+      orgAccess: 'editor',
+      ownerId: teamMember.id,
+    })
+
+    const rows = await listOrganizationDocuments(mainOrg, owner.id)
+    const owned = new Map(rows.map((row) => [row.id, row.owned]))
+
+    expect(owned.get('doc-org-mine')).toBe(true)
+    expect(owned.get('doc-org-theirs')).toBe(false)
+  })
+
+  it('tells apart the teamspace rows the person owns from the rest', async () => {
+    await insertDocument({
+      id: 'doc-team-mine',
+      ownerId: owner.id,
+      teamspaceId: openTeamspace,
+    })
+    await insertDocument({
+      id: 'doc-team-theirs',
+      ownerId: teamMember.id,
+      teamspaceId: openTeamspace,
+    })
+
+    const rows = await listTeamspaceDocuments(openTeamspace, owner.id)
+    const owned = new Map(rows.map((row) => [row.id, row.owned]))
+
+    expect(owned.get('doc-team-mine')).toBe(true)
+    expect(owned.get('doc-team-theirs')).toBe(false)
   })
 })
 
