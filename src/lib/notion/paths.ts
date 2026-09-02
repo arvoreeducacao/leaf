@@ -25,6 +25,13 @@ export function withoutExtension(path: string): string {
   return extension.length === 0 ? path : path.slice(0, -extension.length)
 }
 
+export function strippedBaseOf(pathWithoutExtension: string): string {
+  const directory = directoryOf(pathWithoutExtension)
+  const name = baseNameOf(pathWithoutExtension).replace(notionHashPattern, '')
+
+  return directory.length > 0 ? `${directory}/${name}` : name
+}
+
 export function notionTitle(path: string, fallbackTitle: string): string {
   const name = withoutExtension(baseNameOf(path))
   const withoutHash = name.replace(notionHashPattern, '')
