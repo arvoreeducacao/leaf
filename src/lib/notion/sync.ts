@@ -839,7 +839,6 @@ export async function* syncNotion(
           const rowEdited = stamp(row.last_edited_time)
           const rowMapping = mappings.get(rowKey)
           const unchanged =
-            !options?.force &&
             rowMapping?.lastEditedAt &&
             rowEdited &&
             rowMapping.lastEditedAt.getTime() >= rowEdited.getTime()
@@ -958,7 +957,6 @@ export async function* syncNotion(
       const edited = stamp(page.last_edited_time)
       const mapping = mappings.get(idKey)
       const unchanged =
-        !options?.force &&
         mapping?.lastEditedAt &&
         edited &&
         mapping.lastEditedAt.getTime() >= edited.getTime()
@@ -971,7 +969,29 @@ export async function* syncNotion(
           rootTitle = title
         }
 
-        enqueueKnownChildren(item.id, mapping.documentId)
+        if (options?.force) {
+          if (item.parentDocId) {
+            await db
+              .update(documents)
+              .set({ parentId: item.parentDocId })
+              .where(eq(documents.id, mapping.documentId))
+          }
+
+          await saveMapping(
+            item.id,
+            mapping.documentId,
+            mapping.kind,
+            item.parentNotionId,
+            mapping.lastEditedAt,
+          )
+
+          const tree = await readTree(item.id)
+
+          enqueueChildren(tree, mapping.documentId, item.id)
+        } else {
+          enqueueKnownChildren(item.id, mapping.documentId)
+        }
+
         continue
       }
 
