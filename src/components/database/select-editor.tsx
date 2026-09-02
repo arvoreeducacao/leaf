@@ -85,7 +85,7 @@ export function OptionChip({
   return (
     <span
       className={cn(
-        'inline-flex h-6 max-w-full shrink-0 items-center gap-1 rounded-pill border px-2 font-bold text-caption leading-none',
+        'inline-flex h-5 max-w-full shrink-0 items-center gap-1 rounded-medium px-1.5 font-regular text-body-small leading-5',
         optionChipClass[option.color],
       )}
     >

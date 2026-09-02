@@ -58,6 +58,7 @@ export function DocumentHeader({
   updatedAt = null,
 }: Props) {
   const t = useTranslations('document')
+  const tTeamspace = useTranslations('teamspace')
   const format = useFormatter()
   const now = useNow()
   const titleId = documentTitleInputId
@@ -114,11 +115,15 @@ export function DocumentHeader({
   const topbar = (
     <>
       <div className="flex min-w-0 flex-1 items-center gap-1 text-body-small text-content">
-        {teamspaceName ? (
+        {sharedWithOrganization ? (
           <>
-            <span className="inline-flex min-w-0 max-w-40 shrink items-center rounded-large px-1.5 py-0.5">
-              <UsersIcon aria-hidden="true" className="mr-1.5 size-4 shrink-0" />
-              <span className="min-w-0 truncate">{teamspaceName}</span>
+            <span
+              className="inline-flex shrink-0 items-center rounded-large px-1.5 py-0.5"
+              data-testid="document-org-tag"
+              title={t('orgTagHint')}
+            >
+              <TeamIcon aria-hidden="true" className="mr-1.5 size-4 shrink-0" />
+              {t('orgTag')}
             </span>
             <CaretRightIcon
               aria-hidden="true"
@@ -126,11 +131,15 @@ export function DocumentHeader({
             />
           </>
         ) : null}
-        {sharedWithOrganization && !teamspaceName ? (
+        {teamspaceName ? (
           <>
-            <span className="inline-flex shrink-0 items-center rounded-large px-1.5 py-0.5">
-              <TeamIcon aria-hidden="true" className="mr-1.5 size-4 shrink-0" />
-              {t('orgTag')}
+            <span
+              className="inline-flex min-w-0 max-w-40 shrink items-center rounded-large px-1.5 py-0.5"
+              data-testid="document-teamspace-tag"
+              title={tTeamspace('badgeHint')}
+            >
+              <UsersIcon aria-hidden="true" className="mr-1.5 size-4 shrink-0" />
+              <span className="min-w-0 truncate">{teamspaceName}</span>
             </span>
             <CaretRightIcon
               aria-hidden="true"
