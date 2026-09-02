@@ -81,6 +81,7 @@ export type NotionPlan = Readonly<{
   rowValuesByKey?: Map<string, Array<ImportedValue>>
   metaByKey?: Map<string, NotionPageMeta>
   assetSourceByPath?: Map<string, string>
+  assetUrlByPath?: Map<string, string>
 }>
 
 export function contentTypeOf(path: string): string {

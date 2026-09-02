@@ -76,7 +76,7 @@ export type ImportOwner = Readonly<{
   parentId?: string | null
 }>
 
-function assetKeyFor(path: string) {
+export function assetKeyFor(path: string) {
   const extension = extensionOf(path)
 
   return `u/${nanoid(16)}${extension.length > 0 ? extension : '.bin'}`
@@ -370,8 +370,8 @@ export async function* importNotionPlan(
     return
   }
 
-  const assetUrls = new Map<string, string>()
-  let uploaded = 0
+  const assetUrls = new Map<string, string>(plan.assetUrlByPath ?? [])
+  let uploaded = assetUrls.size
 
   for (const [index, asset] of plan.assets.entries()) {
     if (signal?.aborted) {
