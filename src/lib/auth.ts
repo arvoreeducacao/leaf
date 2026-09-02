@@ -1,8 +1,9 @@
+import { expo } from '@better-auth/expo'
 import { betterAuth } from 'better-auth'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
 import { APIError, createAuthMiddleware } from 'better-auth/api'
 import { nextCookies } from 'better-auth/next-js'
-import { genericOAuth } from 'better-auth/plugins'
+import { genericOAuth, oneTimeToken } from 'better-auth/plugins'
 import { eq } from 'drizzle-orm'
 import { headers } from 'next/headers'
 
@@ -13,6 +14,7 @@ import {
   emailDomainPolicy,
   isEmailDomainAllowed,
 } from '@/lib/email-domain'
+import { mobileTrustedOrigins } from '@/lib/mobile-auth'
 import { buildSsoSignOutUrl, requestOrigin } from '@/lib/sso-sign-out'
 
 const guardedPaths = new Set(['/sign-up/email', '/sign-in/email'])
@@ -126,6 +128,7 @@ const ssoPlugin = sso
 
 export const auth = betterAuth({
   appName: 'Leaf',
+  trustedOrigins: mobileTrustedOrigins(process.env.NODE_ENV),
   database: drizzleAdapter(db, {
     provider: 'mysql',
     schema: {
@@ -176,7 +179,12 @@ export const auth = betterAuth({
       },
     },
   },
-  plugins: ssoPlugin ? [ssoPlugin, nextCookies()] : [nextCookies()],
+  plugins: [
+    ...(ssoPlugin ? [ssoPlugin] : []),
+    expo(),
+    oneTimeToken({ storeToken: 'hashed' }),
+    nextCookies(),
+  ],
 })
 
 export type Session = typeof auth.$Infer.Session
