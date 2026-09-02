@@ -53,6 +53,7 @@ const collapsedStorageKey = 'leaf:sidebar-collapsed'
 
 type Props = Readonly<{
   user: { name: string; email: string }
+  aiEnabled: boolean
   locale: string
   owned: Array<DocumentNode>
   organizationDocuments: Array<DocumentNode>
@@ -254,6 +255,7 @@ function NavContent({
 
 export function AppShell({
   user,
+  aiEnabled,
   locale,
   owned,
   organizationDocuments,
@@ -348,7 +350,10 @@ export function AppShell({
 
   return (
     <div className="flex min-h-dvh w-full bg-surface-app">
-      <CommandPalette hasOrganization={organizationName !== null} />
+      <CommandPalette
+        aiEnabled={aiEnabled}
+        hasOrganization={organizationName !== null}
+      />
       <OfflineSync />
 
       {collapsed ? null : (

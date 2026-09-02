@@ -7,9 +7,12 @@ export const HIGHLIGHT_START = String.fromCharCode(2)
 export const HIGHLIGHT_END = String.fromCharCode(3)
 
 export const MAX_SEARCH_RESULTS = 8
+export const MAX_ASK_SOURCES = 6
 export const MAX_RECENT_RESULTS = 7
 
 const MAX_QUERY_TOKENS = 8
+const MAX_ASK_TOKENS = 12
+const MIN_ASK_TOKEN_LENGTH = 3
 const MAX_TOKEN_LENGTH = 32
 const MAX_INDEXED_BODY = 200_000
 const SNIPPET_WORDS = 12
@@ -33,6 +36,83 @@ export function queryTokens(query: string): Array<string> {
     .slice(0, MAX_QUERY_TOKENS)
     .map((token) => token.slice(0, MAX_TOKEN_LENGTH))
     .filter((token) => token.length > 0)
+}
+
+const askStopWords = new Set([
+  'aos',
+  'como',
+  'com',
+  'das',
+  'dos',
+  'ela',
+  'ele',
+  'eles',
+  'essa',
+  'esse',
+  'esta',
+  'este',
+  'isso',
+  'meu',
+  'minha',
+  'nas',
+  'nos',
+  'nossa',
+  'nosso',
+  'para',
+  'pela',
+  'pelo',
+  'por',
+  'pra',
+  'qual',
+  'quais',
+  'quando',
+  'que',
+  'quem',
+  'sem',
+  'ser',
+  'seu',
+  'sua',
+  'tem',
+  'ter',
+  'uma',
+  'and',
+  'are',
+  'can',
+  'does',
+  'for',
+  'from',
+  'how',
+  'the',
+  'what',
+  'when',
+  'where',
+  'which',
+  'who',
+  'why',
+  'with',
+])
+
+export function askTokens(query: string): Array<string> {
+  return query
+    .normalize('NFC')
+    .split(/[^\p{L}\p{N}]+/u)
+    .map((token) => token.slice(0, MAX_TOKEN_LENGTH))
+    .filter(
+      (token) =>
+        token.length >= MIN_ASK_TOKEN_LENGTH &&
+        !askStopWords.has(foldForSearch(token)),
+    )
+    .slice(0, MAX_ASK_TOKENS)
+}
+
+export function buildAskMatchExpression(query: string): string | null {
+  const tokens = askTokens(query)
+
+  if (tokens.length === 0) {
+    return null
+  }
+
+  return tokens.map((token) => `${token}*`).join(' ')
 }
 
 export function buildMatchExpression(query: string): string | null {
@@ -194,7 +274,7 @@ export async function reconcileSearchIndex() {
   }
 }
 
-type ViewerKeys = Readonly<{ userId: string; email: string }>
+export type ViewerKeys = Readonly<{ userId: string; email: string }>
 
 function accessCondition(viewer: ViewerKeys) {
   return sql`(
@@ -265,6 +345,49 @@ export async function searchAccessibleDocuments(
     id: row.id,
     title: row.title,
     segments: parseSnippet(buildSnippet(row.body ?? '', tokens)),
+  }))
+}
+
+export type DocumentPassage = Readonly<{
+  id: string
+  title: string
+  body: string
+}>
+
+export async function searchAccessibleDocumentBodies(
+  viewer: ViewerKeys,
+  query: string,
+  limit: number = MAX_ASK_SOURCES,
+): Promise<Array<DocumentPassage>> {
+  const match = buildAskMatchExpression(query)
+
+  if (!match) {
+    return []
+  }
+
+  await reconcileSearchIndex()
+
+  const rows = await selectRows<HitRow>(sql`
+    select
+      d.id as id,
+      d.title as title,
+      f.body as body
+    from documents_fts f
+    join documents d on d.id = f.document_id
+    where match(f.title, f.body) against (${match} in boolean mode)
+      and d.deleted_at is null
+      and ${accessCondition(viewer)}
+    order by
+      match(f.title) against (${match} in boolean mode) * 10
+      + match(f.body) against (${match} in boolean mode) desc,
+      d.updated_at desc
+    limit ${limit}
+  `)
+
+  return rows.map((row) => ({
+    id: row.id,
+    title: row.title,
+    body: row.body ?? '',
   }))
 }
 

@@ -107,7 +107,15 @@
     "resultCount": "{count, plural, =0 {# resultados} one {# resultado} other {# resultados}}",
     "hintNavigate": "navegar",
     "hintOpen": "abrir",
-    "hintToggle": "abrir ou fechar"
+    "hintToggle": "abrir ou fechar",
+    "askSection": "IA",
+    "askActionWithQuery": "Perguntar à IA: “{query}”",
+    "askAnswerLabel": "Resposta da IA",
+    "askThinking": "Lendo seus documentos…",
+    "askSources": "Onde encontrei",
+    "askEmpty": "Não achei nada sobre isso nos documentos que você pode ver.",
+    "askError": "Não deu para responder agora.",
+    "askBack": "Voltar para a busca"
   },
   "home": {
     "title": "Crie seu primeiro documento",
