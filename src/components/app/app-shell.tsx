@@ -3,10 +3,12 @@
 import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { Fragment, useCallback, useEffect, useRef, useState } from 'react'
 
 import { CommandPalette } from '@/components/app/command-palette'
 import { CommandPaletteTrigger } from '@/components/app/command-palette-trigger'
+import type { CustomizableSection } from '@/components/app/customize-sidebar'
+import { CustomizeSidebar } from '@/components/app/customize-sidebar'
 import { DocumentList } from '@/components/app/document-list'
 import { DocumentTree } from '@/components/app/document-tree'
 import { NewDatabaseButton } from '@/components/app/new-database-button'
@@ -23,9 +25,10 @@ import { sidebarIcon, sidebarRow } from '@/components/app/sidebar-styles'
 import { TeamspaceSections } from '@/components/app/teamspace-sections'
 import { registerTopbarSlot } from '@/components/app/topbar-slot'
 import { TrashSection } from '@/components/app/trash-section'
+import { useSidebarLayout } from '@/components/app/use-sidebar-layout'
 import { useSidebarWidth } from '@/components/app/use-sidebar-width'
 import { UserMenu } from '@/components/app/user-menu'
-import { HomeIcon, SidebarIcon } from '@/components/icons/outline'
+import { HomeIcon, SidebarIcon, SlidersIcon } from '@/components/icons/outline'
 import { ButtonIcon } from '@/components/ui/button-icon'
 import {
   Sheet,
@@ -40,6 +43,8 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import type { DocumentNode, DocumentSummary } from '@/lib/documents'
+import type { SidebarLayout, SidebarSectionId } from '@/lib/sidebar-layout'
+import { visibleSectionIds } from '@/lib/sidebar-layout'
 import type { TeamspaceSection } from '@/lib/teamspaces'
 import { cn } from '@/shared/utils'
 
@@ -58,6 +63,7 @@ type Props = Readonly<{
   recents: Array<DocumentSummary>
   shared: Array<DocumentSummary>
   trashed: Array<DocumentSummary>
+  sidebarLayout: SidebarLayout
   children: React.ReactNode
 }>
 
@@ -75,6 +81,9 @@ function NavContent({
   trashed,
   user,
   locale,
+  layout,
+  onMoveSection,
+  onToggleSection,
   onNavigate,
   headerAction,
 }: Readonly<{
@@ -91,10 +100,95 @@ function NavContent({
   trashed: Array<DocumentSummary>
   user: { name: string; email: string }
   locale: string
+  layout: SidebarLayout
+  onMoveSection: (id: SidebarSectionId, toIndex: number) => void
+  onToggleSection: (id: SidebarSectionId) => void
   onNavigate?: () => void
   headerAction?: React.ReactNode
 }>) {
   const t = useTranslations('nav')
+  const tTeamspace = useTranslations('teamspace')
+  const [customizing, setCustomizing] = useState(false)
+  const stopCustomizing = useCallback(() => setCustomizing(false), [])
+
+  const sectionNodes: Record<SidebarSectionId, React.ReactNode> = {
+    organization: organizationName ? (
+      <SidebarSection
+        collapseId="organization"
+        href="/org"
+        onNavigate={onNavigate}
+        title={t('organizationSection')}
+      >
+        <DocumentTree
+          emptyLabel={t('emptyOrganization')}
+          hasOrganization={organizationName !== null}
+          nodes={organizationDocuments}
+          onNavigate={onNavigate}
+        />
+        <SidebarOverflowLink
+          hidden={hiddenOrganizationDocuments}
+          href="/documents"
+          onNavigate={onNavigate}
+        />
+      </SidebarSection>
+    ) : null,
+    private: (
+      <SidebarSection collapseId="private" title={t('privateSection')}>
+        <DocumentTree
+          emptyLabel={t('emptyPrivate')}
+          hasOrganization={organizationName !== null}
+          nodes={owned}
+          onNavigate={onNavigate}
+        />
+        <SidebarOverflowLink
+          hidden={hiddenOwnedDocuments}
+          href="/documents?scope=private"
+          onNavigate={onNavigate}
+        />
+        <NewDocumentButton variant="sidebar" />
+      </SidebarSection>
+    ),
+    recents: (
+      <SidebarSection collapseId="recents" title={t('recentsSection')}>
+        <RecentDocuments
+          documents={recents}
+          hasOrganization={organizationName !== null}
+          onNavigate={onNavigate}
+        />
+      </SidebarSection>
+    ),
+    shared:
+      shared.length > 0 ? (
+        <SidebarSection collapseId="shared" title={t('sharedWithMe')}>
+          <DocumentList
+            documents={shared}
+            emptyLabel={t('emptyShared')}
+            hasOrganization={organizationName !== null}
+            onNavigate={onNavigate}
+          />
+        </SidebarSection>
+      ) : null,
+    teamspaces: organizationName ? (
+      <TeamspaceSections
+        canCreate={true}
+        hasOrganization={organizationName !== null}
+        onNavigate={onNavigate}
+        teamspaces={teamspaces}
+      />
+    ) : null,
+  }
+
+  const sectionTitles: Record<SidebarSectionId, string> = {
+    organization: t('organizationSection'),
+    private: t('privateSection'),
+    recents: t('recentsSection'),
+    shared: t('sharedWithMe'),
+    teamspaces: tTeamspace('sectionTitle'),
+  }
+
+  const customizableSections: Array<CustomizableSection> = layout.order
+    .filter((id) => sectionNodes[id] !== null)
+    .map((id) => ({ id, title: sectionTitles[id] }))
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -124,72 +218,34 @@ function NavContent({
         aria-label={t('documents')}
         className="mt-4 flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-2 pb-2"
       >
-        <SidebarSection collapseId="recents" title={t('recentsSection')}>
-          <RecentDocuments
-            documents={recents}
-            hasOrganization={organizationName !== null}
-            onNavigate={onNavigate}
+        {customizing ? (
+          <CustomizeSidebar
+            layout={layout}
+            onDone={stopCustomizing}
+            onMove={onMoveSection}
+            onToggle={onToggleSection}
+            sections={customizableSections}
           />
-        </SidebarSection>
-
-        <SidebarSection collapseId="private" title={t('privateSection')}>
-          <DocumentTree
-            emptyLabel={t('emptyPrivate')}
-            hasOrganization={organizationName !== null}
-            nodes={owned}
-            onNavigate={onNavigate}
-          />
-          <SidebarOverflowLink
-            hidden={hiddenOwnedDocuments}
-            href="/documents?scope=private"
-            onNavigate={onNavigate}
-          />
-          <NewDocumentButton variant="sidebar" />
-        </SidebarSection>
-
-        {organizationName ? (
-          <TeamspaceSections
-            canCreate={true}
-            hasOrganization={organizationName !== null}
-            onNavigate={onNavigate}
-            teamspaces={teamspaces}
-          />
-        ) : null}
-
-        {organizationName ? (
-          <SidebarSection
-            collapseId="organization"
-            href="/org"
-            onNavigate={onNavigate}
-            title={t('organizationSection')}
-          >
-            <DocumentTree
-              emptyLabel={t('emptyOrganization')}
-              hasOrganization={organizationName !== null}
-              nodes={organizationDocuments}
-              onNavigate={onNavigate}
-            />
-            <SidebarOverflowLink
-              hidden={hiddenOrganizationDocuments}
-              href="/documents"
-              onNavigate={onNavigate}
-            />
-          </SidebarSection>
-        ) : null}
-
-        {shared.length > 0 ? (
-          <SidebarSection collapseId="shared" title={t('sharedWithMe')}>
-            <DocumentList
-              documents={shared}
-              emptyLabel={t('emptyShared')}
-              hasOrganization={organizationName !== null}
-              onNavigate={onNavigate}
-            />
-          </SidebarSection>
-        ) : null}
+        ) : (
+          visibleSectionIds(layout).map((id) => (
+            <Fragment key={id}>{sectionNodes[id]}</Fragment>
+          ))
+        )}
       </nav>
 
       <div className="flex flex-col gap-0.5 px-2 pt-1 pb-2">
+        {customizing ? null : (
+          <button
+            className={cn(sidebarRow, 'cursor-pointer')}
+            onClick={() => setCustomizing(true)}
+            type="button"
+          >
+            <SlidersIcon aria-hidden="true" className={sidebarIcon} />
+            <span className="min-w-0 flex-1 truncate">
+              {t('customizeSidebar')}
+            </span>
+          </button>
+        )}
         <TrashSection documents={trashed} />
         <div className="flex min-w-0 items-center gap-1">
           <div className="min-w-0 flex-1">
@@ -226,6 +282,7 @@ export function AppShell({
   recents,
   shared,
   trashed,
+  sidebarLayout,
   children,
 }: Props) {
   const t = useTranslations('nav')
@@ -233,6 +290,8 @@ export function AppShell({
   const { preferences, update } = useSidebarPreferences()
   const { collapsed } = preferences
   const [mobileOpen, setMobileOpen] = useState(false)
+  const { layout, moveSectionTo, toggleSection } =
+    useSidebarLayout(sidebarLayout)
   const {
     handleResizeKeyDown,
     maxWidth,
@@ -323,9 +382,12 @@ export function AppShell({
                   <TooltipContent>{t('collapse')}</TooltipContent>
                 </Tooltip>
               }
+              layout={layout}
               locale={locale}
               hiddenOrganizationDocuments={hiddenOrganizationDocuments}
               hiddenOwnedDocuments={hiddenOwnedDocuments}
+              onMoveSection={moveSectionTo}
+              onToggleSection={toggleSection}
               organizationDocuments={organizationDocuments}
               organizationName={organizationName}
               organizations={organizations}
@@ -398,8 +460,11 @@ export function AppShell({
           </SheetHeader>
           <NavContent
             activeOrgId={activeOrgId}
+            layout={layout}
             locale={locale}
+            onMoveSection={moveSectionTo}
             onNavigate={() => setMobileOpen(false)}
+            onToggleSection={toggleSection}
             hiddenOrganizationDocuments={hiddenOrganizationDocuments}
             hiddenOwnedDocuments={hiddenOwnedDocuments}
             organizationDocuments={organizationDocuments}

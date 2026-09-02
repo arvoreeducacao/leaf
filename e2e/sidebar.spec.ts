@@ -93,4 +93,29 @@ test.describe('sidebar', () => {
 
     expect(child).toBeTruthy()
   })
+
+  test('customizing the sidebar hides a section and the choice survives a reload', async ({
+    page,
+  }) => {
+    await signUp(page, uniqueEmail('customize'))
+    await createDocument(page, 'Field notes')
+
+    await expect(page.getByRole('region', { name: 'Privado' })).toBeVisible()
+
+    await page.getByRole('button', { name: 'Customizar barra lateral' }).click()
+    await page.getByRole('button', { name: 'Esconder Privado' }).click()
+    await page.getByRole('button', { name: 'Concluído' }).click()
+
+    await expect(page.getByRole('region', { name: 'Privado' })).toHaveCount(0)
+
+    await page.reload()
+
+    await expect(page.getByRole('region', { name: 'Privado' })).toHaveCount(0)
+
+    await page.getByRole('button', { name: 'Customizar barra lateral' }).click()
+    await page.getByRole('button', { name: 'Mostrar Privado' }).click()
+    await page.getByRole('button', { name: 'Concluído' }).click()
+
+    await expect(page.getByRole('region', { name: 'Privado' })).toBeVisible()
+  })
 })

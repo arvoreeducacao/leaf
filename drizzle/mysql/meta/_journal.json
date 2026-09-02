@@ -85,6 +85,13 @@
       "when": 1788600000000,
       "tag": "0011_github_documents",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "5",
+      "when": 1788700000000,
+      "tag": "0012_sidebar_preferences",
+      "breakpoints": true
     }
   ]
 }

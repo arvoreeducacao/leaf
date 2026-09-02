@@ -19,6 +19,7 @@ import {
   acceptPendingInvites,
   listOrganizationDocuments,
 } from '@/lib/organizations'
+import { readSidebarLayout } from '@/lib/sidebar-layout-store'
 import { readSidebarPreferences } from '@/lib/sidebar-preferences'
 import type { TeamspaceSection } from '@/lib/teamspaces'
 import { listTeamspaceDocuments, listVisibleTeamspaces } from '@/lib/teamspaces'
@@ -45,15 +46,21 @@ export default async function AppLayout({
     memberships[0] ??
     null
 
-  const [privateDocuments, shared, trashed, organizationDocuments] =
-    await Promise.all([
-      listPrivateDocuments(session.user.id),
-      listSharedDocuments(session.user.email),
-      listTrashedDocuments(session.user.id),
-      membership
-        ? listOrganizationDocuments(membership.orgId, session.user.id)
-        : Promise.resolve([]),
-    ])
+  const [
+    privateDocuments,
+    shared,
+    trashed,
+    organizationDocuments,
+    sidebarLayout,
+  ] = await Promise.all([
+    listPrivateDocuments(session.user.id),
+    listSharedDocuments(session.user.email),
+    listTrashedDocuments(session.user.id),
+    membership
+      ? listOrganizationDocuments(membership.orgId, session.user.id)
+      : Promise.resolve([]),
+    readSidebarLayout(session.user.id),
+  ])
 
   const visibleTeamspaces = membership
     ? await listVisibleTeamspaces(membership.orgId, session.user.id)
@@ -109,6 +116,7 @@ export default async function AppLayout({
         owned={ownedTree.nodes}
         recents={recents}
         shared={shared}
+        sidebarLayout={sidebarLayout}
         teamspaces={teamspaceSections}
         trashed={trashed}
         user={{ name: session.user.name, email: session.user.email }}
