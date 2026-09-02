@@ -76,7 +76,7 @@ export function UserMenu({ name, email, locale, compact = false }: Props) {
   const tNav = useTranslations('nav')
   const router = useRouter()
   const { theme, setTheme } = useTheme()
-  const { offer: installOffer, install } = useInstallPrompt()
+  const { installable, install } = useInstallPrompt()
   const [mounted, setMounted] = useState(false)
   const [pending, setPending] = useState(false)
   const [switching, startSwitching] = useTransition()
@@ -101,15 +101,6 @@ export function UserMenu({ name, email, locale, compact = false }: Props) {
 
     router.push('/login')
     router.refresh()
-  }
-
-  async function handleInstall() {
-    if (installOffer === 'ios-hint') {
-      toast(t('installIosTitle'), { description: t('installIosBody') })
-      return
-    }
-
-    await install()
   }
 
   function handleLocaleChange(next: string) {
@@ -169,8 +160,8 @@ export function UserMenu({ name, email, locale, compact = false }: Props) {
             {tNav('organizationLink')}
           </Link>
         </DropdownMenuItem>
-        {installOffer !== 'none' ? (
-          <DropdownMenuItem data-testid="install-app" onSelect={handleInstall}>
+        {installable ? (
+          <DropdownMenuItem data-testid="install-app" onSelect={() => void install()}>
             <DownloadIcon aria-hidden="true" />
             {t('installApp')}
           </DropdownMenuItem>
