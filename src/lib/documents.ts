@@ -9,6 +9,7 @@ export type DocumentSummary = Pick<
   'id' | 'title' | 'updatedAt' | 'deletedAt' | 'parentId' | 'kind' | 'icon'
 > & {
   shared: boolean
+  owned: boolean
 }
 
 export type DocumentNode = DocumentSummary & {
@@ -41,7 +42,7 @@ export async function listOwnedDocuments(
     )
     .orderBy(desc(documents.updatedAt))
 
-  return rows.map((row) => ({ ...row, shared: false }))
+  return rows.map((row) => ({ ...row, shared: false, owned: true }))
 }
 
 export async function listPrivateDocuments(
@@ -69,7 +70,7 @@ export async function listPrivateDocuments(
     )
     .orderBy(desc(documents.updatedAt))
 
-  return rows.map((row) => ({ ...row, shared: false }))
+  return rows.map((row) => ({ ...row, shared: false, owned: true }))
 }
 
 export async function listSharedDocuments(
@@ -95,7 +96,7 @@ export async function listSharedDocuments(
     )
     .orderBy(desc(documents.updatedAt))
 
-  return rows.map((row) => ({ ...row, shared: true, parentId: null }))
+  return rows.map((row) => ({ ...row, shared: true, owned: false, parentId: null }))
 }
 
 export async function listTrashedDocuments(
@@ -124,7 +125,7 @@ export async function listTrashedDocuments(
     )
     .orderBy(desc(documents.deletedAt))
 
-  return rows.map((row) => ({ ...row, shared: false }))
+  return rows.map((row) => ({ ...row, shared: false, owned: true }))
 }
 
 export function buildDocumentTree(

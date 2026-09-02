@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { DocumentIcon } from '@/components/app/document-icon'
+import { DocumentRowMenu } from '@/components/app/document-row-menu'
 import {
   sidebarEmpty,
   sidebarIcon,
@@ -27,6 +28,7 @@ const expandedStorageKey = 'leaf:tree-expanded'
 type Props = Readonly<{
   nodes: Array<DocumentNode>
   emptyLabel: string
+  hasOrganization: boolean
   onNavigate?: () => void
 }>
 
@@ -49,7 +51,12 @@ function parentsOf(nodes: Array<DocumentNode>) {
   return parents
 }
 
-export function DocumentTree({ nodes, emptyLabel, onNavigate }: Props) {
+export function DocumentTree({
+  nodes,
+  emptyLabel,
+  hasOrganization,
+  onNavigate,
+}: Props) {
   const pathname = usePathname()
   const activeId = pathname.startsWith('/doc/') ? pathname.slice(5) : null
   const parents = useMemo(() => parentsOf(nodes), [nodes])
@@ -126,6 +133,7 @@ export function DocumentTree({ nodes, emptyLabel, onNavigate }: Props) {
       ancestors={[]}
       depth={0}
       expanded={expanded}
+      hasOrganization={hasOrganization}
       nodes={nodes}
       onNavigate={onNavigate}
       onToggle={toggle}
@@ -139,6 +147,7 @@ function TreeLevel({
   ancestors,
   expanded,
   activeId,
+  hasOrganization,
   onToggle,
   onNavigate,
 }: Readonly<{
@@ -147,6 +156,7 @@ function TreeLevel({
   ancestors: Array<string>
   expanded: ReadonlySet<string>
   activeId: string | null
+  hasOrganization: boolean
   onToggle: (id: string) => void
   onNavigate?: () => void
 }>) {
@@ -175,13 +185,17 @@ function TreeLevel({
 
         return (
           <li key={node.id}>
-            <div
+            <DocumentRowMenu
               className={cn(
                 sidebarRow,
                 'group/row gap-1',
                 indentByDepth[visualDepth],
                 active && sidebarRowActive,
               )}
+              documentId={node.id}
+              hasOrganization={hasOrganization}
+              owned={node.owned}
+              title={node.title}
             >
               <span className="relative flex size-5 shrink-0 items-center justify-center">
                 <DocumentIcon
@@ -222,7 +236,7 @@ function TreeLevel({
               ) : (
                 link
               )}
-            </div>
+            </DocumentRowMenu>
 
             {hasChildren && open ? (
               <TreeLevel
@@ -230,6 +244,7 @@ function TreeLevel({
                 ancestors={[...ancestors, node.title]}
                 depth={depth + 1}
                 expanded={expanded}
+                hasOrganization={hasOrganization}
                 nodes={node.children}
                 onNavigate={onNavigate}
                 onToggle={onToggle}
