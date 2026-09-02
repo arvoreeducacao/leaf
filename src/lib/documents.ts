@@ -128,6 +128,27 @@ export async function listTrashedDocuments(
   return rows.map((row) => ({ ...row, shared: false, owned: true }))
 }
 
+export function pickRecentDocuments(
+  lists: ReadonlyArray<ReadonlyArray<DocumentSummary>>,
+  limit: number,
+): Array<DocumentSummary> {
+  const newest = new Map<string, DocumentSummary>()
+
+  for (const list of lists) {
+    for (const summary of list) {
+      const current = newest.get(summary.id)
+
+      if (!current || current.updatedAt < summary.updatedAt) {
+        newest.set(summary.id, summary)
+      }
+    }
+  }
+
+  return [...newest.values()]
+    .sort((first, second) => second.updatedAt.getTime() - first.updatedAt.getTime())
+    .slice(0, limit)
+}
+
 export function buildDocumentTree(
   summaries: Array<DocumentSummary>,
 ): Array<DocumentNode> {

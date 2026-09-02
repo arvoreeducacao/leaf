@@ -15,7 +15,7 @@ test.describe('context menu', () => {
     await signUp(page, uniqueEmail('context-sidebar'))
     await createDocument(page, 'Ata da reunião')
 
-    const nav = page.getByRole('navigation', { name: 'Documentos' })
+    const nav = page.getByRole('region', { name: 'Privado' })
     const row = nav.getByRole('link', { name: /Ata da reunião/ })
 
     await row.click({ button: 'right' })
@@ -41,7 +41,7 @@ test.describe('context menu', () => {
     await signUp(page, uniqueEmail('context-rename'))
     await createDocument(page, 'Nome antigo')
 
-    const nav = page.getByRole('navigation', { name: 'Documentos' })
+    const nav = page.getByRole('region', { name: 'Privado' })
 
     await nav.getByRole('link', { name: /Nome antigo/ }).click({ button: 'right' })
     await page.getByRole('menuitem', { name: 'Renomear' }).click()

@@ -101,23 +101,6 @@ export function RestoreIcon(props: IconProps) {
   )
 }
 
-export function FilterIcon(props: IconProps) {
-  return (
-    <OutlineIcon {...props}>
-      <path d="M2.75 3.75h10.5l-4.1 4.9v3.55l-2.3 1.15V8.65z" />
-    </OutlineIcon>
-  )
-}
-
-export function CloseIcon(props: IconProps) {
-  return (
-    <OutlineIcon {...props}>
-      <path d="m4.25 4.25 7.5 7.5" />
-      <path d="m11.75 4.25-7.5 7.5" />
-    </OutlineIcon>
-  )
-}
-
 export function PlusIcon(props: IconProps) {
   return (
     <OutlineIcon {...props}>
