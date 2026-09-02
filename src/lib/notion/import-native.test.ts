@@ -40,6 +40,7 @@ const messages: NotionImportMessages = {
   crawlTruncated: (max) => `stopped at ${max}`,
   csvColumn: 'Column',
   csvDatabases: (count) => `${count} databases`,
+  skippedUnchanged: (count) => `${count} skipped`,
   csvView: 'Table',
   missingLinks: (count) => `${count} links`,
   noPages: 'no pages',

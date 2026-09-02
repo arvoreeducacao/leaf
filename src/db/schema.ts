@@ -9,6 +9,7 @@ import {
   longtext,
   mysqlEnum,
   mysqlTable,
+  primaryKey,
   text,
   uniqueIndex,
   varchar,
@@ -386,6 +387,38 @@ export const comments = mysqlTable(
     ),
     index('comments_parent_id_idx').on(table.parentId),
     index('comments_author_id_idx').on(table.authorId),
+  ],
+)
+
+export const notionDocuments = mysqlTable(
+  'notion_documents',
+  {
+    userId: varchar('user_id', { length: AUTH_ID })
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    notionId: varchar('notion_id', { length: 64 }).notNull(),
+    documentId: varchar('document_id', { length: APP_ID })
+      .notNull()
+      .references(() => documents.id, { onDelete: 'cascade' }),
+    parentNotionId: varchar('parent_notion_id', { length: 64 }),
+    kind: mysqlEnum('kind', ['page', 'database', 'row'])
+      .notNull()
+      .default('page'),
+    lastEditedAt: datetime('last_edited_at', { mode: 'date', fsp: 3 }),
+    createdAt: datetime('created_at', { mode: 'date', fsp: 3 })
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP(3)`),
+    updatedAt: datetime('updated_at', { mode: 'date', fsp: 3 })
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP(3)`),
+  },
+  (table) => [
+    primaryKey({ columns: [table.userId, table.notionId] }),
+    index('notion_documents_document_id_idx').on(table.documentId),
+    index('notion_documents_user_parent_idx').on(
+      table.userId,
+      table.parentNotionId,
+    ),
   ],
 )
 
