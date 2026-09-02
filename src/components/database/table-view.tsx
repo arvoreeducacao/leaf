@@ -43,7 +43,7 @@ export function TableView({
   return (
     <div className="flex flex-col">
       <div className="overflow-x-auto">
-        <div className={cn('w-max min-w-full', gutter)}>
+        <div className={cn('relative w-max min-w-full', gutter)}>
           <table className="min-w-max border-collapse text-body-small">
             <thead>
               <tr>
@@ -51,7 +51,7 @@ export function TableView({
                   className={cn(cellFrame, 'w-70 border-t-0 border-l-0')}
                   scope="col"
                 >
-                  <div className="flex h-9 w-70 min-w-0 items-center gap-1.5 px-2 font-regular text-content">
+                  <div className="flex h-9 w-70 min-w-0 items-center gap-1.5 px-2 font-regular text-content-subtle">
                     <FormatTextIcon
                       aria-hidden="true"
                       className="size-4 shrink-0"
@@ -65,7 +65,7 @@ export function TableView({
                     key={property.id}
                     scope="col"
                   >
-                    <div className="group/head flex h-9 w-50 min-w-0 items-center px-2 font-regular text-content">
+                    <div className="group/head flex h-9 w-50 min-w-0 items-center px-2 font-regular text-content-subtle">
                       <PropertyHeader
                         canEdit={canEdit}
                         onChangeType={(type) =>
