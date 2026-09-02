@@ -423,7 +423,12 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
   const gutter = compact ? '' : 'px-4 tablet:px-24'
 
   return (
-    <section className={compact ? 'flex flex-col gap-2' : 'flex flex-col'}>
+    <section
+      className={cn(
+        'flex min-w-0 flex-col',
+        compact ? 'gap-2' : undefined,
+      )}
+    >
       <ViewToolbar
         activeViewId={activeView.id}
         canEdit={canEdit}

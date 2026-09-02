@@ -39,6 +39,7 @@ type Props = Readonly<{
   name: string
   email: string
   locale: string
+  compact?: boolean
 }>
 
 const themeOptions = [
@@ -67,7 +68,7 @@ function initials(name: string, email: string) {
   return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase()
 }
 
-export function UserMenu({ name, email, locale }: Props) {
+export function UserMenu({ name, email, locale, compact = false }: Props) {
   const t = useTranslations('settings')
   const tAuth = useTranslations('auth')
   const tNav = useTranslations('nav')
@@ -116,7 +117,12 @@ export function UserMenu({ name, email, locale }: Props) {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button
-          className={cn(sidebarRow, 'cursor-pointer')}
+          aria-label={compact ? name || email : undefined}
+          className={cn(
+            sidebarRow,
+            'cursor-pointer',
+            compact && 'w-auto justify-center px-1.5',
+          )}
           data-testid="user-menu-trigger"
           type="button"
         >
@@ -125,7 +131,14 @@ export function UserMenu({ name, email, locale }: Props) {
               {initials(name, email)}
             </AvatarFallback>
           </Avatar>
-          <span className="min-w-0 flex-1 truncate">{name || email}</span>
+          <span
+            className={cn(
+              'min-w-0 flex-1 truncate',
+              compact && 'sr-only',
+            )}
+          >
+            {name || email}
+          </span>
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-64">
