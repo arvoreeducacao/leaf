@@ -23,8 +23,20 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: t('title'),
     description: t('description'),
+    applicationName: 'Leaf',
     manifest: '/manifest.webmanifest',
-    icons: { icon: '/icon.svg', apple: '/icon.svg' },
+    icons: {
+      icon: [
+        { url: '/icon.svg', type: 'image/svg+xml' },
+        { url: '/icon-192.png', sizes: '192x192', type: 'image/png' },
+      ],
+      apple: [{ url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
+    },
+    appleWebApp: {
+      capable: true,
+      title: 'Leaf',
+      statusBarStyle: 'default',
+    },
   }
 }
 
