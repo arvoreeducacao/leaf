@@ -26,6 +26,9 @@ import {
   listRecentAccessibleDocuments,
   parseSnippet,
   removeDocumentFromIndex,
+  askTokens,
+  buildAskMatchExpression,
+  searchAccessibleDocumentBodies,
   searchAccessibleDocuments,
 } from '@/lib/search-index'
 
@@ -199,6 +202,62 @@ describe('buildSnippet', () => {
 
   it('returns an empty snippet for an empty body', () => {
     expect(buildSnippet('', ['target'])).toBe('')
+  })
+})
+
+describe('askTokens', () => {
+  it('drops the words that carry no meaning in a question', () => {
+    expect(askTokens('quantos dias antes preciso pedir férias e quem aprova?')).toEqual(
+      ['quantos', 'dias', 'antes', 'preciso', 'pedir', 'férias', 'aprova'],
+    )
+  })
+
+  it('keeps nothing when the question is only function words', () => {
+    expect(askTokens('o que é isso?')).toEqual([])
+    expect(buildAskMatchExpression('o que é isso?')).toBeNull()
+  })
+})
+
+describe('buildAskMatchExpression', () => {
+  it('ranks by any word instead of demanding all of them', () => {
+    expect(buildAskMatchExpression('como funciona o deploy do Leaf')).toBe(
+      'funciona* deploy* Leaf*',
+    )
+  })
+})
+
+describe('searchAccessibleDocumentBodies', () => {
+  it('answers a whole question, without demanding every word of it', async () => {
+    const passages = await searchAccessibleDocumentBodies(
+      viewerOf(owner),
+      'what does the assessment say about critical reading?',
+    )
+
+    expect(passages.map((passage) => passage.id)).toContain('doc-private')
+  })
+
+  it('returns the whole body, which is what the AI answer reads', async () => {
+    const passages = await searchAccessibleDocumentBodies(
+      viewerOf(owner),
+      'resume',
+    )
+
+    expect(passages.map((passage) => passage.id)).toEqual(['doc-private'])
+    expect(passages[0].body.length).toBeGreaterThan(0)
+  })
+
+  it('never returns a document the person cannot open', async () => {
+    expect(
+      await searchAccessibleDocumentBodies(viewerOf(stranger), 'plan'),
+    ).toEqual([])
+    expect(
+      await searchAccessibleDocumentBodies(viewerOf(member), 'plan'),
+    ).toEqual([])
+    expect(
+      (
+        await searchAccessibleDocumentBodies(viewerOf(guest), 'schedule')
+      ).map((passage) => passage.id),
+    ).toEqual(['doc-shared'])
   })
 })
 
