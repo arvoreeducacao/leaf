@@ -1,15 +1,17 @@
 'use client'
 
 import '@blocknote/shadcn/style.css'
+import '@blocknote/xl-ai/style.css'
 import './editor.css'
 
 import { filterSuggestionItems } from '@blocknote/core'
 import { withCollaboration } from '@blocknote/core/yjs'
 import { SuggestionMenuController, useCreateBlockNote } from '@blocknote/react'
 import { BlockNoteView } from '@blocknote/shadcn'
-import { useTranslations } from 'next-intl'
+import { AIMenu, AIMenuController } from '@blocknote/xl-ai'
+import { useLocale, useTranslations } from 'next-intl'
 import { useTheme } from 'next-themes'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 
 import {
@@ -28,6 +30,9 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { createDatabase } from '@/lib/database-actions'
 import { takeSessionFlag } from '@/shared/storage'
 
+import { aiAgentName, createAiMenuTexts } from './ai-dictionary'
+import { createLeafAiExtension } from './ai-extension'
+import { createLeafAiMenuItems, leafAiSlashMenuItems } from './ai-menu-items'
 import { collectBlockIds } from './block-ids'
 import { BlockContextMenu } from './block-context-menu'
 import { readDocumentContent } from './content'
@@ -70,6 +75,7 @@ type Props = Readonly<{
   seed: string | null
   conflict: boolean
   localOnly: boolean
+  aiEnabled: boolean
 }>
 
 export default function BlockNoteEditor({
@@ -84,7 +90,9 @@ export default function BlockNoteEditor({
   seed,
   conflict,
   localOnly,
+  aiEnabled,
 }: Props) {
+  const locale = useLocale()
   const t = useTranslations('editor')
   const tComments = useTranslations('comments')
   const tImport = useTranslations('importFile')
@@ -97,6 +105,7 @@ export default function BlockNoteEditor({
   const parsed = readDocumentContent(seed ?? initialContent)
   const isUnreadable = parsed.status === 'unreadable'
   const isEditable = !readOnly && !isUnreadable
+  const canUseAi = aiEnabled && isEditable
   const seedBlocks = parsed.status === 'ok' ? parsed.blocks : null
 
   const { status, schedule, flush, markSaved } = useAutosave(
@@ -111,6 +120,9 @@ export default function BlockNoteEditor({
     withCollaboration({
       schema: leafSchema,
       dictionary,
+      extensions: canUseAi
+        ? [createLeafAiExtension(documentId, aiAgentName(locale))]
+        : [],
       uploadFile: (file: File) => uploadEditorFile(file, t('uploadFailed')),
       domAttributes: readOnly
         ? { editor: { 'aria-describedby': readOnlyHintId } }
@@ -129,6 +141,14 @@ export default function BlockNoteEditor({
   const [highlightedBlock, setHighlightedBlock] = useState<string | null>(null)
   const [stats, setStats] = useState(() => statsFromBlocks([]))
   const seededRef = useRef(false)
+
+  const aiMenu = useMemo(() => {
+    const items = createLeafAiMenuItems(createAiMenuTexts(locale))
+
+    return function LeafAiMenu() {
+      return <AIMenu items={items} />
+    }
+  }, [locale])
 
   const handleChange = useCallback(() => {
     const blocks = editor.document
@@ -387,7 +407,11 @@ export default function BlockNoteEditor({
           slashMenu={false}
           theme={resolvedTheme === 'dark' ? 'dark' : 'light'}
         >
-          <LeafFormattingToolbarController canComment={canComment} />
+          <LeafFormattingToolbarController
+            canComment={canComment}
+            canUseAi={canUseAi}
+          />
+          {canUseAi ? <AIMenuController aiMenu={aiMenu} /> : null}
           <SuggestionMenuController
             getItems={async (query) =>
               filterSuggestionItems(
@@ -413,6 +437,7 @@ export default function BlockNoteEditor({
                     onMarkdown: () => importRef.current?.pickMarkdown(),
                   },
                   { ...databaseItem, onInsert: insertDatabase },
+                  canUseAi ? leafAiSlashMenuItems(editor) : [],
                 ),
                 query,
               )

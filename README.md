@@ -15,6 +15,7 @@ Editor de documentos colaborativo da Árvore, no espírito do Notion: blocos, hi
 - **Busca**: `Ctrl+K` / `Alt+K` abrem a command palette (full-text via índice `FULLTEXT` do MySQL, recentes e ações rápidas), sempre filtrada por permissão no servidor
 - **Colaboração em tempo real**: Yjs + WebSocket, cursores nomeados, indicador de presença, escrita autorizada no handshake e fallback automático para edição solo
 - **Offline first**: the open document lives in the browser (Yjs in IndexedDB), stays editable with no connection and syncs on its own when the network is back; a service worker keeps the app shell and the pages you already visited, and falls back to its own screen when a page was never loaded
+- **IA no editor** (opcional, ligada por chave no `.env`): `/` abre *Pedir para a IA* — escrever sobre um assunto, continuar o texto, resumir a página, listar próximos passos; com texto selecionado, a barra de formatação oferece melhorar a escrita, corrigir ortografia, encurtar, desenvolver, simplificar, mudar o tom, traduzir e explicar. A resposta chega escrevendo no documento, com aceitar ou desfazer antes de valer
 - **Dois temas** (claro/escuro/sistema, contraste AA verificado) e **dois idiomas** (pt-BR e en-US)
 
 ## Stack
@@ -29,6 +30,7 @@ Editor de documentos colaborativo da Árvore, no espírito do Notion: blocos, hi
 | Arquivos | API S3 (`@aws-sdk/client-s3`) — emulador s3rver em dev |
 | Realtime | Servidor WebSocket próprio (`scripts/dev-realtime.mjs`) falando o protocolo y-websocket |
 | Offline | `y-indexeddb` for the document, a dedicated IndexedDB for the outbox, module service worker in `public/sw.js` |
+| IA | `@blocknote/xl-ai` no editor e AI SDK no servidor (Anthropic ou OpenAI) |
 
 ## Rodando localmente
 
@@ -82,6 +84,30 @@ The two representations are tie-broken by date: if `documents.updated_at` is new
 - Comments and version history are not cached.
 - The sidebar and the document **title** offline are the ones from the last page warm-up, not live data. The document body comes from the local Yjs and is always right; the title may be stale.
 - `navigator.onLine` lies (captive portal, wi-fi with no way out). That is why nothing depends on the `online` event alone: both the outbox and the collaboration reconnect retry every 5s while something is pending, and the request that fails is the probe.
+
+## IA
+
+A IA do editor nasce **desligada** e liga sozinha quando existe uma chave no ambiente — não há flag separada. Cada pessoa põe a **sua** chave no `.env.local`, do mesmo jeito que já faz com o banco:
+
+```bash
+ANTHROPIC_API_KEY=sk-ant-...
+```
+
+Só isso já basta: sem `LEAF_AI_MODEL`, o modelo é `claude-sonnet-5`. O resto é opcional:
+
+| Variável | Para quê |
+|---|---|
+| `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` | A chave. A presença de uma delas é o que liga a IA |
+| `LEAF_AI_PROVIDER` | `anthropic` ou `openai`, quando as duas chaves existem no mesmo `.env` |
+| `LEAF_AI_MODEL` | Troca o modelo. Obrigatório na OpenAI, que não tem padrão aqui |
+| `LEAF_AI_BASE_URL` | Aponta para um gateway compatível em vez da API do provedor |
+| `LEAF_AI_MAX_OUTPUT_TOKENS` | Teto de saída por resposta (padrão 8192) |
+
+Quem não põe chave nenhuma continua com o editor de sempre: sem item de IA no `/`, sem botão na barra de formatação, sem rota respondendo.
+
+**A chave nunca vai para o navegador.** O editor fala com `POST /api/ai`, e é o servidor que chama o provedor. A rota exige sessão, exige permissão de edição no documento que veio no corpo do pedido, e limita 20 chamadas por minuto por pessoa; quem só pode ver ou comentar recebe 403 e não vê a IA na tela.
+
+O que a IA escreve entra como sugestão no documento aberto — em colaboração, num fork do `Y.Doc`, então ninguém mais vê o rascunho antes da hora. Aceitar aplica, desfazer descarta, e o histórico de versões continua sendo a rede de proteção.
 
 ## Produção
 

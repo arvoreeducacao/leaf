@@ -1,5 +1,6 @@
 'use client'
 
+import { FormattingToolbarExtension } from '@blocknote/core/extensions'
 import {
   BasicTextStyleButton,
   BlockTypeSelect,
@@ -13,12 +14,14 @@ import {
   UnnestBlockButton,
   useBlockNoteEditor,
   useComponentsContext,
+  useExtension,
 } from '@blocknote/react'
+import { AIExtension, useAIDictionary } from '@blocknote/xl-ai'
 import { useTranslations } from 'next-intl'
 import { useMemo } from 'react'
 
 import { requestCommentOnBlock } from '@/components/comments/comments-bridge'
-import { ChatIcon } from '@/components/icons'
+import { ChatIcon, MagicWandIcon } from '@/components/icons'
 
 function CommentButton() {
   const t = useTranslations('comments')
@@ -41,7 +44,38 @@ function CommentButton() {
   )
 }
 
-function LeafFormattingToolbar({ canComment }: Readonly<{ canComment: boolean }>) {
+function AiButton() {
+  const dictionary = useAIDictionary()
+  const editor = useBlockNoteEditor()
+  const components = useComponentsContext()
+  const ai = useExtension(AIExtension)
+  const formattingToolbar = useExtension(FormattingToolbarExtension)
+
+  if (!components) {
+    return null
+  }
+
+  return (
+    <components.FormattingToolbar.Button
+      icon={<MagicWandIcon />}
+      label={dictionary.formatting_toolbar.ai.tooltip}
+      mainTooltip={dictionary.formatting_toolbar.ai.tooltip}
+      onClick={() => {
+        const selection = editor.getSelection()
+        const target =
+          selection?.blocks.at(-1) ?? editor.getTextCursorPosition().block
+
+        ai.openAIMenuAtBlock(target.id)
+        formattingToolbar.store.setState(false)
+      }}
+    />
+  )
+}
+
+function LeafFormattingToolbar({
+  canComment,
+  canUseAi,
+}: Readonly<{ canComment: boolean; canUseAi: boolean }>) {
   return (
     <FormattingToolbar>
       <BlockTypeSelect key="blockTypeSelect" />
@@ -67,6 +101,8 @@ function LeafFormattingToolbar({ canComment }: Readonly<{ canComment: boolean }>
 
       <CreateLinkButton key="createLinkButton" />
 
+      {canUseAi ? <AiButton key="aiButton" /> : null}
+
       {canComment ? <CommentButton key="commentButton" /> : null}
     </FormattingToolbar>
   )
@@ -74,13 +110,16 @@ function LeafFormattingToolbar({ canComment }: Readonly<{ canComment: boolean }>
 
 export function LeafFormattingToolbarController({
   canComment,
-}: Readonly<{ canComment: boolean }>) {
+  canUseAi,
+}: Readonly<{ canComment: boolean; canUseAi: boolean }>) {
   const toolbar = useMemo(
     () =>
       function BoundFormattingToolbar() {
-        return <LeafFormattingToolbar canComment={canComment} />
+        return (
+          <LeafFormattingToolbar canComment={canComment} canUseAi={canUseAi} />
+        )
       },
-    [canComment],
+    [canComment, canUseAi],
   )
 
   return <FormattingToolbarController formattingToolbar={toolbar} />
