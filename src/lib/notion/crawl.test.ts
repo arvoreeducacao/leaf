@@ -45,12 +45,14 @@ const messages: CrawlMessages = {
   commentsUnavailable: 'no permission to read comments',
   crawlTruncated: (max) => `stopped at ${max}`,
   pageFailed: (title) => `page ${title}`,
+  unsupportedBlocks: (count, types) => `${count} without equivalent: ${types}`,
   untitled: 'Untitled',
 }
 
 const importMessages = {
   ...messages,
   assetTooLarge: (name: string, limit: string) => `${name} ${limit}`,
+  boardView: 'Board',
   commentsFailed: 'comments failed',
   commentsImported: (count: number) => `${count} comments`,
   csvColumn: 'Column',
@@ -240,6 +242,7 @@ function fakeClient(
         yield row
       }
     },
+    search: async function* () {},
   }
 }
 
@@ -304,21 +307,25 @@ beforeEach(async () => {
 })
 
 describe('crawl of the Notion page', () => {
-  it('walks down from the page into the subpages and the database', async () => {
+  it('walks down from the page into the subpages, the database and the rows', async () => {
     const plan = await crawl()
 
     expect(plan.pages.map((page) => page.title)).toEqual([
       'Reading plan',
       'Class A',
       'Students',
+      'Ana Souza',
     ])
 
     const child = plan.pages.find((page) => page.title === 'Class A')
     const base = plan.pages.find((page) => page.title === 'Students')
+    const row = plan.pages.find((page) => page.title === 'Ana Souza')
 
     expect(child?.parentKey).toBe(`${rootId}.md`)
     expect(base?.parentKey).toBe(`${rootId}.md`)
     expect(base?.kind).toBe('csv')
+    expect(row?.parentKey).toBe(`${databaseId}.csv`)
+    expect(row?.kind).toBe('blocks')
   })
 
   it('reports each page read while walking', async () => {
@@ -330,43 +337,72 @@ describe('crawl of the Notion page', () => {
       }
     }
 
-    expect(seen).toEqual(['Reading plan', 'Class A', 'Students'])
+    expect(seen).toEqual(['Reading plan', 'Class A', 'Students', 'Ana Souza'])
   })
 
-  it('writes the markdown with heading, list and table', async () => {
+  it('converts heading, list and table into native blocks', async () => {
     const plan = await crawl()
-    const markdown = plan.markdownByPath.get(`${rootId}.md`) ?? ''
+    const blocks = plan.blocksByPath?.get(`${rootId}.md`) ?? []
+    const types = blocks.map((block) => block.type)
 
-    expect(markdown).toContain('# Goals')
-    expect(markdown).toContain('- Read every day')
-    expect(markdown).toContain('| Student | Grade |')
-    expect(markdown).toContain('| --- | --- |')
-    expect(markdown).toContain('| Ana | 9 |')
+    expect(types).toContain('heading')
+    expect(types).toContain('bulletListItem')
+    expect(types).toContain('table')
+
+    const heading = blocks.find((block) => block.type === 'heading')
+
+    expect(heading?.props?.level).toBe(1)
+
+    const table = blocks.find((block) => block.type === 'table')
+    const tableContent = table?.content as {
+      rows: Array<{ cells: Array<Array<{ text?: string }>> }>
+    }
+
+    expect(tableContent.rows).toHaveLength(2)
+    expect(tableContent.rows[0].cells[0][0].text).toBe('Student')
+    expect(tableContent.rows[1].cells[1][0].text).toBe('9')
   })
 
-  it('points the internal link at the file of the subpage', async () => {
+  it('points the internal link at the key of the subpage', async () => {
     const plan = await crawl()
-    const markdown = plan.markdownByPath.get(`${rootId}.md`) ?? ''
+    const blocks = plan.blocksByPath?.get(`${rootId}.md`) ?? []
+    const serialized = JSON.stringify(blocks)
 
-    expect(markdown).toContain(`[see the class](${childId}.md)`)
+    expect(serialized).toContain(`"href":"${childId}.md"`)
+    expect(serialized).toContain('see the class')
   })
 
-  it('downloads the image and keeps the local path in the markdown', async () => {
+  it('downloads the image and keeps the local path in the block', async () => {
     const plan = await crawl()
-    const markdown = plan.markdownByPath.get(`${rootId}.md`) ?? ''
+    const blocks = plan.blocksByPath?.get(`${rootId}.md`) ?? []
 
     expect(downloads).toEqual([imageUrl])
     expect(plan.assets).toHaveLength(1)
     expect(plan.assets[0].isImage).toBe(true)
-    expect(markdown).toContain(`![](${plan.assets[0].path})`)
+
+    const image = blocks.find((block) => block.type === 'image')
+
+    expect(image?.props?.url).toBe(plan.assets[0].path)
+    expect(plan.assetSourceByPath?.get(plan.assets[0].path)).toBe(imageUrl)
   })
 
-  it('becomes a csv with the title in the first column', async () => {
+  it('keeps the typed schema and the row values', async () => {
     const plan = await crawl()
-    const csv = plan.csvByPath.get(`${databaseId}.csv`) ?? ''
+    const schema = plan.databasesByKey?.get(`${databaseId}.csv`)
 
-    expect(csv.split('\n')[0]).toBe('Name,Class')
-    expect(csv).toContain('Ana Souza,5th grade')
+    expect(schema?.properties.map((property) => property.name)).toEqual([
+      'Class',
+    ])
+    expect(schema?.properties[0].type).toBe('text')
+    expect(plan.rowValuesByKey?.get('row-1.md')).toEqual(['5th grade'])
+  })
+
+  it('embeds the child database as a database block', async () => {
+    const plan = await crawl()
+    const blocks = plan.blocksByPath?.get(`${rootId}.md`) ?? []
+    const embed = blocks.find((block) => block.type === 'database')
+
+    expect(embed?.props?.databaseId).toBe(`${databaseId}.csv`)
   })
 })
 

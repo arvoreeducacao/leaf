@@ -598,7 +598,9 @@
     "commentsUnavailable": "We could not read the comments. Check that the Notion connection can read comments.",
     "commentsImported": "{count, plural, one {# open comment came along, anchored to the page} other {# open comments came along, anchored to the page}}",
     "commentsFailed": "The comments could not be created. The pages were imported anyway.",
-    "unresolvedPeople": "{count, plural, one {# name in the person column matched nobody in the organization ({names}) and was left unassigned.} other {# names in the person column matched nobody in the organization ({names}) and were left unassigned.}}"
+    "unresolvedPeople": "{count, plural, one {# name in the person column matched nobody in the organization ({names}) and was left unassigned.} other {# names in the person column matched nobody in the organization ({names}) and were left unassigned.}}",
+    "boardView": "Board",
+    "unsupportedBlocks": "Blocks without an equivalent were skipped: {count} ({types})."
   },
   "notionLink": {
     "title": "Import from Notion",
@@ -618,7 +620,9 @@
     "invalidLink": "That link does not look like a Notion page.",
     "unreachable": "We could not open that page. Check that you granted access to it in the Notion connection.",
     "withComments": "Bring the open comments too",
-    "withCommentsHint": "Unresolved threads come anchored to the page, not to the passage. Makes the import slower."
+    "withCommentsHint": "Unresolved threads come anchored to the page, not to the passage. Makes the import slower.",
+    "workspaceOption": "Import the whole workspace",
+    "workspaceOptionHint": "Everything the Notion connection can see, keeping the hierarchy. This can take a while."
   },
   "teamspace": {
     "sectionTitle": "Teamspaces",
