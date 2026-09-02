@@ -24,7 +24,7 @@ export type TeamspaceSummary = Readonly<{
 }>
 
 export type TeamspaceSection = TeamspaceSummary &
-  Readonly<{ documents: Array<DocumentNode> }>
+  Readonly<{ documents: Array<DocumentNode>; hiddenDocuments: number }>
 
 export type TeamspacePerson = Readonly<{
   memberId: string

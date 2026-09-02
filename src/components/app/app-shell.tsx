@@ -16,6 +16,7 @@ import { OfflineSync } from '@/components/app/offline-sync'
 import { OrgSwitcher } from '@/components/app/org-switcher'
 import type { OrganizationOption } from '@/components/app/org-switcher'
 import { RecentDocuments } from '@/components/app/recent-documents'
+import { SidebarOverflowLink } from '@/components/app/sidebar-overflow-link'
 import { SidebarSection } from '@/components/app/sidebar-section'
 import { sidebarIcon, sidebarRow } from '@/components/app/sidebar-styles'
 import { TeamspaceSections } from '@/components/app/teamspace-sections'
@@ -50,6 +51,8 @@ type Props = Readonly<{
   locale: string
   owned: Array<DocumentNode>
   organizationDocuments: Array<DocumentNode>
+  hiddenOwnedDocuments: number
+  hiddenOrganizationDocuments: number
   organizationName: string | null
   organizations: Array<OrganizationOption>
   activeOrgId: string | null
@@ -63,6 +66,8 @@ type Props = Readonly<{
 function NavContent({
   owned,
   organizationDocuments,
+  hiddenOwnedDocuments,
+  hiddenOrganizationDocuments,
   organizationName,
   organizations,
   activeOrgId,
@@ -77,6 +82,8 @@ function NavContent({
 }: Readonly<{
   owned: Array<DocumentNode>
   organizationDocuments: Array<DocumentNode>
+  hiddenOwnedDocuments: number
+  hiddenOrganizationDocuments: number
   organizationName: string | null
   organizations: Array<OrganizationOption>
   activeOrgId: string | null
@@ -134,6 +141,11 @@ function NavContent({
             nodes={owned}
             onNavigate={onNavigate}
           />
+          <SidebarOverflowLink
+            hidden={hiddenOwnedDocuments}
+            href="/documents?scope=private"
+            onNavigate={onNavigate}
+          />
           <NewDocumentButton variant="sidebar" />
         </SidebarSection>
 
@@ -157,6 +169,11 @@ function NavContent({
               emptyLabel={t('emptyOrganization')}
               hasOrganization={organizationName !== null}
               nodes={organizationDocuments}
+              onNavigate={onNavigate}
+            />
+            <SidebarOverflowLink
+              hidden={hiddenOrganizationDocuments}
+              href="/documents"
               onNavigate={onNavigate}
             />
           </SidebarSection>
@@ -202,6 +219,8 @@ export function AppShell({
   locale,
   owned,
   organizationDocuments,
+  hiddenOwnedDocuments,
+  hiddenOrganizationDocuments,
   organizationName,
   organizations,
   activeOrgId,
@@ -309,6 +328,8 @@ export function AppShell({
                 </Tooltip>
               }
               locale={locale}
+              hiddenOrganizationDocuments={hiddenOrganizationDocuments}
+              hiddenOwnedDocuments={hiddenOwnedDocuments}
               organizationDocuments={organizationDocuments}
               organizationName={organizationName}
               organizations={organizations}
@@ -383,6 +404,8 @@ export function AppShell({
             activeOrgId={activeOrgId}
             locale={locale}
             onNavigate={() => setMobileOpen(false)}
+            hiddenOrganizationDocuments={hiddenOrganizationDocuments}
+            hiddenOwnedDocuments={hiddenOwnedDocuments}
             organizationDocuments={organizationDocuments}
             organizationName={organizationName}
             organizations={organizations}
