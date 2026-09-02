@@ -1,6 +1,7 @@
 import { getTranslations } from 'next-intl/server'
 import Link from 'next/link'
 
+import { DocumentIcon } from '@/components/app/document-icon'
 import { CaretRightIcon } from '@/components/icons'
 import type { DocumentCrumb } from '@/lib/documents'
 
@@ -30,6 +31,11 @@ export async function DocumentBreadcrumb({ crumbs }: Props) {
               className="inline-flex min-w-0 max-w-40 items-center rounded-large px-1.5 py-0.5 text-body-small text-content transition-colors hover:bg-surface-hover hover:text-content-strong focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-1"
               href={`/doc/${crumb.id}`}
             >
+              <DocumentIcon
+                className="mr-1.5 size-4"
+                icon={crumb.icon}
+                kind={crumb.kind}
+              />
               <span className="min-w-0 truncate">{crumb.title}</span>
             </Link>
           </li>

@@ -5,18 +5,14 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
+import { DocumentIcon } from '@/components/app/document-icon'
 import {
   sidebarEmpty,
   sidebarIcon,
   sidebarRow,
   sidebarRowActive,
 } from '@/components/app/sidebar-styles'
-import {
-  CaretDownIcon,
-  CaretRightIcon,
-  DatabaseIcon,
-  PageIcon,
-} from '@/components/icons'
+import { CaretDownIcon, CaretRightIcon } from '@/components/icons'
 import {
   Tooltip,
   TooltipContent,
@@ -164,7 +160,7 @@ function TreeLevel({
         const active = activeId === node.id
         const hasChildren = node.children.length > 0
         const deep = depth > maxVisualDepth
-        const NodeIcon = node.kind === 'database' ? DatabaseIcon : PageIcon
+        const nodeKind = node.kind === 'row' ? 'page' : node.kind
 
         const link = (
           <Link
@@ -188,12 +184,13 @@ function TreeLevel({
               )}
             >
               <span className="relative flex size-5 shrink-0 items-center justify-center">
-                <NodeIcon
-                  aria-hidden="true"
+                <DocumentIcon
                   className={cn(
                     sidebarIcon,
                     hasChildren && 'group-hover/row:opacity-0',
                   )}
+                  icon={node.icon}
+                  kind={nodeKind}
                 />
                 {hasChildren ? (
                   <button

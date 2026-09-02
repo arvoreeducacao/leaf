@@ -33,12 +33,13 @@ function toIso(value: Date | string): string {
 export function toDatabaseRow(
   document: Pick<
     Document,
-    'id' | 'title' | 'properties' | 'createdAt' | 'updatedAt'
+    'id' | 'title' | 'icon' | 'properties' | 'createdAt' | 'updatedAt'
   >,
 ): DatabaseRow {
   return {
     id: document.id,
     title: document.title,
+    icon: document.icon,
     values: parseValues(document.properties),
     createdAt: toIso(document.createdAt),
     updatedAt: toIso(document.updatedAt),
@@ -84,6 +85,7 @@ export async function listDatabaseRows(
     .select({
       id: documents.id,
       title: documents.title,
+      icon: documents.icon,
       properties: documents.properties,
       createdAt: documents.createdAt,
       updatedAt: documents.updatedAt,
