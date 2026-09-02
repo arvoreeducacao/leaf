@@ -60,9 +60,7 @@
     "localePtBR": "Português (Brasil)",
     "localeEnUS": "English (US)",
     "switchingLanguage": "Trocando o idioma",
-    "installApp": "Instalar o Leaf",
-    "installIosTitle": "Adicione o Leaf à Tela de Início",
-    "installIosBody": "No Safari, toque em Compartilhar e depois em \"Adicionar à Tela de Início\"."
+    "installApp": "Instalar o Leaf"
   },
   "nav": {
     "navigation": "Navegação",

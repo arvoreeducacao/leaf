@@ -69,9 +69,9 @@ Leaf opens and edits with no network. Three independent layers, and none of them
 
 Navigating from the sidebar is not a browser navigation — Next only fetches the payload, so the page HTML would never enter the cache. That is why the client asks the service worker to *warm* the open page (`leaf:warm-page`), on the first visit and again when the tab is hidden. It is what makes a refresh with no network still open the document instead of the offline screen.
 
-### Instalação como app
+### Instalação como app (desktop)
 
-O Leaf é instalável: `public/manifest.webmanifest` (id, escopo, ícones PNG 192/512 e um maskable de sangria total em `public/icon-maskable.svg`), `apple-touch-icon.png` e as metatags Apple no `src/app/layout.tsx` cobrem Chrome, Edge, Android e iOS. O menu da pessoa ganha **Instalar o Leaf** quando o navegador entrega o `beforeinstallprompt`; no Safari do iOS, que não tem esse evento, o mesmo item mostra o caminho pela folha de compartilhar. Instalado (display standalone), o item some. Os ícones PNG são gerados uma vez a partir dos SVGs de `public/` — ao mudar o logo, regenere os quatro.
+O Leaf é instalável no Chrome e no Edge do desktop: `public/manifest.webmanifest` (id, escopo, ícones PNG 192/512 e um maskable de sangria total em `public/icon-maskable.svg`) mais o `apple-touch-icon.png` e as metatags de web app no `src/app/layout.tsx`. O menu da pessoa ganha **Instalar o Leaf** quando um navegador de desktop entrega o `beforeinstallprompt`; instalado (display standalone), o item some. No celular o item nunca aparece e o evento é engolido — a barra "adicionar à tela inicial" do Chrome no Android não sobe — porque lá o caminho é o app nativo. Os ícones PNG são gerados uma vez a partir dos SVGs de `public/` — ao mudar o logo, regenere os quatro.
 
 ### Why the Yjs state became a table
 
