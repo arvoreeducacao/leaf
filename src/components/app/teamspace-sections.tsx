@@ -6,6 +6,7 @@ import { useId, useState, useTransition } from 'react'
 import { toast } from 'sonner'
 
 import { DocumentTree } from '@/components/app/document-tree'
+import { SidebarOverflowLink } from '@/components/app/sidebar-overflow-link'
 import {
   SidebarCollapseMarker,
   SidebarSection,
@@ -161,12 +162,21 @@ function TeamspaceGroup({
       </div>
 
       <div hidden={collapsed} id={contentId}>
-        <DocumentTree
-          emptyLabel={t('empty')}
-          hasOrganization={hasOrganization}
-          nodes={teamspace.documents}
-          onNavigate={onNavigate}
-        />
+        {collapsed ? null : (
+          <>
+            <DocumentTree
+              emptyLabel={t('empty')}
+              hasOrganization={hasOrganization}
+              nodes={teamspace.documents}
+              onNavigate={onNavigate}
+            />
+            <SidebarOverflowLink
+              hidden={teamspace.hiddenDocuments}
+              href={`/documents?scope=teamspace&id=${teamspace.id}`}
+              onNavigate={onNavigate}
+            />
+          </>
+        )}
       </div>
     </div>
   )

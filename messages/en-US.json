@@ -89,7 +89,13 @@
     "organizationLink": "Organization",
     "newDatabase": "New database",
     "newDatabaseFailed": "Could not create the database",
-    "home": "Home"
+    "home": "Home",
+    "showAll": "See all (+{count})",
+    "showingCount": "{count, plural, one {# document} other {# documents}}",
+    "allDocuments": "All documents",
+    "filterPlaceholder": "Filter by title",
+    "filterLabel": "Filter documents by title",
+    "filterEmpty": "No document with that name"
   },
   "palette": {
     "title": "Search and commands",
