@@ -26,6 +26,7 @@ export function useSidebarWidth() {
   const [preferredWidth, setPreferredWidth] = useState(defaultWidth)
   const [maxWidth, setMaxWidth] = useState(defaultWidth)
   const [resizing, setResizing] = useState(false)
+  const sidebarRef = useRef<HTMLElement>(null)
   const width = clampWidth(preferredWidth, maxWidth)
   const widthRef = useRef(width)
 
@@ -83,9 +84,19 @@ export function useSidebarWidth() {
     const limit = viewportMaxWidth()
 
     function handleMove(moveEvent: PointerEvent) {
-      setPreferredWidth(
-        clampWidth(startWidth + moveEvent.clientX - startX, limit),
-      )
+      const next = clampWidth(startWidth + moveEvent.clientX - startX, limit)
+
+      if (next === widthRef.current) {
+        return
+      }
+
+      widthRef.current = next
+
+      if (sidebarRef.current !== null) {
+        sidebarRef.current.style.width = `${next}px`
+      }
+
+      handle.setAttribute('aria-valuenow', String(next))
     }
 
     function handleEnd() {
@@ -98,6 +109,7 @@ export function useSidebarWidth() {
       }
 
       setResizing(false)
+      setPreferredWidth(widthRef.current)
       writeStoredValue(storageKey, widthRef.current)
     }
 
@@ -136,6 +148,7 @@ export function useSidebarWidth() {
     minWidth,
     resetWidth,
     resizing,
+    sidebarRef,
     startResize,
     width,
   }
