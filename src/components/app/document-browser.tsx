@@ -13,8 +13,8 @@ import {
 
 import { DocumentIcon } from '@/components/app/document-icon'
 import { Input } from '@/components/ui/input'
+import { normalizeTitle } from '@/lib/document-title'
 import type { BrowsableDocument } from '@/lib/documents'
-import { normalizeTitle } from '@/lib/documents'
 
 const rowHeight = 40
 const overscan = 8

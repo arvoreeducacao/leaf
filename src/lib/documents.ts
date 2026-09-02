@@ -188,14 +188,6 @@ export function buildDocumentTree(
   return roots
 }
 
-export function normalizeTitle(value: string): string {
-  return value
-    .normalize('NFD')
-    .replace(/\p{Diacritic}/gu, '')
-    .toLowerCase()
-    .trim()
-}
-
 export type BrowsableDocument = Pick<
   DocumentSummary,
   'id' | 'title' | 'icon' | 'kind'
