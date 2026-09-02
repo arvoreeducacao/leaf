@@ -3,7 +3,7 @@
 import { useTranslations } from 'next-intl'
 
 import { useDocumentActions } from '@/components/app/document-actions'
-import { EllipsisIcon } from '@/components/icons'
+import { EllipsisIcon } from '@/components/icons/outline'
 import { ButtonIcon } from '@/components/ui/button-icon'
 import {
   DropdownMenu,

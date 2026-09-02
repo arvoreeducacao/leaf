@@ -9,7 +9,7 @@ import { DocumentTree } from '@/components/app/document-tree'
 import { SidebarSection } from '@/components/app/sidebar-section'
 import { sidebarHeading } from '@/components/app/sidebar-styles'
 import { TeamspaceFormDialog } from '@/components/app/teamspace-form-dialog'
-import { AddIcon, PadlockIcon, UsersIcon } from '@/components/icons'
+import { LockIcon, PeopleIcon, PlusIcon } from '@/components/icons/outline'
 import { Button } from '@/components/ui/button'
 import { ButtonIcon } from '@/components/ui/button-icon'
 import type { TeamspaceSection } from '@/lib/teamspaces'
@@ -64,7 +64,7 @@ export function TeamspaceSections({
             size="small"
             variant="ghost"
           >
-            <AddIcon aria-hidden="true" />
+            <PlusIcon aria-hidden="true" />
           </ButtonIcon>
         ) : null
       }
@@ -80,13 +80,13 @@ export function TeamspaceSections({
         <div className="group/teamspace flex flex-col" key={teamspace.id}>
           <div className={cn(sidebarHeading, 'gap-1.5 text-content')}>
             {teamspace.access === 'closed' ? (
-              <PadlockIcon
+              <LockIcon
                 aria-label={t('accessClosed')}
                 className="size-3.5 shrink-0"
                 role="img"
               />
             ) : (
-              <UsersIcon
+              <PeopleIcon
                 aria-label={t('accessOpen')}
                 className="size-3.5 shrink-0"
                 role="img"

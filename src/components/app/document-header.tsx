@@ -15,12 +15,8 @@ import {
   documentTitleInputId,
   requestEditorFocus,
 } from '@/components/editor/focus-bridge'
-import {
-  CaretRightIcon,
-  ClipboardContentIcon,
-  TeamIcon,
-  UsersIcon,
-} from '@/components/icons'
+import { ClipboardContentIcon } from '@/components/icons'
+import { ChevronRightIcon, PeopleIcon } from '@/components/icons/outline'
 import { ShareButton } from '@/components/sharing/share-button'
 import { ButtonIcon } from '@/components/ui/button-icon'
 import { renameDocument } from '@/lib/document-actions'
@@ -124,10 +120,10 @@ export function DocumentHeader({
               data-testid="document-org-tag"
               title={t('orgTagHint')}
             >
-              <TeamIcon aria-hidden="true" className="mr-1.5 size-4 shrink-0" />
+              <PeopleIcon aria-hidden="true" className="mr-1.5 size-4 shrink-0" />
               {t('orgTag')}
             </span>
-            <CaretRightIcon
+            <ChevronRightIcon
               aria-hidden="true"
               className="size-3 shrink-0 text-content-disabled"
             />
@@ -140,10 +136,10 @@ export function DocumentHeader({
               data-testid="document-teamspace-tag"
               title={tTeamspace('badgeHint')}
             >
-              <UsersIcon aria-hidden="true" className="mr-1.5 size-4 shrink-0" />
+              <PeopleIcon aria-hidden="true" className="mr-1.5 size-4 shrink-0" />
               <span className="min-w-0 truncate">{teamspaceName}</span>
             </span>
-            <CaretRightIcon
+            <ChevronRightIcon
               aria-hidden="true"
               className="size-3 shrink-0 text-content-disabled"
             />
@@ -151,7 +147,7 @@ export function DocumentHeader({
         ) : null}
         {breadcrumb}
         {breadcrumb ? (
-          <CaretRightIcon
+          <ChevronRightIcon
             aria-hidden="true"
             className="size-3 shrink-0 text-content-disabled"
           />

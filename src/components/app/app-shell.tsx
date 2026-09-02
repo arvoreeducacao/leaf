@@ -22,13 +22,7 @@ import { TeamspaceSections } from '@/components/app/teamspace-sections'
 import { registerTopbarSlot } from '@/components/app/topbar-slot'
 import { TrashSection } from '@/components/app/trash-section'
 import { UserMenu } from '@/components/app/user-menu'
-import {
-  CaretLeftIcon,
-  CaretRightIcon,
-  HomeIcon,
-  MenuIcon,
-  TeamIcon,
-} from '@/components/icons'
+import { HomeIcon, PeopleIcon, SidebarIcon } from '@/components/icons/outline'
 import { ButtonIcon } from '@/components/ui/button-icon'
 import { Search } from '@/components/ui/search'
 import {
@@ -194,7 +188,7 @@ function NavContent({
             {organizationName ? (
               <SidebarSection
                 href="/org"
-                icon={TeamIcon}
+                icon={PeopleIcon}
                 onNavigate={onNavigate}
                 title={t('organizationSection')}
               >
@@ -369,7 +363,7 @@ export function AppShell({
                       size="medium"
                       variant="ghost"
                     >
-                      <CaretLeftIcon aria-hidden="true" />
+                      <SidebarIcon aria-hidden="true" />
                     </ButtonIcon>
                   </TooltipTrigger>
                   <TooltipContent>{t('collapse')}</TooltipContent>
@@ -403,7 +397,7 @@ export function AppShell({
               size="medium"
               variant="ghost"
             >
-              <MenuIcon aria-hidden="true" />
+              <SidebarIcon aria-hidden="true" />
             </ButtonIcon>
           </div>
 
@@ -418,7 +412,7 @@ export function AppShell({
                     size="medium"
                     variant="ghost"
                   >
-                    <CaretRightIcon aria-hidden="true" />
+                    <SidebarIcon aria-hidden="true" />
                   </ButtonIcon>
                 </TooltipTrigger>
                 <TooltipContent>{t('expand')}</TooltipContent>

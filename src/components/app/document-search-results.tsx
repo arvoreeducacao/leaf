@@ -10,7 +10,7 @@ import {
   sidebarRow,
   sidebarRowActive,
 } from '@/components/app/sidebar-styles'
-import { PageIcon } from '@/components/icons'
+import { PageIcon } from '@/components/icons/outline'
 import type { DocumentMatch } from '@/lib/document-search'
 import { cn } from '@/shared/utils'
 

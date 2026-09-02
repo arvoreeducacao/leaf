@@ -2,7 +2,7 @@ import { getTranslations } from 'next-intl/server'
 import Link from 'next/link'
 
 import { DocumentIcon } from '@/components/app/document-icon'
-import { CaretRightIcon } from '@/components/icons'
+import { ChevronRightIcon } from '@/components/icons/outline'
 import type { DocumentCrumb } from '@/lib/documents'
 
 type Props = Readonly<{
@@ -22,7 +22,7 @@ export async function DocumentBreadcrumb({ crumbs }: Props) {
         {crumbs.map((crumb, index) => (
           <li className="flex min-w-0 items-center gap-0.5" key={crumb.id}>
             {index > 0 ? (
-              <CaretRightIcon
+              <ChevronRightIcon
                 aria-hidden="true"
                 className="size-3 shrink-0 text-content-disabled"
               />
