@@ -7,6 +7,7 @@ import { DocumentHeader } from '@/components/app/document-header'
 import { DatabaseSurface } from '@/components/database/database-surface'
 import { RowPropertiesSurface } from '@/components/database/row-properties-surface'
 import { DocumentEditor } from '@/components/editor/document-editor'
+import { isAiEnabled } from '@/lib/ai-config'
 import { authorNameOf } from '@/lib/author-name'
 import { getSession } from '@/lib/auth'
 import { canComment, canEdit, getDocumentAccess } from '@/lib/authz'
@@ -93,6 +94,7 @@ export default async function DocumentPage({ params }: Props) {
             </div>
           ) : null}
           <DocumentEditor
+            aiEnabled={isAiEnabled()}
             canComment={canComment(access)}
             documentId={document.id}
             initialContent={document.content}
