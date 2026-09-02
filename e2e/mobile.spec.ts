@@ -22,7 +22,7 @@ test.describe('mobile 375px', () => {
 
     await expect(nav).toBeVisible()
     await expect(
-      page.getByRole('dialog').getByLabel('Buscar documento pelo título'),
+      page.getByRole('dialog').getByRole('button', { name: /Buscar em tudo/ }),
     ).toBeVisible()
 
     await page.keyboard.press('Escape')

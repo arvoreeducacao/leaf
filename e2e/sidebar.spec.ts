@@ -9,35 +9,6 @@ import {
 } from './helpers'
 
 test.describe('sidebar', () => {
-  test('the search filters by title, the shortcut focuses the field and the empty state shows', async ({
-    page,
-  }) => {
-    await signUp(page, uniqueEmail('search'))
-    await createDocument(page, 'Vacation report')
-    await createDocument(page, 'Reading plan')
-
-    const search = page.getByLabel('Buscar documento pelo título')
-
-    await search.fill('vacat')
-
-    const nav = page.getByRole('navigation', { name: 'Documentos' })
-
-    await expect(nav.getByRole('link', { name: /Vacation report/ })).toBeVisible()
-    await expect(nav.getByRole('link', { name: /Reading plan/ })).toHaveCount(0)
-
-    await search.fill('something that does not exist')
-    await expect(
-      nav.getByText('Nenhum documento com esse nome').first(),
-    ).toBeVisible()
-
-    await page.getByRole('button', { name: 'Limpar busca' }).click()
-    await expect(search).toHaveValue('')
-    await expect(nav.getByRole('link', { name: /Reading plan/ })).toBeVisible()
-
-    await page.keyboard.press('Control+p')
-    await expect(page.getByLabel('Buscar documento pelo título')).toBeFocused()
-  })
-
   test('duplicating copies title and content without touching the original', async ({
     page,
   }) => {
@@ -56,11 +27,13 @@ test.describe('sidebar', () => {
       page.locator('.leaf-editor [contenteditable="true"]').first(),
     ).toContainText('original text of the minutes')
 
-    const nav = page.getByRole('navigation', { name: 'Documentos' })
+    const privateSection = page.getByRole('region', { name: 'Privado' })
 
-    await expect(nav.getByRole('link', { name: /Minutes template$/ })).toBeVisible()
     await expect(
-      nav.getByRole('link', { name: /Minutes template \(cópia\)/ }),
+      privateSection.getByRole('link', { name: /Minutes template$/ }),
+    ).toBeVisible()
+    await expect(
+      privateSection.getByRole('link', { name: /Minutes template \(cópia\)/ }),
     ).toBeVisible()
   })
 
@@ -94,19 +67,29 @@ test.describe('sidebar', () => {
 
     await expect(page.getByText('Documento movido')).toBeVisible()
 
-    const nav = page.getByRole('navigation', { name: 'Documentos' })
+    const privateSection = page.getByRole('region', { name: 'Privado' })
 
     await page.goto(`/doc/${parent}`)
-    await expect(nav.getByRole('button', { name: 'Expandir Parent' })).toBeVisible()
-    await expect(nav.getByRole('link', { name: /Child/ })).toHaveCount(0)
+    await expect(
+      privateSection.getByRole('button', { name: 'Expandir Parent' }),
+    ).toBeVisible()
+    await expect(
+      privateSection.getByRole('link', { name: /Child/ }),
+    ).toHaveCount(0)
 
-    await nav.getByRole('button', { name: 'Expandir Parent' }).click()
-    await expect(nav.getByRole('link', { name: /Child/ })).toBeVisible()
+    await privateSection.getByRole('button', { name: 'Expandir Parent' }).click()
+    await expect(
+      privateSection.getByRole('link', { name: /Child/ }),
+    ).toBeVisible()
 
     await page.reload()
 
-    await expect(nav.getByRole('button', { name: 'Recolher Parent' })).toBeVisible()
-    await expect(nav.getByRole('link', { name: /Child/ })).toBeVisible()
+    await expect(
+      privateSection.getByRole('button', { name: 'Recolher Parent' }),
+    ).toBeVisible()
+    await expect(
+      privateSection.getByRole('link', { name: /Child/ }),
+    ).toBeVisible()
 
     expect(child).toBeTruthy()
   })

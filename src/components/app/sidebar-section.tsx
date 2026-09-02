@@ -4,7 +4,7 @@ import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { useId } from 'react'
 
-import { sidebarHeading } from '@/components/app/sidebar-styles'
+import { sidebarSectionLabel } from '@/components/app/sidebar-styles'
 import { useSidebarCollapse } from '@/components/app/use-sidebar-collapse'
 import { ChevronDownIcon, ChevronRightIcon } from '@/components/icons/outline'
 import { cn } from '@/shared/utils'
@@ -51,7 +51,7 @@ export function SidebarSection({
   )
 
   return (
-    <section className="group/section flex flex-col">
+    <section aria-label={title} className="group/section flex flex-col">
       <div className="flex items-center gap-0.5">
         {collapsible && href ? (
           <button
@@ -62,7 +62,7 @@ export function SidebarSection({
                 ? t('expandNode', { title })
                 : t('collapseNode', { title })
             }
-            className="flex h-8 w-7 shrink-0 cursor-pointer items-center justify-center rounded-small transition-colors hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-1 tablet:h-[30px]"
+            className="flex h-8 w-7 shrink-0 cursor-pointer items-center justify-center rounded-small transition-colors hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-1 tablet:h-7"
             onClick={toggle}
             type="button"
           >
@@ -73,7 +73,7 @@ export function SidebarSection({
           {href ? (
             <Link
               className={cn(
-                sidebarHeading,
+                sidebarSectionLabel,
                 'transition-colors hover:bg-surface-hover hover:text-content',
                 collapsible && 'pl-0',
               )}
@@ -91,7 +91,7 @@ export function SidebarSection({
               aria-controls={contentId}
               aria-expanded={!collapsed}
               className={cn(
-                sidebarHeading,
+                sidebarSectionLabel,
                 'w-full cursor-pointer text-left transition-colors hover:bg-surface-hover hover:text-content focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-1',
               )}
               onClick={toggle}
@@ -100,7 +100,7 @@ export function SidebarSection({
               {label}
             </button>
           ) : (
-            <span className={sidebarHeading}>{label}</span>
+            <span className={sidebarSectionLabel}>{label}</span>
           )}
         </h2>
         {action ? (
@@ -151,7 +151,7 @@ export function SidebarCollapseMarker({
         className={cn(
           'size-3.5 shrink-0 text-content-subtle transition-opacity',
           Icon && 'absolute',
-          Icon && !collapsed && revealCaret,
+          !collapsed && revealCaret,
         )}
       />
     </span>
