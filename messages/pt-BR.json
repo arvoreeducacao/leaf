@@ -88,7 +88,8 @@
     "emptyPrivate": "Nenhum documento privado ainda",
     "organizationLink": "Organização",
     "newDatabase": "Nova base de dados",
-    "newDatabaseFailed": "Não foi possível criar a base de dados"
+    "newDatabaseFailed": "Não foi possível criar a base de dados",
+    "home": "Página inicial"
   },
   "palette": {
     "title": "Busca e comandos",
