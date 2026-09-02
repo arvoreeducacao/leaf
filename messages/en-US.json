@@ -120,6 +120,12 @@
     "savingTitle": "Saving title",
     "breadcrumbLabel": "Document path",
     "menuLabel": "Document actions",
+    "rowMenuLabel": "Actions for {title}",
+    "rename": "Rename",
+    "renameDescription": "The new name shows up in the sidebar and at the top of the page.",
+    "renameFieldLabel": "New page name",
+    "renameSubmit": "Rename",
+    "openInNewTab": "Open in new tab",
     "moveToPage": "Move to another page",
     "duplicate": "Duplicate document",
     "exportMarkdown": "Export as Markdown",
@@ -136,7 +142,8 @@
     "orgTagHint": "This document isn't private: people in the organization have access",
     "editedAt": "Edited {time}",
     "copyLink": "Copy link",
-    "linkCopied": "Link copied"
+    "linkCopied": "Link copied",
+    "linkCopyFailed": "Could not copy the link"
   },
   "database": {
     "untitled": "Untitled database",
@@ -336,6 +343,7 @@
     "empty": "The trash is empty",
     "restore": "Restore",
     "restoreItem": "Restore {title}",
+    "restored": "Document restored",
     "deleteForever": "Delete forever",
     "deleteItem": "Delete {title} forever",
     "confirmDescription": "The document {title} will be erased with no way to recover it.",
@@ -405,7 +413,10 @@
     "words": "{count, plural, one {# word} other {# words}}",
     "characters": "{count, plural, one {# character} other {# characters}}",
     "uploadFailed": "We couldn't upload the image. Try again.",
-    "saveOffline": "Saved on this device"
+    "saveOffline": "Saved on this device",
+    "blockTurnInto": "Turn into",
+    "blockDuplicate": "Duplicate block",
+    "blockRemove": "Delete block"
   },
   "blocknote": {
     "placeholder": "Type / for commands",

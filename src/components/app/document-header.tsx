@@ -66,6 +66,7 @@ export function DocumentHeader({
   const [value, setValue] = useState(title)
   const [saving, setSaving] = useState(false)
   const lastSaved = useRef(title)
+  const lastFromServer = useRef(title)
   const loadedFor = useRef(documentId)
   const fieldRef = useRef<HTMLTextAreaElement>(null)
 
@@ -83,11 +84,12 @@ export function DocumentHeader({
   useEffect(fitToContent, [fitToContent, value])
 
   useEffect(() => {
-    if (loadedFor.current === documentId) {
+    if (loadedFor.current === documentId && lastFromServer.current === title) {
       return
     }
 
     loadedFor.current = documentId
+    lastFromServer.current = title
     setValue(title)
     lastSaved.current = title
   }, [documentId, title])
@@ -189,6 +191,7 @@ export function DocumentHeader({
           canMoveToTeamspace={canMoveToTeamspace}
           documentId={documentId}
           isOwner={isOwner}
+          title={value}
         />
       </div>
     </>
