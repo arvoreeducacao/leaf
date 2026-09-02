@@ -52,7 +52,7 @@
   --color-primary-200: #cde7f5;
   --color-primary-300: #a5d3ee;
   --color-primary-400: #6cb6e4;
-  --color-primary-500: #2383e2;
+  --color-primary-500: #2783de;
   --color-primary-600: #1a73c7;
   --color-primary-700: #1665b0;
   --color-primary-800: #135391;
@@ -64,7 +64,7 @@
   --color-blue-200: #cde7f5;
   --color-blue-300: #a5d3ee;
   --color-blue-400: #6cb6e4;
-  --color-blue-500: #2383e2;
+  --color-blue-500: #2783de;
   --color-blue-600: #1a73c7;
   --color-blue-700: #1665b0;
   --color-blue-800: #135391;
@@ -299,32 +299,32 @@
 
   --topbar-height: 45px;
 
-  --content-strong: #37352f;
-  --content: #787774;
-  --content-muted: #787774;
-  --content-subtle: #9b9a97;
+  --content-strong: #2c2c2b;
+  --content: #5f5e59;
+  --content-muted: #7d7a75;
+  --content-subtle: #7d7a75;
   --content-disabled: #c7c6c3;
   --content-inverse: #ffffff;
 
   --surface-app: #ffffff;
-  --surface-nav: #f7f7f5;
+  --surface-nav: #f9f8f7;
   --surface-card: #ffffff;
   --surface-sunken: #f7f7f5;
   --surface-subtle: #f1f1ef;
-  --surface-hover: rgba(55, 53, 47, 0.06);
-  --surface-active: rgba(55, 53, 47, 0.09);
+  --surface-hover: rgba(33, 27, 23, 0.05);
+  --surface-active: rgba(33, 27, 23, 0.09);
   --surface-grabber: rgba(55, 53, 47, 0.24);
   --overlay: rgba(15, 15, 15, 0.4);
 
   --line: rgba(55, 53, 47, 0.09);
   --line-subtle: rgba(55, 53, 47, 0.06);
-  --line-divider: rgba(55, 53, 47, 0.09);
+  --line-divider: rgba(42, 28, 0, 0.07);
   --line-soft: rgba(55, 53, 47, 0.09);
   --line-muted: rgba(55, 53, 47, 0.12);
   --line-strong: rgba(55, 53, 47, 0.16);
   --line-stronger: rgba(55, 53, 47, 0.24);
   --line-contrast: rgba(55, 53, 47, 0.4);
-  --focus: #2383e2;
+  --focus: #2783de;
 
   --elevation-low:
     rgba(15, 15, 15, 0.1) 0px 0px 0px 1px, rgba(15, 15, 15, 0.1) 0px 2px 4px;
@@ -335,11 +335,11 @@
     rgba(15, 15, 15, 0.05) 0px 0px 0px 1px, rgba(15, 15, 15, 0.1) 0px 5px 10px,
     rgba(15, 15, 15, 0.2) 0px 15px 40px;
 
-  --brand: #2383e2;
+  --brand: #2783de;
   --brand-strong: #1a73c7;
   --brand-surface: #e7f3f8;
   --brand-surface-strong: #cde7f5;
-  --link: #2383e2;
+  --link: #2783de;
   --link-hover: #1a73c7;
 
   --danger: #c1302f;
@@ -371,7 +371,7 @@
   --card-foreground: var(--content-strong);
   --popover: var(--surface-card);
   --popover-foreground: var(--content-strong);
-  --primary: #2383e2;
+  --primary: #2783de;
   --primary-foreground: #ffffff;
   --secondary: var(--surface-card);
   --secondary-foreground: var(--content-strong);
@@ -460,7 +460,7 @@
   --scrollbar-thumb: rgba(255, 255, 255, 0.16);
   --scrollbar-thumb-hover: rgba(255, 255, 255, 0.28);
 
-  --primary: #2383e2;
+  --primary: #2783de;
   --primary-foreground: #ffffff;
   --secondary-foreground: var(--content-strong);
   --destructive: var(--danger-solid);

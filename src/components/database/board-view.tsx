@@ -76,7 +76,7 @@ export function BoardView({
 
   return (
     <div className="overflow-x-auto pb-2">
-      <div className="flex min-w-max items-start gap-3">
+      <div className="relative flex min-w-max items-start gap-3">
         {groups.map((group) => {
           const key = group.id ?? 'none'
 
