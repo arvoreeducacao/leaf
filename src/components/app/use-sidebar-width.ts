@@ -83,26 +83,20 @@ export function useSidebarWidth() {
     const startWidth = widthRef.current
     const limit = viewportMaxWidth()
 
-    let pendingWidth = startWidth
-    let frame = 0
+    function handleMove(moveEvent: PointerEvent) {
+      const next = clampWidth(startWidth + moveEvent.clientX - startX, limit)
 
-    function paint() {
-      frame = 0
-      widthRef.current = pendingWidth
+      if (next === widthRef.current) {
+        return
+      }
+
+      widthRef.current = next
 
       if (sidebarRef.current !== null) {
-        sidebarRef.current.style.width = `${pendingWidth}px`
+        sidebarRef.current.style.width = `${next}px`
       }
 
-      handle.setAttribute('aria-valuenow', String(pendingWidth))
-    }
-
-    function handleMove(moveEvent: PointerEvent) {
-      pendingWidth = clampWidth(startWidth + moveEvent.clientX - startX, limit)
-
-      if (frame === 0) {
-        frame = window.requestAnimationFrame(paint)
-      }
+      handle.setAttribute('aria-valuenow', String(next))
     }
 
     function handleEnd() {
@@ -110,18 +104,13 @@ export function useSidebarWidth() {
       handle.removeEventListener('pointerup', handleEnd)
       handle.removeEventListener('pointercancel', handleEnd)
 
-      if (frame !== 0) {
-        window.cancelAnimationFrame(frame)
-        paint()
-      }
-
       if (handle.hasPointerCapture(pointerId)) {
         handle.releasePointerCapture(pointerId)
       }
 
       setResizing(false)
-      setPreferredWidth(pendingWidth)
-      writeStoredValue(storageKey, pendingWidth)
+      setPreferredWidth(widthRef.current)
+      writeStoredValue(storageKey, widthRef.current)
     }
 
     handle.setPointerCapture(pointerId)
