@@ -240,6 +240,7 @@ export function AppShell({
     minWidth,
     resetWidth,
     resizing,
+    sidebarRef,
     startResize,
     width,
   } = useSidebarWidth()
@@ -288,6 +289,7 @@ export function AppShell({
         <aside
           aria-label={t('navigation')}
           className="group/sidebar relative hidden shrink-0 border-line border-r bg-surface-nav tablet:block"
+          ref={sidebarRef}
           style={{ width }}
         >
           <div
