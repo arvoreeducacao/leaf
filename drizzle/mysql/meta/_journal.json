@@ -64,6 +64,13 @@
       "when": 1788369253292,
       "tag": "0008_notion_documents",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "5",
+      "when": 1788380000000,
+      "tag": "0009_documents_cover",
+      "breakpoints": true
     }
   ]
 }
