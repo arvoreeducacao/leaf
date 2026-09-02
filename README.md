@@ -7,6 +7,7 @@ Editor de documentos colaborativo da Árvore, no espírito do Notion: blocos, hi
 - **Editor de blocos** (BlockNote): parágrafos, títulos, listas, checklists, citações, código, tabelas, imagens, destaques; slash menu (`/`), toolbar de formatação, atalhos markdown ao digitar e colagem rica direto do Notion ou Google Docs
 - **Hierarquia de páginas**: subpáginas ilimitadas, sidebar em árvore, breadcrumb, mover documentos, lixeira em cascata com desfazer
 - **Importação agnóstica** via slash menu: arquivos `.md` inseridos no ponto do cursor, ou o **zip de export do Notion inteiro** virando árvore de páginas (imagens, links internos, callouts e databases CSV convertidos)
+- **Capa da página** no estilo do Notion: *Adicionar capa* ao passar o mouse no título, galeria de cores e gradientes, upload, link ou busca no **Unsplash** (com crédito ao fotógrafo), reposicionar arrastando e remover; a capa aparece também no link público
 - **Exportação** para Markdown e HTML
 - **Compartilhamento**: convites por email com papéis Pode ver / Pode comentar / Pode editar, link público somente leitura revogável
 - **Organizações e teamspaces**: documento nasce privado; seções Privado / Organização / Teamspaces na sidebar; teamspaces abertos ou fechados; múltiplas organizações por pessoa com switcher; convidados externos com selo próprio
@@ -128,6 +129,7 @@ O app fala S3 e SQL por configuração — publicar é trocar env:
 | `ARVORE_SSO_CLIENT_ID` / `ARVORE_SSO_CLIENT_SECRET` / `ARVORE_SSO_ISSUER` | habilitam o botão "Entrar com a conta Árvore"; sem o client id, o provider não é registrado e a tela continua sendo o formulário de email e senha. O issuer padrão é `https://auth.arvore.com.br/api-arvore` |
 | `NOTION_CLIENT_ID` / `NOTION_CLIENT_SECRET` / `NOTION_REDIRECT_URI` | habilitam o import por link do Notion; sem elas o caminho fica desligado e o diálogo diz isso. Em produção o redirect é `https://leaf.arvore.com.br/api/notion/callback` |
 | `NOTION_API_VERSION` | versão da API do Notion no cabeçalho `Notion-Version` (padrão `2022-06-28`) |
+| `UNSPLASH_ACCESS_KEY` | liga a aba Unsplash do seletor de capa; sem ela, a aba explica que a busca não está configurada. A chave fica no servidor: o navegador fala com `/api/unsplash`, que exige sessão e limita 30 buscas por minuto por pessoa. Apps novos no Unsplash começam em modo demo (50 chamadas/hora) — produção precisa pedir o upgrade no painel deles |
 
 **Acesso restrito**: com `LEAF_ALLOWED_EMAIL_DOMAINS` setada, a validação acontece
 no servidor em quatro pontos — hook `before` do better-auth em `/sign-up/email` e

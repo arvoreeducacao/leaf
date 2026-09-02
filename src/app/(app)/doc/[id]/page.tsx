@@ -3,6 +3,7 @@ import { getTranslations } from 'next-intl/server'
 import { notFound, redirect } from 'next/navigation'
 
 import { DocumentBreadcrumb } from '@/components/app/document-breadcrumb'
+import { DocumentCover } from '@/components/app/document-cover'
 import { DocumentHeader } from '@/components/app/document-header'
 import { DatabaseSurface } from '@/components/database/database-surface'
 import { RowPropertiesSurface } from '@/components/database/row-properties-surface'
@@ -12,9 +13,12 @@ import { authorNameOf } from '@/lib/author-name'
 import { getSession } from '@/lib/auth'
 import { canComment, canEdit, getDocumentAccess } from '@/lib/authz'
 import { countOpenComments } from '@/lib/comments'
+import { parseCoverCredit } from '@/lib/document-cover'
 import { getDocument, listAncestors } from '@/lib/documents'
 import { isRealtimeEnabled, realtimePort } from '@/lib/realtime-config'
 import { getTeamspace } from '@/lib/teamspaces'
+import { isUnsplashEnabled } from '@/lib/unsplash'
+import { cn } from '@/shared/utils'
 
 type Props = Readonly<{ params: Promise<{ id: string }> }>
 
@@ -55,69 +59,85 @@ export default async function DocumentPage({ params }: Props) {
     : null
 
   const isDatabase = document.kind === 'database'
+  const hasCover = document.cover !== null
 
   return (
-    <article
-      className={
-        isDatabase
-          ? 'flex w-full min-w-0 flex-col gap-1 pt-6 pb-40 tablet:pt-9'
-          : 'mx-auto flex w-full max-w-page flex-col gap-2 pt-10 pb-40 tablet:pt-20'
-      }
-    >
-      <DocumentHeader
-        breadcrumb={
-          crumbs.length > 0 ? <DocumentBreadcrumb crumbs={crumbs} /> : null
-        }
-        canEdit={canEdit(access)}
-        canMoveToTeamspace={access === 'owner' && document.orgId !== null}
-        documentId={document.id}
-        icon={document.icon}
-        isOwner={access === 'owner'}
-        kind={document.kind}
-        openComments={openComments}
-        sharedWithOrganization={document.orgAccess !== null}
-        teamspaceName={teamspace?.name ?? null}
-        title={document.title}
-        updatedAt={document.updatedAt}
-        wide={isDatabase}
-      />
-      {isDatabase ? (
-        <DatabaseSurface canEdit={canEdit(access)} databaseId={document.id} />
-      ) : (
-        <>
-          {document.kind === 'row' ? (
-            <div className="px-4 tablet:px-[54px]">
-              <RowPropertiesSurface
-                canEdit={canEdit(access)}
-                rowId={document.id}
-              />
-            </div>
-          ) : null}
-          <DocumentEditor
-            aiEnabled={isAiEnabled()}
-            canComment={canComment(access)}
-            documentId={document.id}
-            initialContent={document.content}
-            isOwner={access === 'owner'}
-            openCommentCount={openComments}
-            readOnly={!canEdit(access)}
-            realtime={
-              isRealtimeEnabled()
-                ? {
-                    url: process.env.LEAF_REALTIME_URL?.trim() || null,
-                    port: realtimePort(),
-                    user: {
-                      id: session.user.id,
-                      name:
-                        authorNameOf(session.user.name, session.user.email) ??
-                        '',
-                    },
-                  }
-                : null
-            }
-          />
-        </>
-      )}
-    </article>
+    <>
+      {document.cover ? (
+        <DocumentCover
+          canEdit={canEdit(access)}
+          cover={document.cover}
+          credit={parseCoverCredit(document.coverCredit)}
+          documentId={document.id}
+          position={document.coverPosition}
+          unsplashEnabled={isUnsplashEnabled()}
+        />
+      ) : null}
+      <article
+        className={cn(
+          isDatabase
+            ? 'flex w-full min-w-0 flex-col gap-1 pb-40'
+            : 'mx-auto flex w-full max-w-page flex-col gap-2 pb-40',
+          isDatabase && (hasCover ? 'pt-4 tablet:pt-6' : 'pt-6 tablet:pt-9'),
+          !isDatabase && (hasCover ? 'pt-6 tablet:pt-10' : 'pt-10 tablet:pt-20'),
+        )}
+      >
+        <DocumentHeader
+          breadcrumb={
+            crumbs.length > 0 ? <DocumentBreadcrumb crumbs={crumbs} /> : null
+          }
+          canEdit={canEdit(access)}
+          canMoveToTeamspace={access === 'owner' && document.orgId !== null}
+          documentId={document.id}
+          hasCover={hasCover}
+          icon={document.icon}
+          isOwner={access === 'owner'}
+          kind={document.kind}
+          openComments={openComments}
+          sharedWithOrganization={document.orgAccess !== null}
+          teamspaceName={teamspace?.name ?? null}
+          title={document.title}
+          updatedAt={document.updatedAt}
+          wide={isDatabase}
+        />
+        {isDatabase ? (
+          <DatabaseSurface canEdit={canEdit(access)} databaseId={document.id} />
+        ) : (
+          <>
+            {document.kind === 'row' ? (
+              <div className="px-4 tablet:px-[54px]">
+                <RowPropertiesSurface
+                  canEdit={canEdit(access)}
+                  rowId={document.id}
+                />
+              </div>
+            ) : null}
+            <DocumentEditor
+              aiEnabled={isAiEnabled()}
+              canComment={canComment(access)}
+              documentId={document.id}
+              initialContent={document.content}
+              isOwner={access === 'owner'}
+              openCommentCount={openComments}
+              readOnly={!canEdit(access)}
+              realtime={
+                isRealtimeEnabled()
+                  ? {
+                      url: process.env.LEAF_REALTIME_URL?.trim() || null,
+                      port: realtimePort(),
+                      user: {
+                        id: session.user.id,
+                        name:
+                          authorNameOf(session.user.name, session.user.email) ??
+                          '',
+                      },
+                    }
+                  : null
+              }
+            />
+          </>
+        )}
+      </article>
+    </>
   )
 }

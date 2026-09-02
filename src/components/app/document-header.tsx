@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { toast } from 'sonner'
 
+import { AddCoverButton } from '@/components/app/add-cover-button'
 import { DocumentIcon } from '@/components/app/document-icon'
 import { DocumentMenu } from '@/components/app/document-menu'
 import { DocumentStatus } from '@/components/app/document-status'
@@ -36,6 +37,7 @@ type Props = Readonly<{
   icon?: string | null
   kind?: 'page' | 'database' | 'row'
   updatedAt?: Date | null
+  hasCover?: boolean
 }>
 
 export function DocumentHeader({
@@ -52,6 +54,7 @@ export function DocumentHeader({
   icon = null,
   kind = 'page',
   updatedAt = null,
+  hasCover = false,
 }: Props) {
   const t = useTranslations('document')
   const tTeamspace = useTranslations('teamspace')
@@ -197,13 +200,31 @@ export function DocumentHeader({
     <>
       {slot ? createPortal(topbar, slot) : null}
 
-      <div className={cn('px-4', wide ? 'tablet:px-24' : 'tablet:px-[54px]')}>
+      <div
+        className={cn(
+          'group/header px-4',
+          wide ? 'tablet:px-24' : 'tablet:px-[54px]',
+        )}
+      >
         {icon && !wide ? (
-          <DocumentIcon
-            className="mb-2 size-[78px] text-[70px]"
-            icon={icon}
-            kind={kind}
-          />
+          <div
+            className={cn(
+              'relative z-10 mb-2 w-fit',
+              hasCover && '-mt-[63px] tablet:-mt-[79px]',
+            )}
+          >
+            <DocumentIcon
+              className="size-[78px] text-[70px]"
+              icon={icon}
+              kind={kind}
+            />
+          </div>
+        ) : null}
+
+        {canEdit && !hasCover ? (
+          <div className="mb-1 flex gap-1 transition-opacity tablet:opacity-0 tablet:focus-within:opacity-100 tablet:group-hover/header:opacity-100">
+            <AddCoverButton documentId={documentId} />
+          </div>
         ) : null}
 
         <div className={wide ? 'flex items-center gap-1.5' : undefined}>
