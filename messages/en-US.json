@@ -199,7 +199,7 @@
     "unsplashTooFast": "You searched too many times in a row. Wait a minute.",
     "unsplashPhotoBy": "Photo by {name}",
     "unsplashFooter": "Photos from",
-    "creditLabel": "Photo by {name} on Unsplash",
+    "creditLabel": "Photo by <photographer>{name}</photographer> on <unsplash>Unsplash</unsplash>",
     "notAuthenticated": "Not authenticated",
     "gradients": {
       "red": "Red",

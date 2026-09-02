@@ -12,6 +12,7 @@ import {
   clampCoverPosition,
   gradientOfCover,
 } from '@/lib/document-cover'
+import { unsplashHomeUrl } from '@/lib/unsplash'
 import { cn } from '@/shared/utils'
 
 type Props = Readonly<{
@@ -187,14 +188,31 @@ export function DocumentCover({
       ) : null}
 
       {credit && !repositioning ? (
-        <a
-          className="absolute bottom-3 left-4 rounded-large bg-surface-card/90 px-2 py-1 text-caption text-content backdrop-blur-sm transition-opacity hover:text-content-strong tablet:opacity-0 tablet:group-hover/cover:opacity-100 tablet:focus-visible:opacity-100"
-          href={credit.url}
-          rel="noopener noreferrer nofollow"
-          target="_blank"
-        >
-          {t('creditLabel', { name: credit.name })}
-        </a>
+        <p className="absolute bottom-3 left-4 rounded-large bg-surface-card/90 px-2 py-1 text-caption text-content backdrop-blur-sm">
+          {t.rich('creditLabel', {
+            name: credit.name,
+            photographer: (chunks) => (
+              <a
+                className="underline underline-offset-2 hover:text-content-strong"
+                href={credit.url}
+                rel="noopener noreferrer nofollow"
+                target="_blank"
+              >
+                {chunks}
+              </a>
+            ),
+            unsplash: (chunks) => (
+              <a
+                className="underline underline-offset-2 hover:text-content-strong"
+                href={unsplashHomeUrl}
+                rel="noopener noreferrer"
+                target="_blank"
+              >
+                {chunks}
+              </a>
+            ),
+          })}
+        </p>
       ) : null}
 
       {canEdit ? (
