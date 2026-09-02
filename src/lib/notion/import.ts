@@ -40,6 +40,7 @@ import { baseNameOf, extensionOf } from '@/lib/notion/paths'
 import { buildImportPlan, isImagePath } from '@/lib/notion/plan'
 import type { ImportedComment } from '@/lib/notion/crawl'
 import type { ImportedValue } from '@/lib/notion/properties'
+import { createRowMatcher } from '@/lib/notion/row-match'
 import type { NotionPage, NotionPlan } from '@/lib/notion/plan'
 import { NotionImportError, readZipEntries } from '@/lib/notion/zip'
 import { storage } from '@/lib/storage'
@@ -737,16 +738,7 @@ export async function* importNotionPlan(
         and(eq(documents.parentId, databaseId), isNull(documents.deletedAt)),
       )
 
-    const idByTitle = new Map<string, string>()
-
-    for (const child of children) {
-      const key = child.title.trim().toLowerCase()
-
-      if (key.length > 0 && !idByTitle.has(key)) {
-        idByTitle.set(key, child.id)
-      }
-    }
-
+    const matcher = createRowMatcher(children)
     const matched = new Set<string>()
     let added = 0
 
@@ -759,15 +751,18 @@ export async function* importNotionPlan(
         }
       }
 
-      const key = row.title.trim().toLowerCase()
-      const existing = key.length > 0 ? idByTitle.get(key) : undefined
+      const existing = matcher.take(row.title)
 
-      if (existing && !matched.has(existing)) {
+      if (existing) {
         matched.add(existing)
 
         await db
           .update(documents)
-          .set({ kind: 'row', properties: serializeValues(values) })
+          .set({
+            kind: 'row',
+            title: row.title.slice(0, 200),
+            properties: serializeValues(values),
+          })
           .where(eq(documents.id, existing))
 
         continue

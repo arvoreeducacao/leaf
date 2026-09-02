@@ -3,6 +3,7 @@ import {
   directoryOf,
   extensionOf,
   notionTitle,
+  strippedBaseOf,
   stripCommonRoot,
 } from '@/lib/notion/paths'
 import type { ZipEntry } from '@/lib/notion/zip'
@@ -139,16 +140,44 @@ export function buildImportPlan(
     })
   }
 
+  for (const path of [...csvByPath.keys()]) {
+    if (path.toLowerCase().endsWith('_all.csv')) {
+      const sibling = `${path.slice(0, -'_all.csv'.length)}.csv`
+
+      if (csvByPath.has(sibling)) {
+        csvByPath.delete(sibling)
+      }
+    }
+  }
+
+  function baseOf(path: string): string {
+    return path.slice(0, path.length - extensionOf(path).length)
+  }
+
+  function registerStripped(map: Map<string, string | null>, path: string) {
+    const stripped = strippedBaseOf(baseOf(path))
+
+    if (stripped === baseOf(path)) {
+      return
+    }
+
+    map.set(stripped, map.has(stripped) ? null : path)
+  }
+
   const markdownByBase = new Map<string, string>()
+  const markdownByStripped = new Map<string, string | null>()
 
   for (const path of markdownByPath.keys()) {
-    markdownByBase.set(path.slice(0, path.length - extensionOf(path).length), path)
+    markdownByBase.set(baseOf(path), path)
+    registerStripped(markdownByStripped, path)
   }
 
   const csvByBase = new Map<string, string>()
+  const csvByStripped = new Map<string, string | null>()
 
   for (const path of csvByPath.keys()) {
-    csvByBase.set(path.slice(0, path.length - extensionOf(path).length), path)
+    csvByBase.set(baseOf(path), path)
+    registerStripped(csvByStripped, path)
   }
 
   const pages = new Map<string, NotionPage>()
@@ -175,7 +204,10 @@ export function buildImportPlan(
 
     directoryKeys.set(directory, null)
 
-    const markdownPath = markdownByBase.get(directory)
+    const markdownPath =
+      markdownByBase.get(directory) ??
+      markdownByStripped.get(strippedBaseOf(directory)) ??
+      null
 
     if (markdownPath) {
       const key = keyForMarkdown(markdownPath)
@@ -184,7 +216,10 @@ export function buildImportPlan(
       return key
     }
 
-    const csvPath = csvByBase.get(directory)
+    const csvPath =
+      csvByBase.get(directory) ??
+      csvByStripped.get(strippedBaseOf(directory)) ??
+      null
 
     if (csvPath) {
       const key = keyForCsv(csvPath)
