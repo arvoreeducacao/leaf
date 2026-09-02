@@ -4,6 +4,7 @@ export const leafProductionHost = 'leaf.arvore.com.br'
 export const leafAppScheme = 'app.leaf'
 
 const leafUrl = process.env.EXPO_PUBLIC_LEAF_URL?.trim() || `https://${leafProductionHost}`
+const pointsToProduction = new URL(leafUrl).host === leafProductionHost
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
@@ -23,7 +24,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     supportsTablet: true,
     infoPlist: {
       ITSAppUsesNonExemptEncryption: false,
-      WKAppBoundDomains: [leafProductionHost],
+      ...(pointsToProduction ? { WKAppBoundDomains: [leafProductionHost] } : {}),
     },
   },
   android: {

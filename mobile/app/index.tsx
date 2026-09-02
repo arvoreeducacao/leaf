@@ -148,9 +148,16 @@ export default function LeafScreen() {
     [sessionDropped],
   )
 
-  const handleNavigationStateChange = useCallback((navigation: WebViewNavigation) => {
-    setCanGoBack(navigation.canGoBack)
-  }, [])
+  const handleNavigationStateChange = useCallback(
+    (navigation: WebViewNavigation) => {
+      setCanGoBack(navigation.canGoBack)
+
+      if (isLoginPage(navigation.url)) {
+        sessionDropped().catch(() => {})
+      }
+    },
+    [sessionDropped],
+  )
 
   const handleMessage = useCallback((event: WebViewMessageEvent) => {
     try {

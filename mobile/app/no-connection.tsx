@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Image, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
@@ -13,12 +13,16 @@ const copy = {
   retry: 'Tentar de novo',
 }
 
+const firstAutoRetryMs = 3000
+const maxAutoRetryMs = 60000
+
 export default function NoConnectionScreen() {
   const insets = useSafeAreaInsets()
   const router = useRouter()
   const { colors } = useThemeColors()
   const { isConnected, probe } = useConnectivity()
   const [retrying, setRetrying] = useState(false)
+  const autoRetryDelay = useRef(firstAutoRetryMs)
 
   async function retry() {
     setRetrying(true)
@@ -31,12 +35,24 @@ export default function NoConnectionScreen() {
   }
 
   useEffect(() => {
-    if (isConnected) {
-      probe().then((reachable) => {
-        if (reachable) {
-          router.replace('/')
-        }
-      })
+    if (!isConnected) return
+
+    let cancelled = false
+    const timer = setTimeout(async () => {
+      const reachable = await probe()
+
+      if (cancelled) return
+
+      if (reachable) {
+        router.replace('/')
+      } else {
+        autoRetryDelay.current = Math.min(autoRetryDelay.current * 2, maxAutoRetryMs)
+      }
+    }, autoRetryDelay.current)
+
+    return () => {
+      cancelled = true
+      clearTimeout(timer)
     }
   }, [isConnected, probe, router])
 

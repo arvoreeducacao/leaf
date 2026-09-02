@@ -1,5 +1,5 @@
-import { Redirect } from 'expo-router'
-import { useState } from 'react'
+import { Redirect, useLocalSearchParams } from 'expo-router'
+import { useEffect, useState } from 'react'
 import { Image, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
@@ -7,20 +7,36 @@ import { LeafButton } from '@/components/LeafButton'
 import { useSession } from '@/contexts/SessionContext'
 import { useThemeColors } from '@/hooks/useThemeColors'
 
+const emailDomainErrorCode = 'EMAIL_DOMAIN_NOT_ALLOWED'
+
 const copy = {
   title: 'Bem-vindo ao Leaf',
   subtitle: 'Entre com sua conta Árvore para escrever e compartilhar documentos.',
   submit: 'Entrar com a conta Árvore',
   hint: 'Use sua conta @arvore.com.br',
-  failed: 'Não foi possível entrar. Tente de novo.',
+  failed: 'Não foi possível entrar com a conta Árvore. Tente de novo.',
+  domainBlocked: 'A conta conectada à Árvore não é @arvore.com.br. Entre com outra conta para usar o Leaf.',
+}
+
+function messageForErrorCode(code: string | undefined): string | null {
+  if (!code) {
+    return null
+  }
+
+  return code === emailDomainErrorCode ? copy.domainBlocked : copy.failed
 }
 
 export default function LoginScreen() {
   const insets = useSafeAreaInsets()
   const { colors } = useThemeColors()
   const { status, signIn } = useSession()
+  const { error: errorCode } = useLocalSearchParams<{ error?: string }>()
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    setError(messageForErrorCode(errorCode))
+  }, [errorCode])
 
   if (status === 'signed-in') {
     return <Redirect href="/" />

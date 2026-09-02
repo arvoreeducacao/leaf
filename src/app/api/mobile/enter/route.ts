@@ -1,4 +1,4 @@
-import { APIError } from 'better-auth/api'
+import { isAPIError } from 'better-auth/api'
 import { NextResponse } from 'next/server'
 
 import { auth } from '@/lib/auth'
@@ -20,7 +20,10 @@ export async function GET(request: Request) {
       returnHeaders: true,
     })
 
-    const response = NextResponse.redirect(new URL('/', request.url), 303)
+    const response = new Response(null, {
+      status: 303,
+      headers: { location: '/' },
+    })
 
     for (const cookie of headers.getSetCookie()) {
       response.headers.append('set-cookie', cookie)
@@ -28,7 +31,7 @@ export async function GET(request: Request) {
 
     return response
   } catch (error) {
-    if (error instanceof APIError) {
+    if (isAPIError(error)) {
       return NextResponse.json({ error: 'invalid_token' }, { status: 401 })
     }
 
