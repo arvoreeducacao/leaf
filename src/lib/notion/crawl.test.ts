@@ -386,6 +386,33 @@ describe('crawl of the Notion page', () => {
     expect(plan.assetSourceByPath?.get(plan.assets[0].path)).toBe(imageUrl)
   })
 
+  it('streams each asset through the sink instead of keeping the bytes', async () => {
+    const stored: Array<string> = []
+    let plan: import('@/lib/notion/plan').NotionPlan | null = null
+
+    for await (const event of crawlNotionPage(
+      fakeClient(),
+      rootId,
+      messages,
+      undefined,
+      {
+        assetSink: async (asset) => {
+          stored.push(asset.path)
+
+          return `/api/uploads/u/${asset.fileName}`
+        },
+      },
+    )) {
+      if (event.type === 'plan') {
+        plan = event.plan
+      }
+    }
+
+    expect(plan?.assets).toHaveLength(0)
+    expect(stored).toHaveLength(1)
+    expect(plan?.assetUrlByPath?.get(stored[0])).toContain('/api/uploads/u/')
+  })
+
   it('keeps the typed schema and the row values', async () => {
     const plan = await crawl()
     const schema = plan.databasesByKey?.get(`${databaseId}.csv`)

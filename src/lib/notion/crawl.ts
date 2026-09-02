@@ -53,7 +53,10 @@ export type ImportedComment = Readonly<{
   createdAt: Date | null
 }>
 
-export type CrawlOptions = Readonly<{ comments?: boolean }>
+export type CrawlOptions = Readonly<{
+  comments?: boolean
+  assetSink?: (asset: NotionAsset) => Promise<string>
+}>
 
 export type CrawlEvent =
   | Readonly<{ type: 'page'; title: string; done: number }>
@@ -234,6 +237,7 @@ async function* crawlNotion(
   const rowValuesByKey = new Map<string, Array<ImportedValue>>()
   const metaByKey = new Map<string, NotionPageMeta>()
   const assetSourceByPath = new Map<string, string>()
+  const assetUrlByPath = new Map<string, string>()
   const pathToPageKey = new Map<string, string>()
   const assetPathByUrl = new Map<string, string>()
   const pendingAssets = new Map<string, string>()
@@ -415,14 +419,19 @@ async function* crawlNotion(
         }
 
         const known = contentTypeOf(path)
-
-        assets.push({
+        const asset: NotionAsset = {
           bytes,
           contentType: known === fallbackContentType ? contentType : known,
           fileName: path.replace('assets/', ''),
           isImage: isImagePath(path),
           path,
-        })
+        }
+
+        if (options.assetSink) {
+          assetUrlByPath.set(path, await options.assetSink(asset))
+        } else {
+          assets.push(asset)
+        }
       } catch {
         warnings.push(messages.assetFailed(path))
       }
@@ -607,6 +616,7 @@ async function* crawlNotion(
     comments: commentsByPage,
     plan: {
       assetSourceByPath,
+      assetUrlByPath,
       assets,
       blocksByPath,
       csvByPath,
