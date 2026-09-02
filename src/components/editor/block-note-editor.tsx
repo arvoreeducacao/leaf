@@ -29,6 +29,7 @@ import { createDatabase } from '@/lib/database-actions'
 import { takeSessionFlag } from '@/shared/storage'
 
 import { collectBlockIds } from './block-ids'
+import { BlockContextMenu } from './block-context-menu'
 import { readDocumentContent } from './content'
 import { DocumentImport } from './document-import'
 import type { DocumentImportHandle } from './document-import'
@@ -366,50 +367,60 @@ export default function BlockNoteEditor({
       {highlightedBlock && blockIdPattern.test(highlightedBlock) ? (
         <style>{highlightRule(highlightedBlock)}</style>
       ) : null}
-      <BlockNoteView
-        className="leaf-editor"
+      <BlockContextMenu
         editable={isEditable}
         editor={editor}
-        emojiPicker={false}
-        formattingToolbar={false}
-        onBlur={handleBlur}
-        onChange={handleChange}
-        slashMenu={false}
-        theme={resolvedTheme === 'dark' ? 'dark' : 'light'}
+        labels={{
+          duplicate: t('blockDuplicate'),
+          remove: t('blockRemove'),
+          turnInto: t('blockTurnInto'),
+        }}
       >
-        <LeafFormattingToolbarController canComment={canComment} />
-        <SuggestionMenuController
-          getItems={async (query) =>
-            filterSuggestionItems(
-              getLeafSlashMenuItems(
-                editor,
-                calloutItem,
-                {
-                  group: tImport('slashGroup'),
-                  markdown: tImport('slashMarkdown'),
-                  markdownHint: tImport('slashMarkdownHint'),
-                  archive: tImport('slashArchive'),
-                  archiveHint: tImport('slashArchiveHint'),
-                  link: tImport('slashLink'),
-                  linkHint: tImport('slashLinkHint'),
-                },
-                {
-                  onArchive: isOwner
-                    ? () => importRef.current?.pickArchive()
-                    : undefined,
-                  onLink: isOwner
-                    ? () => importRef.current?.pickLink()
-                    : undefined,
-                  onMarkdown: () => importRef.current?.pickMarkdown(),
-                },
-                { ...databaseItem, onInsert: insertDatabase },
-              ),
-              query,
-            )
-          }
-          triggerCharacter="/"
-        />
-      </BlockNoteView>
+        <BlockNoteView
+          className="leaf-editor"
+          editable={isEditable}
+          editor={editor}
+          emojiPicker={false}
+          formattingToolbar={false}
+          onBlur={handleBlur}
+          onChange={handleChange}
+          slashMenu={false}
+          theme={resolvedTheme === 'dark' ? 'dark' : 'light'}
+        >
+          <LeafFormattingToolbarController canComment={canComment} />
+          <SuggestionMenuController
+            getItems={async (query) =>
+              filterSuggestionItems(
+                getLeafSlashMenuItems(
+                  editor,
+                  calloutItem,
+                  {
+                    group: tImport('slashGroup'),
+                    markdown: tImport('slashMarkdown'),
+                    markdownHint: tImport('slashMarkdownHint'),
+                    archive: tImport('slashArchive'),
+                    archiveHint: tImport('slashArchiveHint'),
+                    link: tImport('slashLink'),
+                    linkHint: tImport('slashLinkHint'),
+                  },
+                  {
+                    onArchive: isOwner
+                      ? () => importRef.current?.pickArchive()
+                      : undefined,
+                    onLink: isOwner
+                      ? () => importRef.current?.pickLink()
+                      : undefined,
+                    onMarkdown: () => importRef.current?.pickMarkdown(),
+                  },
+                  { ...databaseItem, onInsert: insertDatabase },
+                ),
+                query,
+              )
+            }
+            triggerCharacter="/"
+          />
+        </BlockNoteView>
+      </BlockContextMenu>
       <InlineComments
         containerRef={containerRef}
         documentId={documentId}

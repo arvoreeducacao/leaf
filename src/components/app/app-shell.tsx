@@ -185,6 +185,7 @@ function NavContent({
             {organizationName ? (
               <TeamspaceSections
                 canCreate={true}
+                hasOrganization={organizationName !== null}
                 onNavigate={onNavigate}
                 teamspaces={teamspaces}
               />
@@ -199,6 +200,7 @@ function NavContent({
               >
                 <DocumentTree
                   emptyLabel={t('emptyOrganization')}
+                  hasOrganization={organizationName !== null}
                   nodes={organizationDocuments}
                   onNavigate={onNavigate}
                 />
@@ -210,6 +212,7 @@ function NavContent({
                 <DocumentList
                   documents={shared}
                   emptyLabel={t('emptyShared')}
+                  hasOrganization={organizationName !== null}
                   onNavigate={onNavigate}
                 />
               </SidebarSection>
@@ -218,6 +221,7 @@ function NavContent({
             <SidebarSection title={t('privateSection')}>
               <DocumentTree
                 emptyLabel={t('emptyPrivate')}
+                hasOrganization={organizationName !== null}
                 nodes={owned}
                 onNavigate={onNavigate}
               />
