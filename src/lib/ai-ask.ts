@@ -95,7 +95,7 @@ export type AnswerSegment = Readonly<{ text: string; strong: boolean }>
 
 export function answerSegments(answer: string): Array<AnswerSegment> {
   const segments: Array<AnswerSegment> = []
-  const pattern = /\*\*(.+?)\*\*/gsu
+  const pattern = /\*\*([\s\S]+?)\*\*/gu
   let cursor = 0
 
   for (const match of answer.matchAll(pattern)) {
