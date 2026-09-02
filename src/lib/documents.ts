@@ -6,7 +6,7 @@ import type { Document } from '@/db/schema'
 
 export type DocumentSummary = Pick<
   Document,
-  'id' | 'title' | 'updatedAt' | 'deletedAt' | 'parentId' | 'kind'
+  'id' | 'title' | 'updatedAt' | 'deletedAt' | 'parentId' | 'kind' | 'icon'
 > & {
   shared: boolean
 }
@@ -16,7 +16,7 @@ export type DocumentNode = DocumentSummary & {
   children: Array<DocumentNode>
 }
 
-export type DocumentCrumb = Pick<Document, 'id' | 'title'>
+export type DocumentCrumb = Pick<Document, 'id' | 'title' | 'icon' | 'kind'>
 
 export async function listOwnedDocuments(
   userId: string,
@@ -29,6 +29,7 @@ export async function listOwnedDocuments(
       deletedAt: documents.deletedAt,
       parentId: documents.parentId,
       kind: documents.kind,
+      icon: documents.icon,
     })
     .from(documents)
     .where(
@@ -54,6 +55,7 @@ export async function listPrivateDocuments(
       deletedAt: documents.deletedAt,
       parentId: documents.parentId,
       kind: documents.kind,
+      icon: documents.icon,
     })
     .from(documents)
     .where(
@@ -80,6 +82,7 @@ export async function listSharedDocuments(
       updatedAt: documents.updatedAt,
       deletedAt: documents.deletedAt,
       kind: documents.kind,
+      icon: documents.icon,
     })
     .from(documentShares)
     .innerJoin(documents, eq(documents.id, documentShares.documentId))
@@ -106,6 +109,7 @@ export async function listTrashedDocuments(
       deletedAt: documents.deletedAt,
       parentId: documents.parentId,
       kind: documents.kind,
+      icon: documents.icon,
     })
     .from(documents)
     .where(
@@ -194,7 +198,12 @@ export async function listAncestors(
       break
     }
 
-    crumbs.unshift({ id: parent.id, title: parent.title })
+    crumbs.unshift({
+      id: parent.id,
+      title: parent.title,
+      icon: parent.icon,
+      kind: parent.kind,
+    })
     current = parent
   }
 

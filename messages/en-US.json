@@ -132,7 +132,10 @@
     "trashed": "Document moved to trash",
     "restored": "Document restored",
     "orgTag": "Organization",
-    "orgTagHint": "This document isn't private: people in the organization have access"
+    "orgTagHint": "This document isn't private: people in the organization have access",
+    "editedAt": "Edited {time}",
+    "copyLink": "Copy link",
+    "linkCopied": "Link copied"
   },
   "database": {
     "untitled": "Untitled database",
@@ -156,7 +159,7 @@
     "titleColumn": "Name",
     "untitledRow": "Untitled",
     "rowTitleLabel": "Row name",
-    "newRow": "New row",
+    "newRow": "New page",
     "newRowShort": "New",
     "addProperty": "New property",
     "propertyNameLabel": "Property name",
@@ -242,7 +245,8 @@
       "todo": "To do",
       "doing": "In progress",
       "done": "Done"
-    }
+    },
+    "openRowShort": "Open"
   },
   "versions": {
     "menuItem": "Version history",
