@@ -267,6 +267,7 @@ export async function listOrganizationDocuments(
       deletedAt: documents.deletedAt,
       parentId: documents.parentId,
       kind: documents.kind,
+      icon: documents.icon,
     })
     .from(documents)
     .where(
