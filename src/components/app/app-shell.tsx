@@ -17,6 +17,7 @@ import { OrgSwitcher } from '@/components/app/org-switcher'
 import type { OrganizationOption } from '@/components/app/org-switcher'
 import { RecentDocuments } from '@/components/app/recent-documents'
 import { SidebarOverflowLink } from '@/components/app/sidebar-overflow-link'
+import { useSidebarPreferences } from '@/components/app/sidebar-preferences-provider'
 import { SidebarSection } from '@/components/app/sidebar-section'
 import { sidebarIcon, sidebarRow } from '@/components/app/sidebar-styles'
 import { TeamspaceSections } from '@/components/app/teamspace-sections'
@@ -40,10 +41,7 @@ import {
 } from '@/components/ui/tooltip'
 import type { DocumentNode, DocumentSummary } from '@/lib/documents'
 import type { TeamspaceSection } from '@/lib/teamspaces'
-import { readStoredValue, writeStoredValue } from '@/shared/storage'
 import { cn } from '@/shared/utils'
-
-const collapsedStorageKey = 'leaf:sidebar-collapsed'
 
 type Props = Readonly<{
   user: { name: string; email: string }
@@ -232,7 +230,8 @@ export function AppShell({
 }: Props) {
   const t = useTranslations('nav')
   const pathname = usePathname()
-  const [collapsed, setCollapsed] = useState(false)
+  const { preferences, update } = useSidebarPreferences()
+  const { collapsed } = preferences
   const [mobileOpen, setMobileOpen] = useState(false)
   const {
     handleResizeKeyDown,
@@ -255,10 +254,6 @@ export function AppShell({
   }, [])
 
   useEffect(() => {
-    setCollapsed(readStoredValue(collapsedStorageKey, false))
-  }, [])
-
-  useEffect(() => {
     setMobileOpen(false)
   }, [pathname])
 
@@ -273,8 +268,7 @@ export function AppShell({
 
   function toggleCollapsed(next: boolean) {
     toggled.current = true
-    setCollapsed(next)
-    writeStoredValue(collapsedStorageKey, next)
+    update({ collapsed: next })
   }
 
   return (
