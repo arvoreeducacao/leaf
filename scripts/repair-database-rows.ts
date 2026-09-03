@@ -280,6 +280,7 @@ async function valuesForRow(
   authors: Map<string, string | null>,
   documentId: string,
   pending: Array<PendingRelation>,
+  skippedFiles?: { count: number },
 ): Promise<Record<string, PropertyValue>> {
   const values: Record<string, PropertyValue> = {}
 
@@ -287,6 +288,20 @@ async function valuesForRow(
     const stored = storedByName.get(property.name.slice(0, MAX_PROPERTY_NAME))
 
     if (!stored) {
+      continue
+    }
+
+    if (property.notionType === 'files') {
+      const attached = (
+        (row.properties as Record<string, unknown> | undefined)?.[
+          property.notionName
+        ] as { files?: unknown } | undefined
+      )?.files
+
+      if (Array.isArray(attached) && attached.length > 0 && skippedFiles) {
+        skippedFiles.count += 1
+      }
+
       continue
     }
 
@@ -397,6 +412,7 @@ async function main() {
   let verified = 0
   let mismatched = 0
   const filesProperties = new Set<string>()
+  const skippedFiles = { count: 0 }
 
   for (const [index, databaseDocumentId] of databaseIds.entries()) {
     const databaseNotionId = notionIdByDocument.get(databaseDocumentId)
@@ -466,6 +482,7 @@ async function main() {
         authors,
         documentId,
         target ? pending : local,
+        target ? skippedFiles : undefined,
       )
 
       if (healthy && !target) {
@@ -567,6 +584,7 @@ async function main() {
   console.log(`bases ilegíveis pela API: ${unreadableDatabases}`)
   console.log(`referências entre bases preenchidas: ${relationsWritten}`)
   console.log(`colunas de arquivo afetadas: ${filesProperties.size}`)
+  console.log(`células de anexo deixadas em branco: ${skippedFiles.count}`)
 
   if (mode === 'verify') {
     console.log(`linhas boas conferidas: ${verified}, divergentes: ${mismatched}`)
