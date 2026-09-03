@@ -4,6 +4,7 @@ import { useTranslations } from 'next-intl'
 import { useState, useTransition } from 'react'
 import { toast } from 'sonner'
 
+import { DocumentIcon } from '@/components/app/document-icon'
 import {
   sidebarEmpty,
   sidebarIcon,
@@ -12,7 +13,6 @@ import {
 import {
   ChevronDownIcon,
   ChevronRightIcon,
-  PageIcon,
   RestoreIcon,
   TrashIcon,
 } from '@/components/icons/outline'
@@ -125,7 +125,11 @@ export function TrashSection({ documents }: Props) {
                 <ContextMenuTrigger asChild>
                   <li className="group/trash flex h-11 items-center gap-1.5 rounded-large pr-0.5 pl-1.5 hover:bg-surface-hover tablet:h-7">
                     <span className="flex size-5 shrink-0 items-center justify-center">
-                      <PageIcon aria-hidden="true" className={sidebarIcon} />
+                      <DocumentIcon
+                        className={sidebarIcon}
+                        icon={document.icon}
+                        kind={document.kind === 'row' ? 'page' : document.kind}
+                      />
                     </span>
                     <span className="min-w-0 flex-1 truncate text-body-small text-content">
                       {document.title}

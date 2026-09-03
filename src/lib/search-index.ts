@@ -26,6 +26,7 @@ export type SearchSegment = Readonly<{ text: string; highlight: boolean }>
 export type SearchHit = Readonly<{
   id: string
   title: string
+  icon: string | null
   segments: Array<SearchSegment>
 }>
 
@@ -333,6 +334,8 @@ function accessCondition(viewer: ViewerKeys) {
 
 type HitRow = Readonly<{ id: string; title: string; body: string | null }>
 
+type IconHitRow = HitRow & Readonly<{ icon: string | null }>
+
 export async function searchAccessibleDocuments(
   viewer: ViewerKeys,
   query: string,
@@ -344,10 +347,11 @@ export async function searchAccessibleDocuments(
     return []
   }
 
-  const rows = await selectRows<HitRow>(sql`
+  const rows = await selectRows<IconHitRow>(sql`
     select
       d.id as id,
       d.title as title,
+      d.icon as icon,
       f.body as body
     from documents_fts f
     join documents d on d.id = f.document_id
@@ -366,6 +370,7 @@ export async function searchAccessibleDocuments(
   return rows.map((row) => ({
     id: row.id,
     title: row.title,
+    icon: row.icon,
     segments: parseSnippet(buildSnippet(row.body ?? '', tokens)),
   }))
 }
@@ -415,13 +420,20 @@ export async function listRecentAccessibleDocuments(
   viewer: ViewerKeys,
   limit: number = MAX_RECENT_RESULTS,
 ): Promise<Array<SearchHit>> {
-  const rows = await selectRows<Readonly<{ id: string; title: string }>>(sql`
-    select d.id as id, d.title as title
+  const rows = await selectRows<
+    Readonly<{ id: string; title: string; icon: string | null }>
+  >(sql`
+    select d.id as id, d.title as title, d.icon as icon
     from documents d
     where d.deleted_at is null and ${accessCondition(viewer)}
     order by d.updated_at desc
     limit ${limit}
   `)
 
-  return rows.map((row) => ({ id: row.id, title: row.title, segments: [] }))
+  return rows.map((row) => ({
+    id: row.id,
+    title: row.title,
+    icon: row.icon,
+    segments: [],
+  }))
 }
