@@ -22,6 +22,7 @@ import {
 } from '@/lib/database/values'
 import type { SelectOption } from '@/lib/database/values'
 import { serializeViewConfig } from '@/lib/database/views'
+import { notionIconValue } from '@/lib/document-icon'
 import { sanitizeBlocks } from '@/lib/markdown/sanitize'
 import type {
   NotionBlock,
@@ -76,27 +77,6 @@ function normalizeNotionId(id: string): string {
 
 function notionFallbackUrl(id: string): string {
   return `https://www.notion.so/${normalizeNotionId(id)}`
-}
-
-function iconOf(
-  icon:
-    | { emoji?: string; external?: { url?: string }; file?: { url?: string } }
-    | null
-    | undefined,
-): string | null {
-  if (!icon) {
-    return null
-  }
-
-  if (typeof icon.emoji === 'string' && icon.emoji.length > 0) {
-    return icon.emoji.slice(0, 64)
-  }
-
-  const url = icon.external?.url ?? icon.file?.url ?? null
-
-  return typeof url === 'string' && url.startsWith('https://')
-    ? url.slice(0, 1024)
-    : null
 }
 
 function stamp(value: string | undefined): Date | null {
@@ -810,7 +790,7 @@ export async function* syncNotion(
       if (item.kind === 'database') {
         const database = await client.database(item.id)
         const title = databaseTitle(database, messages.untitled)
-        const icon = iconOf(database.icon)
+        const icon = notionIconValue(database.icon)
         const existing = mappings.get(idKey)
         const { documentId, created } = await upsertDocument(
           item.id,
@@ -877,7 +857,7 @@ export async function* syncNotion(
             row.id,
             'row',
             rowTitle,
-            iconOf(row.icon),
+            notionIconValue(row.icon),
             stamp(row.created_time),
             rowEdited,
             documentId,
@@ -1024,7 +1004,7 @@ export async function* syncNotion(
         item.id,
         mapping?.kind === 'row' ? 'row' : 'page',
         title,
-        iconOf(page.icon),
+        notionIconValue(page.icon),
         stamp(page.created_time),
         edited,
         item.parentDocId,
