@@ -22,6 +22,7 @@ export type ConvertContext = Readonly<{
   pageRef: (id: string) => string | null
   unsupported: (type: string) => void
   isInlineDatabase?: (id: string) => boolean
+  isDeadDatabase?: (id: string) => boolean
 }>
 
 const blockColors = new Set([
@@ -474,6 +475,25 @@ function convertNode(
 
       if (!target) {
         return []
+      }
+
+      if (context.isDeadDatabase?.(block.id)) {
+        const title =
+          typeof content.title === 'string' && content.title.length > 0
+            ? content.title
+            : block.id
+
+        return [
+          {
+            content: [
+              linkInline(
+                `https://www.notion.so/${block.id.replace(/-/g, '')}`,
+                styledText(title, {}),
+              ),
+            ],
+            type: 'paragraph',
+          },
+        ]
       }
 
       if (context.isInlineDatabase && !context.isInlineDatabase(block.id)) {
