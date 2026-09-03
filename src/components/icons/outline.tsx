@@ -161,3 +161,55 @@ export function EllipsisIcon(props: IconProps) {
     </svg>
   )
 }
+
+export function SlidersIcon(props: IconProps) {
+  return (
+    <OutlineIcon {...props}>
+      <path d="M2.75 5.25h1.5" />
+      <path d="M7.75 5.25h5.5" />
+      <circle cx="6" cy="5.25" r="1.5" />
+      <path d="M2.75 10.75h4.5" />
+      <path d="M10.75 10.75h2.5" />
+      <circle cx="9" cy="10.75" r="1.5" />
+    </OutlineIcon>
+  )
+}
+
+export function GripIcon(props: IconProps) {
+  return (
+    <svg
+      fill="currentColor"
+      height="1em"
+      viewBox="0 0 16 16"
+      width="1em"
+      {...props}
+    >
+      <circle cx="6" cy="4" r="1.15" />
+      <circle cx="10" cy="4" r="1.15" />
+      <circle cx="6" cy="8" r="1.15" />
+      <circle cx="10" cy="8" r="1.15" />
+      <circle cx="6" cy="12" r="1.15" />
+      <circle cx="10" cy="12" r="1.15" />
+    </svg>
+  )
+}
+
+export function EyeIcon(props: IconProps) {
+  return (
+    <OutlineIcon {...props}>
+      <path d="M1.75 8S4.15 3.75 8 3.75 14.25 8 14.25 8 11.85 12.25 8 12.25 1.75 8 1.75 8Z" />
+      <circle cx="8" cy="8" r="1.9" />
+    </OutlineIcon>
+  )
+}
+
+export function EyeOffIcon(props: IconProps) {
+  return (
+    <OutlineIcon {...props}>
+      <path d="M6.6 4.05A6.7 6.7 0 0 1 8 3.9c3.85 0 6.25 4.1 6.25 4.1a12.2 12.2 0 0 1-2.2 2.75" />
+      <path d="M4.55 5.15A11.9 11.9 0 0 0 1.75 8s2.4 4.1 6.25 4.1c1.03 0 1.95-.3 2.75-.73" />
+      <path d="M9.4 9.4a2 2 0 0 1-2.8-2.8" />
+      <path d="m2.6 2.6 10.8 10.8" />
+    </OutlineIcon>
+  )
+}

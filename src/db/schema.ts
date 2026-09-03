@@ -465,6 +465,16 @@ export const notionConnections = mysqlTable('notion_connections', {
     .default(sql`CURRENT_TIMESTAMP(3)`),
 })
 
+export const sidebarPreferences = mysqlTable('sidebar_preferences', {
+  userId: varchar('user_id', { length: AUTH_ID })
+    .primaryKey()
+    .references(() => user.id, { onDelete: 'cascade' }),
+  sections: longtext('sections').notNull(),
+  updatedAt: datetime('updated_at', { mode: 'date', fsp: 3 })
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP(3)`),
+})
+
 export type Document = typeof documents.$inferSelect
 export type DocumentKind = Document['kind']
 export type DatabaseProperty = typeof databaseProperties.$inferSelect
@@ -712,3 +722,4 @@ export type OAuthConsent = typeof oauthConsents.$inferSelect
 
 export type GithubDocument = typeof githubDocuments.$inferSelect
 export type GithubDocumentKind = GithubDocument['kind']
+export type SidebarPreference = typeof sidebarPreferences.$inferSelect
