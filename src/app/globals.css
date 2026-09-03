@@ -511,6 +511,7 @@
 
 html {
   scrollbar-gutter: stable;
+  overscroll-behavior-y: none;
 }
 
 html body[data-scroll-locked] {
