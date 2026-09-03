@@ -78,6 +78,13 @@
       "when": 1788500000000,
       "tag": "0010_document_chunks",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "5",
+      "when": 1788600000000,
+      "tag": "0011_github_documents",
+      "breakpoints": true
     }
   ]
 }
