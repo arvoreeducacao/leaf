@@ -8,6 +8,19 @@ vi.mock('@/db', async () => {
   return createTestDb()
 })
 
+const stored: Array<{ key: string; bytes: number; contentType: string }> = []
+
+vi.mock('@/lib/storage', () => ({
+  storage: {
+    async put(key: string, body: Buffer, contentType: string) {
+      stored.push({ key, bytes: body.length, contentType })
+    },
+    async get() {
+      return null
+    },
+  },
+}))
+
 import { eq } from 'drizzle-orm'
 
 import { db } from '@/db'
@@ -36,6 +49,7 @@ import {
   listOrganizationsTool,
   searchDocuments,
   updateDocumentTool,
+  uploadImageTool,
 } from '@/lib/mcp/tools'
 
 const owner = { id: 'mcp-owner', email: 'dono@arvore.com.br' }
@@ -213,6 +227,87 @@ describe('list_comments', () => {
   })
 })
 
+describe('upload_image', () => {
+  const png = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x01])
+
+  it('guarda a imagem e devolve o endereço que entra na página', async () => {
+    const before = stored.length
+    const result = await uploadImageTool(contextFor(member), {
+      data: png.toString('base64'),
+      contentType: 'image/png',
+    })
+
+    expect(result.url).toMatch(/^\/api\/uploads\/u\/[\w-]{16}\.png$/)
+    expect(result.absoluteUrl.endsWith(result.url)).toBe(true)
+    expect(result.bytes).toBe(png.length)
+    expect(stored.length).toBe(before + 1)
+    expect(stored.at(-1)?.contentType).toBe('image/png')
+  })
+
+  it('aceita SVG e guarda sem o script e sem o onload', async () => {
+    const before = stored.length
+    const result = await uploadImageTool(contextFor(member), {
+      data: Buffer.from(
+        '<svg viewBox="0 0 10 10" onload="x()"><script>roubar()</script><text>o desenho</text></svg>',
+      ).toString('base64'),
+      contentType: 'image/svg+xml',
+    })
+
+    expect(result.url).toMatch(/\.svg$/)
+    expect(stored.length).toBe(before + 1)
+    expect(result.bytes).toBeLessThan(
+      Buffer.from('<svg viewBox="0 0 10 10" onload="x()"><script>roubar()</script><text>o desenho</text></svg>').length,
+    )
+  })
+
+  it('recusa o que diz ser SVG e não é', async () => {
+    await expectToolError(
+      uploadImageTool(contextFor(member), {
+        data: Buffer.from('só um texto qualquer').toString('base64'),
+        contentType: 'image/svg+xml',
+      }),
+      'invalid_argument',
+    )
+  })
+
+  it('recusa bytes que não são do tipo que dizem ser', async () => {
+    await expectToolError(
+      uploadImageTool(contextFor(member), {
+        data: Buffer.from('MZ ainda não é imagem').toString('base64'),
+        contentType: 'image/png',
+      }),
+      'invalid_argument',
+    )
+  })
+
+  it('recusa o que não é base64 e o que passa de 500 kB', async () => {
+    await expectToolError(
+      uploadImageTool(contextFor(member), { data: 'não é base64!', contentType: 'image/png' }),
+      'invalid_argument',
+    )
+
+    const big = Buffer.concat([png, Buffer.alloc(500_001)])
+
+    await expectToolError(
+      uploadImageTool(contextFor(member), {
+        data: big.toString('base64'),
+        contentType: 'image/png',
+      }),
+      'invalid_argument',
+    )
+  })
+
+  it('não guarda nada sem o escopo leaf:write', async () => {
+    await expectToolError(
+      uploadImageTool(contextFor(owner, readScopes), {
+        data: png.toString('base64'),
+        contentType: 'image/png',
+      }),
+      'write_disabled',
+    )
+  })
+})
+
 describe('create_document', () => {
   it('cria uma página privada do usuário do token', async () => {
     const result = await createDocumentTool(contextFor(member), {
@@ -246,6 +341,46 @@ describe('create_document', () => {
       createDocumentTool(contextFor(owner, readScopes), { title: 'Sem escopo' }),
       'write_disabled',
     )
+  })
+
+  it('cria a página a partir de uma página de HTML, sem o script e sem o desenho', async () => {
+    const result = await createDocumentTool(contextFor(member), {
+      title: 'Artefato migrado',
+      html: [
+        '<style>body{color:red}</style>',
+        '<script>fetch("https://example.com")</script>',
+        '<h1>Artefato migrado</h1>',
+        '<p>O texto <b>sobrevive</b>.</p>',
+        '<svg viewBox="0 0 10 10"><text>o desenho</text></svg>',
+        '<figcaption>a legenda sobrevive</figcaption>',
+      ].join('\n'),
+    })
+
+    const created = await db.query.documents.findFirst({ where: eq(documents.id, result.id) })
+
+    expect(created?.content).toContain('sobrevive')
+    expect(created?.content).toContain('a legenda sobrevive')
+    expect(created?.content).not.toContain('o desenho')
+    expect(created?.content).not.toContain('fetch(')
+    expect(created?.content).not.toContain('color:red')
+  })
+
+  it('recusa markdown e html na mesma chamada, em vez de escolher um', async () => {
+    await expectToolError(
+      createDocumentTool(contextFor(member), {
+        title: 'Os dois',
+        markdown: 'texto',
+        html: '<p>texto</p>',
+      }),
+      'invalid_argument',
+    )
+  })
+
+  it('cria uma página vazia quando não vem corpo nenhum', async () => {
+    const result = await createDocumentTool(contextFor(member), { title: 'Só o título' })
+    const created = await db.query.documents.findFirst({ where: eq(documents.id, result.id) })
+
+    expect(created?.content).toBeNull()
   })
 })
 
@@ -302,6 +437,27 @@ describe('update_document', () => {
     await expectToolError(
       updateDocumentTool(contextFor(owner, readScopes), { documentId: 'doc-private', markdown: 'x' }),
       'write_disabled',
+    )
+  })
+
+  it('substitui o corpo por uma página de HTML', async () => {
+    await updateDocumentTool(contextFor(owner), {
+      documentId: 'doc-private',
+      html: '<h2>Migrado</h2><p>O texto sobrevive.</p><svg><text>o desenho</text></svg>',
+      mode: 'replace',
+    })
+
+    const updated = await db.query.documents.findFirst({ where: eq(documents.id, 'doc-private') })
+
+    expect(updated?.content).toContain('O texto sobrevive.')
+    expect(updated?.content).not.toContain('o desenho')
+    expect(updated?.content).not.toContain('Segredo')
+  })
+
+  it('recusa uma chamada sem markdown e sem html', async () => {
+    await expectToolError(
+      updateDocumentTool(contextFor(owner), { documentId: 'doc-private' }),
+      'invalid_argument',
     )
   })
 })

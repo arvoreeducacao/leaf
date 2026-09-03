@@ -19,8 +19,8 @@ import {
 import type { DocumentSummary } from '@/lib/documents'
 import {
   contentToMarkdown,
+  htmlToBlocks,
   markdownToBlocks,
-  markdownToContent,
   parseContentBlocks,
 } from '@/lib/markdown/convert'
 import {
@@ -43,11 +43,28 @@ import {
   listTeamspacesForOrganization,
   listVisibleTeamspaces,
 } from '@/lib/teamspaces'
+import {
+  decodeBase64,
+  looksLikeType,
+  sanitizeSvg,
+  storeUpload,
+} from '@/lib/uploads'
 
 export const MAX_MCP_RESULTS = 50
 export const MAX_MCP_MARKDOWN_CHARS = 400_000
+export const MAX_MCP_HTML_CHARS = 600_000
+export const MAX_MCP_IMAGE_BYTES = 500_000
 export const MAX_MCP_TITLE_CHARS = 200
 export const MCP_LIVE_EDIT_WINDOW_MS = 15_000
+
+export const mcpImageTypes = [
+  'image/png',
+  'image/jpeg',
+  'image/webp',
+  'image/gif',
+  'image/avif',
+  'image/svg+xml',
+] as const
 
 export type McpToolErrorCode =
   | 'not_found'
@@ -466,9 +483,99 @@ function requireMarkdown(markdown: string) {
   return markdown
 }
 
+function requireHtml(html: string) {
+  if (html.length > MAX_MCP_HTML_CHARS) {
+    throw new McpToolError('invalid_argument', 'html is too long')
+  }
+
+  return html
+}
+
+type WrittenBody = Readonly<{ markdown?: string; html?: string }>
+
+async function blocksOf(body: WrittenBody, required: boolean) {
+  const markdown = body.markdown ?? ''
+  const html = body.html ?? ''
+
+  if (markdown.length > 0 && html.length > 0) {
+    throw new McpToolError(
+      'invalid_argument',
+      'send either markdown or html, not both',
+    )
+  }
+
+  if (html.length > 0) {
+    return htmlToBlocks(requireHtml(html))
+  }
+
+  if (markdown.length > 0) {
+    return markdownToBlocks(requireMarkdown(markdown))
+  }
+
+  if (required) {
+    throw new McpToolError('invalid_argument', 'markdown or html is required')
+  }
+
+  return []
+}
+
+export async function uploadImageTool(
+  context: McpToolContext,
+  args: Readonly<{ data: string; contentType: string }>,
+) {
+  requireWrite(context)
+
+  const contentType = args.contentType.trim().toLowerCase()
+
+  if (!(mcpImageTypes as ReadonlyArray<string>).includes(contentType)) {
+    throw new McpToolError(
+      'invalid_argument',
+      `contentType must be one of ${mcpImageTypes.join(', ')}`,
+    )
+  }
+
+  const bytes = decodeBase64(args.data)
+
+  if (!bytes) {
+    throw new McpToolError('invalid_argument', 'data must be a base64 image')
+  }
+
+  if (bytes.length > MAX_MCP_IMAGE_BYTES) {
+    throw new McpToolError(
+      'invalid_argument',
+      `the image is larger than ${MAX_MCP_IMAGE_BYTES} bytes`,
+    )
+  }
+
+  if (!looksLikeType(bytes, contentType)) {
+    throw new McpToolError(
+      'invalid_argument',
+      `those bytes are not ${contentType}`,
+    )
+  }
+
+  const safe =
+    contentType === 'image/svg+xml'
+      ? Buffer.from(sanitizeSvg(bytes.toString('utf8')), 'utf8')
+      : bytes
+
+  const stored = await storeUpload(safe, contentType)
+
+  return {
+    url: stored.url,
+    absoluteUrl: `${authIssuer()}${stored.url}`,
+    bytes: safe.length,
+  }
+}
+
 export async function createDocumentTool(
   context: McpToolContext,
-  args: Readonly<{ title: string; markdown?: string; parentId?: string }>,
+  args: Readonly<{
+    title: string
+    markdown?: string
+    html?: string
+    parentId?: string
+  }>,
 ) {
   requireWrite(context)
 
@@ -478,7 +585,7 @@ export async function createDocumentTool(
     throw new McpToolError('invalid_argument', 'title is required')
   }
 
-  const markdown = requireMarkdown(args.markdown ?? '')
+  const blocks = await blocksOf(args, false)
   const userId = context.session.user.id
   let parent: Document | null = null
 
@@ -510,7 +617,7 @@ export async function createDocumentTool(
     orgAccess: parent?.orgAccess ?? null,
     kind: 'page',
     title,
-    content: markdown.trim().length > 0 ? await markdownToContent(markdown) : null,
+    content: blocks.length > 0 ? JSON.stringify(blocks) : null,
     createdAt: now,
     updatedAt: now,
   })
@@ -525,7 +632,12 @@ export async function createDocumentTool(
 
 export async function updateDocumentTool(
   context: McpToolContext,
-  args: Readonly<{ documentId: string; markdown: string; mode?: 'append' | 'replace' }>,
+  args: Readonly<{
+    documentId: string
+    markdown?: string
+    html?: string
+    mode?: 'append' | 'replace'
+  }>,
   now: Date = new Date(),
 ) {
   requireWrite(context)
@@ -554,9 +666,8 @@ export async function updateDocumentTool(
     )
   }
 
-  const markdown = requireMarkdown(args.markdown)
   const mode = args.mode ?? 'append'
-  const incoming = await markdownToBlocks(markdown)
+  const incoming = await blocksOf(args, true)
   const blocks =
     mode === 'append'
       ? [...parseContentBlocks(document.content), ...incoming]

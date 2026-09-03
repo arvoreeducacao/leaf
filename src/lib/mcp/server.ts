@@ -3,6 +3,7 @@ import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
 import { z } from 'zod'
 
 import {
+  MAX_MCP_HTML_CHARS,
   MAX_MCP_MARKDOWN_CHARS,
   MAX_MCP_RESULTS,
   MAX_MCP_TITLE_CHARS,
@@ -15,8 +16,10 @@ import {
   listCommentsTool,
   listDocumentsTool,
   listOrganizationsTool,
+  mcpImageTypes,
   searchDocuments,
   updateDocumentTool,
+  uploadImageTool,
 } from '@/lib/mcp/tools'
 
 const dataNotice =
@@ -30,6 +33,20 @@ const documentIdSchema = z
   .min(1)
   .max(64)
   .describe('Leaf document id (the last segment of its /doc/ URL)')
+
+const markdownSchema = z
+  .string()
+  .max(MAX_MCP_MARKDOWN_CHARS)
+  .optional()
+  .describe('Body as markdown')
+
+const htmlSchema = z
+  .string()
+  .max(MAX_MCP_HTML_CHARS)
+  .optional()
+  .describe(
+    'Body as an HTML page. Scripts, styles and inline SVG are dropped: what survives is the text and the structure a Leaf block can hold.',
+  )
 
 const limitSchema = z
   .number()
@@ -211,10 +228,11 @@ export function createLeafMcpServer(context: McpToolContext) {
       {
         title: 'Create document',
         description:
-          'Create a Leaf page from markdown, owned by you. With parentId it becomes a subpage of a page you can edit and inherits its organization and teamspace; otherwise it is private.',
+          'Create a Leaf page owned by you, from markdown or from a whole HTML page. Send one of the two, never both. With parentId it becomes a subpage of a page you can edit and inherits its organization and teamspace; otherwise it is private.',
         inputSchema: {
           title: z.string().min(1).max(MAX_MCP_TITLE_CHARS),
-          markdown: z.string().max(MAX_MCP_MARKDOWN_CHARS).optional(),
+          markdown: markdownSchema,
+          html: htmlSchema,
           parentId: documentIdSchema.optional(),
         },
         annotations: { readOnlyHint: false, destructiveHint: false },
@@ -226,14 +244,36 @@ export function createLeafMcpServer(context: McpToolContext) {
     )
 
     server.registerTool(
+      'upload_image',
+      {
+        title: 'Upload image',
+        description:
+          'Store an image in Leaf and get the address to put in a page. Send the bytes as base64, up to 500 kB. Use it for something Leaf cannot hold as a block, such as a hand-drawn diagram: send the diagram itself as image/svg+xml and it keeps its lines. Script and event handlers are stripped from SVG before it is stored.',
+        inputSchema: {
+          data: z
+            .string()
+            .min(1)
+            .describe('The image bytes, base64 encoded, no data: prefix'),
+          contentType: z
+            .enum(mcpImageTypes)
+            .describe('The image type, which must match the bytes'),
+        },
+        annotations: { readOnlyHint: false, destructiveHint: false },
+      },
+      (args) =>
+        run(context, 'upload_image', args, () => uploadImageTool(context, args)),
+    )
+
+    server.registerTool(
       'update_document',
       {
         title: 'Update document',
         description:
-          'Append markdown to a page you can edit, or replace its body. Refuses to write while someone is editing the page live; retry a few seconds later.',
+          'Append markdown or an HTML page to a page you can edit, or replace its body. Send one of the two, never both. Refuses to write while someone is editing the page live; retry a few seconds later.',
         inputSchema: {
           documentId: documentIdSchema,
-          markdown: z.string().min(1).max(MAX_MCP_MARKDOWN_CHARS),
+          markdown: markdownSchema,
+          html: htmlSchema,
           mode: z.enum(['append', 'replace']).optional(),
         },
         annotations: { readOnlyHint: false, destructiveHint: true },
