@@ -25,6 +25,7 @@ import {
   indexDocument,
   listRecentAccessibleDocuments,
   parseSnippet,
+  reconcileSearchIndex,
   removeDocumentFromIndex,
   askTokens,
   buildAskMatchExpression,
@@ -132,6 +133,7 @@ async function seed() {
 beforeEach(async () => {
   await resetDatabase()
   await seed()
+  await reconcileSearchIndex()
 })
 
 describe('buildMatchExpression', () => {
