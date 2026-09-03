@@ -167,12 +167,15 @@ export function buildDocumentTree(
       continue
     }
 
-    const parent = summary.parentId ? nodes.get(summary.parentId) : undefined
+    if (!summary.parentId) {
+      roots.push(node)
+      continue
+    }
+
+    const parent = nodes.get(summary.parentId)
 
     if (parent && parent.id !== node.id) {
       parent.children.push(node)
-    } else {
-      roots.push(node)
     }
   }
 
