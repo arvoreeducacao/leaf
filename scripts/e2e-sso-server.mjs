@@ -56,7 +56,7 @@ const next = spawn(
       ARVORE_SSO_CLIENT_SECRET: 'leaf-e2e-sso-client-secret',
       ARVORE_SSO_ISSUER: 'https://auth.e2e.invalid/api-arvore',
       BETTER_AUTH_SECRET:
-        process.env.E2E_AUTH_SECRET ?? 'leaf-e2e-secret-nao-use-em-producao',
+        process.env.E2E_AUTH_SECRET ?? 'leaf-e2e-secret-do-not-use-in-production',
       BETTER_AUTH_URL: `http://127.0.0.1:${port}`,
       S3_ENDPOINT: `http://127.0.0.1:${s3Port}`,
       S3_BUCKET: bucket,

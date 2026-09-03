@@ -148,7 +148,7 @@ export function documentToMarkdownFile(
 
 export async function contentToHTML(
   content: string | null,
-  title = 'Documento',
+  title = 'Document',
   origin = '',
 ): Promise<string> {
   const blocks = absolutizeBlocks(parseContentBlocks(content), origin)

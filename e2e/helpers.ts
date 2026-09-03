@@ -5,10 +5,10 @@ let counter = 0
 export function uniqueEmail(prefix = 'leaf') {
   counter += 1
 
-  return `${prefix}-${Date.now()}-${process.pid}-${counter}@exemplo.test`
+  return `${prefix}-${Date.now()}-${process.pid}-${counter}@example.test`
 }
 
-export const password = 'senha-de-teste-123'
+export const password = 'test-password-123'
 
 async function submitUntilLeaves(page: Page, buttonName: string) {
   for (let attempt = 0; attempt < 4; attempt += 1) {
@@ -25,15 +25,15 @@ async function submitUntilLeaves(page: Page, buttonName: string) {
       const alert = page.getByRole('alert')
 
       if (await alert.isVisible().catch(() => false)) {
-        throw new Error(`Falha na autenticação: ${await alert.innerText()}`)
+        throw new Error(`Authentication failed: ${await alert.innerText()}`)
       }
     }
   }
 
-  throw new Error(`Não saiu da tela de autenticação depois de clicar em ${buttonName}`)
+  throw new Error(`Did not leave the auth screen after clicking ${buttonName}`)
 }
 
-export async function signUp(page: Page, email: string, name = 'Pessoa Teste') {
+export async function signUp(page: Page, email: string, name = 'Test Person') {
   await page.goto('/signup')
   await page.getByLabel('Nome (opcional)').fill(name)
   await page.getByLabel('Email').fill(email)
@@ -94,6 +94,79 @@ export async function waitForSaved(page: Page) {
   await expect(page.getByText('Salvo', { exact: true }).first()).toBeVisible({
     timeout: 20_000,
   })
+}
+
+export async function waitForServiceWorker(page: Page) {
+  await page.waitForFunction(
+    () =>
+      'serviceWorker' in navigator &&
+      navigator.serviceWorker.controller !== null,
+    undefined,
+    { timeout: 30_000 },
+  )
+}
+
+export async function waitForPageCached(page: Page) {
+  await page.waitForFunction(
+    async () => {
+      const names = await caches.keys()
+      const pages = names.find((name) => name.endsWith('-pages'))
+
+      if (!pages) {
+        return false
+      }
+
+      const cache = await caches.open(pages)
+      const hit = await cache.match(window.location.href, { ignoreVary: true })
+
+      return hit !== undefined
+    },
+    undefined,
+    { timeout: 30_000 },
+  )
+}
+
+export async function waitForQueuedOffline(
+  page: Page,
+  documentId: string,
+  text: string,
+) {
+  await page.waitForFunction(
+    ({ documentId: id, text: needle }) =>
+      new Promise<boolean>((resolve) => {
+        const open = indexedDB.open('leaf-offline')
+
+        open.onerror = () => resolve(false)
+        open.onsuccess = () => {
+          const db = open.result
+
+          if (!db.objectStoreNames.contains('kv')) {
+            db.close()
+            resolve(false)
+
+            return
+          }
+
+          const read = db
+            .transaction('kv', 'readonly')
+            .objectStore('kv')
+            .get(`outbox:${id}`)
+
+          read.onerror = () => {
+            db.close()
+            resolve(false)
+          }
+          read.onsuccess = () => {
+            const entry = read.result as { content?: string } | undefined
+
+            db.close()
+            resolve(entry?.content?.includes(needle) === true)
+          }
+        }
+      }),
+    { documentId, text },
+    { timeout: 30_000 },
+  )
 }
 
 export async function expectNoHorizontalOverflow(page: Page) {

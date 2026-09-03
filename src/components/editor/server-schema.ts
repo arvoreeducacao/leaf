@@ -3,9 +3,11 @@ import {
   createBlockSpec,
   defaultBlockSpecs,
 } from '@blocknote/core'
+import { withMultiColumn } from '@blocknote/xl-multi-column'
 
 import { calloutConfig } from './callout-config'
 import { databaseConfig } from './database-config'
+import { embedConfig } from './embed-config'
 
 const createServerCalloutBlock = createBlockSpec(calloutConfig, {
   render: () => {
@@ -45,10 +47,33 @@ const createServerDatabaseBlock = createBlockSpec(databaseConfig, {
   },
 })
 
-export const leafServerSchema = BlockNoteSchema.create({
-  blockSpecs: {
-    ...defaultBlockSpecs,
-    callout: createServerCalloutBlock(),
-    database: createServerDatabaseBlock(),
+const createServerEmbedBlock = createBlockSpec(embedConfig, {
+  render: () => {
+    const dom = document.createElement('div')
+
+    return { dom }
+  },
+  toExternalHTML: (block) => {
+    const dom = document.createElement('p')
+    const link = document.createElement('a')
+    const label =
+      block.props.caption.length > 0 ? block.props.caption : block.props.url
+
+    link.setAttribute('href', block.props.url)
+    link.textContent = label
+    dom.appendChild(link)
+
+    return { dom }
   },
 })
+
+export const leafServerSchema = withMultiColumn(
+  BlockNoteSchema.create({
+    blockSpecs: {
+      ...defaultBlockSpecs,
+      callout: createServerCalloutBlock(),
+      database: createServerDatabaseBlock(),
+      embed: createServerEmbedBlock(),
+    },
+  }),
+)

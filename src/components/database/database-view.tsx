@@ -35,6 +35,7 @@ import {
   visibleProperties,
 } from '@/lib/database/views'
 import type { DatabaseSnapshot } from '@/lib/databases'
+import { cn } from '@/shared/utils'
 
 import { BoardView } from './board-view'
 import { TableView } from './table-view'
@@ -419,12 +420,21 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
     return null
   }
 
+  const gutter = compact ? '' : 'px-4 tablet:px-24'
+
   return (
-    <section className={compact ? 'flex flex-col gap-2' : 'flex flex-col gap-3'}>
+    <section
+      className={cn(
+        'flex min-w-0 flex-col',
+        compact ? 'gap-2' : undefined,
+      )}
+    >
       <ViewToolbar
         activeViewId={activeView.id}
         canEdit={canEdit}
+        compact={compact}
         config={config}
+        onCreateRow={() => handlers.createRow()}
         onConfigChange={changeConfig}
         onCreateView={createView}
         onDeleteView={deleteView}
@@ -439,7 +449,7 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
       />
 
       {rows.length === 0 ? (
-        <p className="px-2 text-body-small text-content">
+        <p className={cn('py-3 text-body-small text-content', gutter)}>
           {t('noRows')}{' '}
           <span className="text-content-subtle">{t('noRowsHint')}</span>
         </p>
@@ -457,6 +467,7 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
       ) : (
         <TableView
           canEdit={canEdit}
+          compact={compact}
           handlers={handlers}
           people={snapshot.people}
           properties={shown}
@@ -465,10 +476,12 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
       )}
 
       {filtered.length === 0 && rows.length > 0 ? (
-        <p className="px-2 text-body-small text-content">{t('noResults')}</p>
+        <p className={cn('py-3 text-body-small text-content', gutter)}>
+          {t('noResults')}
+        </p>
       ) : null}
 
-      <p className="px-2 text-caption text-content-subtle">
+      <p className={cn('pt-2 text-caption text-content-subtle', gutter)}>
         {t('rowCount', { count: rows.length })}
       </p>
     </section>

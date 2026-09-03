@@ -8,7 +8,6 @@
     "backHome": "Back home",
     "goToLeaf": "Go to Leaf",
     "close": "Close",
-    "clearSearch": "Clear search",
     "step": "Step {current} of {total}"
   },
   "metadata": {
@@ -62,7 +61,8 @@
     "localePtBR": "Português (Brasil)",
     "localeEnUS": "English (US)",
     "switchingLanguage": "Switching language",
-    "connectedApps": "Connected apps"
+    "connectedApps": "Connected apps",
+    "installApp": "Install Leaf"
   },
   "nav": {
     "navigation": "Navigation",
@@ -70,16 +70,16 @@
     "mobileDescription": "Document list, trash and account",
     "openNavigation": "Open navigation",
     "collapseNavigation": "Collapse navigation",
+    "resizeNavigation": "Resize navigation",
     "expandNavigation": "Expand navigation",
     "collapse": "Collapse",
     "expand": "Expand",
     "newDocument": "New document",
     "newDocumentFailed": "We couldn't create the document",
-    "searchLabel": "Search documents by title",
-    "searchPlaceholder": "Filter by title",
-    "searchResults": "Search results",
-    "searchEmpty": "No document with that name",
-    "searchCount": "{count, plural, one {# document found} other {# documents found}}",
+    "recentsSection": "Recent",
+    "emptyRecents": "Nothing here yet",
+    "more": "More",
+    "less": "Less",
     "sharedWithMe": "Shared with me",
     "emptyShared": "Nothing shared with you",
     "sharedBadge": "Shared with me",
@@ -91,7 +91,14 @@
     "emptyPrivate": "No private documents yet",
     "organizationLink": "Organization",
     "newDatabase": "New database",
-    "newDatabaseFailed": "Could not create the database"
+    "newDatabaseFailed": "Could not create the database",
+    "home": "Home",
+    "showAll": "See all (+{count})",
+    "showingCount": "{count, plural, one {# document} other {# documents}}",
+    "allDocuments": "All documents",
+    "filterPlaceholder": "Filter by title",
+    "filterLabel": "Filter documents by title",
+    "filterEmpty": "No document with that name"
   },
   "palette": {
     "title": "Search and commands",
@@ -109,7 +116,15 @@
     "resultCount": "{count, plural, =0 {# results} one {# result} other {# results}}",
     "hintNavigate": "navigate",
     "hintOpen": "open",
-    "hintToggle": "open or close"
+    "hintToggle": "open or close",
+    "askSection": "AI",
+    "askActionWithQuery": "Ask AI: “{query}”",
+    "askAnswerLabel": "AI answer",
+    "askThinking": "Reading your documents…",
+    "askSources": "Where I found it",
+    "askEmpty": "I found nothing about that in the documents you can see.",
+    "askError": "Could not answer right now.",
+    "askBack": "Back to search"
   },
   "home": {
     "title": "Create your first document",
@@ -122,6 +137,12 @@
     "savingTitle": "Saving title",
     "breadcrumbLabel": "Document path",
     "menuLabel": "Document actions",
+    "rowMenuLabel": "Actions for {title}",
+    "rename": "Rename",
+    "renameDescription": "The new name shows up in the sidebar and at the top of the page.",
+    "renameFieldLabel": "New page name",
+    "renameSubmit": "Rename",
+    "openInNewTab": "Open in new tab",
     "moveToPage": "Move to another page",
     "duplicate": "Duplicate document",
     "exportMarkdown": "Export as Markdown",
@@ -135,7 +156,67 @@
     "trashed": "Document moved to trash",
     "restored": "Document restored",
     "orgTag": "Organization",
-    "orgTagHint": "This document isn't private: people in the organization have access"
+    "orgTagHint": "This document isn't private: people in the organization have access",
+    "editedAt": "Edited {time}",
+    "copyLink": "Copy link",
+    "linkCopied": "Link copied",
+    "linkCopyFailed": "Could not copy the link"
+  },
+  "cover": {
+    "add": "Add cover",
+    "adding": "Adding cover",
+    "change": "Change cover",
+    "reposition": "Reposition",
+    "repositionHint": "Drag the image to adjust its position",
+    "repositionLabel": "Cover vertical position",
+    "savePosition": "Save position",
+    "positionSaved": "Position saved",
+    "remove": "Remove",
+    "removed": "Cover removed",
+    "updated": "Cover updated",
+    "imageAlt": "Page cover",
+    "region": "Page cover",
+    "pickerTitle": "Page cover",
+    "pickerDescription": "Pick a color, upload an image, paste a link or search Unsplash",
+    "tabGallery": "Gallery",
+    "tabUpload": "Upload",
+    "tabLink": "Link",
+    "tabUnsplash": "Unsplash",
+    "galleryColors": "Color & gradient",
+    "uploadPick": "Choose image",
+    "uploadHint": "Images up to 5 MB. Works best with a width of 1500 px or more.",
+    "uploading": "Uploading image",
+    "uploadFailed": "We couldn't upload the image",
+    "linkLabel": "Image address",
+    "linkPlaceholder": "https://",
+    "linkSubmit": "Use link",
+    "linkInvalid": "Paste an https:// address of an image",
+    "linkHint": "Works with any image published on the web",
+    "unsplashSearchLabel": "Search Unsplash photos",
+    "unsplashSearchPlaceholder": "Search for an image",
+    "unsplashLoading": "Searching photos",
+    "unsplashEmpty": "No photos for \"{query}\"",
+    "unsplashFailed": "We couldn't search Unsplash",
+    "unsplashLoadMore": "More photos",
+    "unsplashNotConfigured": "Unsplash search isn't configured. Set UNSPLASH_ACCESS_KEY on the server.",
+    "unsplashTooFast": "You searched too many times in a row. Wait a minute.",
+    "unsplashPhotoBy": "Photo by {name}",
+    "unsplashFooter": "Photos from",
+    "creditLabel": "Photo by <photographer>{name}</photographer> on <unsplash>Unsplash</unsplash>",
+    "notAuthenticated": "Not authenticated",
+    "gradients": {
+      "red": "Red",
+      "yellow": "Yellow",
+      "blue": "Blue",
+      "cream": "Cream",
+      "teal-to-cyan": "Teal to cyan",
+      "pink": "Pink",
+      "red-to-orange": "Red to orange",
+      "sky": "Pastel sky",
+      "blue-to-red": "Blue to red",
+      "purple-to-pink": "Purple to pink",
+      "slate": "Slate"
+    }
   },
   "database": {
     "untitled": "Untitled database",
@@ -159,7 +240,7 @@
     "titleColumn": "Name",
     "untitledRow": "Untitled",
     "rowTitleLabel": "Row name",
-    "newRow": "New row",
+    "newRow": "New page",
     "newRowShort": "New",
     "addProperty": "New property",
     "propertyNameLabel": "Property name",
@@ -245,7 +326,8 @@
       "todo": "To do",
       "doing": "In progress",
       "done": "Done"
-    }
+    },
+    "openRowShort": "Open"
   },
   "versions": {
     "menuItem": "Version history",
@@ -334,6 +416,7 @@
     "empty": "The trash is empty",
     "restore": "Restore",
     "restoreItem": "Restore {title}",
+    "restored": "Document restored",
     "deleteForever": "Delete forever",
     "deleteItem": "Delete {title} forever",
     "confirmDescription": "The document {title} will be erased with no way to recover it.",
@@ -402,7 +485,11 @@
     "saveError": "We couldn't save",
     "words": "{count, plural, one {# word} other {# words}}",
     "characters": "{count, plural, one {# character} other {# characters}}",
-    "uploadFailed": "We couldn't upload the image. Try again."
+    "uploadFailed": "We couldn't upload the image. Try again.",
+    "saveOffline": "Saved on this device",
+    "blockTurnInto": "Turn into",
+    "blockDuplicate": "Duplicate block",
+    "blockRemove": "Delete block"
   },
   "blocknote": {
     "placeholder": "Type / for commands",
@@ -414,7 +501,17 @@
     "calloutAliases": "callout, highlight, warning, tip, note",
     "databaseTitle": "Database",
     "databaseSubtext": "A table of pages with properties, filters and a board",
-    "databaseAliases": "database, table, board, kanban, grid"
+    "databaseAliases": "database, table, board, kanban, grid",
+    "embedTitle": "Embed",
+    "embedSubtext": "Figma, YouTube, Google Docs, Miro and other links",
+    "embedAliases": "embed, figma, youtube, video, miro, google docs, loom, spreadsheet"
+  },
+  "embed": {
+    "placeholder": "Paste a Figma, YouTube or Google Docs link...",
+    "confirm": "Embed",
+    "empty": "No link embedded",
+    "unsupported": "Cannot be shown here",
+    "activate": "Click to interact"
   },
   "importFile": {
     "tooLarge": "The file is larger than {limit}",
@@ -463,7 +560,8 @@
     "commentNotFound": "This comment no longer exists.",
     "commentEmpty": "Write something before sending.",
     "commentTooFast": "You've commented too many times in a row. Wait a minute.",
-    "domainRestricted": "Only @{domain} accounts."
+    "domainRestricted": "Only @{domain} accounts.",
+    "coverInvalid": "Choose a valid image for the cover."
   },
   "org": {
     "title": "Organization",
@@ -540,7 +638,13 @@
     "confirmLinkResetTitle": "Reset the invite link?",
     "confirmLinkResetDescription": "A new link is generated and the current link stops working immediately.",
     "confirmLinkResetAction": "Reset",
-    "confirmLinkCancel": "Cancel"
+    "confirmLinkCancel": "Cancel",
+    "deleteOrgAction": "Delete organization",
+    "deleteOrgTitle": "Delete {name}?",
+    "deleteOrgDescription": "Every member loses access, teamspaces are removed, and documents go back to being private to their owners. This cannot be undone.",
+    "deleteOrgConfirm": "Delete organization",
+    "deleteOrgCancel": "Cancel",
+    "deletedOrg": "Organization deleted"
   },
   "archiveImport": {
     "title": "Import export",
@@ -594,7 +698,29 @@
     "commentsUnavailable": "We could not read the comments. Check that the Notion connection can read comments.",
     "commentsImported": "{count, plural, one {# open comment came along, anchored to the page} other {# open comments came along, anchored to the page}}",
     "commentsFailed": "The comments could not be created. The pages were imported anyway.",
-    "unresolvedPeople": "{count, plural, one {# name in the person column matched nobody in the organization ({names}) and was left unassigned.} other {# names in the person column matched nobody in the organization ({names}) and were left unassigned.}}"
+    "unresolvedPeople": "{count, plural, one {# name in the person column matched nobody in the organization ({names}) and was left unassigned.} other {# names in the person column matched nobody in the organization ({names}) and were left unassigned.}}",
+    "boardView": "Board",
+    "unsupportedBlocks": "Blocks without an equivalent were skipped: {count} ({types}).",
+    "skippedUnchanged": "{count} pages were already up to date and were skipped."
+  },
+  "githubSync": {
+    "databaseTitle": "GitHub pull requests",
+    "propertyRepository": "Repository",
+    "propertyNumber": "Number",
+    "propertyState": "State",
+    "propertyAuthor": "Author",
+    "propertyUpdatedAt": "Updated at",
+    "propertyUrl": "URL",
+    "stateOpen": "Open",
+    "stateMerged": "Merged",
+    "stateClosed": "Closed",
+    "tableView": "Table",
+    "boardView": "Board",
+    "notAuthenticated": "Not authenticated",
+    "notConfigured": "The GitHub database is not configured in this Leaf yet.",
+    "unfinished": "Could not finish the GitHub sync",
+    "repoFailed": "Could not read the pull requests of {repo}.",
+    "skippedUnchanged": "{count} pull requests were already up to date and were skipped."
   },
   "notionLink": {
     "title": "Import from Notion",
@@ -614,7 +740,9 @@
     "invalidLink": "That link does not look like a Notion page.",
     "unreachable": "We could not open that page. Check that you granted access to it in the Notion connection.",
     "withComments": "Bring the open comments too",
-    "withCommentsHint": "Unresolved threads come anchored to the page, not to the passage. Makes the import slower."
+    "withCommentsHint": "Unresolved threads come anchored to the page, not to the passage. Makes the import slower.",
+    "workspaceOption": "Import the whole workspace",
+    "workspaceOptionHint": "Everything the Notion connection can see, keeping the hierarchy. This can take a while."
   },
   "teamspace": {
     "sectionTitle": "Teamspaces",
@@ -634,7 +762,6 @@
     "delete": "Delete teamspace",
     "deleted": "Teamspace deleted",
     "deleteConfirm": "Delete {name}?",
-    "deleteBlocked": "{count, plural, =0 {No documents} one {Move the # document before deleting} other {Move the # documents before deleting}}",
     "nameLabel": "Teamspace name",
     "namePlaceholder": "Content team",
     "accessLabel": "Who can join",
@@ -668,19 +795,29 @@
     "errorNoOrganization": "Create or join an organization before creating a teamspace.",
     "errorInvalidAccess": "Choose who can join the teamspace.",
     "errorEmptyName": "Type a name for the teamspace.",
-    "errorNotEmpty": "Move the documents out of this teamspace before deleting it.",
     "errorClosedTeamspace": "This teamspace is closed: ask for an invite.",
     "errorLastOwner": "Hand the teamspace to someone else before leaving.",
     "errorMemberNotFound": "This person is no longer in the teamspace.",
     "errorAlreadyMember": "This person is already in the teamspace.",
-    "errorNotInOrganization": "This person is not in the organization."
+    "errorNotInOrganization": "This person is not in the organization.",
+    "deleteWithDocs": "{count, plural, one {The # document in this teamspace goes back to the organization.} other {The # documents in this teamspace go back to the organization.}}"
   },
   "realtime": {
     "connected": "Real-time collaboration",
-    "reconnecting": "No connection. Your changes are not saved yet",
+    "reconnecting": "Reconnecting. Your changes are saved on this device",
     "someone": "Someone",
     "you": "{name} (you)",
     "peopleHere": "{count, plural, one {# person in this document} other {# people in this document}}"
+  },
+  "offline": {
+    "banner": "No connection",
+    "badge": "Offline · saved on this device",
+    "conflict": "This document changed somewhere else",
+    "pageTitle": "You're offline",
+    "pageBody": "The documents you already opened are still available. This page had not been loaded on this device yet.",
+    "retry": "Try again",
+    "documentUnavailableTitle": "This document is not available offline yet",
+    "documentUnavailableBody": "Open it once with a connection and it starts working offline on this device."
   },
   "join": {
     "heading": "You've been invited to join {org}",

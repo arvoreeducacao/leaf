@@ -17,8 +17,17 @@ import {
 } from '@/lib/authz'
 import { copyDatabaseInto } from '@/lib/databases'
 import { persistDocumentContent } from '@/lib/document-content'
+import {
+  type CoverCredit,
+  clampCoverPosition,
+  defaultCoverPosition,
+  normalizeCover,
+  normalizeCoverCredit,
+  serializeCoverCredit,
+} from '@/lib/document-cover'
 import { listOwnedDocuments, listSubtreeIds } from '@/lib/documents'
 import { indexDocument, removeDocumentFromIndex } from '@/lib/search-index'
+import { registerUnsplashDownload, unsplashAccessKey } from '@/lib/unsplash'
 
 export type ActionResult = { ok: true } | { ok: false; error: string }
 
@@ -88,6 +97,96 @@ export async function renameDocument(
   await indexDocument(id)
 
   revalidatePath('/', 'layout')
+  revalidatePath(`/doc/${id}`)
+
+  return { ok: true }
+}
+
+export type CoverInput = Readonly<{
+  cover: string
+  credit?: CoverCredit | null
+  unsplashDownloadLocation?: string | null
+}>
+
+export async function setDocumentCover(
+  id: string,
+  input: CoverInput,
+): Promise<ActionResult> {
+  const session = await requireSession()
+  const access = await getDocumentAccess(id, session)
+
+  if (!canEdit(access)) {
+    return notAllowedResult()
+  }
+
+  const cover = normalizeCover(input.cover)
+
+  if (!cover) {
+    return { ok: false, error: (await errorMessages())('coverInvalid') }
+  }
+
+  const credit = normalizeCoverCredit(input.credit)
+
+  await db
+    .update(documents)
+    .set({
+      cover,
+      coverPosition: defaultCoverPosition,
+      coverCredit: serializeCoverCredit(credit),
+      updatedAt: new Date(),
+    })
+    .where(and(eq(documents.id, id), isNull(documents.deletedAt)))
+
+  const key = unsplashAccessKey()
+
+  if (key && input.unsplashDownloadLocation) {
+    await registerUnsplashDownload(input.unsplashDownloadLocation, key)
+  }
+
+  revalidatePath(`/doc/${id}`)
+
+  return { ok: true }
+}
+
+export async function setDocumentCoverPosition(
+  id: string,
+  position: number,
+): Promise<ActionResult> {
+  const session = await requireSession()
+  const access = await getDocumentAccess(id, session)
+
+  if (!canEdit(access)) {
+    return notAllowedResult()
+  }
+
+  await db
+    .update(documents)
+    .set({ coverPosition: clampCoverPosition(position) })
+    .where(and(eq(documents.id, id), isNull(documents.deletedAt)))
+
+  revalidatePath(`/doc/${id}`)
+
+  return { ok: true }
+}
+
+export async function removeDocumentCover(id: string): Promise<ActionResult> {
+  const session = await requireSession()
+  const access = await getDocumentAccess(id, session)
+
+  if (!canEdit(access)) {
+    return notAllowedResult()
+  }
+
+  await db
+    .update(documents)
+    .set({
+      cover: null,
+      coverPosition: defaultCoverPosition,
+      coverCredit: null,
+      updatedAt: new Date(),
+    })
+    .where(and(eq(documents.id, id), isNull(documents.deletedAt)))
+
   revalidatePath(`/doc/${id}`)
 
   return { ok: true }

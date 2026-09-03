@@ -14,7 +14,7 @@ import { account, documents, session, user } from '@/db/schema'
 import { resetDatabase } from '@/db/testing'
 import { auth } from '@/lib/auth'
 
-const email = 'pessoa@arvore.com.br'
+const email = 'person@arvore.com.br'
 
 async function endpointContext() {
   return {
@@ -46,7 +46,7 @@ async function ssoSignIn() {
       email,
       emailVerified: true,
       id: 'arvore-identity-id',
-      name: 'Pessoa da Árvore',
+      name: 'Person from Árvore',
     },
   })
 }
@@ -54,20 +54,20 @@ async function ssoSignIn() {
 beforeEach(async () => {
   await resetDatabase()
 
-  process.env.BETTER_AUTH_SECRET ??= 'leaf-test-secret-de-trinta-e-dois-chars'
+  process.env.BETTER_AUTH_SECRET ??= 'leaf-test-secret-with-thirty-two-chars'
   process.env.BETTER_AUTH_URL ??= 'http://localhost:3000'
 })
 
-describe('vínculo da conta do SSO da Árvore com a conta de email e senha', () => {
-  it('mantém a mesma pessoa e os documentos dela', async () => {
+describe('linking the Árvore SSO account to the email and password account', () => {
+  it('keeps the same person and their documents', async () => {
     const created = await auth.api.signUpEmail({
-      body: { email, name: 'Pessoa', password: 'senha-forte-123' },
+      body: { email, name: 'Person', password: 'strong-password-123' },
     })
 
     await db.insert(documents).values({
-      id: 'doc-antigo',
+      id: 'doc-old',
       ownerId: created.user.id,
-      title: 'Documento antigo',
+      title: 'Old document',
     })
 
     const linked = await ssoSignIn()
@@ -92,10 +92,10 @@ describe('vínculo da conta do SSO da Árvore com a conta de email e senha', () 
       .where(eq(documents.ownerId, created.user.id))
 
     expect(owned).toHaveLength(1)
-    expect(owned[0]?.title).toBe('Documento antigo')
+    expect(owned[0]?.title).toBe('Old document')
   })
 
-  it('cria a pessoa no primeiro login pelo SSO', async () => {
+  it('creates the person on the first sign-in through SSO', async () => {
     const registered = await ssoSignIn()
 
     expect(registered.error).toBeNull()

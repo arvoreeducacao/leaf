@@ -2,82 +2,82 @@ import { describe, expect, it } from 'vitest'
 
 import { inferColumnType, inferDatabase } from './csv-import'
 
-describe('inferência de tipo de coluna do csv', () => {
-  it('lê caixa de seleção do Notion em português e em inglês', () => {
+describe('csv column type inference', () => {
+  it('reads the Notion checkbox in Portuguese and in English', () => {
     expect(inferColumnType(['Yes', 'No', 'Yes'])).toBe('checkbox')
     expect(inferColumnType(['Sim', 'Não'])).toBe('checkbox')
   })
 
-  it('lê número antes de tentar data', () => {
+  it('reads a number before trying a date', () => {
     expect(inferColumnType(['12', '7', '3'])).toBe('number')
     expect(inferColumnType(['5', '6'])).toBe('number')
   })
 
-  it('lê data só quando o valor tem dígito', () => {
+  it('reads a date only when the value has a digit', () => {
     expect(inferColumnType(['2026-03-04', '10/02/2026'])).toBe('date')
     expect(inferColumnType(['May', 'June'])).not.toBe('date')
   })
 
-  it('lê link', () => {
+  it('reads a link', () => {
     expect(
       inferColumnType(['https://arvore.com.br', 'http://leaf.arvore.com.br']),
     ).toBe('url')
   })
 
-  it('lê multisseleção quando os rótulos são curtos e se repetem', () => {
+  it('reads a multi select when the labels are short and repeat', () => {
     expect(
       inferColumnType([
-        'Leitura, Escrita',
-        'Leitura',
-        'Escrita, Fluência',
-        'Leitura, Fluência',
+        'Reading, Writing',
+        'Reading',
+        'Writing, Fluency',
+        'Reading, Fluency',
       ]),
     ).toBe('multiSelect')
   })
 
-  it('não confunde texto com vírgula com multisseleção', () => {
+  it('does not mistake text with a comma for a multi select', () => {
     expect(
       inferColumnType([
-        'Leitora assídua, gosta de biografias',
-        'Prefere quadrinhos',
+        'Avid reader, likes biographies',
+        'Prefers comics',
       ]),
     ).toBe('text')
   })
 
-  it('lê seleção quando os valores se repetem', () => {
+  it('reads a select when the values repeat', () => {
     expect(
       inferColumnType([
-        'A fazer',
-        'Feito',
-        'A fazer',
-        'Em andamento',
-        'Feito',
-        'A fazer',
+        'To do',
+        'Done',
+        'To do',
+        'In progress',
+        'Done',
+        'To do',
       ]),
     ).toBe('select')
   })
 
-  it('não transforma coluna de nomes únicos em seleção', () => {
+  it('does not turn a column of unique names into a select', () => {
     expect(
       inferColumnType(['Ana', 'Bruno', 'Carla', 'Davi', 'Eva', 'Fábio']),
     ).toBe('text')
   })
 
-  it('cai para texto quando a coluna está vazia', () => {
+  it('falls back to text when the column is empty', () => {
     expect(inferColumnType(['', '  '])).toBe('text')
   })
 })
 
-describe('conversão da database csv em base de dados', () => {
+describe('turning the csv database into a database', () => {
   const table = [
-    ['Nome', 'Livros', 'Status', 'Temas', 'Lido'],
-    ['Ana', '12', 'Feito', 'Leitura, Escrita', 'Yes'],
-    ['Bruno', '7', 'A fazer', 'Leitura', 'No'],
-    ['Carla', '', 'Feito', '', 'Yes'],
+    ['Name', 'Books', 'Status', 'Topics', 'Read'],
+    ['Ana', '12', 'Done', 'Reading, Writing', 'Yes'],
+    ['Bruno', '7', 'To do', 'Reading', 'No'],
+    ['Carla', '', 'Done', '', 'Yes'],
   ]
 
-  it('usa a primeira coluna como título da linha', () => {
-    const inferred = inferDatabase(table, 'Coluna')
+  it('uses the first column as the row title', () => {
+    const inferred = inferDatabase(table, 'Column')
 
     expect(inferred?.rows.map((row) => row.title)).toEqual([
       'Ana',
@@ -86,69 +86,69 @@ describe('conversão da database csv em base de dados', () => {
     ])
   })
 
-  it('cria uma propriedade por coluna a partir da segunda', () => {
-    const inferred = inferDatabase(table, 'Coluna')
+  it('creates one property per column starting from the second', () => {
+    const inferred = inferDatabase(table, 'Column')
 
     expect(
       inferred?.properties.map((property) => [property.name, property.type]),
     ).toEqual([
-      ['Livros', 'number'],
+      ['Books', 'number'],
       ['Status', 'select'],
-      ['Temas', 'multiSelect'],
-      ['Lido', 'checkbox'],
+      ['Topics', 'multiSelect'],
+      ['Read', 'checkbox'],
     ])
   })
 
-  it('cria as opções na ordem em que aparecem', () => {
-    const inferred = inferDatabase(table, 'Coluna')
+  it('creates the options in the order they show up', () => {
+    const inferred = inferDatabase(table, 'Column')
     const status = inferred?.properties[1]
-    const temas = inferred?.properties[2]
+    const topics = inferred?.properties[2]
 
     expect(status?.options.map((option) => option.name)).toEqual([
-      'Feito',
-      'A fazer',
+      'Done',
+      'To do',
     ])
-    expect(temas?.options.map((option) => option.name)).toEqual([
-      'Leitura',
-      'Escrita',
+    expect(topics?.options.map((option) => option.name)).toEqual([
+      'Reading',
+      'Writing',
     ])
   })
 
-  it('converte cada célula no valor do tipo da coluna', () => {
-    const inferred = inferDatabase(table, 'Coluna')
-    const temas = inferred?.properties[2]
+  it('turns each cell into the value of the column type', () => {
+    const inferred = inferDatabase(table, 'Column')
+    const topics = inferred?.properties[2]
     const ana = inferred?.rows[0]
 
     expect(ana?.values[0]).toBe(12)
     expect(ana?.values[3]).toBe(true)
-    expect(ana?.values[2]).toEqual(temas?.options.map((option) => option.id))
+    expect(ana?.values[2]).toEqual(topics?.options.map((option) => option.id))
   })
 
-  it('deixa a célula vazia sem valor em vez de inventar um', () => {
-    const inferred = inferDatabase(table, 'Coluna')
+  it('leaves the empty cell without a value instead of inventing one', () => {
+    const inferred = inferDatabase(table, 'Column')
 
     expect(inferred?.rows[2].values[0]).toBeUndefined()
     expect(inferred?.rows[2].values[2]).toBeUndefined()
   })
 
-  it('nomeia coluna sem cabeçalho', () => {
+  it('names a column without a header', () => {
     const inferred = inferDatabase(
       [
-        ['Nome', ''],
+        ['Name', ''],
         ['Ana', 'x'],
       ],
-      'Coluna',
+      'Column',
     )
 
-    expect(inferred?.properties[0].name).toBe('Coluna 1')
+    expect(inferred?.properties[0].name).toBe('Column 1')
   })
 
-  it('devolve nulo quando não há cabeçalho', () => {
-    expect(inferDatabase([], 'Coluna')).toBeNull()
+  it('returns null when there is no header', () => {
+    expect(inferDatabase([], 'Column')).toBeNull()
   })
 })
 
-describe('coluna de pessoa vinda do Notion', () => {
+describe('person column coming from Notion', () => {
   const people = [
     { id: 'u1', name: 'Rafael Andrade', email: 'rafael.andrade@arvore.com.br' },
     { id: 'u2', name: 'Ricardo raposo', email: 'ricardo.raposo@arvore.com.br' },
@@ -156,46 +156,46 @@ describe('coluna de pessoa vinda do Notion', () => {
   ]
 
   const table = [
-    ['Bloco', 'Responsavel'],
-    ['Acervo', 'Rafael'],
-    ['Busca', 'Raposo,Coutinho'],
-    ['Relatório', 'Carlinhos'],
+    ['Block', 'Owner'],
+    ['Catalog', 'Rafael'],
+    ['Search', 'Raposo,Coutinho'],
+    ['Report', 'Carlinhos'],
   ]
 
-  it('vira pessoa quando o texto casa com gente da organização', () => {
-    const inferred = inferDatabase(table, 'Coluna', people)
+  it('becomes a person when the text matches people from the organization', () => {
+    const inferred = inferDatabase(table, 'Column', people)
 
     expect(inferred?.properties[0].type).toBe('person')
   })
 
-  it('guarda o id de quem casou e não inventa quem não casou', () => {
-    const inferred = inferDatabase(table, 'Coluna', people)
+  it('keeps the id of whoever matched and invents nobody who did not', () => {
+    const inferred = inferDatabase(table, 'Column', people)
 
     expect(inferred?.rows[0].values[0]).toEqual(['u1'])
     expect(inferred?.rows[1].values[0]).toEqual(['u2', 'u3'])
     expect(inferred?.rows[2].values[0]).toEqual([])
   })
 
-  it('lista o que ficou sem dono para alguém resolver', () => {
-    expect(inferDatabase(table, 'Coluna', people)?.unresolvedPeople).toEqual([
+  it('lists what was left without an owner for someone to resolve', () => {
+    expect(inferDatabase(table, 'Column', people)?.unresolvedPeople).toEqual([
       'Carlinhos',
     ])
   })
 
-  it('nunca vira pessoa quando não há organização', () => {
-    expect(inferDatabase(table, 'Coluna')?.properties[0].type).not.toBe(
+  it('never becomes a person when there is no organization', () => {
+    expect(inferDatabase(table, 'Column')?.properties[0].type).not.toBe(
       'person',
     )
   })
 
-  it('não confunde coluna de texto qualquer com gente', () => {
+  it('does not mistake any text column for people', () => {
     const inferred = inferDatabase(
       [
-        ['Bloco', 'Notas'],
-        ['Acervo', 'precisa revisar o contrato antes do prazo'],
-        ['Busca', 'depende do time de dados'],
+        ['Block', 'Notes'],
+        ['Catalog', 'the contract needs a review before the deadline'],
+        ['Search', 'depends on the data team'],
       ],
-      'Coluna',
+      'Column',
       people,
     )
 

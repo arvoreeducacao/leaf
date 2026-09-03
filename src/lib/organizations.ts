@@ -258,6 +258,7 @@ export async function acceptPendingInvites(
 
 export async function listOrganizationDocuments(
   orgId: string,
+  userId?: string,
 ): Promise<Array<DocumentSummary>> {
   const rows = await db
     .select({
@@ -267,6 +268,8 @@ export async function listOrganizationDocuments(
       deletedAt: documents.deletedAt,
       parentId: documents.parentId,
       kind: documents.kind,
+      icon: documents.icon,
+      ownerId: documents.ownerId,
     })
     .from(documents)
     .where(
@@ -280,7 +283,11 @@ export async function listOrganizationDocuments(
     )
     .orderBy(desc(documents.updatedAt))
 
-  return rows.map((row) => ({ ...row, shared: false }))
+  return rows.map(({ ownerId, ...row }) => ({
+    ...row,
+    shared: false,
+    owned: ownerId === userId,
+  }))
 }
 
 export async function attachOwnerDocuments(orgId: string, userId: string) {

@@ -1,10 +1,12 @@
 'use client'
 
-import { useTranslations } from 'next-intl'
+import { useFormatter, useNow, useTranslations } from 'next-intl'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { toast } from 'sonner'
 
+import { AddCoverButton } from '@/components/app/add-cover-button'
+import { DocumentIcon } from '@/components/app/document-icon'
 import { DocumentMenu } from '@/components/app/document-menu'
 import { DocumentStatus } from '@/components/app/document-status'
 import { PresenceIndicator } from '@/components/app/presence-indicator'
@@ -14,10 +16,13 @@ import {
   documentTitleInputId,
   requestEditorFocus,
 } from '@/components/editor/focus-bridge'
-import { CaretRightIcon, TeamIcon, UsersIcon } from '@/components/icons'
+import { ClipboardContentIcon } from '@/components/icons'
+import { ChevronRightIcon, PeopleIcon } from '@/components/icons/outline'
 import { ShareButton } from '@/components/sharing/share-button'
-import { Badge } from '@/components/ui/badge'
+import { ButtonIcon } from '@/components/ui/button-icon'
 import { renameDocument } from '@/lib/document-actions'
+import { readDocumentIcon } from '@/lib/document-icon'
+import { cn } from '@/shared/utils'
 
 type Props = Readonly<{
   documentId: string
@@ -29,6 +34,11 @@ type Props = Readonly<{
   sharedWithOrganization: boolean
   openComments: number
   breadcrumb: React.ReactNode
+  wide?: boolean
+  icon?: string | null
+  kind?: 'page' | 'database' | 'row'
+  updatedAt?: Date | null
+  hasCover?: boolean
 }>
 
 export function DocumentHeader({
@@ -41,16 +51,25 @@ export function DocumentHeader({
   sharedWithOrganization,
   openComments,
   breadcrumb,
+  wide = false,
+  icon = null,
+  kind = 'page',
+  updatedAt = null,
+  hasCover = false,
 }: Props) {
   const t = useTranslations('document')
   const tTeamspace = useTranslations('teamspace')
+  const format = useFormatter()
+  const now = useNow()
   const titleId = documentTitleInputId
   const slot = useTopbarSlot()
   const [value, setValue] = useState(title)
   const [saving, setSaving] = useState(false)
   const lastSaved = useRef(title)
+  const lastFromServer = useRef(title)
   const loadedFor = useRef(documentId)
   const fieldRef = useRef<HTMLTextAreaElement>(null)
+  const hasIcon = readDocumentIcon(icon) !== null
 
   const fitToContent = useCallback(() => {
     const field = fieldRef.current
@@ -66,11 +85,12 @@ export function DocumentHeader({
   useEffect(fitToContent, [fitToContent, value])
 
   useEffect(() => {
-    if (loadedFor.current === documentId) {
+    if (loadedFor.current === documentId && lastFromServer.current === title) {
       return
     }
 
     loadedFor.current = documentId
+    lastFromServer.current = title
     setValue(title)
     lastSaved.current = title
   }, [documentId, title])
@@ -98,28 +118,81 @@ export function DocumentHeader({
   const topbar = (
     <>
       <div className="flex min-w-0 flex-1 items-center gap-1 text-body-small text-content">
+        {sharedWithOrganization ? (
+          <>
+            <span
+              className="inline-flex shrink-0 items-center rounded-large px-1.5 py-0.5"
+              data-testid="document-org-tag"
+              title={t('orgTagHint')}
+            >
+              <PeopleIcon aria-hidden="true" className="mr-1.5 size-4 shrink-0" />
+              {t('orgTag')}
+            </span>
+            <ChevronRightIcon
+              aria-hidden="true"
+              className="size-3 shrink-0 text-content-disabled"
+            />
+          </>
+        ) : null}
+        {teamspaceName ? (
+          <>
+            <span
+              className="inline-flex min-w-0 max-w-40 shrink items-center rounded-large px-1.5 py-0.5"
+              data-testid="document-teamspace-tag"
+              title={tTeamspace('badgeHint')}
+            >
+              <PeopleIcon aria-hidden="true" className="mr-1.5 size-4 shrink-0" />
+              <span className="min-w-0 truncate">{teamspaceName}</span>
+            </span>
+            <ChevronRightIcon
+              aria-hidden="true"
+              className="size-3 shrink-0 text-content-disabled"
+            />
+          </>
+        ) : null}
         {breadcrumb}
         {breadcrumb ? (
-          <CaretRightIcon
+          <ChevronRightIcon
             aria-hidden="true"
             className="size-3 shrink-0 text-content-disabled"
           />
         ) : null}
-        <span className="min-w-0 truncate rounded-large px-1.5 py-0.5 text-content-strong">
-          {value.trim().length > 0 ? value : t('untitled')}
+        <span className="inline-flex min-w-0 items-center rounded-large px-1.5 py-0.5 text-content-strong">
+          <DocumentIcon className="mr-1.5 size-4" icon={icon} kind={kind} />
+          <span className="min-w-0 truncate">
+            {value.trim().length > 0 ? value : t('untitled')}
+          </span>
         </span>
       </div>
 
       <div className="flex shrink-0 items-center justify-end gap-1">
         <DocumentStatus />
+        {updatedAt ? (
+          <span className="hidden shrink-0 px-1.5 text-caption text-content-subtle tablet:inline">
+            {t('editedAt', { time: format.relativeTime(updatedAt, now) })}
+          </span>
+        ) : null}
         <PresenceIndicator />
         <CommentsPanel documentId={documentId} initialOpenCount={openComments} />
         <ShareButton canShare={isOwner} documentId={documentId} />
+        <ButtonIcon
+          aria-label={t('copyLink')}
+          onClick={() => {
+            void navigator.clipboard
+              .writeText(window.location.href)
+              .then(() => toast.success(t('linkCopied')))
+          }}
+          size="medium"
+          variant="ghost"
+        >
+          <ClipboardContentIcon aria-hidden="true" />
+        </ButtonIcon>
         <DocumentMenu
           canEdit={canEdit}
           canMoveToTeamspace={canMoveToTeamspace}
           documentId={documentId}
           isOwner={isOwner}
+          title={value}
         />
       </div>
     </>
@@ -129,14 +202,53 @@ export function DocumentHeader({
     <>
       {slot ? createPortal(topbar, slot) : null}
 
-      <div className="px-4 tablet:px-[54px]">
+      <div
+        className={cn(
+          'group/header px-4',
+          wide ? 'tablet:px-24' : 'tablet:px-[54px]',
+        )}
+      >
+        {hasIcon && !wide ? (
+          <div
+            className={cn(
+              'relative z-10 mb-2 w-fit',
+              hasCover && '-mt-[63px] tablet:-mt-[79px]',
+            )}
+          >
+            <DocumentIcon
+              className="size-[78px] text-[70px]"
+              icon={icon}
+              kind={kind}
+            />
+          </div>
+        ) : null}
+
+        {canEdit && !hasCover ? (
+          <div className="mb-1 flex gap-1 transition-opacity tablet:opacity-0 tablet:focus-within:opacity-100 tablet:group-hover/header:opacity-100">
+            <AddCoverButton documentId={documentId} />
+          </div>
+        ) : null}
+
+        <div className={wide ? 'flex items-center gap-1.5' : undefined}>
+        {hasIcon && wide ? (
+          <DocumentIcon
+            className="size-7 text-[26px]"
+            icon={icon}
+            kind={kind}
+          />
+        ) : null}
         {canEdit ? (
-          <h1>
+          <h1 className={wide ? 'flex min-w-0 flex-1 items-center' : undefined}>
             <label className="sr-only" htmlFor={titleId}>
               {t('titleLabel')}
             </label>
             <textarea
-              className="block w-full resize-none overflow-hidden bg-transparent font-heavy text-content-strong text-display-small outline-none tablet:text-display-medium placeholder:text-content-disabled disabled:opacity-60"
+              className={cn(
+                'block w-full resize-none overflow-hidden bg-transparent font-heavy text-content-strong outline-none placeholder:text-content-disabled disabled:opacity-60',
+                wide
+                  ? 'text-display-compact'
+                  : 'text-display-small tablet:text-display-medium',
+              )}
               disabled={saving}
               id={titleId}
               onBlur={persist}
@@ -163,37 +275,18 @@ export function DocumentHeader({
             </span>
           </h1>
         ) : (
-          <h1 className="font-heavy text-content-strong text-display-small tablet:text-display-medium">
+          <h1
+            className={cn(
+              'font-heavy text-content-strong',
+              wide
+                ? 'text-display-compact'
+                : 'text-display-small tablet:text-display-medium',
+            )}
+          >
             {title}
           </h1>
         )}
-
-        {teamspaceName || sharedWithOrganization ? (
-          <div className="mt-3 flex flex-wrap items-center gap-1.5">
-            {teamspaceName ? (
-              <Badge
-                data-testid="document-teamspace-tag"
-                title={tTeamspace('badgeHint')}
-                variant="info"
-              >
-                <UsersIcon aria-hidden="true" className="size-3.5 shrink-0" />
-                <span className="max-w-40 truncate">{teamspaceName}</span>
-                <span className="sr-only">{tTeamspace('badgeHint')}</span>
-              </Badge>
-            ) : null}
-            {sharedWithOrganization ? (
-              <Badge
-                data-testid="document-org-tag"
-                title={t('orgTagHint')}
-                variant="info"
-              >
-                <TeamIcon aria-hidden="true" className="size-3.5 shrink-0" />
-                {t('orgTag')}
-                <span className="sr-only">{t('orgTagHint')}</span>
-              </Badge>
-            ) : null}
-          </div>
-        ) : null}
+        </div>
       </div>
     </>
   )

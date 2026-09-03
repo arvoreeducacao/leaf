@@ -1,31 +1,31 @@
 import { zipSync } from 'fflate'
 
-const planoHash = '1111111111111111111111111111aaaa'
+const planHash = '1111111111111111111111111111aaaa'
 
-const turmaHash = '2222222222222222222222222222bbbb'
+const classHash = '2222222222222222222222222222bbbb'
 
-const alunoHash = '3333333333333333333333333333cccc'
+const studentHash = '3333333333333333333333333333cccc'
 
-const alunosHash = '4444444444444444444444444444dddd'
+const studentsHash = '4444444444444444444444444444dddd'
 
 const anaHash = '5555555555555555555555555555eeee'
 
 export const fixtureTitles = {
-  plano: 'Plano de leitura',
-  turma: 'Turma A',
-  aluno: 'Aluno destaque',
-  alunos: 'Alunos',
+  plan: 'Reading plan',
+  class: 'Class A',
+  student: 'Featured student',
+  students: 'Students',
   ana: 'Ana Souza',
 }
 
 export const fixturePaths = {
-  plano: `Export-8f3a/${fixtureTitles.plano} ${planoHash}.md`,
-  turma: `Export-8f3a/${fixtureTitles.plano} ${planoHash}/${fixtureTitles.turma} ${turmaHash}.md`,
-  aluno: `Export-8f3a/${fixtureTitles.plano} ${planoHash}/${fixtureTitles.turma} ${turmaHash}/${fixtureTitles.aluno} ${alunoHash}.md`,
-  capa: `Export-8f3a/${fixtureTitles.plano} ${planoHash}/${fixtureTitles.turma} ${turmaHash}/capa.png`,
-  anexo: `Export-8f3a/${fixtureTitles.plano} ${planoHash}/${fixtureTitles.turma} ${turmaHash}/regras.pdf`,
-  alunos: `Export-8f3a/${fixtureTitles.plano} ${planoHash}/${fixtureTitles.alunos} ${alunosHash}.csv`,
-  ana: `Export-8f3a/${fixtureTitles.plano} ${planoHash}/${fixtureTitles.alunos} ${alunosHash}/${fixtureTitles.ana} ${anaHash}.md`,
+  plan: `Export-8f3a/${fixtureTitles.plan} ${planHash}.md`,
+  class: `Export-8f3a/${fixtureTitles.plan} ${planHash}/${fixtureTitles.class} ${classHash}.md`,
+  student: `Export-8f3a/${fixtureTitles.plan} ${planHash}/${fixtureTitles.class} ${classHash}/${fixtureTitles.student} ${studentHash}.md`,
+  cover: `Export-8f3a/${fixtureTitles.plan} ${planHash}/${fixtureTitles.class} ${classHash}/cover.png`,
+  attachment: `Export-8f3a/${fixtureTitles.plan} ${planHash}/${fixtureTitles.class} ${classHash}/rules.pdf`,
+  students: `Export-8f3a/${fixtureTitles.plan} ${planHash}/${fixtureTitles.students} ${studentsHash}.csv`,
+  ana: `Export-8f3a/${fixtureTitles.plan} ${planHash}/${fixtureTitles.students} ${studentsHash}/${fixtureTitles.ana} ${anaHash}.md`,
 }
 
 const pngBytes = Uint8Array.from([
@@ -34,57 +34,57 @@ const pngBytes = Uint8Array.from([
   0x00, 0x00, 0x00, 0x1f, 0x15, 0xc4, 0x89,
 ])
 
-const planoMarkdown = [
-  `# ${fixtureTitles.plano}`,
+const planMarkdown = [
+  `# ${fixtureTitles.plan}`,
   '',
-  'Roteiro do trimestre com as turmas participantes.',
+  'Term outline with the participating classes.',
   '',
-  `[${fixtureTitles.turma}](${encodeURIComponent(`${fixtureTitles.plano} ${planoHash}`)}/${encodeURIComponent(`${fixtureTitles.turma} ${turmaHash}`)}.md)`,
+  `[${fixtureTitles.class}](${encodeURIComponent(`${fixtureTitles.plan} ${planHash}`)}/${encodeURIComponent(`${fixtureTitles.class} ${classHash}`)}.md)`,
   '',
   '<aside>',
-  'Combine as datas com a coordenação antes de publicar.',
+  'Agree on the dates with the coordination before publishing.',
   '</aside>',
   '',
   '<details>',
-  '<summary>Materiais de apoio</summary>',
+  '<summary>Support material</summary>',
   '',
-  'Lista de leituras complementares.',
+  'List of complementary readings.',
   '',
   '</details>',
   '',
 ].join('\n')
 
-const turmaMarkdown = [
-  `# ${fixtureTitles.turma}`,
+const classMarkdown = [
+  `# ${fixtureTitles.class}`,
   '',
-  '> 💡 A turma lê duas vezes por semana.',
+  '> 💡 The class reads twice a week.',
   '',
-  `![Capa](${encodeURIComponent(`${fixtureTitles.turma} ${turmaHash}`)}/capa.png)`,
+  `![Cover](${encodeURIComponent(`${fixtureTitles.class} ${classHash}`)}/cover.png)`,
   '',
-  `[Regras](${encodeURIComponent(`${fixtureTitles.turma} ${turmaHash}`)}/regras.pdf)`,
+  `[Rules](${encodeURIComponent(`${fixtureTitles.class} ${classHash}`)}/rules.pdf)`,
   '',
-  `[${fixtureTitles.aluno}](${encodeURIComponent(`${fixtureTitles.turma} ${turmaHash}`)}/${encodeURIComponent(`${fixtureTitles.aluno} ${alunoHash}`)}.md)`,
+  `[${fixtureTitles.student}](${encodeURIComponent(`${fixtureTitles.class} ${classHash}`)}/${encodeURIComponent(`${fixtureTitles.student} ${studentHash}`)}.md)`,
   '',
 ].join('\n')
 
-const alunoMarkdown = [
-  `# ${fixtureTitles.aluno}`,
+const studentMarkdown = [
+  `# ${fixtureTitles.student}`,
   '',
-  'Resenha do mês escrita pelo estudante.',
+  'Review of the month written by the student.',
   '',
 ].join('\n')
 
 const anaMarkdown = [
   `# ${fixtureTitles.ana}`,
   '',
-  'Ficha de leitura da estudante.',
+  'Reading record of the student.',
   '',
 ].join('\n')
 
-const alunosCsv = [
-  'Nome,Livros,Comentário',
-  `${fixtureTitles.ana},12,"Leitora assídua, gosta de biografias"`,
-  'Bruno Lima,7,Prefere quadrinhos',
+const studentsCsv = [
+  'Name,Books,Comment',
+  `${fixtureTitles.ana},12,"Avid reader, likes biographies"`,
+  'Bruno Lima,7,Prefers comics',
 ].join('\n')
 
 function encode(text: string) {
@@ -93,12 +93,12 @@ function encode(text: string) {
 
 export function buildNotionFixtureZip(): Uint8Array {
   return zipSync({
-    [fixturePaths.plano]: encode(planoMarkdown),
-    [fixturePaths.turma]: encode(turmaMarkdown),
-    [fixturePaths.aluno]: encode(alunoMarkdown),
-    [fixturePaths.capa]: pngBytes,
-    [fixturePaths.anexo]: encode('%PDF-1.4 conteudo'),
-    [fixturePaths.alunos]: encode(alunosCsv),
+    [fixturePaths.plan]: encode(planMarkdown),
+    [fixturePaths.class]: encode(classMarkdown),
+    [fixturePaths.student]: encode(studentMarkdown),
+    [fixturePaths.cover]: pngBytes,
+    [fixturePaths.attachment]: encode('%PDF-1.4 content'),
+    [fixturePaths.students]: encode(studentsCsv),
     [fixturePaths.ana]: encode(anaMarkdown),
   })
 }

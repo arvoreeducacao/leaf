@@ -36,7 +36,8 @@ import {
   listOrganizationPeople,
 } from '@/lib/organizations'
 import { isDocumentIdShaped } from '@/lib/realtime'
-import { searchAccessibleDocuments } from '@/lib/search-index'
+import { searchDocumentsHybrid } from '@/lib/search-hybrid'
+import { scheduleSearchIndexReconcile } from '@/lib/search-index'
 import {
   listTeamspaceDocuments,
   listTeamspacesForOrganization,
@@ -150,7 +151,9 @@ export async function searchDocuments(
     return { results: [] }
   }
 
-  const hits = await searchAccessibleDocuments(
+  scheduleSearchIndexReconcile()
+
+  const hits = await searchDocumentsHybrid(
     { userId: context.session.user.id, email: context.session.user.email },
     query,
     limit,

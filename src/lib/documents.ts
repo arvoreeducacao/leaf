@@ -6,9 +6,10 @@ import type { Document } from '@/db/schema'
 
 export type DocumentSummary = Pick<
   Document,
-  'id' | 'title' | 'updatedAt' | 'deletedAt' | 'parentId' | 'kind'
+  'id' | 'title' | 'updatedAt' | 'deletedAt' | 'parentId' | 'kind' | 'icon'
 > & {
   shared: boolean
+  owned: boolean
 }
 
 export type DocumentNode = DocumentSummary & {
@@ -16,7 +17,7 @@ export type DocumentNode = DocumentSummary & {
   children: Array<DocumentNode>
 }
 
-export type DocumentCrumb = Pick<Document, 'id' | 'title'>
+export type DocumentCrumb = Pick<Document, 'id' | 'title' | 'icon' | 'kind'>
 
 export async function listOwnedDocuments(
   userId: string,
@@ -29,6 +30,7 @@ export async function listOwnedDocuments(
       deletedAt: documents.deletedAt,
       parentId: documents.parentId,
       kind: documents.kind,
+      icon: documents.icon,
     })
     .from(documents)
     .where(
@@ -40,7 +42,7 @@ export async function listOwnedDocuments(
     )
     .orderBy(desc(documents.updatedAt))
 
-  return rows.map((row) => ({ ...row, shared: false }))
+  return rows.map((row) => ({ ...row, shared: false, owned: true }))
 }
 
 export async function listPrivateDocuments(
@@ -54,6 +56,7 @@ export async function listPrivateDocuments(
       deletedAt: documents.deletedAt,
       parentId: documents.parentId,
       kind: documents.kind,
+      icon: documents.icon,
     })
     .from(documents)
     .where(
@@ -67,7 +70,7 @@ export async function listPrivateDocuments(
     )
     .orderBy(desc(documents.updatedAt))
 
-  return rows.map((row) => ({ ...row, shared: false }))
+  return rows.map((row) => ({ ...row, shared: false, owned: true }))
 }
 
 export async function listSharedDocuments(
@@ -80,6 +83,7 @@ export async function listSharedDocuments(
       updatedAt: documents.updatedAt,
       deletedAt: documents.deletedAt,
       kind: documents.kind,
+      icon: documents.icon,
     })
     .from(documentShares)
     .innerJoin(documents, eq(documents.id, documentShares.documentId))
@@ -92,7 +96,7 @@ export async function listSharedDocuments(
     )
     .orderBy(desc(documents.updatedAt))
 
-  return rows.map((row) => ({ ...row, shared: true, parentId: null }))
+  return rows.map((row) => ({ ...row, shared: true, owned: false, parentId: null }))
 }
 
 export async function listTrashedDocuments(
@@ -106,6 +110,7 @@ export async function listTrashedDocuments(
       deletedAt: documents.deletedAt,
       parentId: documents.parentId,
       kind: documents.kind,
+      icon: documents.icon,
     })
     .from(documents)
     .where(
@@ -120,7 +125,28 @@ export async function listTrashedDocuments(
     )
     .orderBy(desc(documents.deletedAt))
 
-  return rows.map((row) => ({ ...row, shared: false }))
+  return rows.map((row) => ({ ...row, shared: false, owned: true }))
+}
+
+export function pickRecentDocuments(
+  lists: ReadonlyArray<ReadonlyArray<DocumentSummary>>,
+  limit: number,
+): Array<DocumentSummary> {
+  const newest = new Map<string, DocumentSummary>()
+
+  for (const list of lists) {
+    for (const summary of list) {
+      const current = newest.get(summary.id)
+
+      if (!current || current.updatedAt < summary.updatedAt) {
+        newest.set(summary.id, summary)
+      }
+    }
+  }
+
+  return [...newest.values()]
+    .sort((first, second) => second.updatedAt.getTime() - first.updatedAt.getTime())
+    .slice(0, limit)
 }
 
 export function buildDocumentTree(
@@ -141,12 +167,15 @@ export function buildDocumentTree(
       continue
     }
 
-    const parent = summary.parentId ? nodes.get(summary.parentId) : undefined
+    if (!summary.parentId) {
+      roots.push(node)
+      continue
+    }
+
+    const parent = nodes.get(summary.parentId)
 
     if (parent && parent.id !== node.id) {
       parent.children.push(node)
-    } else {
-      roots.push(node)
     }
   }
 
@@ -160,6 +189,38 @@ export function buildDocumentTree(
   applyDepth(roots, 0)
 
   return roots
+}
+
+export type BrowsableDocument = Pick<
+  DocumentSummary,
+  'id' | 'title' | 'icon' | 'kind'
+>
+
+export function toBrowsable(document: DocumentSummary): BrowsableDocument {
+  return {
+    id: document.id,
+    title: document.title,
+    icon: document.icon,
+    kind: document.kind,
+  }
+}
+
+export const sidebarBranchLimit = 20
+
+export type CappedTree = Readonly<{
+  nodes: Array<DocumentNode>
+  hidden: number
+}>
+
+export function capDocumentTree(
+  roots: Array<DocumentNode>,
+  limit: number = sidebarBranchLimit,
+): CappedTree {
+  if (roots.length <= limit) {
+    return { nodes: roots, hidden: 0 }
+  }
+
+  return { nodes: roots.slice(0, limit), hidden: roots.length - limit }
 }
 
 export async function getDocument(docId: string) {
@@ -194,7 +255,12 @@ export async function listAncestors(
       break
     }
 
-    crumbs.unshift({ id: parent.id, title: parent.title })
+    crumbs.unshift({
+      id: parent.id,
+      title: parent.title,
+      icon: parent.icon,
+      kind: parent.kind,
+    })
     current = parent
   }
 

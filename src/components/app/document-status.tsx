@@ -4,18 +4,24 @@ import { useTranslations } from 'next-intl'
 
 import {
   CheckCircleIcon,
+  CloudCheckIcon,
+  CloudOffIcon,
   EyeIcon,
   SyncIcon,
   UsersIcon,
   WarningIcon,
 } from '@/components/icons'
-import type { SaveStatus } from '@/components/editor/status-bridge'
+import type {
+  ConnectionStatus,
+  SaveStatus,
+} from '@/components/editor/status-bridge'
 import {
   readOnlyHintId,
   requestSaveRetry,
   useEditorStatus,
 } from '@/components/editor/status-bridge'
 import { Button } from '@/components/ui/button'
+import { useOnlineStatus } from '@/shared/hooks/use-online-status'
 import { cn } from '@/shared/utils'
 
 const saveLabelKeys: Record<SaveStatus, string> = {
@@ -24,13 +30,66 @@ const saveLabelKeys: Record<SaveStatus, string> = {
   saving: 'saveSaving',
   saved: 'saveSaved',
   error: 'saveError',
+  offline: 'saveOffline',
+}
+
+function ConnectionChip({
+  connection,
+  online,
+}: Readonly<{ connection: ConnectionStatus; online: boolean }>) {
+  const t = useTranslations('realtime')
+  const tOffline = useTranslations('offline')
+
+  if (online && connection === 'solo') {
+    return null
+  }
+
+  if (online && connection === 'connected') {
+    return (
+      <p className="flex items-center gap-1 whitespace-nowrap">
+        <UsersIcon aria-hidden="true" className="size-3.5" />
+        {t('connected')}
+      </p>
+    )
+  }
+
+  if (!online || connection === 'offline') {
+    return (
+      <>
+        <span aria-live="polite" className="sr-only" role="status">
+          {tOffline('badge')}
+        </span>
+        <p className="flex items-center gap-1 whitespace-nowrap text-content-subtle">
+          <CloudOffIcon aria-hidden="true" className="size-3.5" />
+          {tOffline('badge')}
+        </p>
+      </>
+    )
+  }
+
+  return (
+    <>
+      <span aria-live="polite" className="sr-only" role="status">
+        {t('reconnecting')}
+      </span>
+      <p className="flex items-center gap-1 whitespace-nowrap text-warn">
+        <SyncIcon
+          aria-hidden="true"
+          className="size-3.5 motion-safe:animate-spin motion-reduce:animate-none"
+        />
+        {t('reconnecting')}
+      </p>
+    </>
+  )
 }
 
 export function DocumentStatus() {
   const t = useTranslations('editor')
   const tCommon = useTranslations('common')
-  const tRealtime = useTranslations('realtime')
-  const { ready, readOnly, save, stats, realtime } = useEditorStatus()
+  const tOffline = useTranslations('offline')
+  const { ready, readOnly, save, stats, connection, conflict } =
+    useEditorStatus()
+  const online = useOnlineStatus()
 
   if (!ready) {
     return null
@@ -38,7 +97,9 @@ export function DocumentStatus() {
 
   const saveLabel = save === 'idle' ? '' : t(saveLabelKeys[save])
   const isError = save === 'error'
-  const connected = realtime === 'connected'
+  const isQueued = save === 'offline'
+  const showSave =
+    online && connection !== 'connected' && !readOnly && save !== 'idle'
 
   return (
     <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-0.5 text-caption text-content-subtle">
@@ -61,34 +122,12 @@ export function DocumentStatus() {
         </p>
       ) : null}
 
-      {realtime !== 'off' ? (
-        <>
-          <span aria-live="polite" className="sr-only" role="status">
-            {connected ? '' : tRealtime('reconnecting')}
-          </span>
-          <p
-            className={cn(
-              'flex items-center gap-1 whitespace-nowrap',
-              connected ? '' : 'text-warn',
-            )}
-          >
-            {connected ? (
-              <UsersIcon aria-hidden="true" className="size-3.5" />
-            ) : (
-              <SyncIcon
-                aria-hidden="true"
-                className="size-3.5 motion-safe:animate-spin motion-reduce:animate-none"
-              />
-            )}
-            {connected ? tRealtime('connected') : tRealtime('reconnecting')}
-          </p>
-        </>
-      ) : null}
+      <ConnectionChip connection={connection} online={online} />
 
-      {realtime === 'off' && !readOnly && save !== 'idle' ? (
+      {showSave ? (
         <>
           <span aria-live="polite" className="sr-only" role="status">
-            {save === 'saved' || isError ? saveLabel : ''}
+            {save === 'saved' || isError || isQueued ? saveLabel : ''}
           </span>
           <p
             aria-hidden="true"
@@ -99,6 +138,9 @@ export function DocumentStatus() {
           >
             {save === 'saved' ? (
               <CheckCircleIcon aria-hidden="true" className="size-3.5" />
+            ) : null}
+            {isQueued ? (
+              <CloudCheckIcon aria-hidden="true" className="size-3.5" />
             ) : null}
             {save === 'saving' ? (
               <SyncIcon
@@ -122,6 +164,13 @@ export function DocumentStatus() {
             </Button>
           ) : null}
         </>
+      ) : null}
+
+      {conflict ? (
+        <p className="flex items-center gap-1 whitespace-nowrap text-warn">
+          <WarningIcon aria-hidden="true" className="size-3.5" />
+          {tOffline('conflict')}
+        </p>
       ) : null}
     </div>
   )

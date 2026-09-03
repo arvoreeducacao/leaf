@@ -23,6 +23,7 @@ import {
   user,
 } from '@/db/schema'
 import { resetDatabase } from '@/db/testing'
+import { reconcileSearchIndex } from '@/lib/search-index'
 import { createLeafMcpServer } from '@/lib/mcp/server'
 import {
   type McpToolContext,
@@ -112,6 +113,8 @@ beforeEach(async () => {
     createdAt: longAgo,
     updatedAt: longAgo,
   })
+
+  await reconcileSearchIndex()
 })
 
 async function expectToolError(promise: Promise<unknown>, code: McpToolError['code']) {

@@ -18,14 +18,31 @@ export class NotionApiError extends Error {
 export type NotionFetch = typeof fetch
 
 export type NotionRichText = Readonly<{
+  type?: string
   plain_text?: string
   href?: string | null
   annotations?: Readonly<{
     bold?: boolean
     italic?: boolean
     strikethrough?: boolean
+    underline?: boolean
     code?: boolean
+    color?: string
   }>
+  mention?: Readonly<{
+    type?: string
+    page?: { id?: string }
+    database?: { id?: string }
+  }>
+}>
+
+export type NotionIcon = Readonly<{
+  type?: string
+  emoji?: string
+  external?: { url?: string }
+  file?: { url?: string }
+  icon?: { name?: string; color?: string }
+  custom_emoji?: { url?: string }
 }>
 
 export type NotionFile = Readonly<{
@@ -47,14 +64,31 @@ export type NotionPageObject = Readonly<{
   object?: string
   in_trash?: boolean
   archived?: boolean
+  icon?: NotionIcon | null
+  cover?: NotionFile | null
+  created_time?: string
+  last_edited_time?: string
   properties?: Record<string, unknown>
   parent?: Record<string, unknown>
 }>
 
+export type NotionPropertyConfig = Readonly<{
+  id?: string
+  type?: string
+  name?: string
+  [key: string]: unknown
+}>
+
 export type NotionDatabaseObject = Readonly<{
   id: string
+  object?: string
   title?: Array<NotionRichText>
-  properties?: Record<string, { type?: string; name?: string }>
+  is_inline?: boolean
+  icon?: NotionIcon | null
+  created_time?: string
+  last_edited_time?: string
+  parent?: Record<string, unknown>
+  properties?: Record<string, NotionPropertyConfig>
 }>
 
 export type NotionComment = Readonly<{
@@ -77,6 +111,12 @@ export type NotionList<T> = Readonly<{
   next_cursor?: string | null
 }>
 
+export type NotionSearchResult = Readonly<{
+  id: string
+  object?: string
+  parent?: Record<string, unknown>
+}>
+
 export type NotionClient = Readonly<{
   page: (id: string) => Promise<NotionPageObject>
   database: (id: string) => Promise<NotionDatabaseObject>
@@ -84,8 +124,38 @@ export type NotionClient = Readonly<{
   rows: (databaseId: string) => AsyncGenerator<NotionPageObject>
   comments: (blockId: string) => AsyncGenerator<NotionComment>
   user: (id: string) => Promise<NotionUserObject>
+  search: () => AsyncGenerator<NotionSearchResult>
   download: (url: string) => Promise<{ bytes: Uint8Array; contentType: string }>
 }>
+
+const maxAttempts = 5
+
+const retryableStatuses = new Set([409, 429, 500, 502, 503, 504])
+
+function retryDelayMs(response: Response | null, attempt: number): number {
+  const retryAfter = Number(response?.headers.get('retry-after'))
+
+  if (Number.isFinite(retryAfter) && retryAfter > 0) {
+    return Math.min(retryAfter * 1000, 60_000)
+  }
+
+  return Math.min(1000 * 2 ** attempt, 30_000)
+}
+
+function sleep(ms: number, signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(resolve, ms)
+
+    signal?.addEventListener(
+      'abort',
+      () => {
+        clearTimeout(timer)
+        reject(new Error('aborted'))
+      },
+      { once: true },
+    )
+  })
+}
 
 export function createNotionClient(
   token: string,
@@ -97,25 +167,46 @@ export function createNotionClient(
     path: string,
     init: RequestInit = {},
   ): Promise<T> {
-    const response = await call(`${NOTION_API_BASE}${path}`, {
-      ...init,
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-        'Notion-Version': NOTION_API_VERSION,
-        ...(init.headers ?? {}),
-      },
-      signal: options.signal,
-    })
+    for (let attempt = 0; ; attempt += 1) {
+      let response: Response | null = null
 
-    if (!response.ok) {
+      try {
+        response = await call(`${NOTION_API_BASE}${path}`, {
+          ...init,
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+            'Notion-Version': NOTION_API_VERSION,
+            ...(init.headers ?? {}),
+          },
+          signal: options.signal,
+        })
+      } catch (error) {
+        if (options.signal?.aborted || attempt >= maxAttempts - 1) {
+          throw error
+        }
+
+        await sleep(retryDelayMs(null, attempt), options.signal)
+        continue
+      }
+
+      if (response.ok) {
+        return (await response.json()) as T
+      }
+
+      if (
+        retryableStatuses.has(response.status) &&
+        attempt < maxAttempts - 1
+      ) {
+        await sleep(retryDelayMs(response, attempt), options.signal)
+        continue
+      }
+
       throw new NotionApiError(
         response.status,
         `${init.method ?? 'GET'} ${path} devolveu ${response.status}`,
       )
     }
-
-    return (await response.json()) as T
   }
 
   async function* paginate<T>(
@@ -167,16 +258,35 @@ export function createNotionClient(
     database: (id) => request<NotionDatabaseObject>(`/databases/${id}`),
 
     download: async (url) => {
-      const response = await call(url, { signal: options.signal })
+      for (let attempt = 0; ; attempt += 1) {
+        let response: Response | null = null
 
-      if (!response.ok) {
+        try {
+          response = await call(url, { signal: options.signal })
+        } catch (error) {
+          if (options.signal?.aborted || attempt >= 2) {
+            throw error
+          }
+
+          await sleep(retryDelayMs(null, attempt), options.signal)
+          continue
+        }
+
+        if (response.ok) {
+          return {
+            bytes: new Uint8Array(await response.arrayBuffer()),
+            contentType:
+              response.headers.get('content-type') ??
+              'application/octet-stream',
+          }
+        }
+
+        if (response.status >= 500 && attempt < 2) {
+          await sleep(retryDelayMs(response, attempt), options.signal)
+          continue
+        }
+
         throw new NotionApiError(response.status, `download ${response.status}`)
-      }
-
-      return {
-        bytes: new Uint8Array(await response.arrayBuffer()),
-        contentType:
-          response.headers.get('content-type') ?? 'application/octet-stream',
       }
     },
 
@@ -197,6 +307,18 @@ export function createNotionClient(
             method: 'POST',
           },
         ),
+      ),
+
+    search: () =>
+      paginate<NotionSearchResult>((cursor) =>
+        request<NotionList<NotionSearchResult>>('/search', {
+          body: JSON.stringify(
+            cursor
+              ? { page_size: pageSize, start_cursor: cursor }
+              : { page_size: pageSize },
+          ),
+          method: 'POST',
+        }),
       ),
   }
 }
