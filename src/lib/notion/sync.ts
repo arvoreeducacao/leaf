@@ -122,11 +122,20 @@ export async function* syncNotion(
   }
 
   const mappingRows = await db
-    .select()
+    .select({
+      notionId: notionDocuments.notionId,
+      documentId: notionDocuments.documentId,
+      kind: notionDocuments.kind,
+      lastEditedAt: notionDocuments.lastEditedAt,
+      parentNotionId: notionDocuments.parentNotionId,
+      icon: documents.icon,
+    })
     .from(notionDocuments)
+    .leftJoin(documents, eq(documents.id, notionDocuments.documentId))
     .where(eq(notionDocuments.userId, owner.id))
 
   const mappings = new Map<string, Mapping>()
+  const storedIcon = new Map<string, string | null>()
   const childrenByParent = new Map<string, Array<string>>()
 
   for (const row of mappingRows) {
@@ -135,6 +144,7 @@ export async function* syncNotion(
       kind: row.kind,
       lastEditedAt: row.lastEditedAt,
     })
+    storedIcon.set(normalizeNotionId(row.notionId), row.icon ?? null)
 
     if (row.parentNotionId) {
       const key = normalizeNotionId(row.parentNotionId)
@@ -142,6 +152,23 @@ export async function* syncNotion(
       siblings.push(row.notionId)
       childrenByParent.set(key, siblings)
     }
+  }
+
+  async function refreshIcon(
+    key: string,
+    documentId: string,
+    icon: string | null,
+  ) {
+    if ((storedIcon.get(key) ?? null) === icon) {
+      return
+    }
+
+    await db
+      .update(documents)
+      .set({ icon })
+      .where(eq(documents.id, documentId))
+
+    storedIcon.set(key, icon)
   }
 
   async function saveMapping(
@@ -851,6 +878,11 @@ export async function* syncNotion(
 
           if (unchanged) {
             skipped += 1
+            await refreshIcon(
+              rowKey,
+              rowMapping.documentId,
+              notionIconValue(row.icon),
+            )
             enqueueKnownChildren(row.id, rowMapping.documentId)
             continue
           }
@@ -970,6 +1002,8 @@ export async function* syncNotion(
 
       if (unchanged) {
         skipped += 1
+
+        await refreshIcon(idKey, mapping.documentId, notionIconValue(page.icon))
 
         if (!rootDocId) {
           rootDocId = mapping.documentId
