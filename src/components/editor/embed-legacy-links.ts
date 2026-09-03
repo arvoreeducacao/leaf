@@ -1,5 +1,3 @@
-import { isEmbeddableUrl } from './embed-providers'
-
 type LegacyInline = Readonly<{
   type?: string
   text?: string
@@ -19,6 +17,8 @@ export type LegacyConversion = Readonly<{
   changed: number
 }>
 
+export type EmbeddableCheck = (url: string) => boolean
+
 function textOf(item: LegacyInline) {
   return typeof item.text === 'string' ? item.text : ''
 }
@@ -33,7 +33,10 @@ function urlOf(item: LegacyInline) {
   return item.type === 'text' && /^https?:\/\/\S+$/u.test(text) ? text : null
 }
 
-export function loneEmbeddableLink(block: LegacyBlock): string | null {
+export function loneEmbeddableLink(
+  block: LegacyBlock,
+  isEmbeddable: EmbeddableCheck,
+): string | null {
   if (block.type !== 'paragraph' || !Array.isArray(block.content)) {
     return null
   }
@@ -52,10 +55,13 @@ export function loneEmbeddableLink(block: LegacyBlock): string | null {
 
   const url = urlOf(meaningful[0])
 
-  return url !== null && isEmbeddableUrl(url) ? url : null
+  return url !== null && isEmbeddable(url) ? url : null
 }
 
-export function convertLegacyLinkBlocks(value: unknown): LegacyConversion {
+export function convertLegacyLinkBlocks(
+  value: unknown,
+  isEmbeddable: EmbeddableCheck,
+): LegacyConversion {
   if (!Array.isArray(value)) {
     return { blocks: [], changed: 0 }
   }
@@ -63,7 +69,7 @@ export function convertLegacyLinkBlocks(value: unknown): LegacyConversion {
   let changed = 0
 
   const blocks = (value as Array<LegacyBlock>).map((block) => {
-    const url = loneEmbeddableLink(block)
+    const url = loneEmbeddableLink(block, isEmbeddable)
 
     if (url !== null) {
       changed += 1
@@ -77,7 +83,7 @@ export function convertLegacyLinkBlocks(value: unknown): LegacyConversion {
     }
 
     if (Array.isArray(block.children) && block.children.length > 0) {
-      const result = convertLegacyLinkBlocks(block.children)
+      const result = convertLegacyLinkBlocks(block.children, isEmbeddable)
 
       changed += result.changed
 
