@@ -8,6 +8,7 @@ import type {
   NotionPageObject,
   NotionUserObject,
 } from '@/lib/notion/api'
+import { notionIconValue } from '@/lib/document-icon'
 import { plainText } from '@/lib/notion/api'
 import type {
   BlockNode,
@@ -118,22 +119,6 @@ export function databaseTitle(
   return text.length > 0 ? text.slice(0, 200) : fallback
 }
 
-function iconOf(icon: NotionIcon | null | undefined): string | null {
-  if (!icon) {
-    return null
-  }
-
-  if (typeof icon.emoji === 'string' && icon.emoji.length > 0) {
-    return icon.emoji.slice(0, 64)
-  }
-
-  const url = icon.external?.url ?? icon.file?.url ?? null
-
-  return typeof url === 'string' && url.startsWith('https://')
-    ? url.slice(0, 1024)
-    : null
-}
-
 function stamp(value: string | undefined): Date | null {
   if (!value) {
     return null
@@ -151,7 +136,7 @@ function metaOf(source: {
 }): NotionPageMeta {
   return {
     createdAt: stamp(source.created_time),
-    icon: iconOf(source.icon),
+    icon: notionIconValue(source.icon),
     updatedAt: stamp(source.last_edited_time),
   }
 }

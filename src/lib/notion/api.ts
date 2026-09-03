@@ -41,6 +41,8 @@ export type NotionIcon = Readonly<{
   emoji?: string
   external?: { url?: string }
   file?: { url?: string }
+  icon?: { name?: string; color?: string }
+  custom_emoji?: { url?: string }
 }>
 
 export type NotionFile = Readonly<{
