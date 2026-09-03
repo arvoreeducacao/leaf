@@ -97,6 +97,7 @@ function makeClient(world: World): NotionClient {
     }),
     [norm(rootId)]: () => ({
       created_time: '2025-12-01T00:00:00.000Z',
+      icon: { icon: { color: 'gray', name: 'alien-pixel' }, type: 'icon' },
       id: rootId,
       last_edited_time: world.editedAt[rootId],
       properties: title('Reading plan'),
@@ -305,6 +306,9 @@ describe('resumable Notion sync', () => {
 
     expect(child?.parentId).toBe(root?.id)
     expect(child?.icon).toBe('🌿')
+    expect(root?.icon).toBe(
+      'https://www.notion.so/icons/alien-pixel_gray.svg',
+    )
     expect(database?.kind).toBe('database')
     expect(rowOne?.parentId).toBe(database?.id)
 
