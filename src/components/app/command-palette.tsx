@@ -14,6 +14,7 @@ import {
 } from 'react'
 import { toast } from 'sonner'
 
+import { DocumentIcon } from '@/components/app/document-icon'
 import {
   onCommandPaletteOpen,
   pendingImportFlag,
@@ -30,9 +31,7 @@ import { PaletteAsk } from '@/components/app/palette-ask'
 import {
   AddIcon,
   ArchiveUploadIcon,
-  ClockIcon,
   MagicWandIcon,
-  PageIcon,
   SearchIcon,
   TeamIcon,
 } from '@/components/icons'
@@ -50,7 +49,7 @@ type PaletteItem = Readonly<{
   label: string
   hit: SearchHit | null
   action: ActionKind | null
-  icon: React.ComponentType<{ className?: string }>
+  icon: React.ReactNode
 }>
 
 type PaletteGroup = Readonly<{
@@ -62,6 +61,7 @@ type PaletteGroup = Readonly<{
 type Props = Readonly<{ hasOrganization: boolean; aiEnabled: boolean }>
 
 const searchDebounce = 200
+const paletteIcon = 'size-4 shrink-0 text-content-subtle'
 
 async function fetchWorkspaceSearch(
   term: string,
@@ -205,7 +205,7 @@ export function CommandPalette({ hasOrganization, aiEnabled }: Props) {
         label: t('actionNewDocument'),
         hit: null,
         action: 'new',
-        icon: AddIcon,
+        icon: <AddIcon aria-hidden="true" className={paletteIcon} />,
       },
     ]
 
@@ -215,7 +215,7 @@ export function CommandPalette({ hasOrganization, aiEnabled }: Props) {
         label: t('actionOrganization'),
         hit: null,
         action: 'organization',
-        icon: TeamIcon,
+        icon: <TeamIcon aria-hidden="true" className={paletteIcon} />,
       })
     }
 
@@ -224,7 +224,7 @@ export function CommandPalette({ hasOrganization, aiEnabled }: Props) {
       label: t('actionImport'),
       hit: null,
       action: 'import',
-      icon: ArchiveUploadIcon,
+      icon: <ArchiveUploadIcon aria-hidden="true" className={paletteIcon} />,
     })
 
     const term = query.trim().toLowerCase()
@@ -250,7 +250,7 @@ export function CommandPalette({ hasOrganization, aiEnabled }: Props) {
             label: t('askActionWithQuery', { query: question }),
             hit: null,
             action: 'ask',
-            icon: MagicWandIcon,
+            icon: <MagicWandIcon aria-hidden="true" className={paletteIcon} />,
           },
         ],
       })
@@ -265,7 +265,7 @@ export function CommandPalette({ hasOrganization, aiEnabled }: Props) {
           label: hit.title,
           hit,
           action: null,
-          icon: recent ? ClockIcon : PageIcon,
+          icon: <DocumentIcon className={paletteIcon} icon={hit.icon} />,
         })),
       })
     }
@@ -509,7 +509,6 @@ export function CommandPalette({ hasOrganization, aiEnabled }: Props) {
                       {group.items.map((item) => {
                         index += 1
                         const position = index
-                        const Icon = item.icon
                         const active = position === selected
 
                         return (
@@ -526,10 +525,7 @@ export function CommandPalette({ hasOrganization, aiEnabled }: Props) {
                             onMouseMove={() => setSelected(position)}
                             role="option"
                           >
-                            <Icon
-                              aria-hidden="true"
-                              className="size-4 shrink-0 text-content-subtle"
-                            />
+                            {item.icon}
                             <span className="min-w-0 flex-1">
                               <span className="block truncate text-body-small text-content-strong">
                                 {item.label}
