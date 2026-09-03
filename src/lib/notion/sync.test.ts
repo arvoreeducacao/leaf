@@ -60,11 +60,13 @@ const messages: NotionImportMessages = {
 type World = {
   editedAt: Record<string, string>
   childText: string
+  dbInline: boolean
 }
 
 function makeWorld(): World {
   return {
     childText: 'child body',
+    dbInline: true,
     editedAt: {
       [childId]: '2026-01-02T00:00:00.000Z',
       [databaseId]: '2026-01-03T00:00:00.000Z',
@@ -178,6 +180,7 @@ function makeClient(world: World): NotionClient {
       return {
         created_time: '2025-12-01T00:00:00.000Z',
         id: databaseId,
+        is_inline: world.dbInline,
         last_edited_time: world.editedAt[databaseId],
         properties: {
           Name: { name: 'Name', type: 'title' },
@@ -327,6 +330,25 @@ describe('resumable Notion sync', () => {
     const mappings = await db.select().from(notionDocuments)
 
     expect(mappings).toHaveLength(5)
+  })
+
+  it('renders a full-page child database as a link, not an embed', async () => {
+    const world = makeWorld()
+
+    world.dbInline = false
+
+    await run(world)
+
+    const root = await db.query.documents.findFirst({
+      where: eq(documents.title, 'Reading plan'),
+    })
+    const database = await db.query.documents.findFirst({
+      where: eq(documents.title, 'Tasks'),
+    })
+
+    expect(root?.content).not.toContain('"type":"database"')
+    expect(root?.content).toContain(`/doc/${database?.id}`)
+    expect(root?.content).toContain('Tasks')
   })
 
   it('skips everything on a rerun with no changes', async () => {
