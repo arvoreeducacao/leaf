@@ -14,7 +14,7 @@ type LegacyBlock = {
 
 export type LegacyConversion = Readonly<{
   blocks: Array<LegacyBlock>
-  changed: number
+  converted: Array<string>
 }>
 
 export type EmbeddableCheck = (url: string) => boolean
@@ -63,16 +63,16 @@ export function convertLegacyLinkBlocks(
   isEmbeddable: EmbeddableCheck,
 ): LegacyConversion {
   if (!Array.isArray(value)) {
-    return { blocks: [], changed: 0 }
+    return { blocks: [], converted: [] }
   }
 
-  let changed = 0
+  const converted: Array<string> = []
 
   const blocks = (value as Array<LegacyBlock>).map((block) => {
     const url = loneEmbeddableLink(block, isEmbeddable)
 
     if (url !== null) {
-      changed += 1
+      converted.push(url)
 
       return {
         children: [],
@@ -85,13 +85,15 @@ export function convertLegacyLinkBlocks(
     if (Array.isArray(block.children) && block.children.length > 0) {
       const result = convertLegacyLinkBlocks(block.children, isEmbeddable)
 
-      changed += result.changed
+      converted.push(...result.converted)
 
-      return result.changed > 0 ? { ...block, children: result.blocks } : block
+      return result.converted.length > 0
+        ? { ...block, children: result.blocks }
+        : block
     }
 
     return block
   })
 
-  return { blocks, changed }
+  return { blocks, converted }
 }
