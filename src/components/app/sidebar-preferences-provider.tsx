@@ -58,18 +58,12 @@ function takeLegacyPreferences(): Partial<SidebarPreferences> | null {
     }
   } catch {}
 
-  const changes: Partial<SidebarPreferences> = {}
-
-  if (typeof collapsed === 'boolean') {
-    changes.collapsed = collapsed
-  }
-
-  if (Array.isArray(collapsedSections)) {
-    changes.collapsedSections = limitCollapsedSections(collapsedSections)
-  }
-
-  if (typeof width === 'number' && Number.isFinite(width)) {
-    changes.width = width
+  const changes: Partial<SidebarPreferences> = {
+    ...(typeof collapsed === 'boolean' ? { collapsed } : {}),
+    ...(Array.isArray(collapsedSections)
+      ? { collapsedSections: limitCollapsedSections(collapsedSections) }
+      : {}),
+    ...(typeof width === 'number' && Number.isFinite(width) ? { width } : {}),
   }
 
   return Object.keys(changes).length > 0 ? changes : null
