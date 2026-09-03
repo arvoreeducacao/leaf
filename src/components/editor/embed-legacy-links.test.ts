@@ -21,7 +21,7 @@ describe('convertLegacyLinkBlocks', () => {
       linkParagraph('b1', 'https://www.figma.com/design/abc123XY/Leaf'),
     ], isEmbeddableUrl)
 
-    expect(result.changed).toBe(1)
+    expect(result.converted).toHaveLength(1)
     expect(result.blocks[0]).toEqual({
       children: [],
       id: 'b1',
@@ -43,7 +43,7 @@ describe('convertLegacyLinkBlocks', () => {
       },
     ], isEmbeddableUrl)
 
-    expect(result.changed).toBe(1)
+    expect(result.converted).toHaveLength(1)
     expect(result.blocks[0].type).toBe('embed')
   })
 
@@ -65,7 +65,7 @@ describe('convertLegacyLinkBlocks', () => {
       },
     ], isEmbeddableUrl)
 
-    expect(result.changed).toBe(0)
+    expect(result.converted).toEqual([])
     expect(result.blocks[0].type).toBe('paragraph')
   })
 
@@ -74,7 +74,7 @@ describe('convertLegacyLinkBlocks', () => {
       linkParagraph('b4', 'https://arvore.com.br/relatorio'),
     ], isEmbeddableUrl)
 
-    expect(result.changed).toBe(0)
+    expect(result.converted).toEqual([])
   })
 
   it('reaches links nested inside other blocks', () => {
@@ -88,7 +88,7 @@ describe('convertLegacyLinkBlocks', () => {
       },
     ], isEmbeddableUrl)
 
-    expect(result.changed).toBe(1)
+    expect(result.converted).toHaveLength(1)
     expect(result.blocks[0].children?.[0].type).toBe('embed')
   })
 })

@@ -1,14 +1,17 @@
 import mysql from 'mysql2/promise'
 
 import { convertLegacyLinkBlocks } from '../src/components/editor/embed-legacy-links.ts'
-import { isEmbeddableUrl } from '../src/components/editor/embed-providers.ts'
+import {
+  isEmbeddableUrl,
+  resolveEmbedSource,
+} from '../src/components/editor/embed-providers.ts'
 
 const apply = process.argv.includes('--apply')
 const batchSize = 200
 
 async function main() {
   const connection = await mysql.createConnection(process.env.DATABASE_URL)
-  const hosts = new Map()
+  const providers = new Map()
   let cursor = ''
   let scanned = 0
   let documents = 0
@@ -38,17 +41,17 @@ async function main() {
 
       const result = convertLegacyLinkBlocks(parsed, isEmbeddableUrl)
 
-      if (result.changed === 0) {
+      if (result.converted.length === 0) {
         continue
       }
 
       documents += 1
-      embeds += result.changed
+      embeds += result.converted.length
 
-      for (const block of JSON.stringify(result.blocks).matchAll(
-        /"url":"https?:\/\/([^/"]+)/gu,
-      )) {
-        hosts.set(block[1], (hosts.get(block[1]) ?? 0) + 1)
+      for (const url of result.converted) {
+        const provider = resolveEmbedSource(url)?.provider ?? 'desconhecido'
+
+        providers.set(provider, (providers.get(provider) ?? 0) + 1)
       }
 
       if (apply) {
@@ -70,8 +73,8 @@ async function main() {
     `${apply ? 'converted' : 'would convert'} ${embeds} links into embeds across ${documents} documents\n`,
   )
 
-  for (const [host, count] of [...hosts].sort((a, b) => b[1] - a[1])) {
-    process.stdout.write(`  ${host}: ${count}\n`)
+  for (const [provider, count] of [...providers].sort((a, b) => b[1] - a[1])) {
+    process.stdout.write(`  ${provider}: ${count}\n`)
   }
 }
 
