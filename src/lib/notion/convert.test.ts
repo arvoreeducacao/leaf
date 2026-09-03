@@ -271,4 +271,43 @@ describe('convertNodes', () => {
     expect(content[0].type).toBe('link')
     expect(content[0].href).toBe('https://arvore.com.br')
   })
+
+  it('turns an embeddable link into an embed block instead of a bare link', () => {
+    const { context } = makeContext()
+    const blocks = convertNodes(
+      [
+        node({
+          embed: {
+            caption: [{ plain_text: 'Fluxo novo', type: 'text' }],
+            url: 'https://www.figma.com/design/abc123XY/Leaf',
+          },
+          id: 'em1',
+          type: 'embed',
+        }),
+      ],
+      context,
+    )
+
+    expect(blocks[0].type).toBe('embed')
+    expect(blocks[0].props?.url).toBe(
+      'https://www.figma.com/design/abc123XY/Leaf',
+    )
+    expect(blocks[0].props?.caption).toBe('Fluxo novo')
+  })
+
+  it('keeps the link paragraph when nothing can frame the page', () => {
+    const { context } = makeContext()
+    const blocks = convertNodes(
+      [
+        node({
+          embed: { caption: [], url: 'https://arvore.com.br/relatorio' },
+          id: 'em2',
+          type: 'embed',
+        }),
+      ],
+      context,
+    )
+
+    expect(blocks[0].type).toBe('paragraph')
+  })
 })

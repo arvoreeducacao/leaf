@@ -50,6 +50,7 @@ import {
 import type { ConnectionStatus } from './status-bridge'
 import type { DocumentSession } from './use-document-session'
 import { leafSchema } from './schema'
+import { acceptsEmbedPaste, embeddablePastedUrl } from './embed-paste'
 import { getLeafSlashMenuItems } from './slash-menu-items'
 import { statsFromBlocks } from './text-stats'
 import { uploadEditorFile } from './upload-file'
@@ -99,7 +100,8 @@ export default function BlockNoteEditor({
   const tDatabase = useTranslations('database')
   const tRealtime = useTranslations('realtime')
   const { resolvedTheme } = useTheme()
-  const { calloutItem, databaseItem, dictionary } = useLeafDictionary(readOnly)
+  const { calloutItem, databaseItem, embedItem, dictionary } =
+    useLeafDictionary(readOnly)
   const containerRef = useRef<HTMLDivElement>(null)
   const importRef = useRef<DocumentImportHandle>(null)
   const parsed = readDocumentContent(seed ?? initialContent)
@@ -124,6 +126,20 @@ export default function BlockNoteEditor({
         ? [createLeafAiExtension(documentId, aiAgentName(locale))]
         : [],
       uploadFile: (file: File) => uploadEditorFile(file, t('uploadFailed')),
+      pasteHandler: ({ event, editor: current, defaultPasteHandler }) => {
+        const url = embeddablePastedUrl(
+          event.clipboardData?.getData('text/plain'),
+        )
+        const block = current.getTextCursorPosition().block
+
+        if (url === null || !acceptsEmbedPaste(block)) {
+          return defaultPasteHandler()
+        }
+
+        current.updateBlock(block, { props: { url }, type: 'embed' })
+
+        return true
+      },
       domAttributes: readOnly
         ? { editor: { 'aria-describedby': readOnlyHintId } }
         : undefined,
@@ -438,6 +454,7 @@ export default function BlockNoteEditor({
                   },
                   { ...databaseItem, onInsert: insertDatabase },
                   canUseAi ? leafAiSlashMenuItems(editor) : [],
+                  embedItem,
                 ),
                 query,
               )
