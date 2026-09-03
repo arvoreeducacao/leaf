@@ -1,4 +1,5 @@
-import { and, desc, eq, isNull, ne, not, sql } from 'drizzle-orm'
+import { and, desc, eq, inArray, isNull, ne, not, sql } from 'drizzle-orm'
+import { cache } from 'react'
 
 import { db } from '@/db'
 import { documentShares, documents } from '@/db/schema'
@@ -223,12 +224,27 @@ export function capDocumentTree(
   return { nodes: roots.slice(0, limit), hidden: roots.length - limit }
 }
 
-export async function getDocument(docId: string) {
+export const getDocument = cache(async (docId: string) => {
   const document = await db.query.documents.findFirst({
     where: eq(documents.id, docId),
   })
 
   return document ?? null
+})
+
+export type DocumentLinkTarget = Pick<Document, 'id' | 'icon' | 'kind'>
+
+export async function listDocumentLinkTargets(
+  ids: ReadonlyArray<string>,
+): Promise<Array<DocumentLinkTarget>> {
+  if (ids.length === 0) {
+    return []
+  }
+
+  return db
+    .select({ id: documents.id, icon: documents.icon, kind: documents.kind })
+    .from(documents)
+    .where(and(inArray(documents.id, [...ids]), isNull(documents.deletedAt)))
 }
 
 export async function listAncestors(
@@ -237,9 +253,7 @@ export async function listAncestors(
   const crumbs: Array<DocumentCrumb> = []
   const seen = new Set<string>([docId])
 
-  let current = await db.query.documents.findFirst({
-    where: eq(documents.id, docId),
-  })
+  let current = await getDocument(docId)
 
   while (current?.parentId && !seen.has(current.parentId)) {
     seen.add(current.parentId)

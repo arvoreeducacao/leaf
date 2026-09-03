@@ -342,70 +342,72 @@ export function AppShell({
       />
       <OfflineSync />
 
-      {collapsed ? null : (
-        <aside
-          aria-label={t('navigation')}
-          className="group/sidebar relative hidden shrink-0 border-line border-r bg-surface-nav tablet:block"
-          ref={sidebarRef}
-          style={{ width }}
-        >
-          <div
-            aria-label={t('resizeNavigation')}
-            aria-orientation="vertical"
-            aria-valuemax={maxWidth}
-            aria-valuemin={minWidth}
-            aria-valuenow={width}
-            className={cn(
-              'absolute inset-y-0 -right-1 z-30 w-2 cursor-col-resize touch-none',
-              "after:absolute after:inset-y-0 after:left-1/2 after:w-0.5 after:-translate-x-1/2 after:bg-transparent after:transition-colors after:content-[''] hover:after:bg-line-contrast",
-              'focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-0',
-              resizing && 'after:bg-line-contrast',
-            )}
-            onDoubleClick={resetWidth}
-            onKeyDown={handleResizeKeyDown}
-            onPointerDown={startResize}
-            role="separator"
-            tabIndex={0}
+      <aside
+        aria-hidden={collapsed || undefined}
+        aria-label={t('navigation')}
+        className="leaf-sidebar group/sidebar relative hidden shrink-0 border-line border-r bg-surface-nav tablet:block"
+        data-resizing={resizing || undefined}
+        inert={collapsed}
+        ref={sidebarRef}
+        style={{ marginLeft: collapsed ? -width : 0, width }}
+      >
+        <div
+          aria-label={t('resizeNavigation')}
+          aria-orientation="vertical"
+          aria-valuemax={maxWidth}
+          aria-valuemin={minWidth}
+          aria-valuenow={width}
+          className={cn(
+            'absolute inset-y-0 -right-1 z-30 w-2 cursor-col-resize touch-none',
+            "after:absolute after:inset-y-0 after:left-1/2 after:w-0.5 after:-translate-x-1/2 after:bg-transparent after:transition-colors after:content-[''] hover:after:bg-line-contrast",
+            'focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-0',
+            resizing && 'after:bg-line-contrast',
+            collapsed && 'hidden',
+          )}
+          onDoubleClick={resetWidth}
+          onKeyDown={handleResizeKeyDown}
+          onPointerDown={startResize}
+          role="separator"
+          tabIndex={0}
+        />
+        <div className="sticky top-0 h-dvh">
+          <NavContent
+            connectedAppsEnabled={connectedAppsEnabled}
+            activeOrgId={activeOrgId}
+            headerAction={
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <ButtonIcon
+                    aria-label={t('collapseNavigation')}
+                    onClick={() => toggleCollapsed(true)}
+                    ref={collapseRef}
+                    size="medium"
+                    variant="ghost"
+                  >
+                    <SidebarIcon aria-hidden="true" />
+                  </ButtonIcon>
+                </TooltipTrigger>
+                <TooltipContent>{t('collapse')}</TooltipContent>
+              </Tooltip>
+            }
+            layout={layout}
+            locale={locale}
+            hiddenOrganizationDocuments={hiddenOrganizationDocuments}
+            hiddenOwnedDocuments={hiddenOwnedDocuments}
+            onMoveSection={moveSectionTo}
+            onToggleSection={toggleSection}
+            organizationDocuments={organizationDocuments}
+            organizationName={organizationName}
+            organizations={organizations}
+            owned={owned}
+            recents={recents}
+            shared={shared}
+            teamspaces={teamspaces}
+            trashed={trashed}
+            user={user}
           />
-          <div className="sticky top-0 h-dvh">
-            <NavContent
-              connectedAppsEnabled={connectedAppsEnabled}
-              activeOrgId={activeOrgId}
-              headerAction={
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <ButtonIcon
-                      aria-label={t('collapseNavigation')}
-                      onClick={() => toggleCollapsed(true)}
-                      ref={collapseRef}
-                      size="medium"
-                      variant="ghost"
-                    >
-                      <SidebarIcon aria-hidden="true" />
-                    </ButtonIcon>
-                  </TooltipTrigger>
-                  <TooltipContent>{t('collapse')}</TooltipContent>
-                </Tooltip>
-              }
-              layout={layout}
-              locale={locale}
-              hiddenOrganizationDocuments={hiddenOrganizationDocuments}
-              hiddenOwnedDocuments={hiddenOwnedDocuments}
-              onMoveSection={moveSectionTo}
-              onToggleSection={toggleSection}
-              organizationDocuments={organizationDocuments}
-              organizationName={organizationName}
-              organizations={organizations}
-              owned={owned}
-              recents={recents}
-              shared={shared}
-              teamspaces={teamspaces}
-              trashed={trashed}
-              user={user}
-            />
-          </div>
-        </aside>
-      )}
+        </div>
+    </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
         <header
@@ -425,7 +427,7 @@ export function AppShell({
           </div>
 
           {collapsed ? (
-            <div className="hidden tablet:block">
+            <div className="hidden animate-in fade-in duration-200 motion-reduce:animate-none tablet:block">
               <Tooltip>
                 <TooltipTrigger asChild>
                   <ButtonIcon

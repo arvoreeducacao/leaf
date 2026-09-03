@@ -14,7 +14,12 @@ import { getSession } from '@/lib/auth'
 import { canComment, canEdit, getDocumentAccess } from '@/lib/authz'
 import { countOpenComments } from '@/lib/comments'
 import { parseCoverCredit } from '@/lib/document-cover'
-import { getDocument, listAncestors } from '@/lib/documents'
+import { documentIdsInContent } from '@/lib/document-links'
+import {
+  getDocument,
+  listAncestors,
+  listDocumentLinkTargets,
+} from '@/lib/documents'
 import { isRealtimeEnabled, realtimePort } from '@/lib/realtime-config'
 import { getTeamspace } from '@/lib/teamspaces'
 import { isUnsplashEnabled } from '@/lib/unsplash'
@@ -52,11 +57,12 @@ export default async function DocumentPage({ params }: Props) {
     notFound()
   }
 
-  const crumbs = await listAncestors(document.id)
-  const openComments = await countOpenComments(document.id)
-  const teamspace = document.teamspaceId
-    ? await getTeamspace(document.teamspaceId)
-    : null
+  const [crumbs, openComments, teamspace, linkedDocuments] = await Promise.all([
+    listAncestors(document.id),
+    countOpenComments(document.id),
+    document.teamspaceId ? getTeamspace(document.teamspaceId) : null,
+    listDocumentLinkTargets(documentIdsInContent(document.content)),
+  ])
 
   const isDatabase = document.kind === 'database'
   const hasCover = document.cover !== null
@@ -117,7 +123,9 @@ export default async function DocumentPage({ params }: Props) {
               canComment={canComment(access)}
               documentId={document.id}
               initialContent={document.content}
+              initialUpdatedAt={new Date(document.updatedAt).getTime()}
               isOwner={access === 'owner'}
+              linkedDocuments={linkedDocuments}
               openCommentCount={openComments}
               readOnly={!canEdit(access)}
               realtime={

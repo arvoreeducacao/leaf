@@ -36,6 +36,7 @@ import { createLeafAiMenuItems, leafAiSlashMenuItems } from './ai-menu-items'
 import { collectBlockIds } from './block-ids'
 import { BlockContextMenu } from './block-context-menu'
 import { readDocumentContent } from './content'
+import type { LinkedDocumentIcon } from './doc-link-icons'
 import { DocumentImport } from './document-import'
 import type { DocumentImportHandle } from './document-import'
 import { focusDocumentTitle, onEditorFocusRequest } from './focus-bridge'
@@ -55,6 +56,7 @@ import { getLeafSlashMenuItems } from './slash-menu-items'
 import { statsFromBlocks } from './text-stats'
 import { uploadEditorFile } from './upload-file'
 import { useAutosave } from './use-autosave'
+import { useDocLinkIcons } from './use-doc-link-icons'
 import { useLeafDictionary } from './use-leaf-dictionary'
 
 const highlightDuration = 2_200
@@ -77,6 +79,7 @@ type Props = Readonly<{
   conflict: boolean
   localOnly: boolean
   aiEnabled: boolean
+  linkedDocuments: ReadonlyArray<LinkedDocumentIcon>
 }>
 
 export default function BlockNoteEditor({
@@ -92,6 +95,7 @@ export default function BlockNoteEditor({
   conflict,
   localOnly,
   aiEnabled,
+  linkedDocuments,
 }: Props) {
   const locale = useLocale()
   const t = useTranslations('editor')
@@ -166,13 +170,19 @@ export default function BlockNoteEditor({
     }
   }, [locale])
 
+  const { css: docLinkIconCss, scan: scanDocLinks } = useDocLinkIcons({
+    container: containerRef,
+    initialTargets: linkedDocuments,
+  })
+
   const handleChange = useCallback(() => {
     const blocks = editor.document
 
     setStats(statsFromBlocks(blocks))
     publishBlockIds(collectBlockIds(blocks))
+    scanDocLinks()
     schedule(JSON.stringify(blocks))
-  }, [editor, schedule])
+  }, [editor, scanDocLinks, schedule])
 
   const handleBlur = useCallback(() => {
     void flush()
@@ -400,6 +410,7 @@ export default function BlockNoteEditor({
 
   return (
     <div className="relative flex w-full flex-col" ref={containerRef}>
+      {docLinkIconCss.length > 0 ? <style>{docLinkIconCss}</style> : null}
       {highlightedBlock && blockIdPattern.test(highlightedBlock) ? (
         <style>{highlightRule(highlightedBlock)}</style>
       ) : null}

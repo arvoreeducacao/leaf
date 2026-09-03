@@ -39,11 +39,9 @@ import {
 import type { DatabaseRow } from '@/lib/database/views'
 import { personOptions } from '@/lib/database/people'
 import {
-  type DatabaseSnapshot,
   getDatabaseDocument,
   listDatabasePeople,
   listDatabaseProperties,
-  loadDatabase,
   toDatabaseRow,
 } from '@/lib/databases'
 import { indexDocument, removeDocumentFromIndex } from '@/lib/search-index'
@@ -186,34 +184,6 @@ export async function createDatabasePage() {
   }
 
   redirect(`/doc/${result.id}`)
-}
-
-export type SnapshotResult =
-  | { ok: true; snapshot: DatabaseSnapshot; canEdit: boolean }
-  | { ok: false; error: string }
-
-export async function readDatabase(
-  databaseId: string,
-): Promise<SnapshotResult> {
-  const session = await getSession()
-  const access = session
-    ? await getDocumentAccess(databaseId, session)
-    : null
-
-  if (!access) {
-    return notAllowed()
-  }
-
-  const snapshot = await loadDatabase(databaseId, session?.user.id ?? null)
-
-  if (!snapshot) {
-    return {
-      ok: false,
-      error: (await getTranslations('errors'))('documentNotFound'),
-    }
-  }
-
-  return { ok: true, snapshot, canEdit: canEdit(access) }
 }
 
 export async function addDatabaseProperty(

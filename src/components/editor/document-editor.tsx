@@ -6,6 +6,7 @@ import dynamic from 'next/dynamic'
 import { WarningIcon } from '@/components/icons'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 
+import type { LinkedDocumentIcon } from './doc-link-icons'
 import { EditorSkeleton } from './editor-skeleton'
 import { useDocumentSession } from './use-document-session'
 
@@ -23,23 +24,27 @@ export type RealtimeConfig = Readonly<{
 type Props = Readonly<{
   documentId: string
   initialContent: string | null
+  initialUpdatedAt: number | null
   readOnly: boolean
   isOwner: boolean
   canComment: boolean
   openCommentCount: number
   realtime: RealtimeConfig | null
   aiEnabled: boolean
+  linkedDocuments: ReadonlyArray<LinkedDocumentIcon>
 }>
 
 export function DocumentEditor({
   documentId,
   initialContent,
+  initialUpdatedAt,
   readOnly,
   isOwner,
   canComment,
   openCommentCount,
   realtime,
   aiEnabled,
+  linkedDocuments,
 }: Props) {
   const locale = useLocale()
   const t = useTranslations('realtime')
@@ -53,6 +58,7 @@ export function DocumentEditor({
       user: realtime?.user ?? { id: '', name: '' },
       anonymousName: t('someone'),
       fallbackContent: initialContent,
+      fallbackUpdatedAt: initialUpdatedAt,
     })
 
   if (phase === 'unavailable') {
@@ -84,6 +90,7 @@ export function DocumentEditor({
       initialContent={initialContent}
       isOwner={isOwner}
       key={`${locale}:${session.provider === null ? 'local' : 'live'}`}
+      linkedDocuments={linkedDocuments}
       localOnly={localOnly}
       openCommentCount={openCommentCount}
       readOnly={readOnly}
