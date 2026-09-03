@@ -1,42 +1,23 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-
-import { readStoredValue, writeStoredValue } from '@/shared/storage'
-
-const storageKey = 'leaf:sidebar-sections-collapsed'
-
-function readCollapsedIds() {
-  return new Set(readStoredValue<Array<string>>(storageKey, []))
-}
+import { useSidebarPreferences } from '@/components/app/sidebar-preferences-provider'
+import { limitCollapsedSections } from '@/shared/sidebar-preferences'
 
 export function useSidebarCollapse(id: string | undefined) {
-  const [collapsed, setCollapsed] = useState(false)
-
-  useEffect(() => {
-    if (id === undefined) {
-      return
-    }
-
-    setCollapsed(readCollapsedIds().has(id))
-  }, [id])
+  const { preferences, update } = useSidebarPreferences()
+  const collapsed =
+    id !== undefined && preferences.collapsedSections.includes(id)
 
   function toggle() {
     if (id === undefined) {
       return
     }
 
-    const next = !collapsed
-    const ids = readCollapsedIds()
-
-    if (next) {
-      ids.add(id)
-    } else {
-      ids.delete(id)
-    }
-
-    writeStoredValue(storageKey, [...ids])
-    setCollapsed(next)
+    update({
+      collapsedSections: collapsed
+        ? preferences.collapsedSections.filter((item) => item !== id)
+        : limitCollapsedSections([...preferences.collapsedSections, id]),
+    })
   }
 
   return { collapsed, toggle }

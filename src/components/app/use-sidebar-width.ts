@@ -2,39 +2,44 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 
-import { readStoredValue, writeStoredValue } from '@/shared/storage'
+import { useSidebarPreferences } from '@/components/app/sidebar-preferences-provider'
+import {
+  defaultSidebarWidth,
+  minSidebarWidth,
+  sidebarMaxWidthRatio,
+} from '@/shared/sidebar-preferences'
 
-const storageKey = 'leaf:sidebar-width'
-const defaultWidth = 240
-const minWidth = 180
-const maxWidthRatio = 0.25
 const keyboardStep = 16
 
 function viewportMaxWidth() {
   if (typeof window === 'undefined') {
-    return defaultWidth
+    return defaultSidebarWidth
   }
 
-  return Math.max(minWidth, Math.round(window.innerWidth * maxWidthRatio))
+  return Math.max(
+    minSidebarWidth,
+    Math.round(window.innerWidth * sidebarMaxWidthRatio),
+  )
 }
 
 function clampWidth(value: number, maxWidth: number) {
-  return Math.min(Math.max(Math.round(value), minWidth), maxWidth)
+  return Math.min(Math.max(Math.round(value), minSidebarWidth), maxWidth)
 }
 
 export function useSidebarWidth() {
-  const [preferredWidth, setPreferredWidth] = useState(defaultWidth)
-  const [maxWidth, setMaxWidth] = useState(defaultWidth)
+  const { preferences, update } = useSidebarPreferences()
+  const [maxWidth, setMaxWidth] = useState(() =>
+    Math.max(minSidebarWidth, preferences.width),
+  )
   const [resizing, setResizing] = useState(false)
   const sidebarRef = useRef<HTMLElement>(null)
-  const width = clampWidth(preferredWidth, maxWidth)
+  const width = clampWidth(preferences.width, maxWidth)
   const widthRef = useRef(width)
 
   widthRef.current = width
 
   useEffect(() => {
     setMaxWidth(viewportMaxWidth())
-    setPreferredWidth(readStoredValue(storageKey, defaultWidth))
 
     function handleViewportResize() {
       setMaxWidth(viewportMaxWidth())
@@ -63,62 +68,62 @@ export function useSidebarWidth() {
     }
   }, [resizing])
 
-  const store = useCallback((value: number) => {
-    const next = clampWidth(value, viewportMaxWidth())
+  const store = useCallback(
+    (value: number) => update({ width: clampWidth(value, viewportMaxWidth()) }),
+    [update],
+  )
 
-    setPreferredWidth(next)
-    writeStoredValue(storageKey, next)
-  }, [])
-
-  const startResize = useCallback((event: React.PointerEvent<HTMLElement>) => {
-    if (event.button !== 0) {
-      return
-    }
-
-    event.preventDefault()
-
-    const handle = event.currentTarget
-    const { pointerId } = event
-    const startX = event.clientX
-    const startWidth = widthRef.current
-    const limit = viewportMaxWidth()
-
-    function handleMove(moveEvent: PointerEvent) {
-      const next = clampWidth(startWidth + moveEvent.clientX - startX, limit)
-
-      if (next === widthRef.current) {
+  const startResize = useCallback(
+    (event: React.PointerEvent<HTMLElement>) => {
+      if (event.button !== 0) {
         return
       }
 
-      widthRef.current = next
+      event.preventDefault()
 
-      if (sidebarRef.current !== null) {
-        sidebarRef.current.style.width = `${next}px`
+      const handle = event.currentTarget
+      const { pointerId } = event
+      const startX = event.clientX
+      const startWidth = widthRef.current
+      const limit = viewportMaxWidth()
+
+      function handleMove(moveEvent: PointerEvent) {
+        const next = clampWidth(startWidth + moveEvent.clientX - startX, limit)
+
+        if (next === widthRef.current) {
+          return
+        }
+
+        widthRef.current = next
+
+        if (sidebarRef.current !== null) {
+          sidebarRef.current.style.width = `${next}px`
+        }
+
+        handle.setAttribute('aria-valuenow', String(next))
       }
 
-      handle.setAttribute('aria-valuenow', String(next))
-    }
+      function handleEnd() {
+        handle.removeEventListener('pointermove', handleMove)
+        handle.removeEventListener('pointerup', handleEnd)
+        handle.removeEventListener('pointercancel', handleEnd)
 
-    function handleEnd() {
-      handle.removeEventListener('pointermove', handleMove)
-      handle.removeEventListener('pointerup', handleEnd)
-      handle.removeEventListener('pointercancel', handleEnd)
+        if (handle.hasPointerCapture(pointerId)) {
+          handle.releasePointerCapture(pointerId)
+        }
 
-      if (handle.hasPointerCapture(pointerId)) {
-        handle.releasePointerCapture(pointerId)
+        setResizing(false)
+        update({ width: widthRef.current })
       }
 
-      setResizing(false)
-      setPreferredWidth(widthRef.current)
-      writeStoredValue(storageKey, widthRef.current)
-    }
-
-    handle.setPointerCapture(pointerId)
-    handle.addEventListener('pointermove', handleMove)
-    handle.addEventListener('pointerup', handleEnd)
-    handle.addEventListener('pointercancel', handleEnd)
-    setResizing(true)
-  }, [])
+      handle.setPointerCapture(pointerId)
+      handle.addEventListener('pointermove', handleMove)
+      handle.addEventListener('pointerup', handleEnd)
+      handle.addEventListener('pointercancel', handleEnd)
+      setResizing(true)
+    },
+    [update],
+  )
 
   const handleResizeKeyDown = useCallback(
     (event: React.KeyboardEvent<HTMLElement>) => {
@@ -126,7 +131,7 @@ export function useSidebarWidth() {
         ArrowLeft: widthRef.current - keyboardStep,
         ArrowRight: widthRef.current + keyboardStep,
         End: viewportMaxWidth(),
-        Home: minWidth,
+        Home: minSidebarWidth,
       }
       const next = steps[event.key]
 
@@ -140,12 +145,12 @@ export function useSidebarWidth() {
     [store],
   )
 
-  const resetWidth = useCallback(() => store(defaultWidth), [store])
+  const resetWidth = useCallback(() => store(defaultSidebarWidth), [store])
 
   return {
     handleResizeKeyDown,
     maxWidth,
-    minWidth,
+    minWidth: minSidebarWidth,
     resetWidth,
     resizing,
     sidebarRef,
