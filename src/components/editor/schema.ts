@@ -3,6 +3,7 @@ import { withMultiColumn } from '@blocknote/xl-multi-column'
 
 import { createCalloutBlock } from './callout-block'
 import { createDatabaseBlock } from './database-block'
+import { createEmbedBlock } from './embed-block'
 
 export const leafSchema = withMultiColumn(
   BlockNoteSchema.create({
@@ -10,6 +11,7 @@ export const leafSchema = withMultiColumn(
       ...defaultBlockSpecs,
       callout: createCalloutBlock(),
       database: createDatabaseBlock(),
+      embed: createEmbedBlock(),
     },
   }),
 )

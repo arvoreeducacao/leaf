@@ -1,3 +1,4 @@
+import { isEmbeddableUrl } from '@/components/editor/embed-providers'
 import type { NotionBlock, NotionRichText } from '@/lib/notion/api'
 import { fileUrl, plainText } from '@/lib/notion/api'
 import { notionIdFromLink } from '@/lib/notion/link'
@@ -37,6 +38,7 @@ const blockColors = new Set([
 
 const childlessTypes = new Set([
   'table',
+  'embed',
   'divider',
   'codeBlock',
   'image',
@@ -446,6 +448,10 @@ function convertNode(
       }
 
       const caption = captionText(content)
+
+      if (isEmbeddableUrl(url)) {
+        return withChildren({ props: { caption, url }, type: 'embed' })
+      }
 
       return withChildren(linkParagraph(url, caption.length > 0 ? caption : url))
     }
