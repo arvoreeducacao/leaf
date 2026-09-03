@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
+import { DocumentIcon } from '@/components/app/document-icon'
 import { DocumentRowMenu } from '@/components/app/document-row-menu'
 import {
   sidebarEmpty,
@@ -10,7 +11,6 @@ import {
   sidebarRow,
   sidebarRowActive,
 } from '@/components/app/sidebar-styles'
-import { PageIcon } from '@/components/icons/outline'
 import type { DocumentSummary } from '@/lib/documents'
 import { cn } from '@/shared/utils'
 
@@ -52,7 +52,11 @@ export function DocumentList({
               title={document.title}
             >
               <span className="flex size-5 shrink-0 items-center justify-center">
-                <PageIcon aria-hidden="true" className={sidebarIcon} />
+                <DocumentIcon
+                  className={sidebarIcon}
+                  icon={document.icon}
+                  kind={document.kind === 'row' ? 'page' : document.kind}
+                />
               </span>
               <Link
                 aria-current={active ? 'page' : undefined}

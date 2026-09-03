@@ -21,6 +21,7 @@ import { ChevronRightIcon, PeopleIcon } from '@/components/icons/outline'
 import { ShareButton } from '@/components/sharing/share-button'
 import { ButtonIcon } from '@/components/ui/button-icon'
 import { renameDocument } from '@/lib/document-actions'
+import { readDocumentIcon } from '@/lib/document-icon'
 import { cn } from '@/shared/utils'
 
 type Props = Readonly<{
@@ -68,6 +69,7 @@ export function DocumentHeader({
   const lastFromServer = useRef(title)
   const loadedFor = useRef(documentId)
   const fieldRef = useRef<HTMLTextAreaElement>(null)
+  const hasIcon = readDocumentIcon(icon) !== null
 
   const fitToContent = useCallback(() => {
     const field = fieldRef.current
@@ -206,7 +208,7 @@ export function DocumentHeader({
           wide ? 'tablet:px-24' : 'tablet:px-[54px]',
         )}
       >
-        {icon && !wide ? (
+        {hasIcon && !wide ? (
           <div
             className={cn(
               'relative z-10 mb-2 w-fit',
@@ -228,7 +230,7 @@ export function DocumentHeader({
         ) : null}
 
         <div className={wide ? 'flex items-center gap-1.5' : undefined}>
-        {icon && wide ? (
+        {hasIcon && wide ? (
           <DocumentIcon
             className="size-7 text-[26px]"
             icon={icon}
