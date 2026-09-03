@@ -528,6 +528,14 @@ input:-webkit-autofill:focus {
   transition: background-color 5000s ease-in-out 0s;
 }
 
+.leaf-sidebar {
+  transition: margin-left 220ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.leaf-sidebar[data-resizing='true'] {
+  transition: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
