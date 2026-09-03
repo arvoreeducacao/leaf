@@ -2,7 +2,11 @@ import type { PartialBlock } from '@blocknote/core'
 import { ServerBlockNoteEditor } from '@blocknote/server-util'
 
 import { leafServerSchema } from '@/components/editor/server-schema'
-import { sanitizeBlocks, sanitizeMarkdown } from '@/lib/markdown/sanitize'
+import {
+  sanitizeBlocks,
+  sanitizeHtml,
+  sanitizeMarkdown,
+} from '@/lib/markdown/sanitize'
 
 let serverEditor: ServerBlockNoteEditor<
   typeof leafServerSchema.blockSchema,
@@ -97,6 +101,22 @@ export async function markdownToBlocks(
 
 export async function markdownToContent(markdown: string): Promise<string> {
   return JSON.stringify(await markdownToBlocks(markdown))
+}
+
+export async function htmlToBlocks(html: string): Promise<Array<PartialBlock>> {
+  const safe = sanitizeHtml(html)
+
+  if (safe.trim().length === 0) {
+    return []
+  }
+
+  const blocks = await getServerEditor().tryParseHTMLToBlocks(safe)
+
+  return sanitizeBlocks(blocks) as Array<PartialBlock>
+}
+
+export async function htmlToContent(html: string): Promise<string> {
+  return JSON.stringify(await htmlToBlocks(html))
 }
 
 export async function contentToMarkdown(

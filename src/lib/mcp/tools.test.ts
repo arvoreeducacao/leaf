@@ -247,6 +247,46 @@ describe('create_document', () => {
       'write_disabled',
     )
   })
+
+  it('cria a página a partir de uma página de HTML, sem o script e sem o desenho', async () => {
+    const result = await createDocumentTool(contextFor(member), {
+      title: 'Artefato migrado',
+      html: [
+        '<style>body{color:red}</style>',
+        '<script>fetch("https://example.com")</script>',
+        '<h1>Artefato migrado</h1>',
+        '<p>O texto <b>sobrevive</b>.</p>',
+        '<svg viewBox="0 0 10 10"><text>o desenho</text></svg>',
+        '<figcaption>a legenda sobrevive</figcaption>',
+      ].join('\n'),
+    })
+
+    const created = await db.query.documents.findFirst({ where: eq(documents.id, result.id) })
+
+    expect(created?.content).toContain('sobrevive')
+    expect(created?.content).toContain('a legenda sobrevive')
+    expect(created?.content).not.toContain('o desenho')
+    expect(created?.content).not.toContain('fetch(')
+    expect(created?.content).not.toContain('color:red')
+  })
+
+  it('recusa markdown e html na mesma chamada, em vez de escolher um', async () => {
+    await expectToolError(
+      createDocumentTool(contextFor(member), {
+        title: 'Os dois',
+        markdown: 'texto',
+        html: '<p>texto</p>',
+      }),
+      'invalid_argument',
+    )
+  })
+
+  it('cria uma página vazia quando não vem corpo nenhum', async () => {
+    const result = await createDocumentTool(contextFor(member), { title: 'Só o título' })
+    const created = await db.query.documents.findFirst({ where: eq(documents.id, result.id) })
+
+    expect(created?.content).toBeNull()
+  })
 })
 
 describe('update_document', () => {
@@ -302,6 +342,27 @@ describe('update_document', () => {
     await expectToolError(
       updateDocumentTool(contextFor(owner, readScopes), { documentId: 'doc-private', markdown: 'x' }),
       'write_disabled',
+    )
+  })
+
+  it('substitui o corpo por uma página de HTML', async () => {
+    await updateDocumentTool(contextFor(owner), {
+      documentId: 'doc-private',
+      html: '<h2>Migrado</h2><p>O texto sobrevive.</p><svg><text>o desenho</text></svg>',
+      mode: 'replace',
+    })
+
+    const updated = await db.query.documents.findFirst({ where: eq(documents.id, 'doc-private') })
+
+    expect(updated?.content).toContain('O texto sobrevive.')
+    expect(updated?.content).not.toContain('o desenho')
+    expect(updated?.content).not.toContain('Segredo')
+  })
+
+  it('recusa uma chamada sem markdown e sem html', async () => {
+    await expectToolError(
+      updateDocumentTool(contextFor(owner), { documentId: 'doc-private' }),
+      'invalid_argument',
     )
   })
 })

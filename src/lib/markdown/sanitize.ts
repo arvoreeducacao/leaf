@@ -125,6 +125,10 @@ function splitByCodeFences(markdown: string) {
   return segments
 }
 
+export function sanitizeHtml(html: string): string {
+  return stripUnsafeMarkup(typeof html === 'string' ? html : '')
+}
+
 function sanitizeProse(text: string): string {
   const spans: Array<string> = []
 
@@ -134,7 +138,14 @@ function sanitizeProse(text: string): string {
     return `${placeholderOpen}${spans.length - 1}${placeholderClose}`
   })
 
-  const cleaned = withPlaceholders
+  return stripUnsafeMarkup(withPlaceholders).replace(
+    placeholderPattern,
+    (_, index: string) => spans[Number(index)],
+  )
+}
+
+function stripUnsafeMarkup(text: string): string {
+  return text
     .replace(
       new RegExp(
         `<\\s*(${strippableElements})\\b[\\s\\S]*?<\\s*/\\s*\\1\\s*>`,
@@ -153,9 +164,4 @@ function sanitizeProse(text: string): string {
         return sanitizeUrl(value).length > 0 ? match : `${prefix}""`
       },
     )
-
-  return cleaned.replace(
-    placeholderPattern,
-    (_, index: string) => spans[Number(index)],
-  )
 }

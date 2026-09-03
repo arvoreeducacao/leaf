@@ -7,6 +7,8 @@ import {
   contentToMarkdown,
   documentToMarkdownFile,
   fixExportedHTML,
+  htmlToBlocks,
+  htmlToContent,
   markdownToContent,
   parseContentBlocks,
 } from '@/lib/markdown/convert'
@@ -412,5 +414,69 @@ describe('title in the exported file', () => {
     expect(documentToMarkdownFile('Lesson plan', body, blocks)).toContain(
       '# Lesson plan',
     )
+  })
+})
+
+describe('htmlToBlocks', () => {
+  const page = [
+    '<h1>Artefatos no Leaf</h1>',
+    '<p class="sub">O que um assento escreve <b>só</b> abre dentro do Hive.</p>',
+    '<ul><li>uma coisa</li><li>outra coisa</li></ul>',
+    '<blockquote>o motivo, citado</blockquote>',
+    '<table><tr><th>etapa</th></tr><tr><td>ligar o Hive</td></tr></table>',
+    '<a href="https://leaf.arvore.com.br/doc/1">o documento</a>',
+  ].join('\n')
+
+  it('keeps the text and the shape of a page written by hand', async () => {
+    const blocks = await htmlToBlocks(page)
+    const kinds = blocks.map((block) => block.type)
+    const text = JSON.stringify(blocks)
+
+    expect(kinds).toContain('heading')
+    expect(kinds).toContain('paragraph')
+    expect(kinds).toContain('bulletListItem')
+    expect(kinds).toContain('table')
+    expect(text).toContain('Artefatos no Leaf')
+    expect(text).toContain('outra coisa')
+    expect(text).toContain('https://leaf.arvore.com.br/doc/1')
+  })
+
+  it('drops the script, the style and the diagram, which is the price of the port', async () => {
+    const blocks = await htmlToBlocks(
+      [
+        '<style>body{color:red}</style>',
+        '<script>fetch("https://example.com")</script>',
+        '<figure><svg viewBox="0 0 10 10"><text>o desenho</text></svg>',
+        '<figcaption>a legenda sobrevive</figcaption></figure>',
+        '<p onclick="steal()">o texto sobrevive</p>',
+      ].join('\n'),
+    )
+    const text = JSON.stringify(blocks)
+
+    expect(text).not.toContain('color:red')
+    expect(text).not.toContain('fetch(')
+    expect(text).not.toContain('o desenho')
+    expect(text).not.toContain('onclick')
+    expect(text).toContain('a legenda sobrevive')
+    expect(text).toContain('o texto sobrevive')
+  })
+
+  it('refuses a link that is not http, https or mailto', async () => {
+    const blocks = await htmlToBlocks('<a href="javascript:alert(1)">clique</a>')
+
+    expect(JSON.stringify(blocks)).not.toContain('javascript:')
+  })
+
+  it('turns an empty page into no blocks, instead of one empty block', async () => {
+    expect(await htmlToBlocks('')).toEqual([])
+    expect(JSON.stringify(await htmlToContent(''))).toBe('"[]"')
+  })
+
+  it('comes back as markdown, so a migrated page can be read again', async () => {
+    const content = await htmlToContent(page)
+    const markdown = await contentToMarkdown(content)
+
+    expect(markdown).toContain('# Artefatos no Leaf')
+    expect(markdown).toContain('uma coisa')
   })
 })
