@@ -47,7 +47,20 @@ function log(...args) {
 }
 
 function documentIdFromPath(pathname) {
-  const room = decodeURIComponent(pathname.replace(/^\/+/, ''))
+  const segments = pathname.split('/').filter((segment) => segment.length > 0)
+  const last = segments.at(-1)
+
+  if (!last) {
+    return null
+  }
+
+  let room
+
+  try {
+    room = decodeURIComponent(last)
+  } catch {
+    return null
+  }
 
   if (!room.startsWith(roomPrefix)) {
     return null
