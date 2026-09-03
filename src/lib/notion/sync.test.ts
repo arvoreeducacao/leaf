@@ -62,12 +62,14 @@ type World = {
   childText: string
   dbInline: boolean
   dbDead?: boolean
+  rootIcon: { name: string; color: string } | null
 }
 
 function makeWorld(): World {
   return {
     childText: 'child body',
     dbInline: true,
+    rootIcon: { color: 'gray', name: 'alien-pixel' },
     editedAt: {
       [childId]: '2026-01-02T00:00:00.000Z',
       [databaseId]: '2026-01-03T00:00:00.000Z',
@@ -97,7 +99,7 @@ function makeClient(world: World): NotionClient {
     }),
     [norm(rootId)]: () => ({
       created_time: '2025-12-01T00:00:00.000Z',
-      icon: { icon: { color: 'gray', name: 'alien-pixel' }, type: 'icon' },
+      icon: world.rootIcon ? { icon: world.rootIcon, type: 'icon' } : undefined,
       id: rootId,
       last_edited_time: world.editedAt[rootId],
       properties: title('Reading plan'),
@@ -371,6 +373,60 @@ describe('resumable Notion sync', () => {
     expect(root?.content).not.toContain('"type":"database"')
     expect(root?.content).toContain(`/doc/${database?.id}`)
     expect(root?.content).toContain('Tasks')
+  })
+
+  it('repairs the icon of a page the rerun skips', async () => {
+    const world = makeWorld()
+
+    await run(world)
+
+    const before = await db.query.documents.findFirst({
+      where: eq(documents.title, 'Reading plan'),
+    })
+
+    expect(before?.icon).toBe(
+      'https://www.notion.so/icons/alien-pixel_gray.svg',
+    )
+
+    world.rootIcon = { color: 'blue', name: 'book' }
+
+    const summary = await run(world)
+
+    expect(summary.pages).toBe(0)
+
+    const after = await db.query.documents.findFirst({
+      where: eq(documents.title, 'Reading plan'),
+    })
+
+    expect(after?.icon).toBe('https://www.notion.so/icons/book_blue.svg')
+  })
+
+  it('gives an icon to a page that was imported without one', async () => {
+    const world = makeWorld()
+
+    world.rootIcon = null
+
+    await run(world)
+
+    const before = await db.query.documents.findFirst({
+      where: eq(documents.title, 'Reading plan'),
+    })
+
+    expect(before?.icon).toBeNull()
+
+    world.rootIcon = { color: 'gray', name: 'alien-pixel' }
+
+    const summary = await run(world)
+
+    expect(summary.pages).toBe(0)
+
+    const after = await db.query.documents.findFirst({
+      where: eq(documents.title, 'Reading plan'),
+    })
+
+    expect(after?.icon).toBe(
+      'https://www.notion.so/icons/alien-pixel_gray.svg',
+    )
   })
 
   it('skips everything on a rerun with no changes', async () => {
