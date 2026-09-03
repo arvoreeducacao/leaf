@@ -133,6 +133,35 @@ describe('sidebar tree cap', () => {
     expect(capped.hidden).toBe(3196)
   })
 
+  it('hides a document whose parent is not in the listing instead of promoting it', () => {
+    const nodes = buildDocumentTree([
+      {
+        id: 'orphan',
+        title: 'Subpage of a database row',
+        updatedAt: new Date(),
+        deletedAt: null,
+        parentId: 'row-outside-the-listing',
+        kind: 'page' as const,
+        icon: null,
+        shared: false,
+        owned: true,
+      },
+      {
+        id: 'root',
+        title: 'Root',
+        updatedAt: new Date(),
+        deletedAt: null,
+        parentId: null,
+        kind: 'page' as const,
+        icon: null,
+        shared: false,
+        owned: true,
+      },
+    ])
+
+    expect(nodes.map((node) => node.id)).toEqual(['root'])
+  })
+
   it('keeps the children of the roots it does keep', () => {
     const nodes = buildDocumentTree([
       {
