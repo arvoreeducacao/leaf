@@ -702,7 +702,25 @@ export async function* syncNotion(
       })
     }
 
+    const seededDatabases = new Set<string>()
+
     for (const [id, entry] of found) {
+      if (entry.parentType === 'database_id' && entry.parentId !== null) {
+        const owner = normalizeNotionId(entry.parentId)
+
+        if (!found.has(entry.parentId) && !seededDatabases.has(owner)) {
+          seededDatabases.add(owner)
+          deferredRoots.push({
+            id: entry.parentId,
+            kind: 'database',
+            parentDocId: null,
+            parentNotionId: null,
+          })
+        }
+
+        continue
+      }
+
       const item: QueueItem = {
         id,
         kind: entry.object === 'database' ? 'database' : 'page',
@@ -885,7 +903,8 @@ export async function* syncNotion(
           const rowEdited = stamp(row.last_edited_time)
           const rowMapping = mappings.get(rowKey)
           const unchanged =
-            rowMapping?.lastEditedAt &&
+            rowMapping?.kind === 'row' &&
+            rowMapping.lastEditedAt &&
             rowEdited &&
             rowMapping.lastEditedAt.getTime() >= rowEdited.getTime()
 
@@ -1086,7 +1105,13 @@ export async function* syncNotion(
         await importComments(item.id, documentId)
       }
 
-      await saveMapping(item.id, documentId, 'page', item.parentNotionId, edited)
+      await saveMapping(
+        item.id,
+        documentId,
+        mapping?.kind === 'row' ? 'row' : 'page',
+        item.parentNotionId,
+        edited,
+      )
       enqueueChildren(source.tree, documentId, item.id)
       written += 1
       yield {
