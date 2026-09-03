@@ -50,6 +50,7 @@ type Options = Readonly<{
   user: Readonly<{ id: string; name: string }>
   anonymousName: string
   fallbackContent: string | null
+  fallbackUpdatedAt: number | null
 }>
 
 export function resolveRealtimeUrl(
@@ -66,15 +67,22 @@ export function resolveRealtimeUrl(
   return `${protocol}//${location.hostname}:${port}`
 }
 
+export function snapshotUrl(documentId: string, since: number | null) {
+  const path = `/api/documents/${documentId}/snapshot`
+
+  return since === null ? path : `${path}?since=${since}`
+}
+
 export async function fetchServerSnapshot(
   documentId: string,
+  since: number | null = null,
   timeoutMs = snapshotTimeoutMs,
 ): Promise<ServerSnapshot | null> {
   const abort = new AbortController()
   const timeout = setTimeout(() => abort.abort(), timeoutMs)
 
   try {
-    const response = await fetch(`/api/documents/${documentId}/snapshot`, {
+    const response = await fetch(snapshotUrl(documentId, since), {
       cache: 'no-store',
       signal: abort.signal,
     })
@@ -105,6 +113,7 @@ export function useDocumentSession({
   user,
   anonymousName,
   fallbackContent,
+  fallbackUpdatedAt,
 }: Options) {
   const [phase, setPhase] = useState<SessionPhase>('loading')
   const [session, setSession] = useState<DocumentSession | null>(null)
@@ -115,8 +124,10 @@ export function useDocumentSession({
   const [conflict, setConflict] = useState(false)
   const [localOnly, setLocalOnly] = useState(false)
   const contentRef = useRef(fallbackContent)
+  const heldSinceRef = useRef(fallbackUpdatedAt)
 
   contentRef.current = fallbackContent
+  heldSinceRef.current = fallbackUpdatedAt
 
   useEffect(() => {
     const store = offlineStore()
@@ -349,7 +360,10 @@ export function useDocumentSession({
         return
       }
 
-      const snapshot = await fetchServerSnapshot(documentId)
+      const snapshot = await fetchServerSnapshot(
+        documentId,
+        heldSinceRef.current,
+      )
 
       if (disposed) {
         return
@@ -392,7 +406,7 @@ export function useDocumentSession({
       const pending = await readQueuedDocument(store, documentId)
       const local = await readLocalDocumentMeta(store, documentId)
       const snapshot = navigator.onLine
-        ? await fetchServerSnapshot(documentId)
+        ? await fetchServerSnapshot(documentId, heldSinceRef.current)
         : null
 
       if (disposed) {

@@ -6,7 +6,6 @@ import { useEffect, useState } from 'react'
 
 import { ArrowExpandIcon, DatabaseIcon } from '@/components/icons'
 import { Skeleton } from '@/components/ui/skeleton'
-import { readDatabase } from '@/lib/database-actions'
 import type { DatabaseSnapshot } from '@/lib/databases'
 
 import { DatabaseView } from './database-view'
@@ -15,6 +14,11 @@ type State =
   | Readonly<{ status: 'loading' }>
   | Readonly<{ status: 'missing' }>
   | Readonly<{ status: 'ready'; snapshot: DatabaseSnapshot; canEdit: boolean }>
+
+type DatabaseResponse = Readonly<{
+  snapshot: DatabaseSnapshot
+  canEdit: boolean
+}>
 
 type Props = Readonly<{ databaseId: string }>
 
@@ -27,14 +31,20 @@ export default function DatabaseEmbed({ databaseId }: Props) {
 
     setState({ status: 'loading' })
 
-    readDatabase(databaseId)
-      .then((result) => {
+    const abort = new AbortController()
+
+    fetch(`/api/databases/${encodeURIComponent(databaseId)}`, {
+      cache: 'no-store',
+      signal: abort.signal,
+    })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((result: DatabaseResponse | null) => {
         if (!active) {
           return
         }
 
         setState(
-          result.ok
+          result
             ? {
                 status: 'ready',
                 snapshot: result.snapshot,
@@ -51,6 +61,7 @@ export default function DatabaseEmbed({ databaseId }: Props) {
 
     return () => {
       active = false
+      abort.abort()
     }
   }, [databaseId])
 

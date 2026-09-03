@@ -7,6 +7,7 @@ import { nextCookies } from 'better-auth/next-js'
 import { genericOAuth, jwt, oneTimeToken } from 'better-auth/plugins'
 import { eq } from 'drizzle-orm'
 import { headers } from 'next/headers'
+import { cache } from 'react'
 
 import { db } from '@/db'
 import * as schema from '@/db/schema'
@@ -270,6 +271,6 @@ export const auth = betterAuth({
 
 export type Session = typeof auth.$Infer.Session
 
-export async function getSession() {
+export const getSession = cache(async () => {
   return auth.api.getSession({ headers: await headers() })
-}
+})

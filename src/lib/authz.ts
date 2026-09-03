@@ -1,4 +1,5 @@
 import { and, eq, isNull } from 'drizzle-orm'
+import { cache } from 'react'
 
 import { db } from '@/db'
 import {
@@ -9,6 +10,7 @@ import {
   teamspaces,
 } from '@/db/schema'
 import type { Document } from '@/db/schema'
+import { getDocument } from '@/lib/documents'
 
 export type AccessLevel = 'owner' | 'editor' | 'commenter' | 'viewer'
 
@@ -76,15 +78,13 @@ export async function getTeamspaceGrant(
   return orgMembership ? 'viewer' : null
 }
 
-export async function getDocumentAccess(
+export const getDocumentAccess = cache(async function resolveDocumentAccess(
   docId: string,
   session: SessionLike,
 ): Promise<AccessLevel | null> {
-  const document = await db.query.documents.findFirst({
-    where: and(eq(documents.id, docId), isNull(documents.deletedAt)),
-  })
+  const document = await getDocument(docId)
 
-  if (!document) {
+  if (!document || document.deletedAt !== null) {
     return null
   }
 
@@ -133,7 +133,7 @@ export async function getDocumentAccess(
   }
 
   return document.orgAccess
-}
+})
 
 export async function getTrashedDocumentAccess(
   docId: string,
