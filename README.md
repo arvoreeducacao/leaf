@@ -134,6 +134,8 @@ O app fala S3 e SQL por configuração — publicar é trocar env:
 | `GITHUB_TOKEN` / `LEAF_GITHUB_ORG` / `LEAF_GITHUB_REPOS` | ligam a base de pull requests do GitHub. Sem o token ou com a lista de repos vazia a base fica desligada e a rota responde 412. `LEAF_GITHUB_ORG` tem padrão `arvoreeducacao` e serve para qualificar nome curto (`leaf` vira `arvoreeducacao/leaf`); a lista aceita as duas formas, separadas por vírgula |
 | `LEAF_GITHUB_SYNC_SECRET` / `LEAF_GITHUB_SYNC_OWNER` | deixam o CronJob disparar a sincronização sem sessão: o segredo (mínimo de 16 caracteres) vai no `Authorization: Bearer` e o email diz de quem é a conta dona da base. Faltando qualquer um dos dois, só sessão de pessoa dispara a rota |
 | `UNSPLASH_ACCESS_KEY` | liga a aba Unsplash do seletor de capa; sem ela, a aba explica que a busca não está configurada. A chave fica no servidor: o navegador fala com `/api/unsplash`, que exige sessão e limita 30 buscas por minuto por pessoa. Apps novos no Unsplash começam em modo demo (50 chamadas/hora) — produção precisa pedir o upgrade no painel deles |
+| `LEAF_MCP_ENABLED` | liga o servidor MCP remoto e o authorization server OAuth 2.1 embutido (`/api/mcp`, `/api/auth/oauth2/*`, `/.well-known/*`). Ausente = ligado fora de produção e **desligado em produção**; desligado, tudo isso responde 404 e a tela de aplicativos conectados some |
+| `LEAF_MCP_WRITE` | com o MCP ligado, permite as tools de escrita (`create_document`, `update_document`). Ausente = ligado; `0`/`false`/`off` desliga a escrita por completo, mesmo para tokens com o escopo `leaf:write` |
 
 **Acesso restrito**: com `LEAF_ALLOWED_EMAIL_DOMAINS` setada, a validação acontece
 no servidor em quatro pontos — hook `before` do better-auth em `/sign-up/email` e
@@ -188,6 +190,63 @@ better-auth com os endpoints explícitos `GET {issuer}/oauth2/authorize` e
 `id_token` (`sub` vira o id externo da conta, `email` vira o email; como o IdP
 não manda `name`, o nome nasce da parte local do email). Quem escolhe o método
 de autenticação (Google incluído) é a tela do próprio IdP, não o Leaf.
+
+## MCP
+
+O Leaf expõe um servidor [MCP](https://modelcontextprotocol.io) remoto em
+`${BETTER_AUTH_URL}/api/mcp` (transporte Streamable HTTP, stateless) protegido
+por OAuth 2.1 — e o próprio Leaf é o authorization server, via o plugin
+`@better-auth/oauth-provider` mais o plugin `jwt` do better-auth. Nenhum serviço
+externo participa: qualquer instalação do Leaf tem o MCP funcionando só com o
+que vem neste repositório e a flag `LEAF_MCP_ENABLED`.
+
+Como funciona, em ordem: o cliente MCP recebe `401` com
+`WWW-Authenticate: Bearer resource_metadata=...`, lê
+`/.well-known/oauth-protected-resource` e `/.well-known/oauth-authorization-server`,
+registra-se sozinho em `/api/auth/oauth2/register` (registro dinâmico, sempre
+client **público** com PKCE S256; redirect só `https`, ou `http` em
+`localhost`/`127.0.0.1`/`[::1]` para clientes de linha de comando), manda a
+pessoa para o login do Leaf e para a tela de consentimento em `/oauth/consent`,
+e troca o código por um access token JWT de 15 minutos (`aud` =
+`${BETTER_AUTH_URL}/api/mcp`, assinado com a chave EdDSA guardada na tabela
+`jwks`) mais um refresh token rotativo. Cada chamada de tool roda em nome da
+pessoa que autorizou, com a mesma ACL da interface (`src/lib/authz.ts`): quem
+não enxerga um documento no Leaf também não enxerga pelo MCP.
+
+Escopos: `leaf:read` (busca, leitura de documentos, bases, comentários e
+organizações), `leaf:write` (`create_document`, `update_document`; sem o escopo
+as tools nem são registradas) e `offline_access` (refresh token). A pessoa vê e
+revoga os aplicativos autorizados em **Aplicativos conectados**, no menu da
+conta (`/connected-apps`); revogar apaga o consentimento e invalida os refresh
+tokens daquele cliente.
+
+Tools: `search_documents`, `get_document`, `list_documents`,
+`list_organizations`, `get_database`, `list_comments`, `create_document`,
+`update_document` (append/replace, recusa escrever se a página foi editada nos
+últimos 15 s — provavelmente há uma sala de colaboração aberta — e usa guard
+otimista no `updated_at`). Nada de apagar, compartilhar, link público ou
+membros. Limites: body até 1 MB, 60 chamadas/min por pessoa, até 50 resultados
+por chamada, markdown até 400 mil caracteres.
+
+Como conectar (troque `https://leaf.exemplo.org` pela `BETTER_AUTH_URL` da sua
+instalação):
+
+- **Claude (web e desktop)**: Configurações → Conectores → Adicionar conector
+  personalizado → URL `https://leaf.exemplo.org/api/mcp`. O Claude registra o
+  client e abre a tela de login e consentimento do Leaf.
+- **Claude Code**: `claude mcp add --transport http leaf https://leaf.exemplo.org/api/mcp`
+  e depois `/mcp` dentro do Claude Code para autenticar (o callback é em
+  `http://localhost`, por isso o loopback fica liberado no registro).
+- **Cursor**: em `.cursor/mcp.json` (ou nas configurações de MCP),
+  `{ "mcpServers": { "leaf": { "url": "https://leaf.exemplo.org/api/mcp" } } }`;
+  o Cursor abre o fluxo OAuth na primeira chamada.
+- **Inspector**: `npx @modelcontextprotocol/inspector` → transporte Streamable
+  HTTP → URL acima → Connect. Para testar localmente use
+  `BETTER_AUTH_URL=http://localhost:3000` e o `pnpm dev`.
+
+O modo antigo do pacote `@arvoretech/leaf-mcp` (stdio falando direto com o
+MySQL) fica só para desenvolvimento contra um banco de dev; em produção o
+caminho é este endpoint.
 
 **Banco**: o database `leaf` está provisionado no cluster Aurora MySQL da Árvore (`arvore-cluster`, MySQL 8.0.42), com usuário dedicado no Secrets Manager (`prd/leaf/database`). As migrações de `drizzle/mysql` rodam no boot do app; o `next build` **não** toca no banco. As sete migrações antigas de SQLite ficaram arquivadas em `drizzle/sqlite-legacy/` e não são mais executadas.
 

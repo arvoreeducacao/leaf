@@ -496,6 +496,230 @@ export type TeamspaceRole = TeamspaceMember['role']
 export type DocumentVersion = typeof documentVersions.$inferSelect
 export type Comment = typeof comments.$inferSelect
 export type NotionConnection = typeof notionConnections.$inferSelect
+
+const OAUTH_CLIENT_ID = 64
+
+export const jwks = mysqlTable('jwks', {
+  id: varchar('id', { length: AUTH_ID }).primaryKey(),
+  publicKey: text('public_key').notNull(),
+  privateKey: text('private_key').notNull(),
+  alg: varchar('alg', { length: 16 }),
+  crv: varchar('crv', { length: 16 }),
+  createdAt: datetime('created_at', { mode: 'date', fsp: 3 }).notNull(),
+  expiresAt: datetime('expires_at', { mode: 'date', fsp: 3 }),
+})
+
+export const oauthClients = mysqlTable(
+  'oauth_clients',
+  {
+    id: varchar('id', { length: AUTH_ID }).primaryKey(),
+    clientId: varchar('client_id', { length: OAUTH_CLIENT_ID })
+      .notNull()
+      .unique(),
+    clientSecret: varchar('client_secret', { length: 255 }),
+    clientDiscoveryId: varchar('client_discovery_id', { length: 64 }),
+    disabled: boolean('disabled').notNull().default(false),
+    skipConsent: boolean('skip_consent'),
+    enableEndSession: boolean('enable_end_session'),
+    subjectType: varchar('subject_type', { length: 16 }),
+    scopes: text('scopes'),
+    clientCredentialsScopes: text('client_credentials_scopes'),
+    userId: varchar('user_id', { length: AUTH_ID }).references(
+      () => user.id,
+      { onDelete: 'set null' },
+    ),
+    referenceId: varchar('reference_id', { length: 64 }),
+    name: varchar('name', { length: 255 }),
+    uri: varchar('uri', { length: 2048 }),
+    icon: varchar('icon', { length: 2048 }),
+    contacts: text('contacts'),
+    tos: varchar('tos', { length: 2048 }),
+    policy: varchar('policy', { length: 2048 }),
+    softwareId: varchar('software_id', { length: 255 }),
+    softwareVersion: varchar('software_version', { length: 64 }),
+    softwareStatement: text('software_statement'),
+    redirectUris: text('redirect_uris').notNull(),
+    postLogoutRedirectUris: text('post_logout_redirect_uris'),
+    backchannelLogoutUri: varchar('backchannel_logout_uri', { length: 2048 }),
+    backchannelLogoutSessionRequired: boolean(
+      'backchannel_logout_session_required',
+    ),
+    tokenEndpointAuthMethod: varchar('token_endpoint_auth_method', {
+      length: 32,
+    }),
+    applicationType: varchar('application_type', { length: 16 }),
+    jwks: text('jwks'),
+    jwksUri: varchar('jwks_uri', { length: 2048 }),
+    grantTypes: text('grant_types'),
+    responseTypes: text('response_types'),
+    requirePKCE: boolean('require_pkce'),
+    dpopBoundAccessTokens: boolean('dpop_bound_access_tokens')
+      .notNull()
+      .default(false),
+    metadata: text('metadata'),
+    createdAt: datetime('created_at', { mode: 'date', fsp: 3 }),
+    updatedAt: datetime('updated_at', { mode: 'date', fsp: 3 }),
+  },
+  (table) => [index('oauth_clients_user_id_idx').on(table.userId)],
+)
+
+export const oauthResources = mysqlTable('oauth_resources', {
+  id: varchar('id', { length: AUTH_ID }).primaryKey(),
+  identifier: varchar('identifier', { length: 512 }).notNull().unique(),
+  name: varchar('name', { length: 255 }).notNull(),
+  accessTokenTtl: int('access_token_ttl'),
+  refreshTokenTtl: int('refresh_token_ttl'),
+  signingAlgorithm: varchar('signing_algorithm', { length: 16 }),
+  signingKeyId: varchar('signing_key_id', { length: AUTH_ID }),
+  allowedScopes: text('allowed_scopes'),
+  customClaims: text('custom_claims'),
+  dpopBoundAccessTokensRequired: boolean('dpop_bound_access_tokens_required')
+    .notNull()
+    .default(false),
+  disabled: boolean('disabled').notNull().default(false),
+  policyVersion: int('policy_version').notNull().default(1),
+  metadata: text('metadata'),
+  createdAt: datetime('created_at', { mode: 'date', fsp: 3 }),
+  updatedAt: datetime('updated_at', { mode: 'date', fsp: 3 }),
+})
+
+export const oauthClientResources = mysqlTable(
+  'oauth_client_resources',
+  {
+    id: varchar('id', { length: AUTH_ID }).primaryKey(),
+    clientId: varchar('client_id', { length: OAUTH_CLIENT_ID })
+      .notNull()
+      .references(() => oauthClients.clientId, { onDelete: 'cascade' }),
+    resourceId: varchar('resource_id', { length: 512 })
+      .notNull()
+      .references(() => oauthResources.identifier, { onDelete: 'cascade' }),
+    metadata: text('metadata'),
+    createdAt: datetime('created_at', { mode: 'date', fsp: 3 }),
+  },
+  (table) => [
+    uniqueIndex('oauth_client_resources_client_resource_unq').on(
+      table.clientId,
+      table.resourceId,
+    ),
+  ],
+)
+
+export const oauthRefreshTokens = mysqlTable(
+  'oauth_refresh_tokens',
+  {
+    id: varchar('id', { length: AUTH_ID }).primaryKey(),
+    token: varchar('token', { length: 255 }).notNull().unique(),
+    clientId: varchar('client_id', { length: OAUTH_CLIENT_ID })
+      .notNull()
+      .references(() => oauthClients.clientId, { onDelete: 'cascade' }),
+    sessionId: varchar('session_id', { length: AUTH_ID }).references(
+      () => session.id,
+      { onDelete: 'set null' },
+    ),
+    userId: varchar('user_id', { length: AUTH_ID })
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    referenceId: varchar('reference_id', { length: 64 }),
+    authorizationCodeId: varchar('authorization_code_id', { length: 255 }),
+    resources: text('resources'),
+    requestedUserInfoClaims: text('requested_user_info_claims'),
+    scopes: text('scopes').notNull(),
+    confirmation: text('confirmation'),
+    rotationReplayResponse: text('rotation_replay_response'),
+    rotationReplayExpiresAt: datetime('rotation_replay_expires_at', {
+      mode: 'date',
+      fsp: 3,
+    }),
+    rotatedAt: datetime('rotated_at', { mode: 'date', fsp: 3 }),
+    authTime: datetime('auth_time', { mode: 'date', fsp: 3 }),
+    revoked: datetime('revoked', { mode: 'date', fsp: 3 }),
+    expiresAt: datetime('expires_at', { mode: 'date', fsp: 3 }),
+    createdAt: datetime('created_at', { mode: 'date', fsp: 3 }),
+  },
+  (table) => [
+    index('oauth_refresh_tokens_client_id_idx').on(table.clientId),
+    index('oauth_refresh_tokens_user_id_idx').on(table.userId),
+    index('oauth_refresh_tokens_session_id_idx').on(table.sessionId),
+    index('oauth_refresh_tokens_authorization_code_id_idx').on(
+      table.authorizationCodeId,
+    ),
+  ],
+)
+
+export const oauthAccessTokens = mysqlTable(
+  'oauth_access_tokens',
+  {
+    id: varchar('id', { length: AUTH_ID }).primaryKey(),
+    token: varchar('token', { length: 255 }).unique(),
+    clientId: varchar('client_id', { length: OAUTH_CLIENT_ID })
+      .notNull()
+      .references(() => oauthClients.clientId, { onDelete: 'cascade' }),
+    sessionId: varchar('session_id', { length: AUTH_ID }).references(
+      () => session.id,
+      { onDelete: 'set null' },
+    ),
+    userId: varchar('user_id', { length: AUTH_ID }).references(
+      () => user.id,
+      { onDelete: 'cascade' },
+    ),
+    referenceId: varchar('reference_id', { length: 64 }),
+    authorizationCodeId: varchar('authorization_code_id', { length: 255 }),
+    refreshId: varchar('refresh_id', { length: AUTH_ID }).references(
+      () => oauthRefreshTokens.id,
+      { onDelete: 'set null' },
+    ),
+    resources: text('resources'),
+    requestedUserInfoClaims: text('requested_user_info_claims'),
+    scopes: text('scopes').notNull(),
+    confirmation: text('confirmation'),
+    revoked: datetime('revoked', { mode: 'date', fsp: 3 }),
+    expiresAt: datetime('expires_at', { mode: 'date', fsp: 3 }),
+    createdAt: datetime('created_at', { mode: 'date', fsp: 3 }),
+  },
+  (table) => [
+    index('oauth_access_tokens_client_id_idx').on(table.clientId),
+    index('oauth_access_tokens_user_id_idx').on(table.userId),
+    index('oauth_access_tokens_session_id_idx').on(table.sessionId),
+    index('oauth_access_tokens_authorization_code_id_idx').on(
+      table.authorizationCodeId,
+    ),
+    index('oauth_access_tokens_refresh_id_idx').on(table.refreshId),
+  ],
+)
+
+export const oauthConsents = mysqlTable(
+  'oauth_consents',
+  {
+    id: varchar('id', { length: AUTH_ID }).primaryKey(),
+    clientId: varchar('client_id', { length: OAUTH_CLIENT_ID })
+      .notNull()
+      .references(() => oauthClients.clientId, { onDelete: 'cascade' }),
+    userId: varchar('user_id', { length: AUTH_ID }).references(
+      () => user.id,
+      { onDelete: 'cascade' },
+    ),
+    referenceId: varchar('reference_id', { length: 64 }),
+    resources: text('resources'),
+    requestedUserInfoClaims: text('requested_user_info_claims'),
+    scopes: text('scopes').notNull(),
+    createdAt: datetime('created_at', { mode: 'date', fsp: 3 }),
+    updatedAt: datetime('updated_at', { mode: 'date', fsp: 3 }),
+  },
+  (table) => [
+    index('oauth_consents_client_id_idx').on(table.clientId),
+    index('oauth_consents_user_id_idx').on(table.userId),
+  ],
+)
+
+export const oauthClientAssertions = mysqlTable('oauth_client_assertions', {
+  id: varchar('id', { length: 128 }).primaryKey(),
+  expiresAt: datetime('expires_at', { mode: 'date', fsp: 3 }).notNull(),
+})
+
+export type Jwk = typeof jwks.$inferSelect
+export type OAuthClient = typeof oauthClients.$inferSelect
+export type OAuthConsent = typeof oauthConsents.$inferSelect
+
 export type GithubDocument = typeof githubDocuments.$inferSelect
 export type GithubDocumentKind = GithubDocument['kind']
 export type SidebarPreference = typeof sidebarPreferences.$inferSelect
