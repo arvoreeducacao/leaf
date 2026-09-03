@@ -59,6 +59,7 @@ const messages: NotionImportMessages = {
 
 type World = {
   editedAt: Record<string, string>
+  search?: Array<Record<string, unknown>>
   childText: string
   dbInline: boolean
   dbDead?: boolean
@@ -232,6 +233,14 @@ function makeClient(world: World): NotionClient {
       }
     },
     search: async function* () {
+      if (world.search) {
+        for (const result of world.search) {
+          yield result as never
+        }
+
+        return
+      }
+
       yield { id: rootId, object: 'page', parent: { type: 'workspace' } }
       yield {
         id: childId,
@@ -293,6 +302,47 @@ beforeEach(async () => {
 })
 
 describe('resumable Notion sync', () => {
+  it('keeps database rows as rows when the search lists them before their database', async () => {
+    const world = makeWorld()
+
+    world.search = [
+      {
+        id: rowOneId,
+        object: 'page',
+        parent: { database_id: databaseId, type: 'database_id' },
+      },
+      {
+        id: rowTwoId,
+        object: 'page',
+        parent: { database_id: databaseId, type: 'database_id' },
+      },
+    ]
+
+    await run(world, 'workspace')
+
+    const rows = await db
+      .select()
+      .from(documents)
+      .where(eq(documents.kind, 'row'))
+
+    expect(rows).toHaveLength(2)
+
+    const properties = await db
+      .select()
+      .from(databaseProperties)
+      .where(eq(databaseProperties.name, 'Status'))
+    const statusId = properties[0].id
+    const first = rows.find((row) => row.title === 'First task')
+
+    expect(parseValues(first?.properties ?? null)[statusId]).toBe('opt-done')
+
+    const mappings = await db.select().from(notionDocuments)
+
+    expect(
+      mappings.filter((mapping) => mapping.kind === 'row'),
+    ).toHaveLength(2)
+  })
+
   it('imports the tree, resolves links and snapshots relations', async () => {
     const summary = await run(makeWorld())
 
