@@ -275,19 +275,20 @@ export async function* syncNotion(
   }
 
   const inlineFlags = new Map<string, boolean>()
+  const deadDatabases = new Set<string>()
 
   async function hydrateInlineFlags(nodes: Array<BlockNode>) {
     for (const node of nodes) {
       if (node.block.type === 'child_database') {
         const key = normalizeNotionId(node.block.id)
 
-        if (!inlineFlags.has(key)) {
+        if (!inlineFlags.has(key) && !deadDatabases.has(key)) {
           try {
             const database = await client.database(node.block.id)
 
             inlineFlags.set(key, database.is_inline === true)
           } catch {
-            inlineFlags.set(key, true)
+            deadDatabases.add(key)
           }
         }
       }
@@ -298,6 +299,7 @@ export async function* syncNotion(
 
   const convertContext = {
     assetPath: registerAsset,
+    isDeadDatabase: (id: string) => deadDatabases.has(normalizeNotionId(id)),
     isInlineDatabase: (id: string) =>
       inlineFlags.get(normalizeNotionId(id)) ?? true,
     pageRef: (id: string) => `${placeholderPrefix}${normalizeNotionId(id)}`,

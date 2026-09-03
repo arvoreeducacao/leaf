@@ -61,6 +61,7 @@ type World = {
   editedAt: Record<string, string>
   childText: string
   dbInline: boolean
+  dbDead?: boolean
 }
 
 function makeWorld(): World {
@@ -173,7 +174,7 @@ function makeClient(world: World): NotionClient {
     },
     comments: async function* () {},
     database: async (id: string) => {
-      if (norm(id) !== norm(databaseId)) {
+      if (world.dbDead || norm(id) !== norm(databaseId)) {
         throw new Error(`no database ${id}`)
       }
 
@@ -330,6 +331,23 @@ describe('resumable Notion sync', () => {
     const mappings = await db.select().from(notionDocuments)
 
     expect(mappings).toHaveLength(5)
+  })
+
+  it('renders an inaccessible child database as a Notion link', async () => {
+    const world = makeWorld()
+
+    world.dbDead = true
+
+    await run(world)
+
+    const root = await db.query.documents.findFirst({
+      where: eq(documents.title, 'Reading plan'),
+    })
+
+    expect(root?.content).not.toContain('"type":"database"')
+    expect(root?.content).not.toContain('"databaseId":""')
+    expect(root?.content).toContain('https://www.notion.so/')
+    expect(root?.content).toContain('Tasks')
   })
 
   it('renders a full-page child database as a link, not an embed', async () => {
