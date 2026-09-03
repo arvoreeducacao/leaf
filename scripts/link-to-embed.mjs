@@ -1,6 +1,7 @@
 import mysql from 'mysql2/promise'
 
 import { convertLegacyLinkBlocks } from '../src/components/editor/embed-legacy-links.ts'
+import { isEmbeddableUrl } from '../src/components/editor/embed-providers.ts'
 
 const apply = process.argv.includes('--apply')
 const batchSize = 200
@@ -35,7 +36,7 @@ async function main() {
         continue
       }
 
-      const result = convertLegacyLinkBlocks(parsed)
+      const result = convertLegacyLinkBlocks(parsed, isEmbeddableUrl)
 
       if (result.changed === 0) {
         continue

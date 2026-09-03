@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { convertLegacyLinkBlocks } from './embed-legacy-links'
+import { isEmbeddableUrl } from './embed-providers'
 
 function linkParagraph(id: string, href: string) {
   return {
@@ -18,7 +19,7 @@ describe('convertLegacyLinkBlocks', () => {
   it('turns a paragraph that is only a figma link into an embed and keeps its id', () => {
     const result = convertLegacyLinkBlocks([
       linkParagraph('b1', 'https://www.figma.com/design/abc123XY/Leaf'),
-    ])
+    ], isEmbeddableUrl)
 
     expect(result.changed).toBe(1)
     expect(result.blocks[0]).toEqual({
@@ -40,7 +41,7 @@ describe('convertLegacyLinkBlocks', () => {
         props: {},
         type: 'paragraph',
       },
-    ])
+    ], isEmbeddableUrl)
 
     expect(result.changed).toBe(1)
     expect(result.blocks[0].type).toBe('embed')
@@ -62,7 +63,7 @@ describe('convertLegacyLinkBlocks', () => {
         props: {},
         type: 'paragraph',
       },
-    ])
+    ], isEmbeddableUrl)
 
     expect(result.changed).toBe(0)
     expect(result.blocks[0].type).toBe('paragraph')
@@ -71,7 +72,7 @@ describe('convertLegacyLinkBlocks', () => {
   it('leaves alone a link nothing can frame', () => {
     const result = convertLegacyLinkBlocks([
       linkParagraph('b4', 'https://arvore.com.br/relatorio'),
-    ])
+    ], isEmbeddableUrl)
 
     expect(result.changed).toBe(0)
   })
@@ -85,7 +86,7 @@ describe('convertLegacyLinkBlocks', () => {
         props: {},
         type: 'bulletListItem',
       },
-    ])
+    ], isEmbeddableUrl)
 
     expect(result.changed).toBe(1)
     expect(result.blocks[0].children?.[0].type).toBe('embed')
