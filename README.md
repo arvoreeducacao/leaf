@@ -131,6 +131,8 @@ O app fala S3 e SQL por configuração — publicar é trocar env:
 | `NOTION_CLIENT_ID` / `NOTION_CLIENT_SECRET` / `NOTION_REDIRECT_URI` | habilitam o import por link do Notion; sem elas o caminho fica desligado e o diálogo diz isso. Em produção o redirect é `https://leaf.arvore.com.br/api/notion/callback` |
 | `NOTION_API_VERSION` | versão da API do Notion no cabeçalho `Notion-Version` (padrão `2022-06-28`) |
 | `LEAF_EMBEDDING_MODEL` / `LEAF_EMBEDDING_DIMENSIONS` / `LEAF_EMBEDDING_BASE_URL` | busca semântica (opcionais; padrão `text-embedding-3-small` em 512 dimensões, na API da OpenAI). Quem liga a busca semântica é a `OPENAI_API_KEY`; a carga inicial dos trechos é o `node scripts/backfill-index.mjs` |
+| `GITHUB_TOKEN` / `LEAF_GITHUB_ORG` / `LEAF_GITHUB_REPOS` | ligam a base de pull requests do GitHub. Sem o token ou com a lista de repos vazia a base fica desligada e a rota responde 412. `LEAF_GITHUB_ORG` tem padrão `arvoreeducacao` e serve para qualificar nome curto (`leaf` vira `arvoreeducacao/leaf`); a lista aceita as duas formas, separadas por vírgula |
+| `LEAF_GITHUB_SYNC_SECRET` / `LEAF_GITHUB_SYNC_OWNER` | deixam o CronJob disparar a sincronização sem sessão: o segredo (mínimo de 16 caracteres) vai no `Authorization: Bearer` e o email diz de quem é a conta dona da base. Faltando qualquer um dos dois, só sessão de pessoa dispara a rota |
 | `UNSPLASH_ACCESS_KEY` | liga a aba Unsplash do seletor de capa; sem ela, a aba explica que a busca não está configurada. A chave fica no servidor: o navegador fala com `/api/unsplash`, que exige sessão e limita 30 buscas por minuto por pessoa. Apps novos no Unsplash começam em modo demo (50 chamadas/hora) — produção precisa pedir o upgrade no painel deles |
 
 **Acesso restrito**: com `LEAF_ALLOWED_EMAIL_DOMAINS` setada, a validação acontece
@@ -148,6 +150,31 @@ depois) e o redirect acima. As capacidades a marcar são **ler conteúdo**, **le
 comentários** (senão `GET /v1/comments` responde 403 e as threads não vêm) e
 **ler informação de usuário com email** (é o que casa o autor do comentário com a
 conta do Leaf). O token de cada pessoa fica em `notion_connections`.
+
+**Base de pull requests do GitHub**: é a versão nativa da coleção espelhada que
+o Kanban tinha no Notion — as *collections* do GitHub não saem pela API e ficaram
+de fora do import, então esta base olha só para frente, sem reconstruir histórico.
+`POST /api/sync/github` cria (ou atualiza) uma base `kind database` chamada
+*Pull requests do GitHub*, com uma linha `kind row` por PR e o esquema fixo
+repositório, número, estado, autor, atualizado em e URL. As linhas são de máquina:
+qualquer edição na tela é sobrescrita na próxima passada.
+
+O motor espelha o de `src/lib/notion/sync.ts` — upsert idempotente por id externo
+numa tabela de mapeamento própria (`github_documents`, chaveada por
+`user_id` + `github_id`), pulando o que não mudou pelo `updated_at` do PR. Como a
+listagem vem ordenada por `updated` decrescente, cada repositório guarda um cursor
+(`repo:<owner>/<nome>`) com o topo da última passada **completa** e para de paginar
+ao cruzá-lo; passada interrompida não move o cursor, então a seguinte recomeça do
+topo e as linhas já em dia saem baratas. O corpo da linha fica vazio de propósito:
+a descrição do PR não entra nesta versão.
+
+A rota aceita dois disparos. Com sessão, a pessoa sincroniza para o próprio espaço
+(o corpo aceita `destination`, como as rotas de import, e `force` para reescrever
+tudo). Com `Authorization: Bearer $LEAF_GITHUB_SYNC_SECRET`, a base é a da conta em
+`LEAF_GITHUB_SYNC_OWNER` — é assim que o CronJob de `deploy/github-sync-cronjob.yaml`
+roda de 15 em 15 minutos, batendo no serviço interno `LEAF_INTERNAL_SERVICE`.
+O manifesto não entra no pipeline de deploy (que só faz `kubectl set image`); é um
+`kubectl apply -f` de uma vez só.
 
 **Login pelo SSO da Árvore**: o Leaf é um client OAuth2/OIDC do IdP da casa
 (`client_id` `leaf`, escopos `openid profile email`, redirect

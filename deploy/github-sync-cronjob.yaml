@@ -1,0 +1,57 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: leaf-github-sync
+  namespace: leaf
+  labels:
+    app: leaf-github-sync
+spec:
+  schedule: "*/15 * * * *"
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 120
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 5
+  jobTemplate:
+    spec:
+      activeDeadlineSeconds: 900
+      backoffLimit: 1
+      ttlSecondsAfterFinished: 3600
+      template:
+        metadata:
+          labels:
+            app: leaf-github-sync
+        spec:
+          restartPolicy: Never
+          nodeSelector:
+            karpenter.sh/capacity-type: on-demand
+            kubernetes.io/arch: arm64
+          tolerations:
+            - key: workload-type
+              operator: Equal
+              value: stable
+              effect: NoSchedule
+          containers:
+            - name: runner
+              image: curlimages/curl:8.11.1
+              env:
+                - name: LEAF_GITHUB_SYNC_SECRET
+                  valueFrom:
+                    secretKeyRef:
+                      name: leaf-env
+                      key: LEAF_GITHUB_SYNC_SECRET
+              command:
+                - sh
+                - -ec
+                - |
+                  curl --fail-with-body --silent --show-error --max-time 870 \
+                    -X POST http://LEAF_INTERNAL_SERVICE:3000/api/sync/github \
+                    -H "Authorization: Bearer ${LEAF_GITHUB_SYNC_SECRET}" \
+                    -H 'Content-Type: application/json' \
+                    -d '{}'
+              resources:
+                requests:
+                  cpu: 20m
+                  memory: 32Mi
+                limits:
+                  cpu: 100m
+                  memory: 64Mi

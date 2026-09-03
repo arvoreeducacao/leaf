@@ -700,6 +700,25 @@
     "unsupportedBlocks": "Blocks without an equivalent were skipped: {count} ({types}).",
     "skippedUnchanged": "{count} pages were already up to date and were skipped."
   },
+  "githubSync": {
+    "databaseTitle": "GitHub pull requests",
+    "propertyRepository": "Repository",
+    "propertyNumber": "Number",
+    "propertyState": "State",
+    "propertyAuthor": "Author",
+    "propertyUpdatedAt": "Updated at",
+    "propertyUrl": "URL",
+    "stateOpen": "Open",
+    "stateMerged": "Merged",
+    "stateClosed": "Closed",
+    "tableView": "Table",
+    "boardView": "Board",
+    "notAuthenticated": "Not authenticated",
+    "notConfigured": "The GitHub database is not configured in this Leaf yet.",
+    "unfinished": "Could not finish the GitHub sync",
+    "repoFailed": "Could not read the pull requests of {repo}.",
+    "skippedUnchanged": "{count} pull requests were already up to date and were skipped."
+  },
   "notionLink": {
     "title": "Import from Notion",
     "description": "Paste a Notion page link. The page and everything under it come into Leaf.",
