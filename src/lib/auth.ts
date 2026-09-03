@@ -1,8 +1,9 @@
+import { oauthProvider } from '@better-auth/oauth-provider'
 import { betterAuth } from 'better-auth'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
 import { APIError, createAuthMiddleware } from 'better-auth/api'
 import { nextCookies } from 'better-auth/next-js'
-import { genericOAuth } from 'better-auth/plugins'
+import { genericOAuth, jwt } from 'better-auth/plugins'
 import { eq } from 'drizzle-orm'
 import { headers } from 'next/headers'
 
@@ -13,9 +14,21 @@ import {
   emailDomainPolicy,
   isEmailDomainAllowed,
 } from '@/lib/email-domain'
+import {
+  authIssuer,
+  isMcpEnabled,
+  mcpAccessTokenTtlSeconds,
+  mcpResourceUrl,
+  mcpScopes,
+} from '@/lib/mcp-config'
+import { validateDynamicClientRegistration } from '@/lib/mcp/client-registration'
 import { buildSsoSignOutUrl, requestOrigin } from '@/lib/sso-sign-out'
 
 const guardedPaths = new Set(['/sign-up/email', '/sign-in/email'])
+
+const clientRegistrationPath = '/oauth2/register'
+
+export const oauthConsentPath = '/oauth/consent'
 
 function domainError() {
   const { primaryDomain } = emailDomainPolicy()
@@ -51,6 +64,21 @@ async function guardUserId(userId: string) {
   })
 
   guardEmail(owner?.email)
+}
+
+function guardClientRegistration(body: unknown) {
+  const decision = validateDynamicClientRegistration(
+    body && typeof body === 'object' ? (body as Record<string, unknown>) : {},
+  )
+
+  if (!decision.ok) {
+    throw new APIError('BAD_REQUEST', {
+      error: decision.error,
+      error_description: decision.description,
+    })
+  }
+
+  return decision.body
 }
 
 export const arvoreSsoProviderId = 'arvore'
@@ -124,6 +152,46 @@ const ssoPlugin = sso
     })
   : null
 
+function mcpAuthorizationServerPlugins() {
+  if (!isMcpEnabled()) {
+    return []
+  }
+
+  const resource = mcpResourceUrl()
+
+  return [
+    jwt({
+      disableSettingJwtHeader: true,
+      jwks: { keyPairConfig: { alg: 'EdDSA', crv: 'Ed25519' } },
+      jwt: { issuer: authIssuer(), expirationTime: mcpAccessTokenTtlSeconds },
+    }),
+    oauthProvider({
+      loginPage: '/login',
+      consentPage: oauthConsentPath,
+      scopes: [...mcpScopes],
+      grantTypes: ['authorization_code', 'refresh_token'],
+      allowDynamicClientRegistration: true,
+      allowUnauthenticatedClientRegistration: true,
+      clientRegistrationDefaultScopes: [...mcpScopes],
+      accessTokenExpiresIn: mcpAccessTokenTtlSeconds,
+      resources: [
+        {
+          identifier: resource,
+          name: 'Leaf MCP',
+          accessTokenTtl: mcpAccessTokenTtlSeconds,
+          allowedScopes: [...mcpScopes],
+        },
+      ],
+      clientRegistrationDefaultResources: [resource],
+      enforcePerClientResources: true,
+      rateLimit: {
+        register: { window: 60, max: 5 },
+        token: { window: 60, max: 20 },
+      },
+    }),
+  ]
+}
+
 export const auth = betterAuth({
   appName: 'Leaf',
   database: drizzleAdapter(db, {
@@ -133,6 +201,14 @@ export const auth = betterAuth({
       session: schema.session,
       account: schema.account,
       verification: schema.verification,
+      jwks: schema.jwks,
+      oauthClient: schema.oauthClients,
+      oauthResource: schema.oauthResources,
+      oauthClientResource: schema.oauthClientResources,
+      oauthRefreshToken: schema.oauthRefreshTokens,
+      oauthAccessToken: schema.oauthAccessTokens,
+      oauthConsent: schema.oauthConsents,
+      oauthClientAssertion: schema.oauthClientAssertions,
     },
   }),
   emailAndPassword: {
@@ -149,6 +225,10 @@ export const auth = betterAuth({
   },
   hooks: {
     before: createAuthMiddleware(async (ctx) => {
+      if (ctx.path === clientRegistrationPath) {
+        return { context: { body: guardClientRegistration(ctx.body) } }
+      }
+
       if (!guardedPaths.has(ctx.path)) {
         return
       }
@@ -176,7 +256,11 @@ export const auth = betterAuth({
       },
     },
   },
-  plugins: ssoPlugin ? [ssoPlugin, nextCookies()] : [nextCookies()],
+  plugins: [
+    ...(ssoPlugin ? [ssoPlugin] : []),
+    ...mcpAuthorizationServerPlugins(),
+    nextCookies(),
+  ],
 })
 
 export type Session = typeof auth.$Infer.Session

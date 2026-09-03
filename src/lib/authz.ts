@@ -179,7 +179,7 @@ export type RateLimitDecision = Readonly<{
   retryAfterSeconds: number
 }>
 
-function createRateLimiter(windowMs: number, maxAttempts: number) {
+export function createRateLimiter(windowMs: number, maxAttempts: number) {
   const hits = new Map<string, Array<number>>()
 
   function prune(now: number) {

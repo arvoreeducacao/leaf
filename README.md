@@ -68,6 +68,8 @@ O app fala S3 e SQL por configuração — publicar é trocar env:
 | `ARVORE_SSO_CLIENT_ID` / `ARVORE_SSO_CLIENT_SECRET` / `ARVORE_SSO_ISSUER` | habilitam o botão "Entrar com a conta Árvore"; sem o client id, o provider não é registrado e a tela continua sendo o formulário de email e senha. O issuer padrão é `https://auth.arvore.com.br/api-arvore` |
 | `NOTION_CLIENT_ID` / `NOTION_CLIENT_SECRET` / `NOTION_REDIRECT_URI` | habilitam o import por link do Notion; sem elas o caminho fica desligado e o diálogo diz isso. Em produção o redirect é `https://leaf.arvore.com.br/api/notion/callback` |
 | `NOTION_API_VERSION` | versão da API do Notion no cabeçalho `Notion-Version` (padrão `2022-06-28`) |
+| `LEAF_MCP_ENABLED` | liga o servidor MCP remoto e o authorization server OAuth 2.1 embutido (`/api/mcp`, `/api/auth/oauth2/*`, `/.well-known/*`). Ausente = ligado fora de produção e **desligado em produção**; desligado, tudo isso responde 404 e a tela de aplicativos conectados some |
+| `LEAF_MCP_WRITE` | com o MCP ligado, permite as tools de escrita (`create_document`, `update_document`). Ausente = ligado; `0`/`false`/`off` desliga a escrita por completo, mesmo para tokens com o escopo `leaf:write` |
 
 **Acesso restrito**: com `LEAF_ALLOWED_EMAIL_DOMAINS` setada, a validação acontece
 no servidor em quatro pontos — hook `before` do better-auth em `/sign-up/email` e
@@ -97,6 +99,63 @@ better-auth com os endpoints explícitos `GET {issuer}/oauth2/authorize` e
 `id_token` (`sub` vira o id externo da conta, `email` vira o email; como o IdP
 não manda `name`, o nome nasce da parte local do email). Quem escolhe o método
 de autenticação (Google incluído) é a tela do próprio IdP, não o Leaf.
+
+## MCP
+
+O Leaf expõe um servidor [MCP](https://modelcontextprotocol.io) remoto em
+`${BETTER_AUTH_URL}/api/mcp` (transporte Streamable HTTP, stateless) protegido
+por OAuth 2.1 — e o próprio Leaf é o authorization server, via o plugin
+`@better-auth/oauth-provider` mais o plugin `jwt` do better-auth. Nenhum serviço
+externo participa: qualquer instalação do Leaf tem o MCP funcionando só com o
+que vem neste repositório e a flag `LEAF_MCP_ENABLED`.
+
+Como funciona, em ordem: o cliente MCP recebe `401` com
+`WWW-Authenticate: Bearer resource_metadata=...`, lê
+`/.well-known/oauth-protected-resource` e `/.well-known/oauth-authorization-server`,
+registra-se sozinho em `/api/auth/oauth2/register` (registro dinâmico, sempre
+client **público** com PKCE S256; redirect só `https`, ou `http` em
+`localhost`/`127.0.0.1`/`[::1]` para clientes de linha de comando), manda a
+pessoa para o login do Leaf e para a tela de consentimento em `/oauth/consent`,
+e troca o código por um access token JWT de 15 minutos (`aud` =
+`${BETTER_AUTH_URL}/api/mcp`, assinado com a chave EdDSA guardada na tabela
+`jwks`) mais um refresh token rotativo. Cada chamada de tool roda em nome da
+pessoa que autorizou, com a mesma ACL da interface (`src/lib/authz.ts`): quem
+não enxerga um documento no Leaf também não enxerga pelo MCP.
+
+Escopos: `leaf:read` (busca, leitura de documentos, bases, comentários e
+organizações), `leaf:write` (`create_document`, `update_document`; sem o escopo
+as tools nem são registradas) e `offline_access` (refresh token). A pessoa vê e
+revoga os aplicativos autorizados em **Aplicativos conectados**, no menu da
+conta (`/connected-apps`); revogar apaga o consentimento e invalida os refresh
+tokens daquele cliente.
+
+Tools: `search_documents`, `get_document`, `list_documents`,
+`list_organizations`, `get_database`, `list_comments`, `create_document`,
+`update_document` (append/replace, recusa escrever se a página foi editada nos
+últimos 15 s — provavelmente há uma sala de colaboração aberta — e usa guard
+otimista no `updated_at`). Nada de apagar, compartilhar, link público ou
+membros. Limites: body até 1 MB, 60 chamadas/min por pessoa, até 50 resultados
+por chamada, markdown até 400 mil caracteres.
+
+Como conectar (troque `https://leaf.exemplo.org` pela `BETTER_AUTH_URL` da sua
+instalação):
+
+- **Claude (web e desktop)**: Configurações → Conectores → Adicionar conector
+  personalizado → URL `https://leaf.exemplo.org/api/mcp`. O Claude registra o
+  client e abre a tela de login e consentimento do Leaf.
+- **Claude Code**: `claude mcp add --transport http leaf https://leaf.exemplo.org/api/mcp`
+  e depois `/mcp` dentro do Claude Code para autenticar (o callback é em
+  `http://localhost`, por isso o loopback fica liberado no registro).
+- **Cursor**: em `.cursor/mcp.json` (ou nas configurações de MCP),
+  `{ "mcpServers": { "leaf": { "url": "https://leaf.exemplo.org/api/mcp" } } }`;
+  o Cursor abre o fluxo OAuth na primeira chamada.
+- **Inspector**: `npx @modelcontextprotocol/inspector` → transporte Streamable
+  HTTP → URL acima → Connect. Para testar localmente use
+  `BETTER_AUTH_URL=http://localhost:3000` e o `pnpm dev`.
+
+O modo antigo do pacote `@arvoretech/leaf-mcp` (stdio falando direto com o
+MySQL) fica só para desenvolvimento contra um banco de dev; em produção o
+caminho é este endpoint.
 
 **Banco**: o database `leaf` está provisionado no cluster Aurora MySQL da Árvore (`arvore-cluster`, MySQL 8.0.42), com usuário dedicado no Secrets Manager (`prd/leaf/database`). As migrações de `drizzle/mysql` rodam no boot do app; o `next build` **não** toca no banco. As sete migrações antigas de SQLite ficaram arquivadas em `drizzle/sqlite-legacy/` e não são mais executadas.
 

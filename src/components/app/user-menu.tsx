@@ -12,6 +12,7 @@ import {
   GlobeIcon,
   MoonFirstQuarterIcon,
   MoonIcon,
+  PluginIcon,
   Sun3Icon,
   SyncIcon,
   TeamIcon,
@@ -37,6 +38,7 @@ type Props = Readonly<{
   name: string
   email: string
   locale: string
+  connectedAppsEnabled?: boolean
 }>
 
 const themeOptions = [
@@ -65,7 +67,12 @@ function initials(name: string, email: string) {
   return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase()
 }
 
-export function UserMenu({ name, email, locale }: Props) {
+export function UserMenu({
+  name,
+  email,
+  locale,
+  connectedAppsEnabled = false,
+}: Props) {
   const t = useTranslations('settings')
   const tAuth = useTranslations('auth')
   const tNav = useTranslations('nav')
@@ -139,6 +146,14 @@ export function UserMenu({ name, email, locale }: Props) {
             {tNav('organizationLink')}
           </Link>
         </DropdownMenuItem>
+        {connectedAppsEnabled ? (
+          <DropdownMenuItem asChild>
+            <Link href="/connected-apps">
+              <PluginIcon aria-hidden="true" />
+              {t('connectedApps')}
+            </Link>
+          </DropdownMenuItem>
+        ) : null}
         <DropdownMenuItem disabled={pending} onSelect={handleSignOut}>
           <ArrowRightIcon aria-hidden="true" />
           {t('signOut')}
