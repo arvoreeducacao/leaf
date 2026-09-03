@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 
 import { AppShell } from '@/components/app/app-shell'
 import { PendingJoinRedirect } from '@/components/app/pending-join-redirect'
+import { SidebarPreferencesProvider } from '@/components/app/sidebar-preferences-provider'
 import { isAiEnabled } from '@/lib/ai-config'
 import { readActiveOrgId } from '@/lib/active-org'
 import { getSession } from '@/lib/auth'
@@ -18,6 +19,7 @@ import {
   acceptPendingInvites,
   listOrganizationDocuments,
 } from '@/lib/organizations'
+import { readSidebarPreferences } from '@/lib/sidebar-preferences'
 import type { TeamspaceSection } from '@/lib/teamspaces'
 import { listTeamspaceDocuments, listVisibleTeamspaces } from '@/lib/teamspaces'
 
@@ -88,29 +90,32 @@ export default async function AppLayout({
   )
 
   const locale = await getLocale()
+  const sidebarPreferences = await readSidebarPreferences()
 
   return (
-    <AppShell
-      activeOrgId={membership?.orgId ?? null}
-      aiEnabled={isAiEnabled()}
-      locale={locale}
-      hiddenOrganizationDocuments={organizationTree.hidden}
-      hiddenOwnedDocuments={ownedTree.hidden}
-      organizationDocuments={organizationTree.nodes}
-      organizationName={membership?.orgName ?? null}
-      organizations={memberships.map((item) => ({
-        id: item.orgId,
-        name: item.orgName,
-      }))}
-      owned={ownedTree.nodes}
-      recents={recents}
-      shared={shared}
-      teamspaces={teamspaceSections}
-      trashed={trashed}
-      user={{ name: session.user.name, email: session.user.email }}
-    >
-      <PendingJoinRedirect />
-      {children}
-    </AppShell>
+    <SidebarPreferencesProvider initial={sidebarPreferences}>
+      <AppShell
+        activeOrgId={membership?.orgId ?? null}
+        aiEnabled={isAiEnabled()}
+        locale={locale}
+        hiddenOrganizationDocuments={organizationTree.hidden}
+        hiddenOwnedDocuments={ownedTree.hidden}
+        organizationDocuments={organizationTree.nodes}
+        organizationName={membership?.orgName ?? null}
+        organizations={memberships.map((item) => ({
+          id: item.orgId,
+          name: item.orgName,
+        }))}
+        owned={ownedTree.nodes}
+        recents={recents}
+        shared={shared}
+        teamspaces={teamspaceSections}
+        trashed={trashed}
+        user={{ name: session.user.name, email: session.user.email }}
+      >
+        <PendingJoinRedirect />
+        {children}
+      </AppShell>
+    </SidebarPreferencesProvider>
   )
 }
