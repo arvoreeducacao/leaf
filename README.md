@@ -5,6 +5,7 @@ Editor de documentos colaborativo da Árvore, no espírito do Notion: blocos, hi
 ## Funcionalidades
 
 - **Editor de blocos** (BlockNote): parágrafos, títulos, listas, checklists, citações, código, tabelas, imagens, destaques; slash menu (`/`), toolbar de formatação, atalhos markdown ao digitar e colagem rica direto do Notion ou Google Docs
+- **Incorporar** (`/incorporar` ou colando o link numa linha vazia): Figma, YouTube, Vimeo, Loom, Miro, Google Docs, Sheets, Slides, Forms e Drive, Canva, Spotify, Typeform, CodeSandbox e CodePen aparecem dentro da página; link de fora dessa lista vira um cartão com o endereço, e o import do Notion traz os embeds dele já assim
 - **Hierarquia de páginas**: subpáginas ilimitadas, sidebar em árvore, breadcrumb, mover documentos, lixeira em cascata com desfazer
 - **Importação agnóstica** via slash menu: arquivos `.md` inseridos no ponto do cursor, ou o **zip de export do Notion inteiro** virando árvore de páginas (imagens, links internos, callouts e databases CSV convertidos)
 - **Capa da página** no estilo do Notion: *Adicionar capa* ao passar o mouse no título, galeria de cores e gradientes, upload, link ou busca no **Unsplash** (com crédito ao fotógrafo), reposicionar arrastando e remover; a capa aparece também no link público

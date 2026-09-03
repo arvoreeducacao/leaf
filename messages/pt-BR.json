@@ -498,7 +498,17 @@
     "calloutAliases": "destaque, callout, aviso, dica, nota",
     "databaseTitle": "Base de dados",
     "databaseSubtext": "Tabela de páginas com propriedades, filtros e quadro",
-    "databaseAliases": "database, base de dados, tabela, banco de dados, quadro, kanban"
+    "databaseAliases": "database, base de dados, tabela, banco de dados, quadro, kanban",
+    "embedTitle": "Incorporar",
+    "embedSubtext": "Figma, YouTube, Google Docs, Miro e outros links",
+    "embedAliases": "incorporar, embed, figma, youtube, video, miro, google docs, loom, planilha"
+  },
+  "embed": {
+    "placeholder": "Cole um link do Figma, YouTube, Google Docs...",
+    "confirm": "Incorporar",
+    "empty": "Nenhum link incorporado",
+    "unsupported": "Não dá para exibir aqui",
+    "activate": "Clique para interagir"
   },
   "importFile": {
     "tooLarge": "O arquivo passa de {limit}",
