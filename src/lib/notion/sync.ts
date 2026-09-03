@@ -274,8 +274,32 @@ export async function* syncNotion(
     }
   }
 
+  const inlineFlags = new Map<string, boolean>()
+
+  async function hydrateInlineFlags(nodes: Array<BlockNode>) {
+    for (const node of nodes) {
+      if (node.block.type === 'child_database') {
+        const key = normalizeNotionId(node.block.id)
+
+        if (!inlineFlags.has(key)) {
+          try {
+            const database = await client.database(node.block.id)
+
+            inlineFlags.set(key, database.is_inline === true)
+          } catch {
+            inlineFlags.set(key, true)
+          }
+        }
+      }
+
+      await hydrateInlineFlags(node.children)
+    }
+  }
+
   const convertContext = {
     assetPath: registerAsset,
+    isInlineDatabase: (id: string) =>
+      inlineFlags.get(normalizeNotionId(id)) ?? true,
     pageRef: (id: string) => `${placeholderPrefix}${normalizeNotionId(id)}`,
     unsupported: (type: string) => {
       unsupportedCounts.set(type, (unsupportedCounts.get(type) ?? 0) + 1)
@@ -902,6 +926,7 @@ export async function* syncNotion(
           }
 
           const tree = await readTree(row.id)
+          await hydrateInlineFlags(tree)
           const blocks = convertNodes(tree, convertContext)
           await flushAssets()
           resolveAssetPlaceholdersInValues(values)
@@ -1013,6 +1038,7 @@ export async function* syncNotion(
       touchedDocIds.add(documentId)
 
       const tree = await readTree(item.id)
+      await hydrateInlineFlags(tree)
       const blocks = convertNodes(tree, convertContext)
       await flushAssets()
 
