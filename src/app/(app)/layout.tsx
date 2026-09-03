@@ -7,6 +7,7 @@ import { SidebarPreferencesProvider } from '@/components/app/sidebar-preferences
 import { isAiEnabled } from '@/lib/ai-config'
 import { readActiveOrgId } from '@/lib/active-org'
 import { getSession } from '@/lib/auth'
+import { isMcpEnabled } from '@/lib/mcp-config'
 import {
   buildDocumentTree,
   capDocumentTree,
@@ -97,6 +98,7 @@ export default async function AppLayout({
       <AppShell
         activeOrgId={membership?.orgId ?? null}
         aiEnabled={isAiEnabled()}
+        connectedAppsEnabled={isMcpEnabled()}
         locale={locale}
         hiddenOrganizationDocuments={organizationTree.hidden}
         hiddenOwnedDocuments={ownedTree.hidden}

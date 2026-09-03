@@ -1,0 +1,585 @@
+import { and, desc, eq, isNull, ne } from 'drizzle-orm'
+import { nanoid } from 'nanoid'
+
+import { db } from '@/db'
+import { documents } from '@/db/schema'
+import type { Document } from '@/db/schema'
+import { canEdit, getDocumentAccess } from '@/lib/authz'
+import type { AccessLevel } from '@/lib/authz'
+import { listDocumentComments } from '@/lib/comments'
+import { personOptions } from '@/lib/database/people'
+import { parseOptions, valueOf, valueToText } from '@/lib/database/values'
+import { loadDatabase, loadRowContext } from '@/lib/databases'
+import { persistDocumentContentIfUnchanged } from '@/lib/document-content'
+import {
+  getDocument,
+  listOwnedDocuments,
+  listSharedDocuments,
+} from '@/lib/documents'
+import type { DocumentSummary } from '@/lib/documents'
+import {
+  contentToMarkdown,
+  markdownToBlocks,
+  markdownToContent,
+  parseContentBlocks,
+} from '@/lib/markdown/convert'
+import {
+  authIssuer,
+  isMcpWriteEnabled,
+  mcpWriteScope,
+} from '@/lib/mcp-config'
+import {
+  canManageOrganization,
+  getMembership,
+  listMemberships,
+  listOrganizationDocuments,
+  listOrganizationPeople,
+} from '@/lib/organizations'
+import { isDocumentIdShaped } from '@/lib/realtime'
+import { searchDocumentsHybrid } from '@/lib/search-hybrid'
+import { scheduleSearchIndexReconcile } from '@/lib/search-index'
+import {
+  listTeamspaceDocuments,
+  listTeamspacesForOrganization,
+  listVisibleTeamspaces,
+} from '@/lib/teamspaces'
+
+export const MAX_MCP_RESULTS = 50
+export const MAX_MCP_MARKDOWN_CHARS = 400_000
+export const MAX_MCP_TITLE_CHARS = 200
+export const MCP_LIVE_EDIT_WINDOW_MS = 15_000
+
+export type McpToolErrorCode =
+  | 'not_found'
+  | 'forbidden'
+  | 'invalid_argument'
+  | 'document_busy'
+  | 'conflict'
+  | 'write_disabled'
+
+export class McpToolError extends Error {
+  constructor(
+    readonly code: McpToolErrorCode,
+    message: string,
+  ) {
+    super(message)
+    this.name = 'McpToolError'
+  }
+}
+
+export type McpToolContext = Readonly<{
+  session: Readonly<{ user: Readonly<{ id: string; email: string }> }>
+  scopes: ReadonlyArray<string>
+  clientId: string
+  locale?: string
+  onDocumentWritten?: (documentId: string) => void
+}>
+
+export function canWrite(context: McpToolContext) {
+  return isMcpWriteEnabled() && context.scopes.includes(mcpWriteScope)
+}
+
+function documentUrl(id: string) {
+  return `${authIssuer()}/doc/${id}`
+}
+
+function toIso(value: Date | string) {
+  return value instanceof Date ? value.toISOString() : new Date(value).toISOString()
+}
+
+function requireDocumentId(value: string) {
+  if (!isDocumentIdShaped(value)) {
+    throw new McpToolError('invalid_argument', 'documentId is malformed')
+  }
+
+  return value
+}
+
+function requireWrite(context: McpToolContext) {
+  if (!canWrite(context)) {
+    throw new McpToolError('write_disabled', 'writing is not available')
+  }
+}
+
+function clampLimit(limit: number | undefined, fallback: number) {
+  if (limit === undefined || !Number.isFinite(limit)) {
+    return fallback
+  }
+
+  return Math.min(MAX_MCP_RESULTS, Math.max(1, Math.trunc(limit)))
+}
+
+async function requireReadable(
+  documentId: string,
+  context: McpToolContext,
+): Promise<{ access: AccessLevel; document: Document }> {
+  const id = requireDocumentId(documentId)
+  const access = await getDocumentAccess(id, context.session)
+
+  if (!access) {
+    throw new McpToolError('not_found', 'document not found')
+  }
+
+  const document = await getDocument(id)
+
+  if (!document || document.deletedAt) {
+    throw new McpToolError('not_found', 'document not found')
+  }
+
+  return { access, document }
+}
+
+function summarize(document: Pick<Document, 'id' | 'title' | 'kind' | 'parentId' | 'updatedAt'>) {
+  return {
+    id: document.id,
+    title: document.title,
+    kind: document.kind,
+    parentId: document.parentId,
+    updatedAt: toIso(document.updatedAt),
+    url: documentUrl(document.id),
+  }
+}
+
+export async function searchDocuments(
+  context: McpToolContext,
+  args: Readonly<{ query: string; limit?: number }>,
+) {
+  const query = args.query.trim().slice(0, 200)
+  const limit = clampLimit(args.limit, 20)
+
+  if (query.length === 0) {
+    return { results: [] }
+  }
+
+  scheduleSearchIndexReconcile()
+
+  const hits = await searchDocumentsHybrid(
+    { userId: context.session.user.id, email: context.session.user.email },
+    query,
+    limit,
+  )
+
+  return {
+    results: hits.map((hit) => ({
+      id: hit.id,
+      title: hit.title,
+      snippet: hit.segments.map((segment) => segment.text).join(''),
+      url: documentUrl(hit.id),
+    })),
+  }
+}
+
+async function listAccessibleChildren(
+  parentId: string,
+  context: McpToolContext,
+) {
+  const rows = await db
+    .select({
+      id: documents.id,
+      title: documents.title,
+      kind: documents.kind,
+      parentId: documents.parentId,
+      updatedAt: documents.updatedAt,
+    })
+    .from(documents)
+    .where(
+      and(
+        eq(documents.parentId, parentId),
+        isNull(documents.deletedAt),
+        ne(documents.kind, 'row'),
+      ),
+    )
+    .orderBy(desc(documents.updatedAt))
+    .limit(MAX_MCP_RESULTS)
+
+  const visible = await Promise.all(
+    rows.map(async (row) =>
+      (await getDocumentAccess(row.id, context.session)) ? row : null,
+    ),
+  )
+
+  return visible
+    .filter((row): row is NonNullable<typeof row> => row !== null)
+    .map(summarize)
+}
+
+async function rowValues(rowId: string, viewerId: string, locale: string) {
+  const row = await loadRowContext(rowId, viewerId)
+
+  if (!row) {
+    return null
+  }
+
+  const values: Record<string, string> = {}
+
+  for (const property of row.properties) {
+    const options =
+      property.type === 'person'
+        ? personOptions(row.people)
+        : parseOptions(property.options)
+
+    values[property.name] = valueToText(
+      valueOf(row.row.values, property, options),
+      property.type,
+      options,
+      locale,
+    )
+  }
+
+  return { databaseId: row.databaseId, databaseTitle: row.databaseTitle, values }
+}
+
+export async function getDocumentTool(
+  context: McpToolContext,
+  args: Readonly<{ documentId: string }>,
+) {
+  const { access, document } = await requireReadable(args.documentId, context)
+  const locale = context.locale ?? 'pt-BR'
+  const children = await listAccessibleChildren(document.id, context)
+  const markdown =
+    document.kind === 'database'
+      ? ''
+      : await contentToMarkdown(document.content, authIssuer())
+  const row =
+    document.kind === 'row'
+      ? await rowValues(document.id, context.session.user.id, locale)
+      : null
+
+  return {
+    ...summarize(document),
+    access,
+    orgId: document.orgId,
+    teamspaceId: document.teamspaceId,
+    orgAccess: document.orgAccess,
+    createdAt: toIso(document.createdAt),
+    markdown,
+    ...(row ? { database: { id: row.databaseId, title: row.databaseTitle }, properties: row.values } : {}),
+    children,
+  }
+}
+
+type ListedDocument = ReturnType<typeof summarize> &
+  Readonly<{ source: 'own' | 'shared' | 'organization' | 'teamspace'; organization?: string; teamspace?: string }>
+
+function fromSummary(
+  summary: DocumentSummary,
+  extra: Omit<ListedDocument, keyof ReturnType<typeof summarize>>,
+): ListedDocument {
+  return { ...summarize(summary), ...extra }
+}
+
+export async function listDocumentsTool(
+  context: McpToolContext,
+  args: Readonly<{ limit?: number }>,
+) {
+  const { id: userId, email } = context.session.user
+  const limit = clampLimit(args.limit, MAX_MCP_RESULTS)
+  const seen = new Set<string>()
+  const listed: Array<ListedDocument> = []
+
+  function push(items: Array<ListedDocument>) {
+    for (const item of items) {
+      if (!seen.has(item.id)) {
+        seen.add(item.id)
+        listed.push(item)
+      }
+    }
+  }
+
+  push(
+    (await listOwnedDocuments(userId)).map((item) =>
+      fromSummary(item, { source: 'own' }),
+    ),
+  )
+  push(
+    (await listSharedDocuments(email)).map((item) =>
+      fromSummary(item, { source: 'shared' }),
+    ),
+  )
+
+  for (const membership of await listMemberships(userId)) {
+    push(
+      (await listOrganizationDocuments(membership.orgId)).map((item) =>
+        fromSummary(item, {
+          source: 'organization',
+          organization: membership.orgName,
+        }),
+      ),
+    )
+
+    const teamspaces = await listTeamspacesForOrganization(
+      membership.orgId,
+      userId,
+    )
+
+    for (const teamspace of teamspaces.filter((item) => item.role !== null)) {
+      push(
+        (await listTeamspaceDocuments(teamspace.id)).map((item) =>
+          fromSummary(item, {
+            source: 'teamspace',
+            organization: membership.orgName,
+            teamspace: teamspace.name,
+          }),
+        ),
+      )
+    }
+  }
+
+  listed.sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))
+
+  return { total: listed.length, documents: listed.slice(0, limit) }
+}
+
+export async function listOrganizationsTool(context: McpToolContext) {
+  const userId = context.session.user.id
+  const memberships = await listMemberships(userId)
+
+  const organizations = await Promise.all(
+    memberships.map(async (membership) => {
+      const [people, teamspaces] = await Promise.all([
+        listOrganizationPeople(membership.orgId),
+        listVisibleTeamspaces(membership.orgId, userId),
+      ])
+      const manages = canManageOrganization(membership.role)
+
+      return {
+        id: membership.orgId,
+        name: membership.orgName,
+        role: membership.role,
+        members: people.map((person) => ({
+          id: person.userId,
+          name: person.name,
+          role: person.role,
+          ...(manages ? { email: person.email } : {}),
+        })),
+        teamspaces: teamspaces.map((teamspace) => ({
+          id: teamspace.id,
+          name: teamspace.name,
+          access: teamspace.access,
+          member: teamspace.role !== null,
+        })),
+      }
+    }),
+  )
+
+  return { organizations }
+}
+
+export async function getDatabaseTool(
+  context: McpToolContext,
+  args: Readonly<{ databaseId: string; limit?: number; offset?: number }>,
+) {
+  const { document } = await requireReadable(args.databaseId, context)
+
+  if (document.kind !== 'database') {
+    throw new McpToolError('not_found', 'database not found')
+  }
+
+  const snapshot = await loadDatabase(document.id, context.session.user.id)
+
+  if (!snapshot) {
+    throw new McpToolError('not_found', 'database not found')
+  }
+
+  const locale = context.locale ?? 'pt-BR'
+  const limit = clampLimit(args.limit, MAX_MCP_RESULTS)
+  const offset = Math.max(0, Math.trunc(args.offset ?? 0))
+  const optionsByProperty = new Map(
+    snapshot.properties.map((property) => [
+      property.id,
+      property.type === 'person'
+        ? personOptions(snapshot.people)
+        : parseOptions(property.options),
+    ]),
+  )
+
+  return {
+    id: snapshot.id,
+    title: snapshot.title,
+    url: documentUrl(snapshot.id),
+    properties: snapshot.properties.map((property) => ({
+      id: property.id,
+      name: property.name,
+      type: property.type,
+      options: (optionsByProperty.get(property.id) ?? []).map(
+        (option) => option.name,
+      ),
+    })),
+    views: snapshot.views.map((view) => ({
+      id: view.id,
+      name: view.name,
+      type: view.type,
+    })),
+    totalRows: snapshot.rows.length,
+    offset,
+    rows: snapshot.rows.slice(offset, offset + limit).map((row) => ({
+      id: row.id,
+      title: row.title,
+      url: documentUrl(row.id),
+      updatedAt: row.updatedAt,
+      values: Object.fromEntries(
+        snapshot.properties.map((property) => [
+          property.name,
+          valueToText(
+            valueOf(row.values, property, optionsByProperty.get(property.id)),
+            property.type,
+            optionsByProperty.get(property.id) ?? [],
+            locale,
+          ),
+        ]),
+      ),
+    })),
+  }
+}
+
+export async function listCommentsTool(
+  context: McpToolContext,
+  args: Readonly<{ documentId: string }>,
+) {
+  const { document } = await requireReadable(args.documentId, context)
+  const threads = await listDocumentComments(document.id)
+
+  return {
+    documentId: document.id,
+    threads: threads.slice(0, MAX_MCP_RESULTS).map((thread) => ({
+      id: thread.id,
+      blockId: thread.blockId,
+      author: thread.authorName,
+      body: thread.body,
+      createdAt: new Date(thread.createdAt).toISOString(),
+      resolved: thread.resolvedAt !== null,
+      replies: thread.replies.map((reply) => ({
+        id: reply.id,
+        author: reply.authorName,
+        body: reply.body,
+        createdAt: new Date(reply.createdAt).toISOString(),
+      })),
+    })),
+  }
+}
+
+function requireMarkdown(markdown: string) {
+  if (markdown.length > MAX_MCP_MARKDOWN_CHARS) {
+    throw new McpToolError('invalid_argument', 'markdown is too long')
+  }
+
+  return markdown
+}
+
+export async function createDocumentTool(
+  context: McpToolContext,
+  args: Readonly<{ title: string; markdown?: string; parentId?: string }>,
+) {
+  requireWrite(context)
+
+  const title = args.title.trim().slice(0, MAX_MCP_TITLE_CHARS)
+
+  if (title.length === 0) {
+    throw new McpToolError('invalid_argument', 'title is required')
+  }
+
+  const markdown = requireMarkdown(args.markdown ?? '')
+  const userId = context.session.user.id
+  let parent: Document | null = null
+
+  if (args.parentId !== undefined) {
+    const parentId = requireDocumentId(args.parentId)
+    const access = await getDocumentAccess(parentId, context.session)
+
+    if (!canEdit(access)) {
+      throw new McpToolError('forbidden', 'cannot create inside this document')
+    }
+
+    parent = await getDocument(parentId)
+
+    if (!parent || parent.kind === 'database') {
+      throw new McpToolError('invalid_argument', 'parent must be a page')
+    }
+  }
+
+  const membership = parent ? null : await getMembership(userId)
+  const id = nanoid(12)
+  const now = new Date()
+
+  await db.insert(documents).values({
+    id,
+    ownerId: userId,
+    parentId: parent?.id ?? null,
+    orgId: parent ? parent.orgId : (membership?.orgId ?? null),
+    teamspaceId: parent?.teamspaceId ?? null,
+    orgAccess: parent?.orgAccess ?? null,
+    kind: 'page',
+    title,
+    content: markdown.trim().length > 0 ? await markdownToContent(markdown) : null,
+    createdAt: now,
+    updatedAt: now,
+  })
+
+  const { indexDocument } = await import('@/lib/search-index')
+
+  await indexDocument(id)
+  context.onDocumentWritten?.(id)
+
+  return { id, title, parentId: parent?.id ?? null, url: documentUrl(id) }
+}
+
+export async function updateDocumentTool(
+  context: McpToolContext,
+  args: Readonly<{ documentId: string; markdown: string; mode?: 'append' | 'replace' }>,
+  now: Date = new Date(),
+) {
+  requireWrite(context)
+
+  const id = requireDocumentId(args.documentId)
+  const access = await getDocumentAccess(id, context.session)
+
+  if (!canEdit(access)) {
+    throw new McpToolError('forbidden', 'cannot edit this document')
+  }
+
+  const document = await getDocument(id)
+
+  if (!document || document.deletedAt) {
+    throw new McpToolError('not_found', 'document not found')
+  }
+
+  if (document.kind === 'database') {
+    throw new McpToolError('invalid_argument', 'databases cannot be edited here')
+  }
+
+  if (now.getTime() - document.updatedAt.getTime() < MCP_LIVE_EDIT_WINDOW_MS) {
+    throw new McpToolError(
+      'document_busy',
+      'document was edited moments ago; retry in a few seconds',
+    )
+  }
+
+  const markdown = requireMarkdown(args.markdown)
+  const mode = args.mode ?? 'append'
+  const incoming = await markdownToBlocks(markdown)
+  const blocks =
+    mode === 'append'
+      ? [...parseContentBlocks(document.content), ...incoming]
+      : incoming
+
+  const outcome = await persistDocumentContentIfUnchanged(
+    id,
+    JSON.stringify(blocks),
+    context.session.user.id,
+    document.updatedAt,
+  )
+
+  if (outcome === 'conflict') {
+    throw new McpToolError('conflict', 'document changed while writing; retry')
+  }
+
+  if (outcome === 'missing') {
+    throw new McpToolError('not_found', 'document not found')
+  }
+
+  if (outcome === 'written') {
+    context.onDocumentWritten?.(id)
+  }
+
+  return { id, mode, written: outcome === 'written', url: documentUrl(id) }
+}

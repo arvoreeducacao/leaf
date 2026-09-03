@@ -13,6 +13,7 @@ import {
   GlobeIcon,
   MoonFirstQuarterIcon,
   MoonIcon,
+  PluginIcon,
   Sun3Icon,
   SyncIcon,
   TeamIcon,
@@ -42,6 +43,7 @@ type Props = Readonly<{
   email: string
   locale: string
   compact?: boolean
+  connectedAppsEnabled?: boolean
 }>
 
 const themeOptions = [
@@ -70,7 +72,13 @@ function initials(name: string, email: string) {
   return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase()
 }
 
-export function UserMenu({ name, email, locale, compact = false }: Props) {
+export function UserMenu({
+  name,
+  email,
+  locale,
+  compact = false,
+  connectedAppsEnabled = false,
+}: Props) {
   const t = useTranslations('settings')
   const tAuth = useTranslations('auth')
   const tNav = useTranslations('nav')
@@ -160,6 +168,14 @@ export function UserMenu({ name, email, locale, compact = false }: Props) {
             {tNav('organizationLink')}
           </Link>
         </DropdownMenuItem>
+        {connectedAppsEnabled ? (
+          <DropdownMenuItem asChild>
+            <Link href="/connected-apps">
+              <PluginIcon aria-hidden="true" />
+              {t('connectedApps')}
+            </Link>
+          </DropdownMenuItem>
+        ) : null}
         {installable ? (
           <DropdownMenuItem data-testid="install-app" onSelect={() => void install()}>
             <DownloadIcon aria-hidden="true" />

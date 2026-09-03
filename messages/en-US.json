@@ -17,7 +17,9 @@
     "signup": "Create account | Leaf",
     "document": "{title} | Leaf",
     "org": "Organization | Leaf",
-    "join": "Invite | Leaf"
+    "join": "Invite | Leaf",
+    "consent": "Authorize app | Leaf",
+    "connectedApps": "Connected apps | Leaf"
   },
   "auth": {
     "loginTitle": "Sign in to your account",
@@ -59,6 +61,7 @@
     "localePtBR": "Português (Brasil)",
     "localeEnUS": "English (US)",
     "switchingLanguage": "Switching language",
+    "connectedApps": "Connected apps",
     "installApp": "Install Leaf"
   },
   "nav": {
@@ -829,5 +832,45 @@
     "invalidTitle": "Invalid invite link",
     "invalidHint": "This link is not valid or was turned off. Ask the person who invited you for a new link.",
     "backHome": "Go to Leaf"
+  },
+  "oauthConsent": {
+    "title": "Allow access to Leaf?",
+    "subtitle": "{client} wants to access your Leaf documents on your behalf",
+    "unknownClient": "Unnamed app",
+    "clientLabel": "App",
+    "redirectLabel": "After allowing, you go back to",
+    "accountLabel": "Account",
+    "scopesTitle": "What the app will be able to do",
+    "scopeRead": "Read documents, databases, comments and organizations you can already see",
+    "scopeWrite": "Create pages and edit the pages you can edit",
+    "scopeOffline": "Stay connected without asking you to sign in again",
+    "allow": "Allow",
+    "deny": "Deny",
+    "failed": "Couldn't complete the authorization. Go back to the app and try again.",
+    "invalidTitle": "Invalid authorization request",
+    "invalidBody": "The link expired or the app is not registered. Go back to the app and try again.",
+    "revokeHint": "You can revoke this access at any time under Connected apps, in your account menu."
+  },
+  "connectedApps": {
+    "title": "Connected apps",
+    "subtitle": "Apps that access Leaf on your behalf through MCP. They only see what you can already see.",
+    "mcpUrlLabel": "MCP address",
+    "mcpUrlHelp": "Use this address to connect Claude, Cursor or another MCP client",
+    "empty": "No connected apps yet",
+    "emptyHelp": "When you authorize an app it shows up here, and you can revoke its access whenever you want",
+    "unknownClient": "Unnamed app",
+    "grantedAt": "Authorized on {date}",
+    "scopesLabel": "Granted permissions",
+    "scopeRead": "Read",
+    "scopeWrite": "Write",
+    "scopeOffline": "Ongoing access",
+    "revoke": "Revoke access for {name}",
+    "revokeAction": "Revoke access",
+    "revoked": "Access revoked",
+    "confirmTitle": "Revoke access for {name}?",
+    "confirmDescription": "The app loses access immediately and must ask for authorization again to use Leaf.",
+    "confirmAction": "Revoke access",
+    "confirmCancel": "Keep access",
+    "errorNotFound": "This app is no longer connected."
   }
 }

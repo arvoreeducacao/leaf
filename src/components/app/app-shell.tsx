@@ -47,6 +47,7 @@ type Props = Readonly<{
   user: { name: string; email: string }
   aiEnabled: boolean
   locale: string
+  connectedAppsEnabled: boolean
   owned: Array<DocumentNode>
   organizationDocuments: Array<DocumentNode>
   hiddenOwnedDocuments: number
@@ -75,6 +76,7 @@ function NavContent({
   trashed,
   user,
   locale,
+  connectedAppsEnabled,
   onNavigate,
   headerAction,
 }: Readonly<{
@@ -91,6 +93,7 @@ function NavContent({
   trashed: Array<DocumentSummary>
   user: { name: string; email: string }
   locale: string
+  connectedAppsEnabled: boolean
   onNavigate?: () => void
   headerAction?: React.ReactNode
 }>) {
@@ -201,6 +204,7 @@ function NavContent({
           </div>
           <UserMenu
             compact
+            connectedAppsEnabled={connectedAppsEnabled}
             email={user.email}
             locale={locale}
             name={user.name}
@@ -215,6 +219,7 @@ export function AppShell({
   user,
   aiEnabled,
   locale,
+  connectedAppsEnabled,
   owned,
   organizationDocuments,
   hiddenOwnedDocuments,
@@ -306,6 +311,7 @@ export function AppShell({
           />
           <div className="sticky top-0 h-dvh">
             <NavContent
+              connectedAppsEnabled={connectedAppsEnabled}
               activeOrgId={activeOrgId}
               headerAction={
                 <Tooltip>
@@ -397,6 +403,7 @@ export function AppShell({
             <SheetDescription>{t('mobileDescription')}</SheetDescription>
           </SheetHeader>
           <NavContent
+              connectedAppsEnabled={connectedAppsEnabled}
             activeOrgId={activeOrgId}
             locale={locale}
             onNavigate={() => setMobileOpen(false)}

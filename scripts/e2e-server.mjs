@@ -68,6 +68,7 @@ const next = spawn(
       BETTER_AUTH_SECRET:
         process.env.E2E_AUTH_SECRET ?? 'leaf-e2e-secret-do-not-use-in-production',
       BETTER_AUTH_URL: `http://127.0.0.1:${port}`,
+      LEAF_MCP_ENABLED: '1',
       S3_ENDPOINT: `http://127.0.0.1:${s3Port}`,
       S3_BUCKET: bucket,
       S3_ACCESS_KEY_ID: 'S3RVER',
