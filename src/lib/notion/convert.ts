@@ -20,6 +20,7 @@ export type ConvertContext = Readonly<{
   assetPath: (url: string, fallbackName: string) => string | null
   pageRef: (id: string) => string | null
   unsupported: (type: string) => void
+  isInlineDatabase?: (id: string) => boolean
 }>
 
 const blockColors = new Set([
@@ -467,6 +468,20 @@ function convertNode(
 
       if (!target) {
         return []
+      }
+
+      if (context.isInlineDatabase && !context.isInlineDatabase(block.id)) {
+        const title =
+          typeof content.title === 'string' && content.title.length > 0
+            ? content.title
+            : target
+
+        return [
+          {
+            content: [linkInline(target, styledText(title, {}))],
+            type: 'paragraph',
+          },
+        ]
       }
 
       return [{ props: { databaseId: target }, type: 'database' }]
