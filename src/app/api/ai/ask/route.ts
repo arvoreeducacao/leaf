@@ -10,11 +10,8 @@ import {
 import { createAiModel } from '@/lib/ai-model'
 import { getSession } from '@/lib/auth'
 import { registerAiAttempt } from '@/lib/authz'
-import {
-  askTokens,
-  scheduleSearchIndexReconcile,
-  searchAccessibleDocumentBodies,
-} from '@/lib/search-index'
+import { askPassagesHybrid } from '@/lib/search-hybrid'
+import { askTokens, scheduleSearchIndexReconcile } from '@/lib/search-index'
 
 export const askSourcesHeader = 'x-leaf-sources'
 
@@ -54,7 +51,7 @@ export async function POST(request: Request) {
 
   scheduleSearchIndexReconcile()
 
-  const passages = await searchAccessibleDocumentBodies(
+  const passages = await askPassagesHybrid(
     { userId: session.user.id, email: session.user.email },
     question,
   )

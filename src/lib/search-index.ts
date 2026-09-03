@@ -20,6 +20,9 @@ const SNIPPET_LEAD_WORDS = 4
 const ELLIPSIS = '…'
 const WORD_PATTERN = /[\p{L}\p{N}]+/gu
 const RECONCILE_INTERVAL = 5 * 60 * 1000
+const RECONCILE_BACKLOG_INTERVAL = 5 * 1000
+const RECONCILE_DOCUMENT_BUDGET = 500
+const RECONCILE_CHUNK_BUDGET = 24
 
 export type SearchSegment = Readonly<{ text: string; highlight: boolean }>
 
@@ -267,6 +270,21 @@ export async function indexDocument(documentId: string) {
 let reconcileDueAt = 0
 let reconcileInFlight: Promise<void> | null = null
 
+async function reconcileChunkRows(budget: number) {
+  const { reconcileSemanticIndex } = await import('@/lib/semantic-index')
+
+  return reconcileSemanticIndex(budget)
+}
+
+async function upkeep() {
+  const indexed = await reconcileSearchIndex(RECONCILE_DOCUMENT_BUDGET)
+  const embedded = await reconcileChunkRows(RECONCILE_CHUNK_BUDGET)
+
+  return (
+    indexed >= RECONCILE_DOCUMENT_BUDGET || embedded >= RECONCILE_CHUNK_BUDGET
+  )
+}
+
 export function scheduleSearchIndexReconcile() {
   const now = Date.now()
 
@@ -275,33 +293,48 @@ export function scheduleSearchIndexReconcile() {
   }
 
   reconcileDueAt = now + RECONCILE_INTERVAL
-  reconcileInFlight = reconcileSearchIndex()
+  reconcileInFlight = upkeep()
+    .then((backlog) => {
+      if (backlog) {
+        reconcileDueAt = Date.now() + RECONCILE_BACKLOG_INTERVAL
+      }
+    })
     .catch(() => undefined)
     .finally(() => {
       reconcileInFlight = null
     })
 }
 
-export async function reconcileSearchIndex() {
+export async function reconcileSearchIndex(
+  budget: number | null = null,
+): Promise<number> {
   await db.execute(
     sql`delete f from documents_fts f left join documents d on d.id = f.document_id where d.id is null`,
   )
 
-  const stale = await selectRows<IndexableRow>(sql`
+  const staleDocuments = sql`
     select d.id as id, d.title as title, d.content as content, d.updated_at as updatedAt
     from documents d
     left join documents_fts f on f.document_id = d.id
     where f.document_id is null or f.indexed_at <> d.updated_at
-  `)
+  `
+
+  const stale = await selectRows<IndexableRow>(
+    budget === null
+      ? staleDocuments
+      : sql`${staleDocuments} order by d.updated_at desc limit ${budget}`,
+  )
 
   for (const row of stale) {
     await writeIndexRow(row)
   }
+
+  return stale.length
 }
 
 export type ViewerKeys = Readonly<{ userId: string; email: string }>
 
-function accessCondition(viewer: ViewerKeys) {
+export function accessCondition(viewer: ViewerKeys) {
   return sql`(
     d.owner_id = ${viewer.userId}
     or exists (
