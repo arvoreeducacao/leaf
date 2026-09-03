@@ -769,6 +769,19 @@ export async function* syncNotion(
     }
   }
 
+  async function readConverted(notionId: string) {
+    try {
+      const tree = await readTree(notionId)
+      await hydrateInlineFlags(tree)
+
+      return { blocks: convertNodes(tree, convertContext), tree }
+    } catch {
+      warn(messages.pageFailed(notionId))
+
+      return null
+    }
+  }
+
   let processed = 0
   let written = 0
   let skipped = 0
@@ -887,6 +900,12 @@ export async function* syncNotion(
             continue
           }
 
+          const source = await readConverted(row.id)
+
+          if (!source) {
+            continue
+          }
+
           const rowDoc = await upsertDocument(
             row.id,
             'row',
@@ -939,16 +958,13 @@ export async function* syncNotion(
             }
           }
 
-          const tree = await readTree(row.id)
-          await hydrateInlineFlags(tree)
-          const blocks = convertNodes(tree, convertContext)
           await flushAssets()
           resolveAssetPlaceholdersInValues(values)
 
           await db
             .update(documents)
             .set({
-              content: JSON.stringify(blocks),
+              content: JSON.stringify(source.blocks),
               properties: serializeValues(values),
               kind: 'row',
             })
@@ -959,7 +975,7 @@ export async function* syncNotion(
           }
 
           await saveMapping(row.id, rowDoc.documentId, 'row', item.id, rowEdited)
-          enqueueChildren(tree, rowDoc.documentId, row.id)
+          enqueueChildren(source.tree, rowDoc.documentId, row.id)
           written += 1
           yield {
             done: written + skipped,
@@ -1036,6 +1052,12 @@ export async function* syncNotion(
         continue
       }
 
+      const source = await readConverted(item.id)
+
+      if (!source) {
+        continue
+      }
+
       const { documentId, created } = await upsertDocument(
         item.id,
         mapping?.kind === 'row' ? 'row' : 'page',
@@ -1053,14 +1075,11 @@ export async function* syncNotion(
 
       touchedDocIds.add(documentId)
 
-      const tree = await readTree(item.id)
-      await hydrateInlineFlags(tree)
-      const blocks = convertNodes(tree, convertContext)
       await flushAssets()
 
       await db
         .update(documents)
-        .set({ content: JSON.stringify(blocks) })
+        .set({ content: JSON.stringify(source.blocks) })
         .where(eq(documents.id, documentId))
 
       if (created && options?.comments) {
@@ -1068,7 +1087,7 @@ export async function* syncNotion(
       }
 
       await saveMapping(item.id, documentId, 'page', item.parentNotionId, edited)
-      enqueueChildren(tree, documentId, item.id)
+      enqueueChildren(source.tree, documentId, item.id)
       written += 1
       yield {
         done: written + skipped,

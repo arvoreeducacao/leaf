@@ -62,6 +62,7 @@ type World = {
   childText: string
   dbInline: boolean
   dbDead?: boolean
+  brokenIds?: Array<string>
   rootIcon: { name: string; color: string } | null
 }
 
@@ -171,6 +172,10 @@ function makeClient(world: World): NotionClient {
 
   return {
     children: async function* (id: string) {
+      if (world.brokenIds?.some((broken) => norm(broken) === norm(id))) {
+        throw new Error(`blocks of ${id} unavailable`)
+      }
+
       for (const block of blocks[norm(id)]?.() ?? []) {
         yield block
       }
@@ -520,5 +525,47 @@ describe('resumable Notion sync', () => {
     const all = await db.select({ id: documents.id }).from(documents)
 
     expect(all).toHaveLength(5)
+  })
+
+  it('leaves no document behind when a page cannot be read', async () => {
+    const world = makeWorld()
+
+    world.brokenIds = [childId]
+
+    const summary = await run(world)
+
+    const child = await db.query.documents.findFirst({
+      where: eq(documents.title, 'Class A'),
+    })
+
+    expect(child).toBeUndefined()
+    expect(summary.warnings).toContain(`page ${childId}`)
+
+    const all = await db.select({ id: documents.id }).from(documents)
+
+    expect(all).toHaveLength(4)
+  })
+
+  it('skips a row that cannot be read and keeps the rest of the database', async () => {
+    const world = makeWorld()
+
+    world.brokenIds = [rowOneId]
+
+    const summary = await run(world)
+
+    const rowOne = await db.query.documents.findFirst({
+      where: eq(documents.title, 'First task'),
+    })
+    const rowTwo = await db.query.documents.findFirst({
+      where: eq(documents.title, 'Second task'),
+    })
+
+    expect(rowOne).toBeUndefined()
+    expect(rowTwo?.kind).toBe('row')
+    expect(summary.warnings).toContain(`page ${rowOneId}`)
+
+    const all = await db.select({ id: documents.id }).from(documents)
+
+    expect(all).toHaveLength(4)
   })
 })
