@@ -1,9 +1,9 @@
 import { getSession } from '@/lib/auth'
+import { searchDocumentsHybrid } from '@/lib/search-hybrid'
 import type { WorkspaceSearchResult } from '@/lib/search-index'
 import {
   listRecentAccessibleDocuments,
   scheduleSearchIndexReconcile,
-  searchAccessibleDocuments,
 } from '@/lib/search-index'
 
 function json(result: WorkspaceSearchResult) {
@@ -36,7 +36,7 @@ export async function GET(request: Request) {
   }
 
   return json({
-    documents: await searchAccessibleDocuments(viewer, term),
+    documents: await searchDocumentsHybrid(viewer, term),
     recent: false,
   })
 }
