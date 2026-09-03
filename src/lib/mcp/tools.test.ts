@@ -8,6 +8,19 @@ vi.mock('@/db', async () => {
   return createTestDb()
 })
 
+const stored: Array<{ key: string; bytes: number; contentType: string }> = []
+
+vi.mock('@/lib/storage', () => ({
+  storage: {
+    async put(key: string, body: Buffer, contentType: string) {
+      stored.push({ key, bytes: body.length, contentType })
+    },
+    async get() {
+      return null
+    },
+  },
+}))
+
 import { eq } from 'drizzle-orm'
 
 import { db } from '@/db'
@@ -36,6 +49,7 @@ import {
   listOrganizationsTool,
   searchDocuments,
   updateDocumentTool,
+  uploadImageTool,
 } from '@/lib/mcp/tools'
 
 const owner = { id: 'mcp-owner', email: 'dono@arvore.com.br' }
@@ -210,6 +224,87 @@ describe('list_comments', () => {
     expect(result.threads.map((thread) => thread.body)).toEqual(['Revisar o cronograma'])
 
     await expectToolError(listCommentsTool(contextFor(stranger), { documentId: 'doc-shared' }), 'not_found')
+  })
+})
+
+describe('upload_image', () => {
+  const png = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x01])
+
+  it('guarda a imagem e devolve o endereço que entra na página', async () => {
+    const before = stored.length
+    const result = await uploadImageTool(contextFor(member), {
+      data: png.toString('base64'),
+      contentType: 'image/png',
+    })
+
+    expect(result.url).toMatch(/^\/api\/uploads\/u\/[\w-]{16}\.png$/)
+    expect(result.absoluteUrl.endsWith(result.url)).toBe(true)
+    expect(result.bytes).toBe(png.length)
+    expect(stored.length).toBe(before + 1)
+    expect(stored.at(-1)?.contentType).toBe('image/png')
+  })
+
+  it('aceita SVG e guarda sem o script e sem o onload', async () => {
+    const before = stored.length
+    const result = await uploadImageTool(contextFor(member), {
+      data: Buffer.from(
+        '<svg viewBox="0 0 10 10" onload="x()"><script>roubar()</script><text>o desenho</text></svg>',
+      ).toString('base64'),
+      contentType: 'image/svg+xml',
+    })
+
+    expect(result.url).toMatch(/\.svg$/)
+    expect(stored.length).toBe(before + 1)
+    expect(result.bytes).toBeLessThan(
+      Buffer.from('<svg viewBox="0 0 10 10" onload="x()"><script>roubar()</script><text>o desenho</text></svg>').length,
+    )
+  })
+
+  it('recusa o que diz ser SVG e não é', async () => {
+    await expectToolError(
+      uploadImageTool(contextFor(member), {
+        data: Buffer.from('só um texto qualquer').toString('base64'),
+        contentType: 'image/svg+xml',
+      }),
+      'invalid_argument',
+    )
+  })
+
+  it('recusa bytes que não são do tipo que dizem ser', async () => {
+    await expectToolError(
+      uploadImageTool(contextFor(member), {
+        data: Buffer.from('MZ ainda não é imagem').toString('base64'),
+        contentType: 'image/png',
+      }),
+      'invalid_argument',
+    )
+  })
+
+  it('recusa o que não é base64 e o que passa de 500 kB', async () => {
+    await expectToolError(
+      uploadImageTool(contextFor(member), { data: 'não é base64!', contentType: 'image/png' }),
+      'invalid_argument',
+    )
+
+    const big = Buffer.concat([png, Buffer.alloc(500_001)])
+
+    await expectToolError(
+      uploadImageTool(contextFor(member), {
+        data: big.toString('base64'),
+        contentType: 'image/png',
+      }),
+      'invalid_argument',
+    )
+  })
+
+  it('não guarda nada sem o escopo leaf:write', async () => {
+    await expectToolError(
+      uploadImageTool(contextFor(owner, readScopes), {
+        data: png.toString('base64'),
+        contentType: 'image/png',
+      }),
+      'write_disabled',
+    )
   })
 })
 

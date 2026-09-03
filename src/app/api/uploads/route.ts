@@ -1,20 +1,8 @@
-import { nanoid } from 'nanoid'
 import { getTranslations } from 'next-intl/server'
 import { NextResponse } from 'next/server'
 
 import { getSession } from '@/lib/auth'
-import { storage } from '@/lib/storage'
-
-const MAX_BYTES = 5 * 1024 * 1024
-
-const extensionByType: Record<string, string> = {
-  'image/png': 'png',
-  'image/jpeg': 'jpg',
-  'image/gif': 'gif',
-  'image/webp': 'webp',
-  'image/svg+xml': 'svg',
-  'image/avif': 'avif',
-}
+import { MAX_UPLOAD_BYTES, storeUpload } from '@/lib/uploads'
 
 export async function POST(request: Request) {
   const t = await getTranslations('uploads')
@@ -41,19 +29,18 @@ export async function POST(request: Request) {
     )
   }
 
-  if (file.size > MAX_BYTES) {
+  if (file.size > MAX_UPLOAD_BYTES) {
     return NextResponse.json(
       { error: t('tooLarge', { limit: '5 MB' }) },
       { status: 413 },
     )
   }
 
-  const extension = extensionByType[file.type] ?? 'bin'
-  const key = `u/${nanoid(16)}.${extension}`
   const buffer = Buffer.from(await file.arrayBuffer())
+  let stored: { url: string }
 
   try {
-    await storage.put(key, buffer, file.type)
+    stored = await storeUpload(buffer, file.type)
   } catch {
     return NextResponse.json(
       { error: t('saveFailed') },
@@ -61,5 +48,5 @@ export async function POST(request: Request) {
     )
   }
 
-  return NextResponse.json({ url: `/api/uploads/${key}` }, { status: 201 })
+  return NextResponse.json({ url: stored.url }, { status: 201 })
 }

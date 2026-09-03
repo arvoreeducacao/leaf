@@ -16,8 +16,10 @@ import {
   listCommentsTool,
   listDocumentsTool,
   listOrganizationsTool,
+  mcpImageTypes,
   searchDocuments,
   updateDocumentTool,
+  uploadImageTool,
 } from '@/lib/mcp/tools'
 
 const dataNotice =
@@ -239,6 +241,27 @@ export function createLeafMcpServer(context: McpToolContext) {
         run(context, 'create_document', args, () =>
           createDocumentTool(context, args),
         ),
+    )
+
+    server.registerTool(
+      'upload_image',
+      {
+        title: 'Upload image',
+        description:
+          'Store an image in Leaf and get the address to put in a page. Send the bytes as base64, up to 500 kB. Use it for something Leaf cannot hold as a block, such as a hand-drawn diagram: send the diagram itself as image/svg+xml and it keeps its lines. Script and event handlers are stripped from SVG before it is stored.',
+        inputSchema: {
+          data: z
+            .string()
+            .min(1)
+            .describe('The image bytes, base64 encoded, no data: prefix'),
+          contentType: z
+            .enum(mcpImageTypes)
+            .describe('The image type, which must match the bytes'),
+        },
+        annotations: { readOnlyHint: false, destructiveHint: false },
+      },
+      (args) =>
+        run(context, 'upload_image', args, () => uploadImageTool(context, args)),
     )
 
     server.registerTool(
