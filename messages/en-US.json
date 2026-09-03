@@ -498,7 +498,17 @@
     "calloutAliases": "callout, highlight, warning, tip, note",
     "databaseTitle": "Database",
     "databaseSubtext": "A table of pages with properties, filters and a board",
-    "databaseAliases": "database, table, board, kanban, grid"
+    "databaseAliases": "database, table, board, kanban, grid",
+    "embedTitle": "Embed",
+    "embedSubtext": "Figma, YouTube, Google Docs, Miro and other links",
+    "embedAliases": "embed, figma, youtube, video, miro, google docs, loom, spreadsheet"
+  },
+  "embed": {
+    "placeholder": "Paste a Figma, YouTube or Google Docs link...",
+    "confirm": "Embed",
+    "empty": "No link embedded",
+    "unsupported": "Cannot be shown here",
+    "activate": "Click to interact"
   },
   "importFile": {
     "tooLarge": "The file is larger than {limit}",
