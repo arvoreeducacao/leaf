@@ -49,6 +49,7 @@ const collapsedStorageKey = 'leaf:sidebar-collapsed'
 type Props = Readonly<{
   user: { name: string; email: string }
   locale: string
+  connectedAppsEnabled: boolean
   owned: Array<DocumentNode>
   organizationDocuments: Array<DocumentNode>
   organizationName: string | null
@@ -71,6 +72,7 @@ function NavContent({
   trashed,
   user,
   locale,
+  connectedAppsEnabled,
   onNavigate,
   searchRef,
   headerAction,
@@ -85,6 +87,7 @@ function NavContent({
   trashed: Array<DocumentSummary>
   user: { name: string; email: string }
   locale: string
+  connectedAppsEnabled: boolean
   onNavigate?: () => void
   searchRef?: React.RefObject<HTMLInputElement | null>
   headerAction?: React.ReactNode
@@ -216,7 +219,12 @@ function NavContent({
 
       <div className="flex flex-col gap-0.5 px-2 pt-1 pb-2">
         <TrashSection documents={trashed} />
-        <UserMenu email={user.email} locale={locale} name={user.name} />
+        <UserMenu
+          connectedAppsEnabled={connectedAppsEnabled}
+          email={user.email}
+          locale={locale}
+          name={user.name}
+        />
       </div>
     </div>
   )
@@ -225,6 +233,7 @@ function NavContent({
 export function AppShell({
   user,
   locale,
+  connectedAppsEnabled,
   owned,
   organizationDocuments,
   organizationName,
@@ -327,6 +336,7 @@ export function AppShell({
         >
           <div className="sticky top-0 h-dvh">
             <NavContent
+              connectedAppsEnabled={connectedAppsEnabled}
               activeOrgId={activeOrgId}
               headerAction={
                 <Tooltip>
@@ -415,6 +425,7 @@ export function AppShell({
             <SheetDescription>{t('mobileDescription')}</SheetDescription>
           </SheetHeader>
           <NavContent
+              connectedAppsEnabled={connectedAppsEnabled}
             activeOrgId={activeOrgId}
             locale={locale}
             onNavigate={() => setMobileOpen(false)}

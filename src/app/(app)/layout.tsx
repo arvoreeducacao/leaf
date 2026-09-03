@@ -5,6 +5,7 @@ import { AppShell } from '@/components/app/app-shell'
 import { PendingJoinRedirect } from '@/components/app/pending-join-redirect'
 import { readActiveOrgId } from '@/lib/active-org'
 import { getSession } from '@/lib/auth'
+import { isMcpEnabled } from '@/lib/mcp-config'
 import {
   buildDocumentTree,
   listPrivateDocuments,
@@ -64,6 +65,7 @@ export default async function AppLayout({
   return (
     <AppShell
       activeOrgId={membership?.orgId ?? null}
+      connectedAppsEnabled={isMcpEnabled()}
       locale={locale}
       organizationDocuments={buildDocumentTree(organizationDocuments)}
       organizationName={membership?.orgName ?? null}

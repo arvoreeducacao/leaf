@@ -15,6 +15,8 @@ import { emailDomainErrorCode } from '@/lib/email-domain'
 
 type Mode = 'login' | 'signup'
 
+type AuthorizationContinuation = Readonly<{ redirect?: boolean; url?: string }>
+
 type Props = Readonly<{
   mode: Mode
   restrictedDomain: string | null
@@ -71,6 +73,13 @@ export function AuthForm({ mode, restrictedDomain }: Props) {
           ? t('domainRestricted', { domain: restrictedDomain ?? '' })
           : t(mode === 'signup' ? 'signupFailed' : 'loginFailed'),
       )
+      return
+    }
+
+    const continuation = result.data as AuthorizationContinuation | null
+
+    if (continuation?.redirect && continuation.url) {
+      window.location.assign(continuation.url)
       return
     }
 

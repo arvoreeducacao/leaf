@@ -18,7 +18,9 @@
     "signup": "Criar conta | Leaf",
     "document": "{title} | Leaf",
     "org": "Organização | Leaf",
-    "join": "Convite | Leaf"
+    "join": "Convite | Leaf",
+    "consent": "Autorizar aplicativo | Leaf",
+    "connectedApps": "Aplicativos conectados | Leaf"
   },
   "auth": {
     "loginTitle": "Entrar na sua conta",
@@ -59,7 +61,8 @@
     "language": "Idioma",
     "localePtBR": "Português (Brasil)",
     "localeEnUS": "English (US)",
-    "switchingLanguage": "Trocando o idioma"
+    "switchingLanguage": "Trocando o idioma",
+    "connectedApps": "Aplicativos conectados"
   },
   "nav": {
     "navigation": "Navegação",
@@ -692,5 +695,45 @@
     "invalidTitle": "Link de convite inválido",
     "invalidHint": "Este link não é válido ou foi desativado. Peça um link novo para quem convidou você.",
     "backHome": "Ir para o Leaf"
+  },
+  "oauthConsent": {
+    "title": "Permitir acesso ao Leaf?",
+    "subtitle": "{client} quer acessar seus documentos no Leaf em seu nome",
+    "unknownClient": "Aplicativo sem nome",
+    "clientLabel": "Aplicativo",
+    "redirectLabel": "Depois de permitir, você volta para",
+    "accountLabel": "Conta",
+    "scopesTitle": "O que o aplicativo poderá fazer",
+    "scopeRead": "Ler documentos, bases de dados, comentários e organizações que você já enxerga",
+    "scopeWrite": "Criar páginas e editar as páginas que você pode editar",
+    "scopeOffline": "Continuar conectado sem pedir seu login de novo",
+    "allow": "Permitir",
+    "deny": "Negar",
+    "failed": "Não foi possível concluir a autorização. Volte ao aplicativo e tente de novo.",
+    "invalidTitle": "Pedido de autorização inválido",
+    "invalidBody": "O link expirou ou o aplicativo não está registrado. Volte ao aplicativo e tente de novo.",
+    "revokeHint": "Você pode revogar esse acesso a qualquer momento em Aplicativos conectados, no menu da sua conta."
+  },
+  "connectedApps": {
+    "title": "Aplicativos conectados",
+    "subtitle": "Aplicativos que acessam o Leaf em seu nome pelo MCP. Eles só enxergam o que você já enxerga.",
+    "mcpUrlLabel": "Endereço do MCP",
+    "mcpUrlHelp": "Use este endereço para conectar o Claude, o Cursor ou outro cliente MCP",
+    "empty": "Nenhum aplicativo conectado ainda",
+    "emptyHelp": "Quando você autorizar um aplicativo, ele aparece aqui e você pode revogar o acesso quando quiser",
+    "unknownClient": "Aplicativo sem nome",
+    "grantedAt": "Autorizado em {date}",
+    "scopesLabel": "Permissões concedidas",
+    "scopeRead": "Leitura",
+    "scopeWrite": "Escrita",
+    "scopeOffline": "Acesso contínuo",
+    "revoke": "Revogar acesso de {name}",
+    "revokeAction": "Revogar acesso",
+    "revoked": "Acesso revogado",
+    "confirmTitle": "Revogar o acesso de {name}?",
+    "confirmDescription": "O aplicativo perde o acesso na hora e precisa pedir autorização de novo para voltar a usar o Leaf.",
+    "confirmAction": "Revogar acesso",
+    "confirmCancel": "Manter acesso",
+    "errorNotFound": "Este aplicativo não está mais conectado."
   }
 }

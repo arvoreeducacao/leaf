@@ -1,0 +1,352 @@
+import { Client } from '@modelcontextprotocol/sdk/client/index.js'
+import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+vi.mock('@/db', async () => {
+  const { createTestDb } = await import('@/db/testing')
+
+  return createTestDb()
+})
+
+import { eq } from 'drizzle-orm'
+
+import { db } from '@/db'
+import {
+  comments,
+  databaseProperties,
+  documentShares,
+  documents,
+  organizationMembers,
+  organizations,
+  teamspaceMembers,
+  teamspaces,
+  user,
+} from '@/db/schema'
+import { resetDatabase } from '@/db/testing'
+import { createLeafMcpServer } from '@/lib/mcp/server'
+import {
+  type McpToolContext,
+  McpToolError,
+  createDocumentTool,
+  getDatabaseTool,
+  getDocumentTool,
+  listCommentsTool,
+  listDocumentsTool,
+  listOrganizationsTool,
+  searchDocuments,
+  updateDocumentTool,
+} from '@/lib/mcp/tools'
+
+const owner = { id: 'mcp-owner', email: 'dono@arvore.com.br' }
+const editor = { id: 'mcp-editor', email: 'editor@arvore.com.br' }
+const member = { id: 'mcp-member', email: 'membro@arvore.com.br' }
+const stranger = { id: 'mcp-stranger', email: 'fora@arvore.com.br' }
+
+const org = 'org-mcp'
+const teamspace = 'ts-mcp'
+
+const readScopes = ['leaf:read', 'offline_access']
+const writeScopes = ['leaf:read', 'leaf:write', 'offline_access']
+
+function contextFor(
+  person: { id: string; email: string },
+  scopes: Array<string> = writeScopes,
+): McpToolContext {
+  return { session: { user: person }, scopes, clientId: 'client-test' }
+}
+
+function paragraph(text: string) {
+  return JSON.stringify([
+    { id: 'b1', type: 'paragraph', props: {}, content: [{ type: 'text', text, styles: {} }], children: [] },
+  ])
+}
+
+const longAgo = new Date(Date.now() - 60_000)
+
+beforeEach(async () => {
+  await resetDatabase()
+
+  await db.insert(user).values(
+    [owner, editor, member, stranger].map((person) => ({
+      id: person.id,
+      name: person.email.split('@')[0],
+      email: person.email,
+      emailVerified: true,
+      createdAt: longAgo,
+      updatedAt: longAgo,
+    })),
+  )
+
+  await db.insert(organizations).values({ id: org, name: 'Escola MCP', createdAt: longAgo })
+  await db.insert(organizationMembers).values([
+    { id: 'm1', orgId: org, userId: owner.id, role: 'owner', createdAt: longAgo },
+    { id: 'm2', orgId: org, userId: member.id, role: 'member', createdAt: longAgo },
+    { id: 'm3', orgId: org, userId: editor.id, role: 'member', createdAt: longAgo },
+  ])
+  await db.insert(teamspaces).values({ id: teamspace, orgId: org, name: 'Pedagógico', access: 'closed', createdAt: longAgo })
+  await db.insert(teamspaceMembers).values({ id: 'tm1', teamspaceId: teamspace, userId: member.id, role: 'member', createdAt: longAgo })
+
+  await db.insert(documents).values([
+    { id: 'doc-private', ownerId: owner.id, orgId: org, title: 'Plano secreto', content: paragraph('Segredo da direção sobre leitura.'), createdAt: longAgo, updatedAt: longAgo },
+    { id: 'doc-shared', ownerId: owner.id, orgId: org, title: 'Ata compartilhada', content: paragraph('Cronograma de leitura do trimestre.'), createdAt: longAgo, updatedAt: longAgo },
+    { id: 'doc-child', ownerId: owner.id, parentId: 'doc-shared', orgId: org, title: 'Anexo da ata', content: paragraph('Anexo.'), createdAt: longAgo, updatedAt: longAgo },
+    { id: 'doc-org', ownerId: owner.id, orgId: org, orgAccess: 'viewer', title: 'Aviso da organização', content: paragraph('Leitura obrigatória para todos.'), createdAt: longAgo, updatedAt: longAgo },
+    { id: 'doc-team', ownerId: owner.id, orgId: org, teamspaceId: teamspace, title: 'Plano do teamspace', content: paragraph('Plano do time de leitura.'), createdAt: longAgo, updatedAt: longAgo },
+    { id: 'db-turmas', ownerId: owner.id, orgId: org, kind: 'database', title: 'Turmas', createdAt: longAgo, updatedAt: longAgo },
+    { id: 'row-6a', ownerId: owner.id, parentId: 'db-turmas', orgId: org, kind: 'row', title: '6º A', properties: JSON.stringify({ 'prop-livros': 12 }), createdAt: longAgo, updatedAt: longAgo },
+  ])
+
+  await db.insert(databaseProperties).values({ id: 'prop-livros', databaseId: 'db-turmas', name: 'Livros', type: 'number', position: 0, createdAt: longAgo })
+
+  await db.insert(documentShares).values([
+    { id: 's1', documentId: 'doc-shared', granteeEmail: editor.email, role: 'editor', createdAt: longAgo },
+    { id: 's2', documentId: 'doc-shared', granteeEmail: member.email, role: 'viewer', createdAt: longAgo },
+  ])
+
+  await db.insert(comments).values({
+    id: 'c1',
+    documentId: 'doc-shared',
+    blockId: 'b1',
+    authorId: owner.id,
+    body: 'Revisar o cronograma',
+    createdAt: longAgo,
+    updatedAt: longAgo,
+  })
+})
+
+async function expectToolError(promise: Promise<unknown>, code: McpToolError['code']) {
+  await expect(promise).rejects.toMatchObject({ name: 'McpToolError', code })
+}
+
+describe('search_documents', () => {
+  it('só devolve documentos que a pessoa acessa', async () => {
+    const asMember = await searchDocuments(contextFor(member), { query: 'leitura' })
+    const ids = asMember.results.map((hit) => hit.id).sort()
+
+    expect(ids).toEqual(['doc-org', 'doc-shared', 'doc-team'])
+
+    const asStranger = await searchDocuments(contextFor(stranger), { query: 'leitura' })
+
+    expect(asStranger.results).toEqual([])
+  })
+})
+
+describe('get_document', () => {
+  it('renderiza markdown e filtra filhos pelo acesso do leitor', async () => {
+    const result = await getDocumentTool(contextFor(member), { documentId: 'doc-shared' })
+
+    expect(result.access).toBe('viewer')
+    expect(result.markdown).toContain('Cronograma de leitura')
+    expect(result.children).toEqual([])
+
+    const asOwner = await getDocumentTool(contextFor(owner), { documentId: 'doc-shared' })
+
+    expect(asOwner.children.map((child) => child.id)).toEqual(['doc-child'])
+  })
+
+  it('devolve not_found para quem não tem acesso e para id malformado', async () => {
+    await expectToolError(getDocumentTool(contextFor(stranger), { documentId: 'doc-private' }), 'not_found')
+    await expectToolError(getDocumentTool(contextFor(owner), { documentId: 'doc private' }), 'invalid_argument')
+  })
+
+  it('traz as propriedades resolvidas de uma linha de base', async () => {
+    const result = await getDocumentTool(contextFor(owner), { documentId: 'row-6a' })
+
+    expect(result.properties).toEqual({ Livros: '12' })
+    expect(result.database).toEqual({ id: 'db-turmas', title: 'Turmas' })
+  })
+})
+
+describe('list_documents', () => {
+  it('lista próprios, compartilhados, da organização e dos teamspaces onde é membro', async () => {
+    const result = await listDocumentsTool(contextFor(member), {})
+    const bySource = Object.fromEntries(result.documents.map((doc) => [doc.id, doc.source]))
+
+    expect(bySource).toEqual({ 'doc-shared': 'shared', 'doc-org': 'organization', 'doc-team': 'teamspace' })
+  })
+
+  it('não vaza nada para quem está fora', async () => {
+    const result = await listDocumentsTool(contextFor(stranger), {})
+
+    expect(result.documents).toEqual([])
+  })
+})
+
+describe('list_organizations', () => {
+  it('só mostra emails para quem administra a organização', async () => {
+    const asOwner = await listOrganizationsTool(contextFor(owner))
+    const asMember = await listOrganizationsTool(contextFor(member))
+
+    expect(asOwner.organizations[0].members.every((person) => 'email' in person)).toBe(true)
+    expect(asMember.organizations[0].members.every((person) => !('email' in person))).toBe(true)
+    expect(asMember.organizations[0].teamspaces).toEqual([
+      { id: teamspace, name: 'Pedagógico', access: 'closed', member: true },
+    ])
+
+    expect((await listOrganizationsTool(contextFor(stranger))).organizations).toEqual([])
+  })
+})
+
+describe('get_database', () => {
+  it('resolve valores por nome de propriedade e respeita o acesso', async () => {
+    const result = await getDatabaseTool(contextFor(owner), { databaseId: 'db-turmas' })
+
+    expect(result.properties.map((property) => property.name)).toEqual(['Livros'])
+    expect(result.rows).toHaveLength(1)
+    expect(result.rows[0].values).toEqual({ Livros: '12' })
+
+    await expectToolError(getDatabaseTool(contextFor(stranger), { databaseId: 'db-turmas' }), 'not_found')
+    await expectToolError(getDatabaseTool(contextFor(owner), { databaseId: 'doc-shared' }), 'not_found')
+  })
+})
+
+describe('list_comments', () => {
+  it('lista as threads para quem lê e recusa quem não lê', async () => {
+    const result = await listCommentsTool(contextFor(member), { documentId: 'doc-shared' })
+
+    expect(result.threads.map((thread) => thread.body)).toEqual(['Revisar o cronograma'])
+
+    await expectToolError(listCommentsTool(contextFor(stranger), { documentId: 'doc-shared' }), 'not_found')
+  })
+})
+
+describe('create_document', () => {
+  it('cria uma página privada do usuário do token', async () => {
+    const result = await createDocumentTool(contextFor(member), {
+      title: 'Nova página',
+      markdown: '# Título\n\nParágrafo.',
+    })
+
+    const created = await db.query.documents.findFirst({ where: eq(documents.id, result.id) })
+
+    expect(created?.ownerId).toBe(member.id)
+    expect(created?.orgId).toBe(org)
+    expect(created?.orgAccess).toBeNull()
+    expect(created?.content).toContain('Parágrafo.')
+  })
+
+  it('exige canEdit no pai e herda organização e teamspace dele', async () => {
+    await expectToolError(
+      createDocumentTool(contextFor(member), { title: 'Sub', parentId: 'doc-shared' }),
+      'forbidden',
+    )
+
+    const result = await createDocumentTool(contextFor(editor), { title: 'Sub', parentId: 'doc-shared' })
+    const created = await db.query.documents.findFirst({ where: eq(documents.id, result.id) })
+
+    expect(created?.parentId).toBe('doc-shared')
+    expect(created?.orgId).toBe(org)
+  })
+
+  it('não cria sem o escopo leaf:write', async () => {
+    await expectToolError(
+      createDocumentTool(contextFor(owner, readScopes), { title: 'Sem escopo' }),
+      'write_disabled',
+    )
+  })
+})
+
+describe('update_document', () => {
+  it('anexa markdown para quem edita e recusa quem só lê', async () => {
+    const result = await updateDocumentTool(contextFor(editor), {
+      documentId: 'doc-shared',
+      markdown: 'Linha nova.',
+    })
+
+    expect(result.written).toBe(true)
+
+    const updated = await db.query.documents.findFirst({ where: eq(documents.id, 'doc-shared') })
+
+    expect(updated?.content).toContain('Cronograma de leitura')
+    expect(updated?.content).toContain('Linha nova.')
+
+    await expectToolError(
+      updateDocumentTool(contextFor(member), { documentId: 'doc-shared', markdown: 'x' }),
+      'forbidden',
+    )
+  })
+
+  it('substitui o corpo no modo replace', async () => {
+    await updateDocumentTool(contextFor(owner), {
+      documentId: 'doc-private',
+      markdown: 'Só isto.',
+      mode: 'replace',
+    })
+
+    const updated = await db.query.documents.findFirst({ where: eq(documents.id, 'doc-private') })
+
+    expect(updated?.content).not.toContain('Segredo')
+    expect(updated?.content).toContain('Só isto.')
+  })
+
+  it('recusa escrever se a página foi editada há menos de 15 s', async () => {
+    await db
+      .update(documents)
+      .set({ updatedAt: new Date() })
+      .where(eq(documents.id, 'doc-private'))
+
+    await expectToolError(
+      updateDocumentTool(contextFor(owner), { documentId: 'doc-private', markdown: 'x' }),
+      'document_busy',
+    )
+  })
+
+  it('não edita bases de dados nem sem escopo de escrita', async () => {
+    await expectToolError(
+      updateDocumentTool(contextFor(owner), { documentId: 'db-turmas', markdown: 'x' }),
+      'invalid_argument',
+    )
+    await expectToolError(
+      updateDocumentTool(contextFor(owner, readScopes), { documentId: 'doc-private', markdown: 'x' }),
+      'write_disabled',
+    )
+  })
+})
+
+async function connectedClient(context: McpToolContext) {
+  const server = createLeafMcpServer(context)
+  const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair()
+  const client = new Client({ name: 'teste', version: '0.0.0' })
+
+  await server.connect(serverTransport)
+  await client.connect(clientTransport)
+
+  return { client, close: () => Promise.all([client.close(), server.close()]) }
+}
+
+describe('servidor MCP', () => {
+  it('só registra as tools de escrita quando o token tem leaf:write', async () => {
+    const readOnly = await connectedClient(contextFor(owner, readScopes))
+    const readNames = (await readOnly.client.listTools()).tools.map((tool) => tool.name).sort()
+
+    await readOnly.close()
+
+    expect(readNames).toEqual([
+      'get_database',
+      'get_document',
+      'list_comments',
+      'list_documents',
+      'list_organizations',
+      'search_documents',
+    ])
+
+    const writable = await connectedClient(contextFor(owner))
+    const writeNames = (await writable.client.listTools()).tools.map((tool) => tool.name)
+
+    await writable.close()
+
+    expect(writeNames).toContain('create_document')
+    expect(writeNames).toContain('update_document')
+  })
+
+  it('devolve erro genérico com isError para documento inacessível', async () => {
+    const { client, close } = await connectedClient(contextFor(stranger, readScopes))
+    const result = await client.callTool({ name: 'get_document', arguments: { documentId: 'doc-private' } })
+
+    await close()
+
+    expect(result.isError).toBe(true)
+    expect(JSON.stringify(result.content)).toContain('not_found')
+    expect(JSON.stringify(result.content)).not.toContain('Segredo')
+  })
+})
