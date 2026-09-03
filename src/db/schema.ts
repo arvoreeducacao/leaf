@@ -425,6 +425,30 @@ export const notionDocuments = mysqlTable(
   ],
 )
 
+export const githubDocuments = mysqlTable(
+  'github_documents',
+  {
+    userId: varchar('user_id', { length: AUTH_ID })
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    githubId: varchar('github_id', { length: 191 }).notNull(),
+    documentId: varchar('document_id', { length: APP_ID })
+      .notNull()
+      .references(() => documents.id, { onDelete: 'cascade' }),
+    kind: mysqlEnum('kind', ['database', 'row', 'repo'])
+      .notNull()
+      .default('row'),
+    updatedAt: datetime('updated_at', { mode: 'date', fsp: 3 }),
+    syncedAt: datetime('synced_at', { mode: 'date', fsp: 3 })
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP(3)`),
+  },
+  (table) => [
+    primaryKey({ columns: [table.userId, table.githubId] }),
+    index('github_documents_document_id_idx').on(table.documentId),
+  ],
+)
+
 export const notionConnections = mysqlTable('notion_connections', {
   userId: varchar('user_id', { length: AUTH_ID })
     .primaryKey()
@@ -462,3 +486,5 @@ export type TeamspaceRole = TeamspaceMember['role']
 export type DocumentVersion = typeof documentVersions.$inferSelect
 export type Comment = typeof comments.$inferSelect
 export type NotionConnection = typeof notionConnections.$inferSelect
+export type GithubDocument = typeof githubDocuments.$inferSelect
+export type GithubDocumentKind = GithubDocument['kind']

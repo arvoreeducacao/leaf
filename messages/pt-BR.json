@@ -700,6 +700,25 @@
     "unsupportedBlocks": "Blocos sem equivalente foram pulados: {count} ({types}).",
     "skippedUnchanged": "{count} páginas já estavam em dia e foram puladas."
   },
+  "githubSync": {
+    "databaseTitle": "Pull requests do GitHub",
+    "propertyRepository": "Repositório",
+    "propertyNumber": "Número",
+    "propertyState": "Estado",
+    "propertyAuthor": "Autor",
+    "propertyUpdatedAt": "Atualizado em",
+    "propertyUrl": "URL",
+    "stateOpen": "Aberto",
+    "stateMerged": "Merged",
+    "stateClosed": "Fechado",
+    "tableView": "Tabela",
+    "boardView": "Quadro",
+    "notAuthenticated": "Não autenticado",
+    "notConfigured": "A base do GitHub ainda não está configurada neste Leaf.",
+    "unfinished": "Não foi possível concluir a sincronização com o GitHub",
+    "repoFailed": "Não foi possível ler os pull requests de {repo}.",
+    "skippedUnchanged": "{count} pull requests já estavam em dia e foram pulados."
+  },
   "notionLink": {
     "title": "Importar do Notion",
     "description": "Cole o link de uma página do Notion. Ela e tudo abaixo dela entram no Leaf.",
