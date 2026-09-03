@@ -4,21 +4,25 @@ import { useTranslations } from 'next-intl'
 import { useState, useTransition } from 'react'
 import { toast } from 'sonner'
 
+import { DocumentIcon } from '@/components/app/document-icon'
 import {
   sidebarEmpty,
   sidebarIcon,
   sidebarRow,
 } from '@/components/app/sidebar-styles'
 import {
-  CaretDownIcon,
-  CaretRightIcon,
-  DeleteIcon,
-  PageIcon,
-  RotateIcon,
+  ChevronDownIcon,
+  ChevronRightIcon,
+  RestoreIcon,
   TrashIcon,
-} from '@/components/icons'
+} from '@/components/icons/outline'
 import { Button } from '@/components/ui/button'
 import { ButtonIcon } from '@/components/ui/button-icon'
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuTrigger,
+} from '@/components/ui/context-menu'
 import {
   Dialog,
   DialogContent,
@@ -27,6 +31,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { ContextEntries } from '@/components/ui/menu-entries'
 import {
   Tooltip,
   TooltipContent,
@@ -97,12 +102,12 @@ export function TrashSection({ documents }: Props) {
             </span>
           ) : null}
           {expanded ? (
-            <CaretDownIcon
+            <ChevronDownIcon
               aria-hidden="true"
               className="size-3.5 shrink-0 text-content-subtle"
             />
           ) : (
-            <CaretRightIcon
+            <ChevronRightIcon
               aria-hidden="true"
               className="size-3.5 shrink-0 text-content-subtle"
             />
@@ -116,47 +121,73 @@ export function TrashSection({ documents }: Props) {
         ) : (
           <ul className="flex flex-col">
             {documents.map((document) => (
-              <li
-                className="group/trash flex h-11 items-center gap-1.5 rounded-large pr-0.5 pl-1.5 hover:bg-surface-hover tablet:h-7"
-                key={document.id}
-              >
-                <span className="flex size-5 shrink-0 items-center justify-center">
-                  <PageIcon aria-hidden="true" className={sidebarIcon} />
-                </span>
-                <span className="min-w-0 flex-1 truncate text-body-small text-content">
-                  {document.title}
-                </span>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <ButtonIcon
-                      aria-label={t('restoreItem', { title: document.title })}
-                      className="tablet:opacity-0 tablet:group-focus-within/trash:opacity-100 tablet:group-hover/trash:opacity-100"
-                      disabled={pending}
-                      onClick={() => handleRestore(document.id)}
-                      size="small"
-                      variant="ghost"
-                    >
-                      <RotateIcon aria-hidden="true" />
-                    </ButtonIcon>
-                  </TooltipTrigger>
-                  <TooltipContent>{t('restore')}</TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <ButtonIcon
-                      aria-label={t('deleteItem', { title: document.title })}
-                      className="tablet:opacity-0 tablet:group-focus-within/trash:opacity-100 tablet:group-hover/trash:opacity-100"
-                      disabled={pending}
-                      onClick={() => setTarget(document)}
-                      size="small"
-                      variant="ghost"
-                    >
-                      <DeleteIcon aria-hidden="true" />
-                    </ButtonIcon>
-                  </TooltipTrigger>
-                  <TooltipContent>{t('deleteForever')}</TooltipContent>
-                </Tooltip>
-              </li>
+              <ContextMenu key={document.id}>
+                <ContextMenuTrigger asChild>
+                  <li className="group/trash flex h-11 items-center gap-1.5 rounded-large pr-0.5 pl-1.5 hover:bg-surface-hover tablet:h-7">
+                    <span className="flex size-5 shrink-0 items-center justify-center">
+                      <DocumentIcon
+                        className={sidebarIcon}
+                        icon={document.icon}
+                        kind={document.kind === 'row' ? 'page' : document.kind}
+                      />
+                    </span>
+                    <span className="min-w-0 flex-1 truncate text-body-small text-content">
+                      {document.title}
+                    </span>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <ButtonIcon
+                          aria-label={t('restoreItem', { title: document.title })}
+                          className="tablet:opacity-0 tablet:group-focus-within/trash:opacity-100 tablet:group-hover/trash:opacity-100"
+                          disabled={pending}
+                          onClick={() => handleRestore(document.id)}
+                          size="small"
+                          variant="ghost"
+                        >
+                          <RestoreIcon aria-hidden="true" />
+                        </ButtonIcon>
+                      </TooltipTrigger>
+                      <TooltipContent>{t('restore')}</TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <ButtonIcon
+                          aria-label={t('deleteItem', { title: document.title })}
+                          className="tablet:opacity-0 tablet:group-focus-within/trash:opacity-100 tablet:group-hover/trash:opacity-100"
+                          disabled={pending}
+                          onClick={() => setTarget(document)}
+                          size="small"
+                          variant="ghost"
+                        >
+                          <TrashIcon aria-hidden="true" />
+                        </ButtonIcon>
+                      </TooltipTrigger>
+                      <TooltipContent>{t('deleteForever')}</TooltipContent>
+                    </Tooltip>
+                  </li>
+                </ContextMenuTrigger>
+                <ContextMenuContent className="w-56">
+                  <ContextEntries
+                    entries={[
+                      {
+                        disabled: pending,
+                        icon: RestoreIcon,
+                        key: 'restore',
+                        label: t('restore'),
+                        onSelect: () => handleRestore(document.id),
+                      },
+                      {
+                        disabled: pending,
+                        icon: TrashIcon,
+                        key: 'delete',
+                        label: t('deleteForever'),
+                        onSelect: () => setTarget(document),
+                        variant: 'destructive',
+                      },
+                    ]}
+                  />
+                </ContextMenuContent>
+              </ContextMenu>
             ))}
           </ul>
         )

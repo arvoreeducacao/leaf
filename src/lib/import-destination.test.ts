@@ -35,7 +35,7 @@ vi.mock('next/headers', () => ({
   }),
 }))
 
-const activeSession = { user: { id: 'user-owner', email: 'dono@arvore.com.br' } }
+const activeSession = { user: { id: 'user-owner', email: 'owner@arvore.com.br' } }
 
 vi.mock('@/lib/auth', () => ({
   getSession: async () => activeSession,
@@ -101,7 +101,7 @@ beforeEach(async () => {
 
   await db.insert(user).values({
     id: ownerId,
-    name: 'Dono',
+    name: 'Owner',
     email: activeSession.user.email,
     emailVerified: false,
     createdAt: now,
@@ -109,8 +109,8 @@ beforeEach(async () => {
   })
 
   await db.insert(organizations).values([
-    { id: orgId, name: 'Escola Árvore', createdAt: now },
-    { id: otherOrgId, name: 'Outra escola', createdAt: now },
+    { id: orgId, name: 'Árvore School', createdAt: now },
+    { id: otherOrgId, name: 'Other school', createdAt: now },
   ])
 
   await db.insert(organizationMembers).values({
@@ -122,26 +122,26 @@ beforeEach(async () => {
   })
 
   await db.insert(teamspaces).values([
-    { id: openTeamspace, orgId, name: 'Aberto', access: 'open', createdAt: now },
+    { id: openTeamspace, orgId, name: 'Open', access: 'open', createdAt: now },
     {
       id: closedTeamspace,
       orgId,
-      name: 'Fechado',
+      name: 'Closed',
       access: 'closed',
       createdAt: now,
     },
     {
       id: foreignTeamspace,
       orgId: otherOrgId,
-      name: 'De fora',
+      name: 'Outsider',
       access: 'open',
       createdAt: now,
     },
   ])
 })
 
-describe('destino da importação', () => {
-  it('lê e escreve o destino que veio do formulário', () => {
+describe('import destination', () => {
+  it('reads and writes the destination that came from the form', () => {
     expect(parseImportDestination('private')).toEqual({ kind: 'private' })
     expect(parseImportDestination('organization')).toEqual({
       kind: 'organization',
@@ -158,13 +158,13 @@ describe('destino da importação', () => {
     ).toBe(`teamspace:${openTeamspace}`)
   })
 
-  it('recusa destino desconhecido e teamspace sem id', () => {
+  it('rejects an unknown destination and a teamspace without an id', () => {
     expect(parseImportDestination('outro')).toBeNull()
     expect(parseImportDestination('teamspace:')).toBeNull()
     expect(parseImportDestination(null)).toBeNull()
   })
 
-  it('herda o destino da página onde a importação começou', () => {
+  it('inherits the destination of the page where the import started', () => {
     expect(
       destinationOfParent({
         orgId,
@@ -182,7 +182,7 @@ describe('destino da importação', () => {
     ).toEqual({ kind: 'private' })
   })
 
-  it('privado não abre acesso para a organização', async () => {
+  it('private grants no access to the organization', async () => {
     expect(await resolveImportPlacement({ kind: 'private' }, ownerId)).toEqual({
       orgId,
       teamspaceId: null,
@@ -190,13 +190,13 @@ describe('destino da importação', () => {
     })
   })
 
-  it('organização grava o acesso que faz o time enxergar', async () => {
+  it('organization writes the access that lets the team see it', async () => {
     expect(
       await resolveImportPlacement({ kind: 'organization' }, ownerId),
     ).toEqual({ orgId, teamspaceId: null, orgAccess: 'editor' })
   })
 
-  it('sem organização não dá para importar para a organização', async () => {
+  it('without an organization there is no importing into the organization', async () => {
     await db.delete(organizationMembers)
 
     expect(
@@ -204,7 +204,7 @@ describe('destino da importação', () => {
     ).toBeNull()
   })
 
-  it('teamspace aberto aceita quem é da organização', async () => {
+  it('an open teamspace accepts whoever is in the organization', async () => {
     expect(
       await resolveImportPlacement(
         { kind: 'teamspace', teamspaceId: openTeamspace },
@@ -213,7 +213,7 @@ describe('destino da importação', () => {
     ).toEqual({ orgId, teamspaceId: openTeamspace, orgAccess: null })
   })
 
-  it('teamspace fechado recusa quem não participa', async () => {
+  it('a closed teamspace rejects whoever is not part of it', async () => {
     expect(
       await resolveImportPlacement(
         { kind: 'teamspace', teamspaceId: closedTeamspace },
@@ -222,7 +222,7 @@ describe('destino da importação', () => {
     ).toBeNull()
   })
 
-  it('teamspace fechado aceita quem participa', async () => {
+  it('a closed teamspace accepts whoever is part of it', async () => {
     await db.insert(teamspaceMembers).values({
       id: 'ts-member',
       teamspaceId: closedTeamspace,
@@ -239,7 +239,7 @@ describe('destino da importação', () => {
     ).toEqual({ orgId, teamspaceId: closedTeamspace, orgAccess: null })
   })
 
-  it('teamspace de outra organização é recusado mesmo estando aberto', async () => {
+  it('a teamspace of another organization is rejected even when open', async () => {
     expect(
       await resolveImportPlacement(
         { kind: 'teamspace', teamspaceId: foreignTeamspace },
@@ -249,8 +249,8 @@ describe('destino da importação', () => {
   })
 })
 
-describe('mover para dentro de uma página compartilhada', () => {
-  it('copia o acesso da organização do pai para a subárvore movida', async () => {
+describe('moving into a shared page', () => {
+  it('copies the organization access of the parent to the moved subtree', async () => {
     await seedDocument('destino', { orgId, orgAccess: 'editor' })
     await seedDocument('solta', { orgId })
     await seedDocument('filha-da-solta', { orgId, parentId: 'solta' })
@@ -266,7 +266,7 @@ describe('mover para dentro de uma página compartilhada', () => {
     expect(accessById.get('filha-da-solta')).toBe('editor')
   })
 
-  it('tira o acesso quando o novo pai é privado', async () => {
+  it('removes the access when the new parent is private', async () => {
     await seedDocument('destino-privado', { orgId })
     await seedDocument('compartilhada', { orgId, orgAccess: 'editor' })
 
@@ -282,8 +282,8 @@ describe('mover para dentro de uma página compartilhada', () => {
   })
 })
 
-describe('compartilhar com a organização', () => {
-  it('desce o acesso para a subárvore inteira', async () => {
+describe('sharing with the organization', () => {
+  it('pushes the access down to the whole subtree', async () => {
     await seedDocument('raiz', { orgId })
     await seedDocument('filha', { orgId, parentId: 'raiz' })
     await seedDocument('neta', { orgId, parentId: 'filha' })
@@ -305,7 +305,7 @@ describe('compartilhar com a organização', () => {
     expect(accessById.get('outra-arvore')).toBeNull()
   })
 
-  it('retira o acesso da subárvore inteira', async () => {
+  it('takes the access away from the whole subtree', async () => {
     await seedDocument('raiz', { orgId, orgAccess: 'editor' })
     await seedDocument('filha', { orgId, orgAccess: 'editor', parentId: 'raiz' })
 
@@ -318,7 +318,7 @@ describe('compartilhar com a organização', () => {
     expect(filha?.orgAccess).toBeNull()
   })
 
-  it('preenche o org_id da subárvore para o acesso valer', async () => {
+  it('fills in the org_id of the subtree so the access holds', async () => {
     await seedDocument('raiz', { orgId })
     await seedDocument('filha', { parentId: 'raiz' })
 

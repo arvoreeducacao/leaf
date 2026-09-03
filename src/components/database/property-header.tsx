@@ -92,6 +92,7 @@ export function PropertyHeader({
             <DropdownMenuTrigger asChild>
               <ButtonIcon
                 aria-label={t('propertyMenu', { name: property.name })}
+                className="opacity-0 transition-opacity group-hover/head:opacity-100 data-[state=open]:opacity-100 focus-visible:opacity-100"
                 size="small"
                 variant="ghost"
               >

@@ -6,9 +6,9 @@ import { useRouter } from 'next/navigation'
 import { useState, useTransition } from 'react'
 import { toast } from 'sonner'
 
-import { sidebarRow } from '@/components/app/sidebar-styles'
 import { LeafMark } from '@/components/app/leaf-mark'
-import { AddIcon, CaretDownIcon, TeamIcon } from '@/components/icons'
+import { sidebarRow } from '@/components/app/sidebar-styles'
+import { ChevronDownIcon, PeopleIcon, PlusIcon } from '@/components/icons/outline'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -110,7 +110,7 @@ export function OrgSwitcher({
           <span className="min-w-0 flex-1 truncate">
             {active?.name ?? t('title')}
           </span>
-          <CaretDownIcon
+          <ChevronDownIcon
             aria-hidden="true"
             className="size-3.5 shrink-0 text-content-subtle"
           />
@@ -138,13 +138,13 @@ export function OrgSwitcher({
 
         <DropdownMenuItem asChild>
           <Link href="/org" onClick={onNavigate}>
-            <TeamIcon aria-hidden="true" />
+            <PeopleIcon aria-hidden="true" />
             {t('manageLink')}
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
           <Link href="/org?new=1" onClick={onNavigate}>
-            <AddIcon aria-hidden="true" />
+            <PlusIcon aria-hidden="true" />
             {t('create')}
           </Link>
         </DropdownMenuItem>

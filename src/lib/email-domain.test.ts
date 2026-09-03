@@ -7,21 +7,21 @@ import {
 } from '@/lib/email-domain'
 
 describe('parseAllowedDomains', () => {
-  it('devolve lista vazia sem valor', () => {
+  it('returns an empty list when there is no value', () => {
     expect(parseAllowedDomains(undefined)).toEqual([])
     expect(parseAllowedDomains(null)).toEqual([])
     expect(parseAllowedDomains('')).toEqual([])
     expect(parseAllowedDomains('  ,  ,')).toEqual([])
   })
 
-  it('normaliza espaços, caixa e arroba', () => {
-    expect(parseAllowedDomains(' @Arvore.COM.BR , outra.com ')).toEqual([
+  it('normalizes whitespace, case and the at sign', () => {
+    expect(parseAllowedDomains(' @Arvore.COM.BR , other.com ')).toEqual([
       'arvore.com.br',
-      'outra.com',
+      'other.com',
     ])
   })
 
-  it('remove domínios repetidos', () => {
+  it('drops repeated domains', () => {
     expect(parseAllowedDomains('arvore.com.br,ARVORE.com.br')).toEqual([
       'arvore.com.br',
     ])
@@ -29,7 +29,7 @@ describe('parseAllowedDomains', () => {
 })
 
 describe('emailDomainPolicy', () => {
-  it('fica inativa sem a variável de ambiente', () => {
+  it('stays inactive without the environment variable', () => {
     expect(emailDomainPolicy(undefined)).toEqual({
       active: false,
       domains: [],
@@ -37,7 +37,7 @@ describe('emailDomainPolicy', () => {
     })
   })
 
-  it('expõe o domínio principal quando ativa', () => {
+  it('exposes the primary domain when active', () => {
     expect(emailDomainPolicy('arvore.com.br,arvore.dev')).toEqual({
       active: true,
       domains: ['arvore.com.br', 'arvore.dev'],
@@ -45,7 +45,7 @@ describe('emailDomainPolicy', () => {
     })
   })
 
-  it('lê a variável de ambiente em tempo de chamada', () => {
+  it('reads the environment variable at call time', () => {
     const previous = process.env.LEAF_ALLOWED_EMAIL_DOMAINS
 
     process.env.LEAF_ALLOWED_EMAIL_DOMAINS = 'arvore.com.br'
@@ -64,51 +64,51 @@ describe('isEmailDomainAllowed', () => {
   const single = ['arvore.com.br']
   const multi = ['arvore.com.br', 'arvore.dev']
 
-  it('libera tudo quando não há domínios configurados', () => {
-    expect(isEmailDomainAllowed('qualquer@gmail.com', [])).toBe(true)
+  it('allows everything when no domain is configured', () => {
+    expect(isEmailDomainAllowed('anyone@gmail.com', [])).toBe(true)
     expect(isEmailDomainAllowed('', [])).toBe(true)
   })
 
-  it('aceita email do domínio permitido', () => {
-    expect(isEmailDomainAllowed('pessoa@arvore.com.br', single)).toBe(true)
+  it('accepts an email from the allowed domain', () => {
+    expect(isEmailDomainAllowed('person@arvore.com.br', single)).toBe(true)
   })
 
-  it('nega email de fora do domínio', () => {
-    expect(isEmailDomainAllowed('pessoa@gmail.com', single)).toBe(false)
-    expect(isEmailDomainAllowed('pessoa@outraescola.com.br', single)).toBe(
+  it('rejects an email outside the domain', () => {
+    expect(isEmailDomainAllowed('person@gmail.com', single)).toBe(false)
+    expect(isEmailDomainAllowed('person@otherschool.com.br', single)).toBe(
       false,
     )
   })
 
-  it('ignora caixa e espaços', () => {
-    expect(isEmailDomainAllowed('  Pessoa@ARVORE.com.BR  ', single)).toBe(true)
+  it('ignores case and whitespace', () => {
+    expect(isEmailDomainAllowed('  Person@ARVORE.com.BR  ', single)).toBe(true)
   })
 
-  it('aceita qualquer domínio da lista', () => {
-    expect(isEmailDomainAllowed('pessoa@arvore.dev', multi)).toBe(true)
-    expect(isEmailDomainAllowed('pessoa@arvore.com.br', multi)).toBe(true)
-    expect(isEmailDomainAllowed('pessoa@arvore.com', multi)).toBe(false)
+  it('accepts any domain from the list', () => {
+    expect(isEmailDomainAllowed('person@arvore.dev', multi)).toBe(true)
+    expect(isEmailDomainAllowed('person@arvore.com.br', multi)).toBe(true)
+    expect(isEmailDomainAllowed('person@arvore.com', multi)).toBe(false)
   })
 
-  it('não aceita subdomínio do domínio permitido', () => {
-    expect(isEmailDomainAllowed('pessoa@mail.arvore.com.br', single)).toBe(
+  it('does not accept a subdomain of the allowed domain', () => {
+    expect(isEmailDomainAllowed('person@mail.arvore.com.br', single)).toBe(
       false,
     )
   })
 
-  it('não se deixa enganar por arroba extra', () => {
-    expect(isEmailDomainAllowed('pessoa@arvore.com.br@gmail.com', single)).toBe(
+  it('is not fooled by an extra at sign', () => {
+    expect(isEmailDomainAllowed('person@arvore.com.br@gmail.com', single)).toBe(
       false,
     )
-    expect(isEmailDomainAllowed('pessoa@gmail.com@arvore.com.br', single)).toBe(
+    expect(isEmailDomainAllowed('person@gmail.com@arvore.com.br', single)).toBe(
       true,
     )
   })
 
-  it('nega entradas malformadas', () => {
-    expect(isEmailDomainAllowed('semarroba', single)).toBe(false)
+  it('rejects malformed input', () => {
+    expect(isEmailDomainAllowed('noatsign', single)).toBe(false)
     expect(isEmailDomainAllowed('@arvore.com.br', single)).toBe(false)
-    expect(isEmailDomainAllowed('pessoa@', single)).toBe(false)
+    expect(isEmailDomainAllowed('person@', single)).toBe(false)
     expect(isEmailDomainAllowed(undefined, single)).toBe(false)
     expect(isEmailDomainAllowed(null, single)).toBe(false)
   })

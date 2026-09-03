@@ -24,7 +24,7 @@ export type TeamspaceSummary = Readonly<{
 }>
 
 export type TeamspaceSection = TeamspaceSummary &
-  Readonly<{ documents: Array<DocumentNode> }>
+  Readonly<{ documents: Array<DocumentNode>; hiddenDocuments: number }>
 
 export type TeamspacePerson = Readonly<{
   memberId: string
@@ -126,6 +126,7 @@ export async function listVisibleTeamspaces(
 
 export async function listTeamspaceDocuments(
   teamspaceId: string,
+  userId?: string,
 ): Promise<Array<DocumentSummary>> {
   const rows = await db
     .select({
@@ -135,6 +136,8 @@ export async function listTeamspaceDocuments(
       deletedAt: documents.deletedAt,
       parentId: documents.parentId,
       kind: documents.kind,
+      icon: documents.icon,
+      ownerId: documents.ownerId,
     })
     .from(documents)
     .where(
@@ -146,14 +149,20 @@ export async function listTeamspaceDocuments(
     )
     .orderBy(desc(documents.updatedAt))
 
-  return rows.map((row) => ({ ...row, shared: false }))
+  return rows.map(({ ownerId, ...row }) => ({
+    ...row,
+    shared: false,
+    owned: ownerId === userId,
+  }))
 }
 
 export async function countTeamspaceDocuments(teamspaceId: string) {
   const rows = await db
     .select({ id: documents.id })
     .from(documents)
-    .where(eq(documents.teamspaceId, teamspaceId))
+    .where(
+      and(eq(documents.teamspaceId, teamspaceId), isNull(documents.deletedAt)),
+    )
 
   return rows.length
 }

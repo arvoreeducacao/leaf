@@ -8,7 +8,6 @@
     "backHome": "Voltar para o início",
     "goToLeaf": "Ir para o Leaf",
     "close": "Fechar",
-    "clearSearch": "Limpar busca",
     "step": "Etapa {current} de {total}"
   },
   "metadata": {
@@ -62,7 +61,8 @@
     "localePtBR": "Português (Brasil)",
     "localeEnUS": "English (US)",
     "switchingLanguage": "Trocando o idioma",
-    "connectedApps": "Aplicativos conectados"
+    "connectedApps": "Aplicativos conectados",
+    "installApp": "Instalar o Leaf"
   },
   "nav": {
     "navigation": "Navegação",
@@ -70,16 +70,16 @@
     "mobileDescription": "Lista de documentos, lixeira e conta",
     "openNavigation": "Abrir navegação",
     "collapseNavigation": "Recolher navegação",
+    "resizeNavigation": "Redimensionar navegação",
     "expandNavigation": "Expandir navegação",
     "collapse": "Recolher",
     "expand": "Expandir",
     "newDocument": "Novo documento",
     "newDocumentFailed": "Não foi possível criar o documento",
-    "searchLabel": "Buscar documento pelo título",
-    "searchPlaceholder": "Filtrar por título",
-    "searchResults": "Resultados da busca",
-    "searchEmpty": "Nenhum documento com esse nome",
-    "searchCount": "{count, plural, =0 {# documentos encontrados} one {# documento encontrado} other {# documentos encontrados}}",
+    "recentsSection": "Recentes",
+    "emptyRecents": "Nada aberto ainda",
+    "more": "Mais",
+    "less": "Menos",
     "sharedWithMe": "Compartilhados comigo",
     "emptyShared": "Nada compartilhado com você",
     "sharedBadge": "Compartilhado comigo",
@@ -91,7 +91,14 @@
     "emptyPrivate": "Nenhum documento privado ainda",
     "organizationLink": "Organização",
     "newDatabase": "Nova base de dados",
-    "newDatabaseFailed": "Não foi possível criar a base de dados"
+    "newDatabaseFailed": "Não foi possível criar a base de dados",
+    "home": "Página inicial",
+    "showAll": "Ver todos (+{count})",
+    "showingCount": "{count, plural, one {# documento} other {# documentos}}",
+    "allDocuments": "Todos os documentos",
+    "filterPlaceholder": "Filtrar por título",
+    "filterLabel": "Filtrar documentos por título",
+    "filterEmpty": "Nenhum documento com esse nome"
   },
   "palette": {
     "title": "Busca e comandos",
@@ -109,7 +116,15 @@
     "resultCount": "{count, plural, =0 {# resultados} one {# resultado} other {# resultados}}",
     "hintNavigate": "navegar",
     "hintOpen": "abrir",
-    "hintToggle": "abrir ou fechar"
+    "hintToggle": "abrir ou fechar",
+    "askSection": "IA",
+    "askActionWithQuery": "Perguntar à IA: “{query}”",
+    "askAnswerLabel": "Resposta da IA",
+    "askThinking": "Lendo seus documentos…",
+    "askSources": "Onde encontrei",
+    "askEmpty": "Não achei nada sobre isso nos documentos que você pode ver.",
+    "askError": "Não deu para responder agora.",
+    "askBack": "Voltar para a busca"
   },
   "home": {
     "title": "Crie seu primeiro documento",
@@ -122,6 +137,12 @@
     "savingTitle": "Salvando título",
     "breadcrumbLabel": "Caminho do documento",
     "menuLabel": "Ações do documento",
+    "rowMenuLabel": "Ações de {title}",
+    "rename": "Renomear",
+    "renameDescription": "O novo nome aparece na barra lateral e no topo da página.",
+    "renameFieldLabel": "Novo nome da página",
+    "renameSubmit": "Renomear",
+    "openInNewTab": "Abrir em nova aba",
     "moveToPage": "Mover para outra página",
     "duplicate": "Duplicar documento",
     "exportMarkdown": "Exportar como Markdown",
@@ -135,7 +156,67 @@
     "trashed": "Documento movido para a lixeira",
     "restored": "Documento restaurado",
     "orgTag": "Organização",
-    "orgTagHint": "Este documento não é privado: quem faz parte da organização tem acesso"
+    "orgTagHint": "Este documento não é privado: quem faz parte da organização tem acesso",
+    "editedAt": "Editada {time}",
+    "copyLink": "Copiar link",
+    "linkCopied": "Link copiado",
+    "linkCopyFailed": "Não foi possível copiar o link"
+  },
+  "cover": {
+    "add": "Adicionar capa",
+    "adding": "Adicionando capa",
+    "change": "Alterar capa",
+    "reposition": "Reposicionar",
+    "repositionHint": "Arraste a imagem para ajustar a posição",
+    "repositionLabel": "Posição vertical da capa",
+    "savePosition": "Salvar posição",
+    "positionSaved": "Posição salva",
+    "remove": "Remover",
+    "removed": "Capa removida",
+    "updated": "Capa atualizada",
+    "imageAlt": "Capa da página",
+    "region": "Capa da página",
+    "pickerTitle": "Capa da página",
+    "pickerDescription": "Escolha uma cor, envie uma imagem, cole um link ou busque no Unsplash",
+    "tabGallery": "Galeria",
+    "tabUpload": "Enviar",
+    "tabLink": "Link",
+    "tabUnsplash": "Unsplash",
+    "galleryColors": "Cores e gradientes",
+    "uploadPick": "Escolher imagem",
+    "uploadHint": "Imagens de até 5 MB. A largura ideal é 1500 px ou mais.",
+    "uploading": "Enviando imagem",
+    "uploadFailed": "Não foi possível enviar a imagem",
+    "linkLabel": "Endereço da imagem",
+    "linkPlaceholder": "https://",
+    "linkSubmit": "Usar link",
+    "linkInvalid": "Cole um endereço https:// de uma imagem",
+    "linkHint": "Funciona com qualquer imagem publicada na web",
+    "unsplashSearchLabel": "Buscar fotos no Unsplash",
+    "unsplashSearchPlaceholder": "Buscar uma imagem",
+    "unsplashLoading": "Buscando fotos",
+    "unsplashEmpty": "Nenhuma foto para \"{query}\"",
+    "unsplashFailed": "Não foi possível buscar no Unsplash",
+    "unsplashLoadMore": "Mais fotos",
+    "unsplashNotConfigured": "A busca no Unsplash não está configurada. Defina UNSPLASH_ACCESS_KEY no servidor.",
+    "unsplashTooFast": "Você buscou muitas vezes seguidas. Espere um minuto.",
+    "unsplashPhotoBy": "Foto de {name}",
+    "unsplashFooter": "Fotos do",
+    "creditLabel": "Foto de <photographer>{name}</photographer> no <unsplash>Unsplash</unsplash>",
+    "notAuthenticated": "Não autenticado",
+    "gradients": {
+      "red": "Vermelho",
+      "yellow": "Amarelo",
+      "blue": "Azul",
+      "cream": "Creme",
+      "teal-to-cyan": "Verde-água para ciano",
+      "pink": "Rosa",
+      "red-to-orange": "Vermelho para laranja",
+      "sky": "Céu pastel",
+      "blue-to-red": "Azul para vermelho",
+      "purple-to-pink": "Roxo para rosa",
+      "slate": "Ardósia"
+    }
   },
   "database": {
     "untitled": "Base sem título",
@@ -159,7 +240,7 @@
     "titleColumn": "Nome",
     "untitledRow": "Sem título",
     "rowTitleLabel": "Nome da linha",
-    "newRow": "Nova linha",
+    "newRow": "Nova página",
     "newRowShort": "Nova",
     "addProperty": "Nova propriedade",
     "propertyNameLabel": "Nome da propriedade",
@@ -245,7 +326,8 @@
       "todo": "A fazer",
       "doing": "Fazendo",
       "done": "Feito"
-    }
+    },
+    "openRowShort": "Abrir"
   },
   "versions": {
     "menuItem": "Histórico de versões",
@@ -334,6 +416,7 @@
     "empty": "A lixeira está vazia",
     "restore": "Restaurar",
     "restoreItem": "Restaurar {title}",
+    "restored": "Documento restaurado",
     "deleteForever": "Excluir de vez",
     "deleteItem": "Excluir {title} de vez",
     "confirmDescription": "O documento {title} será apagado sem possibilidade de recuperação.",
@@ -402,7 +485,11 @@
     "saveError": "Não foi possível salvar",
     "words": "{count, plural, =0 {# palavras} one {# palavra} other {# palavras}}",
     "characters": "{count, plural, =0 {# caracteres} one {# caractere} other {# caracteres}}",
-    "uploadFailed": "Não foi possível enviar a imagem. Tente de novo."
+    "uploadFailed": "Não foi possível enviar a imagem. Tente de novo.",
+    "saveOffline": "Salvo neste aparelho",
+    "blockTurnInto": "Transformar em",
+    "blockDuplicate": "Duplicar bloco",
+    "blockRemove": "Excluir bloco"
   },
   "blocknote": {
     "placeholder": "Digite / para comandos",
@@ -414,7 +501,17 @@
     "calloutAliases": "destaque, callout, aviso, dica, nota",
     "databaseTitle": "Base de dados",
     "databaseSubtext": "Tabela de páginas com propriedades, filtros e quadro",
-    "databaseAliases": "database, base de dados, tabela, banco de dados, quadro, kanban"
+    "databaseAliases": "database, base de dados, tabela, banco de dados, quadro, kanban",
+    "embedTitle": "Incorporar",
+    "embedSubtext": "Figma, YouTube, Google Docs, Miro e outros links",
+    "embedAliases": "incorporar, embed, figma, youtube, video, miro, google docs, loom, planilha"
+  },
+  "embed": {
+    "placeholder": "Cole um link do Figma, YouTube, Google Docs...",
+    "confirm": "Incorporar",
+    "empty": "Nenhum link incorporado",
+    "unsupported": "Não dá para exibir aqui",
+    "activate": "Clique para interagir"
   },
   "importFile": {
     "tooLarge": "O arquivo passa de {limit}",
@@ -463,7 +560,8 @@
     "commentNotFound": "Este comentário não existe mais.",
     "commentEmpty": "Escreva algo antes de enviar.",
     "commentTooFast": "Você comentou muitas vezes seguidas. Espere um minuto.",
-    "domainRestricted": "Somente contas @{domain}."
+    "domainRestricted": "Somente contas @{domain}.",
+    "coverInvalid": "Escolha uma imagem válida para a capa."
   },
   "org": {
     "title": "Organização",
@@ -540,7 +638,13 @@
     "confirmLinkResetTitle": "Redefinir o link de convite?",
     "confirmLinkResetDescription": "Um link novo é gerado e o link atual deixa de funcionar imediatamente.",
     "confirmLinkResetAction": "Redefinir",
-    "confirmLinkCancel": "Cancelar"
+    "confirmLinkCancel": "Cancelar",
+    "deleteOrgAction": "Excluir organização",
+    "deleteOrgTitle": "Excluir {name}?",
+    "deleteOrgDescription": "Todos os membros perdem o acesso, os teamspaces são removidos e os documentos voltam a ser privados de cada dono. Isso não pode ser desfeito.",
+    "deleteOrgConfirm": "Excluir organização",
+    "deleteOrgCancel": "Cancelar",
+    "deletedOrg": "Organização excluída"
   },
   "archiveImport": {
     "title": "Importar exportação",
@@ -594,7 +698,29 @@
     "commentsUnavailable": "Não foi possível ler os comentários. Confira se a conexão com o Notion tem permissão de ler comentários.",
     "commentsImported": "{count, plural, one {# comentário aberto veio junto, preso à página} other {# comentários abertos vieram junto, presos à página}}",
     "commentsFailed": "Os comentários não puderam ser criados. As páginas foram importadas assim mesmo.",
-    "unresolvedPeople": "{count, plural, one {# nome da coluna de pessoa não bateu com ninguém da organização ({names}) e ficou sem responsável.} other {# nomes da coluna de pessoa não bateram com ninguém da organização ({names}) e ficaram sem responsável.}}"
+    "unresolvedPeople": "{count, plural, one {# nome da coluna de pessoa não bateu com ninguém da organização ({names}) e ficou sem responsável.} other {# nomes da coluna de pessoa não bateram com ninguém da organização ({names}) e ficaram sem responsável.}}",
+    "boardView": "Quadro",
+    "unsupportedBlocks": "Blocos sem equivalente foram pulados: {count} ({types}).",
+    "skippedUnchanged": "{count} páginas já estavam em dia e foram puladas."
+  },
+  "githubSync": {
+    "databaseTitle": "Pull requests do GitHub",
+    "propertyRepository": "Repositório",
+    "propertyNumber": "Número",
+    "propertyState": "Estado",
+    "propertyAuthor": "Autor",
+    "propertyUpdatedAt": "Atualizado em",
+    "propertyUrl": "URL",
+    "stateOpen": "Aberto",
+    "stateMerged": "Merged",
+    "stateClosed": "Fechado",
+    "tableView": "Tabela",
+    "boardView": "Quadro",
+    "notAuthenticated": "Não autenticado",
+    "notConfigured": "A base do GitHub ainda não está configurada neste Leaf.",
+    "unfinished": "Não foi possível concluir a sincronização com o GitHub",
+    "repoFailed": "Não foi possível ler os pull requests de {repo}.",
+    "skippedUnchanged": "{count} pull requests já estavam em dia e foram pulados."
   },
   "notionLink": {
     "title": "Importar do Notion",
@@ -614,7 +740,9 @@
     "invalidLink": "Esse link não parece ser de uma página do Notion.",
     "unreachable": "Não conseguimos abrir essa página. Confira se você deu acesso a ela na conexão com o Notion.",
     "withComments": "Trazer também os comentários abertos",
-    "withCommentsHint": "As threads não resolvidas entram presas à página, não ao trecho. Deixa a importação mais lenta."
+    "withCommentsHint": "As threads não resolvidas entram presas à página, não ao trecho. Deixa a importação mais lenta.",
+    "workspaceOption": "Importar o workspace inteiro",
+    "workspaceOptionHint": "Tudo que a conexão do Notion enxerga, com a hierarquia preservada. Pode levar bastante tempo."
   },
   "teamspace": {
     "sectionTitle": "Teamspaces",
@@ -634,7 +762,6 @@
     "delete": "Excluir teamspace",
     "deleted": "Teamspace excluído",
     "deleteConfirm": "Excluir {name}?",
-    "deleteBlocked": "{count, plural, =0 {Sem documentos} one {Mova o # documento antes de excluir} other {Mova os # documentos antes de excluir}}",
     "nameLabel": "Nome do teamspace",
     "namePlaceholder": "Time de conteúdo",
     "accessLabel": "Quem pode entrar",
@@ -668,19 +795,29 @@
     "errorNoOrganization": "Crie ou entre em uma organização antes de criar um teamspace.",
     "errorInvalidAccess": "Escolha quem pode entrar no teamspace.",
     "errorEmptyName": "Digite um nome para o teamspace.",
-    "errorNotEmpty": "Mova os documentos deste teamspace antes de excluí-lo.",
     "errorClosedTeamspace": "Este teamspace é fechado: peça um convite.",
     "errorLastOwner": "Passe o teamspace para outra pessoa antes de sair.",
     "errorMemberNotFound": "Esta pessoa não faz mais parte do teamspace.",
     "errorAlreadyMember": "Esta pessoa já faz parte do teamspace.",
-    "errorNotInOrganization": "Esta pessoa não faz parte da organização."
+    "errorNotInOrganization": "Esta pessoa não faz parte da organização.",
+    "deleteWithDocs": "{count, plural, one {O # documento deste teamspace volta para a organização.} other {Os # documentos deste teamspace voltam para a organização.}}"
   },
   "realtime": {
     "connected": "Colaboração em tempo real",
-    "reconnecting": "Sem conexão. Suas mudanças ainda não foram salvas",
+    "reconnecting": "Reconectando. Suas mudanças estão salvas aqui",
     "someone": "Alguém",
     "you": "{name} (você)",
     "peopleHere": "{count, plural, one {# pessoa neste documento} other {# pessoas neste documento}}"
+  },
+  "offline": {
+    "banner": "Sem conexão",
+    "badge": "Offline · salvo neste aparelho",
+    "conflict": "Este documento mudou em outro lugar",
+    "pageTitle": "Você está sem conexão",
+    "pageBody": "Os documentos que você já abriu continuam disponíveis. Esta página ainda não tinha sido carregada neste aparelho.",
+    "retry": "Tentar de novo",
+    "documentUnavailableTitle": "Este documento ainda não está disponível offline",
+    "documentUnavailableBody": "Abra ele uma vez com internet e ele passa a funcionar sem conexão neste aparelho."
   },
   "join": {
     "heading": "Você recebeu um convite para entrar em {org}",

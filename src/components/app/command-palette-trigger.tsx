@@ -8,8 +8,7 @@ import {
   isMacPlatform,
   primaryShortcutLabel,
 } from '@/components/app/palette-shortcut'
-import { sidebarIcon, sidebarRow } from '@/components/app/sidebar-styles'
-import { SearchIcon } from '@/components/icons'
+import { SearchIcon } from '@/components/icons/outline'
 import { cn } from '@/shared/utils'
 
 export function CommandPaletteTrigger() {
@@ -23,16 +22,19 @@ export function CommandPaletteTrigger() {
   return (
     <button
       aria-keyshortcuts="Meta+K Control+K Alt+K"
-      className={cn(sidebarRow, 'group/row cursor-pointer')}
+      className={cn(
+        'flex h-11 w-full min-w-0 cursor-pointer items-center gap-2 rounded-xlarge border border-line-muted bg-surface-card px-2 text-left text-body-small text-content transition-colors hover:bg-surface-hover hover:text-content-strong focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-1 tablet:h-8',
+      )}
       data-testid="command-palette-trigger"
       onClick={() => openCommandPalette()}
       type="button"
     >
-      <span className="flex size-5 shrink-0 items-center justify-center">
-        <SearchIcon aria-hidden="true" className={sidebarIcon} />
-      </span>
+      <SearchIcon
+        aria-hidden="true"
+        className="size-4 shrink-0 text-content-subtle"
+      />
       <span className="min-w-0 flex-1 truncate">{t('trigger')}</span>
-      <kbd className="hidden shrink-0 font-sans text-caption text-content-disabled opacity-0 transition-opacity group-hover/row:opacity-100 tablet:inline">
+      <kbd className="hidden shrink-0 font-sans text-caption text-content-disabled tablet:inline">
         {primaryShortcutLabel(mac)}
       </kbd>
     </button>

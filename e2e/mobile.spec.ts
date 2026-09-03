@@ -10,9 +10,9 @@ import {
 } from './helpers'
 
 test.describe('mobile 375px', () => {
-  test('navegação vira Sheet e o editor cabe na tela', async ({ page }) => {
+  test('the navigation becomes a Sheet and the editor fits the screen', async ({ page }) => {
     await signUp(page, uniqueEmail('mobile'))
-    await createDocument(page, 'Documento no celular')
+    await createDocument(page, 'Document on the phone')
 
     await expect(page.getByRole('complementary', { name: 'Navegação' })).toBeHidden()
 
@@ -22,41 +22,41 @@ test.describe('mobile 375px', () => {
 
     await expect(nav).toBeVisible()
     await expect(
-      page.getByRole('dialog').getByLabel('Buscar documento pelo título'),
+      page.getByRole('dialog').getByRole('button', { name: /Buscar em tudo/ }),
     ).toBeVisible()
 
     await page.keyboard.press('Escape')
 
-    await typeInEditor(page, 'texto escrito no celular com uma frase mais longa')
+    await typeInEditor(page, 'text written on the phone with a longer sentence')
 
     await expectNoHorizontalOverflow(page)
-    await expect(editorBody(page)).toContainText('texto escrito no celular')
+    await expect(editorBody(page)).toContainText('text written on the phone')
   })
 
-  test('criar e gerir a organização cabe na tela', async ({ page }) => {
+  test('creating and managing the organization fits the screen', async ({ page }) => {
     await signUp(page, uniqueEmail('mobile-org'))
 
     await page.goto('/org')
-    await page.getByLabel('Nome da organização').fill('Escola no celular')
+    await page.getByLabel('Nome da organização').fill('School on the phone')
     await page.getByRole('button', { name: 'Criar organização' }).click()
 
     await expect(page.getByRole('heading', { name: 'Membros' })).toBeVisible()
     await expectNoHorizontalOverflow(page)
 
-    await page.getByLabel('Email', { exact: true }).fill('convidada@exemplo.test')
+    await page.getByLabel('Email', { exact: true }).fill('guest@example.test')
     await page.getByRole('button', { name: 'Convidar', exact: true }).click()
 
-    await expect(page.getByText('convidada@exemplo.test')).toBeVisible()
+    await expect(page.getByText('guest@example.test')).toBeVisible()
     await expectNoHorizontalOverflow(page)
   })
 
-  test('histórico de versões cabe na tela e volta da pré-visualização', async ({
+  test('the version history fits the screen and comes back from the preview', async ({
     page,
   }) => {
-    await signUp(page, uniqueEmail('mobile-versoes'))
-    await createDocument(page, 'Documento versionado no celular')
+    await signUp(page, uniqueEmail('mobile-versions'))
+    await createDocument(page, 'Versioned document on the phone')
 
-    await typeInEditor(page, 'primeiro paragrafo do celular')
+    await typeInEditor(page, 'first paragraph from the phone')
     await expect(page.getByText('Salvo', { exact: true }).first()).toBeVisible({
       timeout: 20_000,
     })
@@ -80,7 +80,7 @@ test.describe('mobile 375px', () => {
 
     await expect(
       dialog.getByRole('region', { name: 'Conteúdo da versão' }),
-    ).toContainText('primeiro paragrafo do celular')
+    ).toContainText('first paragraph from the phone')
     await expect(
       dialog.getByRole('list', { name: 'Versões salvas' }),
     ).toHaveCount(0)
@@ -93,11 +93,11 @@ test.describe('mobile 375px', () => {
     ).toHaveCount(1)
   })
 
-  test('compartilhar abre como Sheet e o diálogo de excluir vira folha de baixo', async ({
+  test('sharing opens as a Sheet and the delete dialog becomes a bottom sheet', async ({
     page,
   }) => {
     await signUp(page, uniqueEmail('mobile-share'))
-    await createDocument(page, 'Documento a excluir')
+    await createDocument(page, 'Document to delete')
 
     await page.getByRole('button', { name: 'Compartilhar' }).click()
 
@@ -151,14 +151,14 @@ test.describe('mobile 375px', () => {
 
     await expectNoHorizontalOverflow(page)
   })
-  test('command palette cabe na tela e abre o documento encontrado', async ({
+  test('the command palette fits the screen and opens the document it found', async ({
     page,
   }) => {
     await signUp(page, uniqueEmail('mobile-palette'))
 
-    const alvo = await createDocument(page, 'Pauta do conselho')
+    const target = await createDocument(page, 'Council agenda')
 
-    await typeInEditor(page, 'combinamos o calendario das reunioes')
+    await typeInEditor(page, 'we agreed on the calendar of the meetings')
     await expect(page.getByText('Salvo', { exact: true }).first()).toBeVisible({
       timeout: 20_000,
     })
@@ -171,28 +171,28 @@ test.describe('mobile 375px', () => {
     await expect(overlay).toBeVisible()
     await expectNoHorizontalOverflow(page)
 
-    await page.getByTestId('command-palette-input').fill('calendario')
+    await page.getByTestId('command-palette-input').fill('calendar')
 
-    const hit = overlay.getByRole('option', { name: /Pauta do conselho/ })
+    const hit = overlay.getByRole('option', { name: /Council agenda/ })
 
     await expect(hit).toBeVisible()
     await expectNoHorizontalOverflow(page)
 
     await hit.click()
 
-    await page.waitForURL(`**/doc/${alvo}`)
+    await page.waitForURL(`**/doc/${target}`)
     await expect(page.getByLabel('Título do documento')).toHaveValue(
-      'Pauta do conselho',
+      'Council agenda',
     )
   })
 
-  test('painel de comentários vira bottom sheet e não estoura a tela', async ({
+  test('the comments panel becomes a bottom sheet and does not overflow the screen', async ({
     page,
   }) => {
-    await signUp(page, uniqueEmail('comentario-mobile'))
-    await createDocument(page, 'Comentários no celular')
+    await signUp(page, uniqueEmail('comment-mobile'))
+    await createDocument(page, 'Comments on the phone')
 
-    await typeInEditor(page, 'texto para comentar no celular')
+    await typeInEditor(page, 'text to comment on the phone')
     await expect(page.getByText('Salvo', { exact: true }).first()).toBeVisible({
       timeout: 20_000,
     })
@@ -222,13 +222,13 @@ test.describe('mobile 375px', () => {
     expect(shape.radiusTop).toBeGreaterThan(0)
     expect(shape.radiusBottom).toBe(0)
 
-    await page.getByLabel('Novo comentário').fill('Comentário do celular')
+    await page.getByLabel('Novo comentário').fill('Comment from the phone')
     await page.getByTestId('submit-comment').click()
 
     await expect(page.getByText('Comentário adicionado').first()).toBeVisible()
     await expect(
       page.getByTestId('comment-thread').first(),
-    ).toContainText('Comentário do celular')
+    ).toContainText('Comment from the phone')
 
     await expectNoHorizontalOverflow(page)
   })
@@ -237,27 +237,27 @@ test.describe('mobile 375px', () => {
 test.describe('mobile 320px', () => {
   test.use({ viewport: { width: 320, height: 780 } })
 
-  test('header do documento com badges e ações cabe na tela', async ({
+  test('the document header with badges and actions fits the screen', async ({
     page,
   }) => {
     await signUp(page, uniqueEmail('mobile-320'))
 
     await page.goto('/org')
-    await page.getByLabel('Nome da organização').fill('Escola Estreita')
+    await page.getByLabel('Nome da organização').fill('Narrow School')
     await page.getByRole('button', { name: 'Criar organização' }).click()
     await expect(page.getByRole('heading', { name: 'Membros' })).toBeVisible()
 
     await page.getByRole('button', { name: 'Criar teamspace' }).first().click()
-    await page.getByLabel('Nome do teamspace').fill('Time de Conteúdo')
+    await page.getByLabel('Nome do teamspace').fill('Content Team')
     await page.getByRole('button', { name: 'Criar teamspace' }).last().click()
     await expect(page.getByText('Teamspace criado')).toBeVisible()
 
     await page.goto('/')
-    await createDocument(page, 'Documento com o header cheio')
+    await createDocument(page, 'Document with a full header')
 
     await page.getByRole('button', { name: 'Ações do documento' }).click()
     await page.getByRole('menuitem', { name: 'Mover para teamspace' }).click()
-    await page.getByRole('radio', { name: /Time de Conteúdo/ }).click()
+    await page.getByRole('radio', { name: /Content Team/ }).click()
     await page.getByRole('button', { name: 'Mover', exact: true }).click()
     await expect(page.getByText('Documento movido')).toBeVisible()
 

@@ -5,15 +5,15 @@ import { createDocument, editorBody, signUp, uniqueEmail } from './helpers'
 
 const archiveInput = '[data-testid="import-archive-input"]'
 
-test.describe('importar exportação', () => {
-  test('zip vira subpáginas com imagem, callout e database', async ({
+test.describe('Notion export import', () => {
+  test('the zip becomes subpages with image, callout and database', async ({
     page,
   }) => {
     await signUp(page, uniqueEmail('zip'))
-    await createDocument(page, 'Migração')
+    await createDocument(page, 'Migration')
 
     await page.setInputFiles(archiveInput, {
-      name: 'exportacao.zip',
+      name: 'export.zip',
       mimeType: 'application/zip',
       buffer: Buffer.from(buildNotionFixtureZip()),
     })
@@ -27,42 +27,42 @@ test.describe('importar exportação', () => {
     await page.getByRole('button', { name: 'Abrir documento' }).click()
 
     await expect(page.getByLabel('Título do documento')).toHaveValue(
-      fixtureTitles.plano,
+      fixtureTitles.plan,
     )
 
     const body = editorBody(page)
 
-    await expect(body).toContainText('Roteiro do trimestre')
-    await expect(body).toContainText('Combine as datas com a coordenação')
+    await expect(body).toContainText('Term outline')
+    await expect(body).toContainText('Agree on the dates with the coordination')
 
     await expect(
       page.getByRole('navigation', { name: 'Caminho do documento' }),
-    ).toContainText('Migração')
+    ).toContainText('Migration')
 
-    const nav = page.getByRole('navigation', { name: 'Documentos' })
+    const nav = page.getByRole('region', { name: 'Privado' })
 
     await nav
-      .getByRole('button', { name: `Expandir ${fixtureTitles.plano}` })
+      .getByRole('button', { name: `Expandir ${fixtureTitles.plan}` })
       .click()
-    await nav.getByRole('link', { name: new RegExp(fixtureTitles.turma) }).click()
+    await nav.getByRole('link', { name: new RegExp(fixtureTitles.class) }).click()
 
     await expect(page.getByLabel('Título do documento')).toHaveValue(
-      fixtureTitles.turma,
+      fixtureTitles.class,
     )
     await expect(editorBody(page).locator('img')).toHaveCount(1)
     await expect(
       page.getByRole('navigation', { name: 'Caminho do documento' }),
-    ).toContainText(fixtureTitles.plano)
+    ).toContainText(fixtureTitles.plan)
   })
 
-  test('zip corrompido devolve erro sem quebrar o app', async ({ page }) => {
-    await signUp(page, uniqueEmail('zip-erro'))
-    await createDocument(page, 'Documento intacto')
+  test('a corrupted zip returns an error without breaking the app', async ({ page }) => {
+    await signUp(page, uniqueEmail('zip-error'))
+    await createDocument(page, 'Untouched document')
 
     await page.setInputFiles(archiveInput, {
-      name: 'quebrado.zip',
+      name: 'broken.zip',
       mimeType: 'application/zip',
-      buffer: Buffer.from('PK isso nao e um zip de verdade', 'utf8'),
+      buffer: Buffer.from('PK this is not a real zip', 'utf8'),
     })
 
     await expect(page.getByRole('alert')).toBeVisible({ timeout: 30_000 })
@@ -73,8 +73,8 @@ test.describe('importar exportação', () => {
     await page.keyboard.press('Escape')
     await expect(page.getByRole('dialog')).toHaveCount(0)
 
-    const nav = page.getByRole('navigation', { name: 'Documentos' })
+    const privateSection = page.getByRole('region', { name: 'Privado' })
 
-    await expect(nav.getByRole('link')).toHaveCount(1)
+    await expect(privateSection.getByRole('link')).toHaveCount(1)
   })
 })

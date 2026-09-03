@@ -3,6 +3,7 @@ import type { DefaultReactSuggestionItem } from '@blocknote/react'
 import { getDefaultReactSlashMenuItems } from '@blocknote/react'
 
 import {
+  BrowserIcon,
   CloudDownloadIcon,
   DatabaseIcon,
   FileUploadIcon,
@@ -10,7 +11,11 @@ import {
   ZipArchiveIcon,
 } from '@/components/icons'
 
-import type { CalloutMenuItem, DatabaseMenuItem } from './dictionary'
+import type {
+  CalloutMenuItem,
+  DatabaseMenuItem,
+  EmbedMenuItem,
+} from './dictionary'
 import type { LeafEditor } from './types'
 
 export type ImportMenuTexts = Readonly<{
@@ -61,6 +66,8 @@ export function getLeafSlashMenuItems(
   importTexts?: ImportMenuTexts,
   importActions?: ImportMenuActions,
   databaseItem?: DatabaseMenuAction,
+  aiItems: ReadonlyArray<DefaultReactSuggestionItem> = [],
+  embedItem?: EmbedMenuItem,
 ): DefaultReactSuggestionItem[] {
   const menu = editor.dictionary.slash_menu
   const hiddenGroups = new Set([menu.video.group, menu.emoji.group])
@@ -81,6 +88,19 @@ export function getLeafSlashMenuItems(
       insertOrUpdateBlockForSlashMenu(editor, { type: 'callout' })
     },
   }
+
+  const embed: DefaultReactSuggestionItem | null = embedItem
+    ? {
+        title: embedItem.title,
+        subtext: embedItem.subtext,
+        aliases: embedItem.aliases,
+        group: embedItem.group,
+        icon: <BrowserIcon aria-hidden="true" className="size-4" />,
+        onItemClick: () => {
+          insertOrUpdateBlockForSlashMenu(editor, { type: 'embed' })
+        },
+      }
+    : null
 
   const database: DefaultReactSuggestionItem | null = databaseItem
     ? {
@@ -130,12 +150,16 @@ export function getLeafSlashMenuItems(
         ]
       : []
 
-  return arrangeMenuItems(
-    defaults,
-    [
-      { after: menu.quote.title, item: callout },
-      ...(database ? [{ after: menu.table.title, item: database }] : []),
-    ],
-    imports,
-  )
+  return [
+    ...aiItems,
+    ...arrangeMenuItems(
+      defaults,
+      [
+        { after: menu.quote.title, item: callout },
+        ...(database ? [{ after: menu.table.title, item: database }] : []),
+        ...(embed ? [{ after: menu.image.title, item: embed }] : []),
+      ],
+      imports,
+    ),
+  ]
 }

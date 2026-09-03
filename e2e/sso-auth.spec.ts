@@ -2,8 +2,8 @@ import { expect, test } from '@playwright/test'
 
 const issuer = 'https://auth.e2e.invalid/api-arvore'
 
-test.describe('login pelo SSO da Árvore', () => {
-  test('a tela de login não tem email e senha', async ({ page }) => {
+test.describe('sign-in through the Árvore SSO', () => {
+  test('the login screen has no email and password', async ({ page }) => {
     await page.goto('/login')
 
     await expect(
@@ -15,7 +15,7 @@ test.describe('login pelo SSO da Árvore', () => {
     await expect(page.getByRole('link', { name: 'Criar conta' })).toHaveCount(0)
   })
 
-  test('/signup manda para /login', async ({ page }) => {
+  test('/signup sends to /login', async ({ page }) => {
     await page.goto('/signup')
 
     await expect(page).toHaveURL(/\/login$/)
@@ -24,10 +24,10 @@ test.describe('login pelo SSO da Árvore', () => {
     ).toBeVisible()
   })
 
-  test('o botão leva para o authorize do SSO com PKCE', async ({ page }) => {
+  test('the button leads to the SSO authorize with PKCE', async ({ page }) => {
     await page.route('https://auth.e2e.invalid/**', (route) =>
       route.fulfill({
-        body: '<html lang="pt-BR"><body>login da Árvore</body></html>',
+        body: '<html lang="pt-BR"><body>Árvore login</body></html>',
         contentType: 'text/html',
       }),
     )
@@ -51,7 +51,7 @@ test.describe('login pelo SSO da Árvore', () => {
     expect(target.searchParams.get('state')).toBeTruthy()
   })
 
-  test('erro de domínio negado volta com mensagem na tela de login', async ({
+  test('a denied domain error comes back with a message on the login screen', async ({
     page,
   }) => {
     await page.goto('/login?error=EMAIL_DOMAIN_NOT_ALLOWED')
@@ -63,7 +63,7 @@ test.describe('login pelo SSO da Árvore', () => {
     ).toBeVisible()
   })
 
-  test('erro genérico do callback também aterrissa no login', async ({
+  test('a generic callback error also lands on the login', async ({
     page,
   }) => {
     await page.goto('/login?error=access_denied')

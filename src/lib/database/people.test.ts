@@ -20,42 +20,42 @@ const roster: Array<Person> = [
 ]
 
 describe('matchPerson', () => {
-  it('casa pelo nome completo, ignorando acento e caixa', () => {
+  it('matches by the full name, ignoring accent and case', () => {
     expect(matchPerson('joao barros', roster)).toEqual({
       kind: 'matched',
       personId: 'u3',
     })
   })
 
-  it('casa pelo primeiro nome quando ele é de uma pessoa só', () => {
+  it('matches by the first name when it belongs to a single person', () => {
     expect(matchPerson('Rafael', roster)).toEqual({
       kind: 'matched',
       personId: 'u1',
     })
   })
 
-  it('casa pelo sobrenome quando ele é de uma pessoa só', () => {
+  it('matches by the last name when it belongs to a single person', () => {
     expect(matchPerson('Raposo', roster)).toEqual({
       kind: 'matched',
       personId: 'u2',
     })
   })
 
-  it('casa pela parte local do email quando o nome não ajuda', () => {
+  it('matches by the local part of the email when the name does not help', () => {
     expect(matchPerson('coutinho', roster)).toEqual({
       kind: 'matched',
       personId: 'u6',
     })
   })
 
-  it('casa pelo email inteiro', () => {
+  it('matches by the whole email', () => {
     expect(matchPerson('vitor.mendes@arvore.com.br', roster)).toEqual({
       kind: 'matched',
       personId: 'u8',
     })
   })
 
-  it('devolve ambíguo, e nunca escolhe, quando há mais de um candidato', () => {
+  it('returns ambiguous, and never picks, when there is more than one candidate', () => {
     const match = matchPerson('Vitor', roster)
 
     expect(match.kind).toBe('ambiguous')
@@ -64,24 +64,24 @@ describe('matchPerson', () => {
     )
   })
 
-  it('não inventa pessoa para apelido que não bate com ninguém', () => {
+  it('does not invent a person for a nickname that matches nobody', () => {
     expect(matchPerson('Carlinhos', roster)).toEqual({ kind: 'unmatched' })
   })
 
-  it('nome exato ganha de quem só bate por parte do nome', () => {
+  it('an exact name beats whoever only matches part of the name', () => {
     expect(matchPerson('Jotta', roster)).toEqual({
       kind: 'matched',
       personId: 'u5',
     })
   })
 
-  it('texto vazio não casa com ninguém', () => {
+  it('empty text matches nobody', () => {
     expect(matchPerson('   ', roster)).toEqual({ kind: 'unmatched' })
   })
 })
 
 describe('reconcileColumn', () => {
-  it('separa o que casou, o que precisa de gente e o que não tem candidato', () => {
+  it('separates what matched, what needs a person and what has no candidate', () => {
     const result = reconcileColumn(
       ['Rafael', 'Raposo', 'Joaozinho', 'Coutinho', 'Carlinhos', 'Vitu'],
       roster,
@@ -96,7 +96,7 @@ describe('reconcileColumn', () => {
     expect(result.pending).toEqual([])
   })
 
-  it('junta os candidatos quando o texto é ambíguo', () => {
+  it('gathers the candidates when the text is ambiguous', () => {
     const result = reconcileColumn(['Vitor'], roster)
 
     expect(result.resolved).toEqual({})
@@ -104,7 +104,7 @@ describe('reconcileColumn', () => {
     expect([...result.pending[0].candidateIds].sort()).toEqual(['u8', 'u9'])
   })
 
-  it('não repete o mesmo texto duas vezes', () => {
+  it('does not repeat the same text twice', () => {
     const result = reconcileColumn(['Rafael', 'Rafael', ' Rafael '], roster)
 
     expect(Object.keys(result.resolved)).toEqual(['Rafael'])
@@ -112,7 +112,7 @@ describe('reconcileColumn', () => {
 })
 
 describe('personOptions', () => {
-  it('vira lista de opção com o id da pessoa', () => {
+  it('becomes an option list carrying the person id', () => {
     const options = personOptions(roster.slice(0, 2))
 
     expect(options.map((option) => option.id)).toEqual(['u1', 'u2'])

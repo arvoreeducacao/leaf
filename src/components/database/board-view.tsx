@@ -13,7 +13,7 @@ import { isMultiValueType } from '@/lib/database/views'
 import { cn } from '@/shared/utils'
 
 import { PropertyIcon } from './property-icon'
-import { RowMenu } from './row-menu'
+import { RowContextMenu, RowMenu } from './row-menu'
 import type { RowMoveTarget } from './row-menu'
 import { OptionChip, PersonChip } from './select-editor'
 import type { DatabaseHandlers } from './types'
@@ -76,7 +76,7 @@ export function BoardView({
 
   return (
     <div className="overflow-x-auto pb-2">
-      <div className="flex min-w-max items-start gap-3">
+      <div className="relative flex min-w-max items-start gap-3">
         {groups.map((group) => {
           const key = group.id ?? 'none'
 
@@ -225,74 +225,83 @@ function BoardCard({
   const title = row.title.trim().length > 0 ? row.title : t('untitledRow')
 
   return (
-    <article
-      className="flex flex-col gap-2 rounded-large border border-line bg-surface-card p-3 shadow-down-small transition-colors hover:border-line-strong"
-      draggable={sortable}
-      onDragEnd={onDragEnd}
-      onDragStart={(event) => {
-        event.dataTransfer.effectAllowed = 'move'
-        event.dataTransfer.setData('text/plain', row.id)
-        onDragStart()
-      }}
+    <RowContextMenu
+      canEdit={canEdit}
+      moveTargets={moveTargets}
+      onDelete={() => handlers.deleteRow(row.id)}
+      onMove={onMove}
+      rowId={row.id}
+      title={row.title}
     >
-      <div className="flex items-start gap-1">
-        <Link
-          className="min-w-0 flex-1 rounded-medium font-bold text-body-small text-content-strong transition-colors hover:text-link focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-2"
-          href={`/doc/${row.id}`}
-        >
-          {title}
-        </Link>
-        <RowMenu
-          canEdit={canEdit}
-          moveTargets={moveTargets}
-          onDelete={() => handlers.deleteRow(row.id)}
-          onMove={onMove}
-          rowId={row.id}
-          title={row.title}
-        />
-      </div>
+      <article
+        className="flex flex-col gap-2 rounded-large border border-line bg-surface-card p-3 shadow-down-small transition-colors hover:border-line-strong"
+        draggable={sortable}
+        onDragEnd={onDragEnd}
+        onDragStart={(event) => {
+          event.dataTransfer.effectAllowed = 'move'
+          event.dataTransfer.setData('text/plain', row.id)
+          onDragStart()
+        }}
+      >
+        <div className="flex items-start gap-1">
+          <Link
+            className="min-w-0 flex-1 rounded-medium font-bold text-body-small text-content-strong transition-colors hover:text-link focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-2"
+            href={`/doc/${row.id}`}
+          >
+            {title}
+          </Link>
+          <RowMenu
+            canEdit={canEdit}
+            moveTargets={moveTargets}
+            onDelete={() => handlers.deleteRow(row.id)}
+            onMove={onMove}
+            rowId={row.id}
+            title={row.title}
+          />
+        </div>
 
-      <dl className="flex flex-col gap-1">
-        {properties.map((property) => {
-          const options = optionsFor(property, people)
-          const value = valueOf(row.values, property, options)
-          const text = valueToText(value, property.type, options, locale)
+        <dl className="flex flex-col gap-1">
+          {properties.map((property) => {
+            const options = optionsFor(property, people)
+            const value = valueOf(row.values, property, options)
+            const text = valueToText(value, property.type, options, locale)
 
-          if (text.length === 0) {
-            return null
-          }
+            if (text.length === 0) {
+              return null
+            }
 
-          return (
-            <div className="flex items-center gap-2" key={property.id}>
-              <dt className="flex shrink-0 items-center gap-1 text-caption text-content-subtle">
-                <PropertyIcon className="size-3.5" type={property.type} />
-                <span className="sr-only">{property.name}</span>
-              </dt>
-              <dd className="min-w-0 flex-1 truncate text-caption text-content">
-                {property.type === 'select' ||
-                property.type === 'multiSelect' ||
-                property.type === 'status' ||
-                property.type === 'person'
-                  ? (Array.isArray(value) ? value : [value]).map((id) => {
-                      const option = options.find((item) => item.id === id)
+            return (
+              <div className="flex items-center gap-2" key={property.id}>
+                <dt className="flex shrink-0 items-center gap-1 text-caption text-content-subtle">
+                  <PropertyIcon className="size-3.5" type={property.type} />
+                  <span className="sr-only">{property.name}</span>
+                </dt>
+                <dd className="min-w-0 flex-1 truncate text-caption text-content">
+                  {property.type === 'select' ||
+                  property.type === 'multiSelect' ||
+                  property.type === 'status' ||
+                  property.type === 'person'
+                    ? (Array.isArray(value) ? value : [value]).map((id) => {
+                        const option = options.find((item) => item.id === id)
 
-                      if (!option) {
-                        return null
-                      }
+                        if (!option) {
+                          return null
+                        }
 
-                      return property.type === 'person' ? (
-                        <PersonChip key={option.id} option={option} />
-                      ) : (
-                        <OptionChip key={option.id} option={option} />
-                      )
-                    })
-                  : text}
-              </dd>
-            </div>
-          )
-        })}
-      </dl>
+                        return property.type === 'person' ? (
+                          <PersonChip key={option.id} option={option} />
+                        ) : (
+                          <OptionChip key={option.id} option={option} />
+                        )
+                      })
+                    : text}
+                </dd>
+              </div>
+            )
+          })}
+        </dl>
 
-    </article>
+      </article>
+    </RowContextMenu>
   )
 }

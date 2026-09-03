@@ -29,9 +29,5 @@ export async function DatabaseSurface({
     )
   }
 
-  return (
-    <div className={compact ? undefined : 'px-4 tablet:px-[54px]'}>
-      <DatabaseView canEdit={canEdit} compact={compact} snapshot={snapshot} />
-    </div>
-  )
+  return <DatabaseView canEdit={canEdit} compact={compact} snapshot={snapshot} />
 }

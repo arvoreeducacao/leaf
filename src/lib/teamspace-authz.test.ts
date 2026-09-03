@@ -26,15 +26,18 @@ import {
   listOrganizationDocuments,
   resolveMembership,
 } from '@/lib/organizations'
-import { listVisibleTeamspaces } from '@/lib/teamspaces'
+import {
+  listTeamspaceDocuments,
+  listVisibleTeamspaces,
+} from '@/lib/teamspaces'
 
-const owner = { id: 'ts-owner', email: 'dono@arvore.com.br' }
-const teamMember = { id: 'ts-member', email: 'time@arvore.com.br' }
-const orgOnly = { id: 'ts-org-only', email: 'colega@arvore.com.br' }
-const outsider = { id: 'ts-outsider', email: 'fora@outraescola.com.br' }
+const owner = { id: 'ts-owner', email: 'owner@arvore.com.br' }
+const teamMember = { id: 'ts-member', email: 'team@arvore.com.br' }
+const orgOnly = { id: 'ts-org-only', email: 'mate@arvore.com.br' }
+const outsider = { id: 'ts-outsider', email: 'outside@otherschool.com.br' }
 
 const mainOrg = 'org-arvore'
-const otherOrg = 'org-outra'
+const otherOrg = 'org-other'
 
 const openTeamspace = 'ts-open'
 const closedTeamspace = 'ts-closed'
@@ -91,8 +94,8 @@ beforeEach(async () => {
   )
 
   await db.insert(organizations).values([
-    { id: mainOrg, name: 'Escola Árvore', createdAt: now },
-    { id: otherOrg, name: 'Outra Escola', createdAt: now },
+    { id: mainOrg, name: 'Árvore School', createdAt: now },
+    { id: otherOrg, name: 'Other School', createdAt: now },
   ])
 
   await db.insert(organizationMembers).values([
@@ -130,14 +133,14 @@ beforeEach(async () => {
     {
       id: openTeamspace,
       orgId: mainOrg,
-      name: 'Time aberto',
+      name: 'Open team',
       access: 'open',
       createdAt: now,
     },
     {
       id: closedTeamspace,
       orgId: mainOrg,
-      name: 'Time fechado',
+      name: 'Closed team',
       access: 'closed',
       createdAt: now,
     },
@@ -161,8 +164,8 @@ beforeEach(async () => {
   ])
 })
 
-describe('precedência de acesso com teamspaces', () => {
-  it('dono do documento vence o teamspace fechado do qual ele não participa', async () => {
+describe('access precedence with teamspaces', () => {
+  it('the document owner beats the closed teamspace they are not part of', async () => {
     await insertDocument({
       id: 'doc-owner',
       ownerId: owner.id,
@@ -174,7 +177,7 @@ describe('precedência de acesso com teamspaces', () => {
     ).resolves.toBe('owner')
   })
 
-  it('share explícito vence o teamspace e pode rebaixar o membro', async () => {
+  it('an explicit share beats the teamspace and can downgrade the member', async () => {
     await insertDocument({
       id: 'doc-shared',
       ownerId: owner.id,
@@ -194,7 +197,7 @@ describe('precedência de acesso com teamspaces', () => {
     ).resolves.toBe('viewer')
   })
 
-  it('membro do teamspace herda editor', async () => {
+  it('a teamspace member inherits editor', async () => {
     await insertDocument({
       id: 'doc-team',
       ownerId: owner.id,
@@ -206,7 +209,7 @@ describe('precedência de acesso com teamspaces', () => {
     ).resolves.toBe('editor')
   })
 
-  it('teamspace vence org_access: membro do teamspace edita doc com org_access viewer', async () => {
+  it('the teamspace beats org_access: a teamspace member edits a doc with org_access viewer', async () => {
     await insertDocument({
       id: 'doc-team-org',
       ownerId: owner.id,
@@ -219,7 +222,7 @@ describe('precedência de acesso com teamspaces', () => {
     ).resolves.toBe('editor')
   })
 
-  it('teamspace aberto deixa qualquer membro da organização ver', async () => {
+  it('an open teamspace lets any member of the organization read', async () => {
     await insertDocument({
       id: 'doc-open',
       ownerId: owner.id,
@@ -231,7 +234,7 @@ describe('precedência de acesso com teamspaces', () => {
     ).resolves.toBe('viewer')
   })
 
-  it('teamspace fechado esconde o documento de quem não foi convidado', async () => {
+  it('a closed teamspace hides the document from whoever was not invited', async () => {
     await insertDocument({
       id: 'doc-closed',
       ownerId: owner.id,
@@ -243,7 +246,7 @@ describe('precedência de acesso com teamspaces', () => {
     ).resolves.toBeNull()
   })
 
-  it('org_access continua valendo quando o teamspace não concede nada', async () => {
+  it('org_access still holds when the teamspace grants nothing', async () => {
     await insertDocument({
       id: 'doc-closed-org',
       ownerId: owner.id,
@@ -256,7 +259,7 @@ describe('precedência de acesso com teamspaces', () => {
     ).resolves.toBe('editor')
   })
 
-  it('quem é de outra organização não alcança teamspace aberto', async () => {
+  it('someone from another organization does not reach an open teamspace', async () => {
     await insertDocument({
       id: 'doc-open-outsider',
       ownerId: owner.id,
@@ -268,7 +271,7 @@ describe('precedência de acesso com teamspaces', () => {
     ).resolves.toBeNull()
   })
 
-  it('documento sem teamspace segue a precedência anterior', async () => {
+  it('a document without a teamspace follows the previous precedence', async () => {
     await insertDocument({
       id: 'doc-plain',
       ownerId: owner.id,
@@ -284,8 +287,8 @@ describe('precedência de acesso com teamspaces', () => {
   })
 })
 
-describe('listas da sidebar', () => {
-  it('teamspace fechado só aparece para quem participa', async () => {
+describe('sidebar lists', () => {
+  it('a closed teamspace only shows up for whoever is part of it', async () => {
     await expect(
       listVisibleTeamspaces(mainOrg, teamMember.id),
     ).resolves.toHaveLength(2)
@@ -296,7 +299,7 @@ describe('listas da sidebar', () => {
     expect(visible[0].role).toBeNull()
   })
 
-  it('documento de teamspace sai das seções Privado e Organização', async () => {
+  it('a teamspace document leaves the Private and Organization sections', async () => {
     await insertDocument({
       id: 'doc-in-team',
       ownerId: owner.id,
@@ -311,22 +314,60 @@ describe('listas da sidebar', () => {
     expect(privateDocuments.map((item) => item.id)).toEqual(['doc-private'])
     expect(organizationDocuments).toHaveLength(0)
   })
+
+  it('tells apart the organization rows the person owns from the rest', async () => {
+    await insertDocument({
+      id: 'doc-org-mine',
+      orgAccess: 'editor',
+      ownerId: owner.id,
+    })
+    await insertDocument({
+      id: 'doc-org-theirs',
+      orgAccess: 'editor',
+      ownerId: teamMember.id,
+    })
+
+    const rows = await listOrganizationDocuments(mainOrg, owner.id)
+    const owned = new Map(rows.map((row) => [row.id, row.owned]))
+
+    expect(owned.get('doc-org-mine')).toBe(true)
+    expect(owned.get('doc-org-theirs')).toBe(false)
+  })
+
+  it('tells apart the teamspace rows the person owns from the rest', async () => {
+    await insertDocument({
+      id: 'doc-team-mine',
+      ownerId: owner.id,
+      teamspaceId: openTeamspace,
+    })
+    await insertDocument({
+      id: 'doc-team-theirs',
+      ownerId: teamMember.id,
+      teamspaceId: openTeamspace,
+    })
+
+    const rows = await listTeamspaceDocuments(openTeamspace, owner.id)
+    const owned = new Map(rows.map((row) => [row.id, row.owned]))
+
+    expect(owned.get('doc-team-mine')).toBe(true)
+    expect(owned.get('doc-team-theirs')).toBe(false)
+  })
 })
 
-describe('múltiplas organizações', () => {
-  it('a pessoa entra em todas as organizações que a convidaram', async () => {
+describe('multiple organizations', () => {
+  it('the person joins every organization that invited them', async () => {
     await db.insert(organizationInvites).values([
       {
         id: 'invite-1',
         orgId: mainOrg,
-        email: 'nova@arvore.com.br',
+        email: 'newcomer@arvore.com.br',
         role: 'member',
         createdAt: new Date(),
       },
       {
         id: 'invite-2',
         orgId: otherOrg,
-        email: 'nova@arvore.com.br',
+        email: 'newcomer@arvore.com.br',
         role: 'admin',
         createdAt: new Date(),
       },
@@ -336,8 +377,8 @@ describe('múltiplas organizações', () => {
 
     await db.insert(user).values({
       id: 'ts-newcomer',
-      name: 'nova',
-      email: 'nova@arvore.com.br',
+      name: 'newcomer',
+      email: 'newcomer@arvore.com.br',
       emailVerified: false,
       createdAt: now,
       updatedAt: now,
@@ -345,7 +386,7 @@ describe('múltiplas organizações', () => {
 
     const memberships = await acceptPendingInvites(
       'ts-newcomer',
-      'nova@arvore.com.br',
+      'newcomer@arvore.com.br',
     )
 
     expect(memberships.map((item) => item.orgId).sort()).toEqual(
@@ -354,11 +395,11 @@ describe('múltiplas organizações', () => {
     await expect(listMemberships('ts-newcomer')).resolves.toHaveLength(2)
   })
 
-  it('a organização ativa vem do id preferido e cai na primeira quando ele não vale', async () => {
+  it('the active organization comes from the preferred id and falls back to the first when it is invalid', async () => {
     const now = new Date()
 
     await db.insert(organizationMembers).values({
-      id: 'm-owner-outra',
+      id: 'm-owner-other',
       orgId: otherOrg,
       userId: owner.id,
       role: 'member',
@@ -369,7 +410,7 @@ describe('múltiplas organizações', () => {
       orgId: otherOrg,
     })
     await expect(
-      resolveMembership(owner.id, 'org-inexistente'),
+      resolveMembership(owner.id, 'org-missing'),
     ).resolves.toMatchObject({ orgId: mainOrg })
     await expect(resolveMembership(outsider.id, mainOrg)).resolves.toMatchObject(
       { orgId: otherOrg },

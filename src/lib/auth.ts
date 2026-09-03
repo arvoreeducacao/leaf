@@ -1,9 +1,10 @@
+import { expo } from '@better-auth/expo'
 import { oauthProvider } from '@better-auth/oauth-provider'
 import { betterAuth } from 'better-auth'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
 import { APIError, createAuthMiddleware } from 'better-auth/api'
 import { nextCookies } from 'better-auth/next-js'
-import { genericOAuth, jwt } from 'better-auth/plugins'
+import { genericOAuth, jwt, oneTimeToken } from 'better-auth/plugins'
 import { eq } from 'drizzle-orm'
 import { headers } from 'next/headers'
 
@@ -22,6 +23,7 @@ import {
   mcpScopes,
 } from '@/lib/mcp-config'
 import { validateDynamicClientRegistration } from '@/lib/mcp/client-registration'
+import { mobileTrustedOrigins } from '@/lib/mobile-auth'
 import { buildSsoSignOutUrl, requestOrigin } from '@/lib/sso-sign-out'
 
 const guardedPaths = new Set(['/sign-up/email', '/sign-in/email'])
@@ -194,6 +196,7 @@ function mcpAuthorizationServerPlugins() {
 
 export const auth = betterAuth({
   appName: 'Leaf',
+  trustedOrigins: mobileTrustedOrigins(process.env.NODE_ENV),
   database: drizzleAdapter(db, {
     provider: 'mysql',
     schema: {
@@ -259,6 +262,8 @@ export const auth = betterAuth({
   plugins: [
     ...(ssoPlugin ? [ssoPlugin] : []),
     ...mcpAuthorizationServerPlugins(),
+    expo(),
+    oneTimeToken({ storeToken: 'hashed' }),
     nextCookies(),
   ],
 })

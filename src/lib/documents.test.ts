@@ -13,19 +13,20 @@ import { documents, user } from '@/db/schema'
 import { resetDatabase } from '@/db/testing'
 import {
   buildDocumentTree,
+  capDocumentTree,
   listAncestors,
   listOwnedDocuments,
   listSubtreeIds,
 } from '@/lib/documents'
 
-const owner = { id: 'user-owner', email: 'dono@arvore.com.br' }
+const owner = { id: 'user-owner', email: 'owner@arvore.com.br' }
 
 const tree = [
-  { id: 'raiz', parentId: null, title: 'Raiz' },
-  { id: 'filho', parentId: 'raiz', title: 'Filho' },
-  { id: 'neto', parentId: 'filho', title: 'Neto' },
-  { id: 'bisneto', parentId: 'neto', title: 'Bisneto' },
-  { id: 'outra', parentId: null, title: 'Outra raiz' },
+  { id: 'root', parentId: null, title: 'Root' },
+  { id: 'child', parentId: 'root', title: 'Child' },
+  { id: 'grandchild', parentId: 'child', title: 'Grandchild' },
+  { id: 'great-grandchild', parentId: 'grandchild', title: 'Great-grandchild' },
+  { id: 'other', parentId: null, title: 'Other root' },
 ]
 
 beforeEach(async () => {
@@ -37,7 +38,7 @@ beforeEach(async () => {
 
   await db.insert(user).values({
     id: owner.id,
-    name: 'Dono',
+    name: 'Owner',
     email: owner.email,
     emailVerified: false,
     createdAt: now,
@@ -56,43 +57,139 @@ beforeEach(async () => {
   }
 })
 
-describe('hierarquia de documentos', () => {
-  it('monta a árvore a partir do parent_id', async () => {
+describe('document hierarchy', () => {
+  it('builds the tree from the parent_id', async () => {
     const roots = buildDocumentTree(await listOwnedDocuments(owner.id))
 
-    expect(roots.map((node) => node.id).sort()).toEqual(['outra', 'raiz'])
+    expect(roots.map((node) => node.id).sort()).toEqual(['other', 'root'])
 
-    const raiz = roots.find((node) => node.id === 'raiz')
+    const root = roots.find((node) => node.id === 'root')
 
-    expect(raiz?.children.map((node) => node.id)).toEqual(['filho'])
-    expect(raiz?.children[0].children[0].id).toBe('neto')
-    expect(raiz?.children[0].children[0].depth).toBe(2)
+    expect(root?.children.map((node) => node.id)).toEqual(['child'])
+    expect(root?.children[0].children[0].id).toBe('grandchild')
+    expect(root?.children[0].children[0].depth).toBe(2)
   })
 
-  it('devolve os ancestrais na ordem da raiz até o pai', async () => {
-    const crumbs = await listAncestors('bisneto')
+  it('returns the ancestors in order from the root down to the parent', async () => {
+    const crumbs = await listAncestors('great-grandchild')
 
-    expect(crumbs.map((crumb) => crumb.id)).toEqual(['raiz', 'filho', 'neto'])
+    expect(crumbs.map((crumb) => crumb.id)).toEqual([
+      'root',
+      'child',
+      'grandchild',
+    ])
   })
 
-  it('não devolve ancestral que está na lixeira', async () => {
+  it('does not return an ancestor that is in the trash', async () => {
     await db
       .update(documents)
       .set({ deletedAt: new Date() })
-      .where(eq(documents.id, 'filho'))
+      .where(eq(documents.id, 'child'))
 
-    const crumbs = await listAncestors('neto')
+    const crumbs = await listAncestors('grandchild')
 
     expect(crumbs).toEqual([])
   })
 
-  it('lista a subárvore inteira a partir de um documento', async () => {
-    const ids = await listSubtreeIds('filho', owner.id)
+  it('lists the whole subtree from a document', async () => {
+    const ids = await listSubtreeIds('child', owner.id)
 
-    expect(ids.sort()).toEqual(['bisneto', 'filho', 'neto'])
+    expect(ids.sort()).toEqual(['child', 'grandchild', 'great-grandchild'])
   })
 
-  it('trata documento sem filhos como subárvore de um item', async () => {
-    expect(await listSubtreeIds('outra', owner.id)).toEqual(['outra'])
+  it('treats a document without children as a one-item subtree', async () => {
+    expect(await listSubtreeIds('other', owner.id)).toEqual(['other'])
+  })
+})
+
+describe('sidebar tree cap', () => {
+  function roots(count: number) {
+    return buildDocumentTree(
+      Array.from({ length: count }, (_, index) => ({
+        id: `doc-${index}`,
+        title: `Document ${index}`,
+        updatedAt: new Date(),
+        deletedAt: null,
+        parentId: null,
+        kind: 'page' as const,
+        icon: null,
+        shared: false,
+        owned: true,
+      })),
+    )
+  }
+
+  it('keeps every root when the list is within the limit', () => {
+    const capped = capDocumentTree(roots(5), 20)
+
+    expect(capped.nodes).toHaveLength(5)
+    expect(capped.hidden).toBe(0)
+  })
+
+  it('keeps the limit and reports how many stayed out', () => {
+    const capped = capDocumentTree(roots(3216), 20)
+
+    expect(capped.nodes).toHaveLength(20)
+    expect(capped.hidden).toBe(3196)
+  })
+
+  it('hides a document whose parent is not in the listing instead of promoting it', () => {
+    const nodes = buildDocumentTree([
+      {
+        id: 'orphan',
+        title: 'Subpage of a database row',
+        updatedAt: new Date(),
+        deletedAt: null,
+        parentId: 'row-outside-the-listing',
+        kind: 'page' as const,
+        icon: null,
+        shared: false,
+        owned: true,
+      },
+      {
+        id: 'root',
+        title: 'Root',
+        updatedAt: new Date(),
+        deletedAt: null,
+        parentId: null,
+        kind: 'page' as const,
+        icon: null,
+        shared: false,
+        owned: true,
+      },
+    ])
+
+    expect(nodes.map((node) => node.id)).toEqual(['root'])
+  })
+
+  it('keeps the children of the roots it does keep', () => {
+    const nodes = buildDocumentTree([
+      {
+        id: 'root',
+        title: 'Root',
+        updatedAt: new Date(),
+        deletedAt: null,
+        parentId: null,
+        kind: 'page' as const,
+        icon: null,
+        shared: false,
+        owned: true,
+      },
+      {
+        id: 'child',
+        title: 'Child',
+        updatedAt: new Date(),
+        deletedAt: null,
+        parentId: 'root',
+        kind: 'page' as const,
+        icon: null,
+        shared: false,
+        owned: true,
+      },
+    ])
+
+    const capped = capDocumentTree(nodes, 1)
+
+    expect(capped.nodes[0]?.children.map((node) => node.id)).toEqual(['child'])
   })
 })

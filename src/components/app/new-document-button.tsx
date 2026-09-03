@@ -5,12 +5,13 @@ import { useTransition } from 'react'
 import { toast } from 'sonner'
 
 import { sidebarIcon, sidebarRow } from '@/components/app/sidebar-styles'
-import { AddIcon } from '@/components/icons'
+import { ComposeIcon, PlusIcon } from '@/components/icons/outline'
 import { Button } from '@/components/ui/button'
+import { ButtonIcon } from '@/components/ui/button-icon'
 import { createDocument } from '@/lib/document-actions'
 import { cn } from '@/shared/utils'
 
-type Props = Readonly<{ variant?: 'sidebar' | 'primary' }>
+type Props = Readonly<{ variant?: 'sidebar' | 'primary' | 'icon' }>
 
 export function NewDocumentButton({ variant = 'sidebar' }: Props) {
   const t = useTranslations('nav')
@@ -30,6 +31,21 @@ export function NewDocumentButton({ variant = 'sidebar' }: Props) {
     })
   }
 
+  if (variant === 'icon') {
+    return (
+      <ButtonIcon
+        aria-busy={pending}
+        aria-label={t('newDocument')}
+        disabled={pending}
+        onClick={handleClick}
+        size="medium"
+        variant="ghost"
+      >
+        <ComposeIcon aria-hidden="true" />
+      </ButtonIcon>
+    )
+  }
+
   if (variant === 'primary') {
     return (
       <Button
@@ -38,7 +54,7 @@ export function NewDocumentButton({ variant = 'sidebar' }: Props) {
         onClick={handleClick}
         type="button"
       >
-        <AddIcon aria-hidden="true" />
+        <PlusIcon aria-hidden="true" />
         {t('newDocument')}
       </Button>
     )
@@ -53,7 +69,7 @@ export function NewDocumentButton({ variant = 'sidebar' }: Props) {
       type="button"
     >
       <span className="flex size-5 shrink-0 items-center justify-center">
-        <AddIcon aria-hidden="true" className={sidebarIcon} />
+        <PlusIcon aria-hidden="true" className={sidebarIcon} />
       </span>
       <span className="min-w-0 flex-1 truncate">{t('newDocument')}</span>
     </button>

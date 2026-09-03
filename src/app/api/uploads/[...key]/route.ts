@@ -26,7 +26,7 @@ export async function GET(
     : object.body
 
   const isImage = object.contentType.startsWith('image/')
-  const fileName = objectKey.split('/').pop() ?? 'arquivo'
+  const fileName = objectKey.split('/').pop() ?? 'file'
 
   return new NextResponse(body as BodyInit, {
     headers: {

@@ -1,5 +1,10 @@
 import type { Dictionary } from '@blocknote/core'
 import { en, pt } from '@blocknote/core/locales'
+import type { AIDictionary } from '@blocknote/xl-ai'
+
+import { createAiDictionary } from './ai-dictionary'
+
+export type LeafDictionary = Dictionary & Readonly<{ ai: AIDictionary }>
 
 export type LeafDictionaryTexts = Readonly<{
   placeholder: string
@@ -16,6 +21,8 @@ export type CalloutMenuItem = Readonly<{
 }>
 
 export type DatabaseMenuItem = CalloutMenuItem
+
+export type EmbedMenuItem = CalloutMenuItem
 
 const ptSlashMenu: Dictionary['slash_menu'] = {
   ...pt.slash_menu,
@@ -200,11 +207,12 @@ function baseFor(locale: string): Dictionary {
 export function createLeafDictionary(
   locale: string,
   texts: LeafDictionaryTexts,
-): Dictionary {
+): LeafDictionary {
   const base = baseFor(locale)
 
   return {
     ...base,
+    ai: createAiDictionary(locale),
     placeholders: {
       ...base.placeholders,
       emptyDocument: texts.placeholder,
@@ -218,7 +226,9 @@ export function createLeafDictionary(
   }
 }
 
-export function toReadOnlyDictionary(dictionary: Dictionary): Dictionary {
+export function toReadOnlyDictionary(
+  dictionary: LeafDictionary,
+): LeafDictionary {
   return {
     ...dictionary,
     placeholders: Object.fromEntries(

@@ -13,11 +13,11 @@ async function openUserMenu(page: import('@playwright/test').Page) {
   await expect(page.getByTestId('theme-dark')).toBeVisible()
 }
 
-test.describe('tema', () => {
-  test('alterna entre claro e escuro e mantem a escolha depois do reload', async ({
+test.describe('theme', () => {
+  test('toggles between light and dark and keeps the choice after the reload', async ({
     page,
   }) => {
-    await signUp(page, uniqueEmail('tema'))
+    await signUp(page, uniqueEmail('theme'))
 
     const html = page.locator('html')
 
@@ -42,8 +42,8 @@ test.describe('tema', () => {
     await expect(html).not.toHaveClass(/dark/)
   })
 
-  test('a opcao sistema segue o prefers-color-scheme', async ({ page }) => {
-    await signUp(page, uniqueEmail('tema-sistema'))
+  test('the system option follows prefers-color-scheme', async ({ page }) => {
+    await signUp(page, uniqueEmail('theme-system'))
 
     const html = page.locator('html')
 
@@ -57,8 +57,8 @@ test.describe('tema', () => {
     await expect(html).not.toHaveClass(/dark/)
   })
 
-  test('o editor fica legivel no tema escuro', async ({ page }) => {
-    await signUp(page, uniqueEmail('tema-editor'))
+  test('the editor stays readable in the dark theme', async ({ page }) => {
+    await signUp(page, uniqueEmail('theme-editor'))
     await createDocument(page)
 
     await openUserMenu(page)
@@ -76,11 +76,11 @@ test.describe('tema', () => {
   })
 })
 
-test.describe('idioma', () => {
-  test('troca a interface para ingles e mantem depois do reload', async ({
+test.describe('language', () => {
+  test('switches the interface to English and keeps it after the reload', async ({
     page,
   }) => {
-    await signUp(page, uniqueEmail('idioma'))
+    await signUp(page, uniqueEmail('language'))
 
     await expect(
       page.getByRole('button', { name: 'Novo documento' }).first(),
@@ -109,8 +109,8 @@ test.describe('idioma', () => {
     await expect(page.locator('html')).toHaveAttribute('lang', 'pt-BR')
   })
 
-  test('o slash menu do editor acompanha o idioma', async ({ page }) => {
-    await signUp(page, uniqueEmail('idioma-editor'))
+  test('the editor slash menu follows the language', async ({ page }) => {
+    await signUp(page, uniqueEmail('language-editor'))
     await createDocument(page)
 
     await editorBody(page).click()

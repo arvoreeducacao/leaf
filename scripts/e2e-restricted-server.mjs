@@ -53,7 +53,7 @@ const next = spawn(
       LEAF_DIST_DIR: process.env.LEAF_DIST_DIR ?? '.next-e2e',
       LEAF_ALLOWED_EMAIL_DOMAINS: 'arvore.com.br',
       BETTER_AUTH_SECRET:
-        process.env.E2E_AUTH_SECRET ?? 'leaf-e2e-secret-nao-use-em-producao',
+        process.env.E2E_AUTH_SECRET ?? 'leaf-e2e-secret-do-not-use-in-production',
       BETTER_AUTH_URL: `http://127.0.0.1:${port}`,
       S3_ENDPOINT: `http://127.0.0.1:${s3Port}`,
       S3_BUCKET: bucket,

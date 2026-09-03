@@ -9,6 +9,7 @@ import { toast } from 'sonner'
 
 import {
   ArrowRightIcon,
+  DownloadIcon,
   GlobeIcon,
   MoonFirstQuarterIcon,
   MoonIcon,
@@ -29,15 +30,19 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { sidebarRow } from '@/components/app/sidebar-styles'
+import { clearOfflineCaches } from '@/components/app/service-worker-registration'
 import { locales } from '@/i18n/config'
 import { setUserLocale } from '@/i18n/locale-action'
 import { authClient } from '@/lib/auth-client'
+import { wipeOfflineData } from '@/lib/offline/wipe'
+import { useInstallPrompt } from '@/shared/hooks/use-install-prompt'
 import { cn } from '@/shared/utils'
 
 type Props = Readonly<{
   name: string
   email: string
   locale: string
+  compact?: boolean
   connectedAppsEnabled?: boolean
 }>
 
@@ -71,6 +76,7 @@ export function UserMenu({
   name,
   email,
   locale,
+  compact = false,
   connectedAppsEnabled = false,
 }: Props) {
   const t = useTranslations('settings')
@@ -78,6 +84,7 @@ export function UserMenu({
   const tNav = useTranslations('nav')
   const router = useRouter()
   const { theme, setTheme } = useTheme()
+  const { installable, install } = useInstallPrompt()
   const [mounted, setMounted] = useState(false)
   const [pending, setPending] = useState(false)
   const [switching, startSwitching] = useTransition()
@@ -96,6 +103,9 @@ export function UserMenu({
       toast.error(tAuth('signOutFailed'))
       return
     }
+
+    await wipeOfflineData()
+    await clearOfflineCaches()
 
     router.push('/login')
     router.refresh()
@@ -118,7 +128,12 @@ export function UserMenu({
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button
-          className={cn(sidebarRow, 'cursor-pointer')}
+          aria-label={compact ? name || email : undefined}
+          className={cn(
+            sidebarRow,
+            'cursor-pointer',
+            compact && 'w-auto justify-center px-1.5',
+          )}
           data-testid="user-menu-trigger"
           type="button"
         >
@@ -127,7 +142,14 @@ export function UserMenu({
               {initials(name, email)}
             </AvatarFallback>
           </Avatar>
-          <span className="min-w-0 flex-1 truncate">{name || email}</span>
+          <span
+            className={cn(
+              'min-w-0 flex-1 truncate',
+              compact && 'sr-only',
+            )}
+          >
+            {name || email}
+          </span>
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-64">
@@ -152,6 +174,12 @@ export function UserMenu({
               <PluginIcon aria-hidden="true" />
               {t('connectedApps')}
             </Link>
+          </DropdownMenuItem>
+        ) : null}
+        {installable ? (
+          <DropdownMenuItem data-testid="install-app" onSelect={() => void install()}>
+            <DownloadIcon aria-hidden="true" />
+            {t('installApp')}
           </DropdownMenuItem>
         ) : null}
         <DropdownMenuItem disabled={pending} onSelect={handleSignOut}>

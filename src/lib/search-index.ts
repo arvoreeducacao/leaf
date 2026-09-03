@@ -7,22 +7,35 @@ export const HIGHLIGHT_START = String.fromCharCode(2)
 export const HIGHLIGHT_END = String.fromCharCode(3)
 
 export const MAX_SEARCH_RESULTS = 8
+export const MAX_ASK_SOURCES = 6
 export const MAX_RECENT_RESULTS = 7
 
 const MAX_QUERY_TOKENS = 8
+const MAX_ASK_TOKENS = 12
+const MIN_ASK_TOKEN_LENGTH = 3
 const MAX_TOKEN_LENGTH = 32
 const MAX_INDEXED_BODY = 200_000
 const SNIPPET_WORDS = 12
 const SNIPPET_LEAD_WORDS = 4
 const ELLIPSIS = '…'
 const WORD_PATTERN = /[\p{L}\p{N}]+/gu
+const RECONCILE_INTERVAL = 5 * 60 * 1000
+const RECONCILE_BACKLOG_INTERVAL = 5 * 1000
+const RECONCILE_DOCUMENT_BUDGET = 500
+const RECONCILE_CHUNK_BUDGET = 24
 
 export type SearchSegment = Readonly<{ text: string; highlight: boolean }>
 
 export type SearchHit = Readonly<{
   id: string
   title: string
+  icon: string | null
   segments: Array<SearchSegment>
+}>
+
+export type WorkspaceSearchResult = Readonly<{
+  documents: Array<SearchHit>
+  recent: boolean
 }>
 
 export function queryTokens(query: string): Array<string> {
@@ -33,6 +46,83 @@ export function queryTokens(query: string): Array<string> {
     .slice(0, MAX_QUERY_TOKENS)
     .map((token) => token.slice(0, MAX_TOKEN_LENGTH))
     .filter((token) => token.length > 0)
+}
+
+const askStopWords = new Set([
+  'aos',
+  'como',
+  'com',
+  'das',
+  'dos',
+  'ela',
+  'ele',
+  'eles',
+  'essa',
+  'esse',
+  'esta',
+  'este',
+  'isso',
+  'meu',
+  'minha',
+  'nas',
+  'nos',
+  'nossa',
+  'nosso',
+  'para',
+  'pela',
+  'pelo',
+  'por',
+  'pra',
+  'qual',
+  'quais',
+  'quando',
+  'que',
+  'quem',
+  'sem',
+  'ser',
+  'seu',
+  'sua',
+  'tem',
+  'ter',
+  'uma',
+  'and',
+  'are',
+  'can',
+  'does',
+  'for',
+  'from',
+  'how',
+  'the',
+  'what',
+  'when',
+  'where',
+  'which',
+  'who',
+  'why',
+  'with',
+])
+
+export function askTokens(query: string): Array<string> {
+  return query
+    .normalize('NFC')
+    .split(/[^\p{L}\p{N}]+/u)
+    .map((token) => token.slice(0, MAX_TOKEN_LENGTH))
+    .filter(
+      (token) =>
+        token.length >= MIN_ASK_TOKEN_LENGTH &&
+        !askStopWords.has(foldForSearch(token)),
+    )
+    .slice(0, MAX_ASK_TOKENS)
+}
+
+export function buildAskMatchExpression(query: string): string | null {
+  const tokens = askTokens(query)
+
+  if (tokens.length === 0) {
+    return null
+  }
+
+  return tokens.map((token) => `${token}*`).join(' ')
 }
 
 export function buildMatchExpression(query: string): string | null {
@@ -177,26 +267,74 @@ export async function indexDocument(documentId: string) {
   await writeIndexRow(row)
 }
 
-export async function reconcileSearchIndex() {
+let reconcileDueAt = 0
+let reconcileInFlight: Promise<void> | null = null
+
+async function reconcileChunkRows(budget: number) {
+  const { reconcileSemanticIndex } = await import('@/lib/semantic-index')
+
+  return reconcileSemanticIndex(budget)
+}
+
+async function upkeep() {
+  const indexed = await reconcileSearchIndex(RECONCILE_DOCUMENT_BUDGET)
+  const embedded = await reconcileChunkRows(RECONCILE_CHUNK_BUDGET)
+
+  return (
+    indexed >= RECONCILE_DOCUMENT_BUDGET || embedded >= RECONCILE_CHUNK_BUDGET
+  )
+}
+
+export function scheduleSearchIndexReconcile() {
+  const now = Date.now()
+
+  if (reconcileInFlight || now < reconcileDueAt) {
+    return
+  }
+
+  reconcileDueAt = now + RECONCILE_INTERVAL
+  reconcileInFlight = upkeep()
+    .then((backlog) => {
+      if (backlog) {
+        reconcileDueAt = Date.now() + RECONCILE_BACKLOG_INTERVAL
+      }
+    })
+    .catch(() => undefined)
+    .finally(() => {
+      reconcileInFlight = null
+    })
+}
+
+export async function reconcileSearchIndex(
+  budget: number | null = null,
+): Promise<number> {
   await db.execute(
     sql`delete f from documents_fts f left join documents d on d.id = f.document_id where d.id is null`,
   )
 
-  const stale = await selectRows<IndexableRow>(sql`
+  const staleDocuments = sql`
     select d.id as id, d.title as title, d.content as content, d.updated_at as updatedAt
     from documents d
     left join documents_fts f on f.document_id = d.id
     where f.document_id is null or f.indexed_at <> d.updated_at
-  `)
+  `
+
+  const stale = await selectRows<IndexableRow>(
+    budget === null
+      ? staleDocuments
+      : sql`${staleDocuments} order by d.updated_at desc limit ${budget}`,
+  )
 
   for (const row of stale) {
     await writeIndexRow(row)
   }
+
+  return stale.length
 }
 
-type ViewerKeys = Readonly<{ userId: string; email: string }>
+export type ViewerKeys = Readonly<{ userId: string; email: string }>
 
-function accessCondition(viewer: ViewerKeys) {
+export function accessCondition(viewer: ViewerKeys) {
   return sql`(
     d.owner_id = ${viewer.userId}
     or exists (
@@ -229,6 +367,8 @@ function accessCondition(viewer: ViewerKeys) {
 
 type HitRow = Readonly<{ id: string; title: string; body: string | null }>
 
+type IconHitRow = HitRow & Readonly<{ icon: string | null }>
+
 export async function searchAccessibleDocuments(
   viewer: ViewerKeys,
   query: string,
@@ -240,12 +380,11 @@ export async function searchAccessibleDocuments(
     return []
   }
 
-  await reconcileSearchIndex()
-
-  const rows = await selectRows<HitRow>(sql`
+  const rows = await selectRows<IconHitRow>(sql`
     select
       d.id as id,
       d.title as title,
+      d.icon as icon,
       f.body as body
     from documents_fts f
     join documents d on d.id = f.document_id
@@ -264,7 +403,49 @@ export async function searchAccessibleDocuments(
   return rows.map((row) => ({
     id: row.id,
     title: row.title,
+    icon: row.icon,
     segments: parseSnippet(buildSnippet(row.body ?? '', tokens)),
+  }))
+}
+
+export type DocumentPassage = Readonly<{
+  id: string
+  title: string
+  body: string
+}>
+
+export async function searchAccessibleDocumentBodies(
+  viewer: ViewerKeys,
+  query: string,
+  limit: number = MAX_ASK_SOURCES,
+): Promise<Array<DocumentPassage>> {
+  const match = buildAskMatchExpression(query)
+
+  if (!match) {
+    return []
+  }
+
+  const rows = await selectRows<HitRow>(sql`
+    select
+      d.id as id,
+      d.title as title,
+      f.body as body
+    from documents_fts f
+    join documents d on d.id = f.document_id
+    where match(f.title, f.body) against (${match} in boolean mode)
+      and d.deleted_at is null
+      and ${accessCondition(viewer)}
+    order by
+      match(f.title) against (${match} in boolean mode) * 10
+      + match(f.body) against (${match} in boolean mode) desc,
+      d.updated_at desc
+    limit ${limit}
+  `)
+
+  return rows.map((row) => ({
+    id: row.id,
+    title: row.title,
+    body: row.body ?? '',
   }))
 }
 
@@ -272,13 +453,20 @@ export async function listRecentAccessibleDocuments(
   viewer: ViewerKeys,
   limit: number = MAX_RECENT_RESULTS,
 ): Promise<Array<SearchHit>> {
-  const rows = await selectRows<Readonly<{ id: string; title: string }>>(sql`
-    select d.id as id, d.title as title
+  const rows = await selectRows<
+    Readonly<{ id: string; title: string; icon: string | null }>
+  >(sql`
+    select d.id as id, d.title as title, d.icon as icon
     from documents d
     where d.deleted_at is null and ${accessCondition(viewer)}
     order by d.updated_at desc
     limit ${limit}
   `)
 
-  return rows.map((row) => ({ id: row.id, title: row.title, segments: [] }))
+  return rows.map((row) => ({
+    id: row.id,
+    title: row.title,
+    icon: row.icon,
+    segments: [],
+  }))
 }

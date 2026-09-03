@@ -4,7 +4,19 @@ import { useSyncExternalStore } from 'react'
 
 import type { TextStats } from './text-stats'
 
-export type SaveStatus = 'idle' | 'pending' | 'saving' | 'saved' | 'error'
+export type SaveStatus =
+  | 'idle'
+  | 'pending'
+  | 'saving'
+  | 'saved'
+  | 'error'
+  | 'offline'
+
+export type ConnectionStatus =
+  | 'connected'
+  | 'reconnecting'
+  | 'offline'
+  | 'solo'
 
 export const readOnlyHintId = 'leaf-read-only-hint'
 
@@ -13,7 +25,8 @@ export type EditorStatus = Readonly<{
   readOnly: boolean
   save: SaveStatus
   stats: TextStats | null
-  realtime: 'off' | 'connected' | 'reconnecting'
+  connection: ConnectionStatus
+  conflict: boolean
 }>
 
 const idleStatus: EditorStatus = {
@@ -21,7 +34,8 @@ const idleStatus: EditorStatus = {
   readOnly: false,
   save: 'idle',
   stats: null,
-  realtime: 'off',
+  connection: 'solo',
+  conflict: false,
 }
 
 let status: EditorStatus = idleStatus
@@ -39,7 +53,8 @@ function same(current: EditorStatus, next: EditorStatus) {
     current.ready === next.ready &&
     current.readOnly === next.readOnly &&
     current.save === next.save &&
-    current.realtime === next.realtime &&
+    current.connection === next.connection &&
+    current.conflict === next.conflict &&
     current.stats?.words === next.stats?.words &&
     current.stats?.characters === next.stats?.characters
   )
