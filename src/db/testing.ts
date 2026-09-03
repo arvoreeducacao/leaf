@@ -5,7 +5,7 @@ import type mysql from 'mysql2/promise'
 import { connect, createPool, runMigrations } from './connection'
 import * as schema from './schema'
 
-const SEARCH_INDEX_TABLE = 'documents_fts'
+const SEARCH_INDEX_TABLES = ['documents_fts', 'document_chunks']
 
 export function testDatabaseUrl(): string {
   const base = process.env.LEAF_TEST_DATABASE_URL?.trim()
@@ -27,7 +27,7 @@ function tableNames(): Array<string> {
     .filter((value) => is(value, MySqlTable))
     .map((value) => getTableName(value as MySqlTable))
 
-  return [...names, SEARCH_INDEX_TABLE]
+  return [...names, ...SEARCH_INDEX_TABLES]
 }
 
 const globalForTests = globalThis as unknown as {
