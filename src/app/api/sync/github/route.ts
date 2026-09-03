@@ -65,12 +65,6 @@ async function serviceUserId(request: Request): Promise<string | null> {
 
 export async function POST(request: Request) {
   const t = await getTranslations('githubSync')
-  const config = githubConfig()
-
-  if (!config) {
-    return NextResponse.json({ error: t('notConfigured') }, { status: 412 })
-  }
-
   const payload: unknown = await request.json().catch(() => null)
   const body = (payload ?? {}) as Record<string, unknown>
 
@@ -87,6 +81,12 @@ export async function POST(request: Request) {
     }
 
     userId = session.user.id
+  }
+
+  const config = githubConfig()
+
+  if (!config) {
+    return NextResponse.json({ error: t('notConfigured') }, { status: 412 })
   }
 
   const destination =
