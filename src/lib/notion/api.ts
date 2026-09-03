@@ -81,6 +81,7 @@ export type NotionDatabaseObject = Readonly<{
   id: string
   object?: string
   title?: Array<NotionRichText>
+  is_inline?: boolean
   icon?: NotionIcon | null
   created_time?: string
   last_edited_time?: string
