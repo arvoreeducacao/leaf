@@ -11,8 +11,8 @@ import type { CustomizableSection } from '@/components/app/customize-sidebar'
 import { CustomizeSidebar } from '@/components/app/customize-sidebar'
 import { DocumentList } from '@/components/app/document-list'
 import { DocumentTree } from '@/components/app/document-tree'
-import { NewDatabaseButton } from '@/components/app/new-database-button'
 import { NewDocumentButton } from '@/components/app/new-document-button'
+import { NewItemMenu } from '@/components/app/new-item-menu'
 import { OfflineBanner } from '@/components/app/offline-banner'
 import { OfflineSync } from '@/components/app/offline-sync'
 import { OrgSwitcher } from '@/components/app/org-switcher'
@@ -198,8 +198,7 @@ function NavContent({
       <div className="flex h-9 items-center gap-1 px-2 pt-2">
         {headerAction}
         <span className="flex-1" />
-        <NewDatabaseButton variant="icon" />
-        <NewDocumentButton variant="icon" />
+        <NewItemMenu />
       </div>
 
       <div className="mt-1 flex flex-col px-2">
