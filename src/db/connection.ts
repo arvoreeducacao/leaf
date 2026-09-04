@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 
+import { readMigrationFiles } from 'drizzle-orm/migrator'
 import { drizzle } from 'drizzle-orm/mysql2'
 import { migrate } from 'drizzle-orm/mysql2/migrator'
 import mysql from 'mysql2/promise'
@@ -75,6 +76,25 @@ async function withMigrationLock<T>(
   }
 }
 
+const MIGRATIONS_TABLE = '__drizzle_migrations'
+
+async function alignRecordedTimestamps(pool: mysql.Pool, folder: string) {
+  const [tables] = (await pool.query('show tables like ?', [
+    MIGRATIONS_TABLE,
+  ])) as unknown as [Array<unknown>, unknown]
+
+  if (tables.length === 0) {
+    return
+  }
+
+  for (const migration of readMigrationFiles({ migrationsFolder: folder })) {
+    await pool.query(
+      `update \`${MIGRATIONS_TABLE}\` set created_at = ? where hash = ? and created_at <> ?`,
+      [migration.folderMillis, migration.hash, migration.folderMillis],
+    )
+  }
+}
+
 export async function runMigrations(pool: mysql.Pool) {
   const folder = join(process.cwd(), MIGRATIONS_FOLDER)
 
@@ -82,11 +102,13 @@ export async function runMigrations(pool: mysql.Pool) {
     return
   }
 
-  await withMigrationLock(pool, () =>
-    migrate(drizzle(pool, { schema, mode: 'default' }), {
+  await withMigrationLock(pool, async () => {
+    await alignRecordedTimestamps(pool, folder)
+
+    await migrate(drizzle(pool, { schema, mode: 'default' }), {
       migrationsFolder: folder,
-    }),
-  )
+    })
+  })
 }
 
 export function gated<T extends object>(pool: T, ready: Promise<unknown>): T {

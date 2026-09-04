@@ -68,42 +68,42 @@
     {
       "idx": 9,
       "version": "5",
-      "when": 1788380000000,
+      "when": 1788380093000,
       "tag": "0009_documents_cover",
       "breakpoints": true
     },
     {
       "idx": 10,
       "version": "5",
-      "when": 1788500000000,
+      "when": 1788441243000,
       "tag": "0010_document_chunks",
       "breakpoints": true
     },
     {
       "idx": 11,
       "version": "5",
-      "when": 1788600000000,
+      "when": 1788454505000,
       "tag": "0011_github_documents",
       "breakpoints": true
     },
     {
       "idx": 12,
       "version": "5",
-      "when": 1788700000000,
+      "when": 1788457088000,
       "tag": "0012_oauth_mcp",
       "breakpoints": true
     },
     {
       "idx": 13,
       "version": "5",
-      "when": 1788800000000,
+      "when": 1788457306000,
       "tag": "0013_sidebar_preferences",
       "breakpoints": true
     },
     {
       "idx": 14,
       "version": "5",
-      "when": 1788900000000,
+      "when": 1788524853333,
       "tag": "0014_document_favorites",
       "breakpoints": true
     }
