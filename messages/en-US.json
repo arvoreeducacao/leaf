@@ -235,6 +235,40 @@
       "slate": "Slate"
     }
   },
+  "icon": {
+    "add": "Add icon",
+    "change": "Change icon",
+    "remove": "Remove",
+    "removed": "Icon removed",
+    "random": "Random",
+    "pickerTitle": "Page icon",
+    "pickerDescription": "Pick an emoji, upload an image or paste a link",
+    "tabEmoji": "Emojis",
+    "tabUpload": "Upload",
+    "tabLink": "Link",
+    "searchLabel": "Search emoji",
+    "searchPlaceholder": "Search for an emoji",
+    "searchEmpty": "No emoji for \"{query}\"",
+    "uploadPick": "Choose image",
+    "uploadHint": "Images up to 5 MB. Square images work best.",
+    "uploading": "Uploading image",
+    "uploadFailed": "We couldn't upload the image",
+    "linkLabel": "Image address",
+    "linkPlaceholder": "https://",
+    "linkSubmit": "Use link",
+    "linkInvalid": "Paste an https:// address of an image",
+    "linkHint": "Works with any image published on the web",
+    "groups": {
+      "smileys": "Smileys and emotion",
+      "people": "People and gestures",
+      "nature": "Animals and nature",
+      "food": "Food and drink",
+      "activity": "Activities",
+      "travel": "Travel and places",
+      "objects": "Objects",
+      "symbols": "Symbols"
+    }
+  },
   "database": {
     "untitled": "Untitled database",
     "newDatabase": "New database",
@@ -579,6 +613,7 @@
     "commentTooFast": "You've commented too many times in a row. Wait a minute.",
     "domainRestricted": "Only @{domain} accounts.",
     "coverInvalid": "Choose a valid image for the cover.",
+    "iconInvalid": "Pick an emoji or a valid image for the icon.",
     "favoriteLimit": "You already have {count} favorites. Remove one before adding another."
   },
   "org": {

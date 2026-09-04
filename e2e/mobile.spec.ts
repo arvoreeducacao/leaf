@@ -232,6 +232,40 @@ test.describe('mobile 375px', () => {
 
     await expectNoHorizontalOverflow(page)
   })
+
+  test('the icon picker becomes a bottom sheet and sets the icon', async ({
+    page,
+  }) => {
+    await signUp(page, uniqueEmail('icon-mobile'))
+    await createDocument(page, 'Icon on the phone')
+
+    await page.getByRole('button', { name: 'Adicionar ícone' }).click()
+
+    const sheet = page.getByRole('dialog', { name: 'Ícone da página' })
+
+    await expect(sheet).toBeVisible()
+
+    const shape = await sheet.evaluate((element) => {
+      const rect = element.getBoundingClientRect()
+
+      return {
+        bottomGap: window.innerHeight - rect.bottom,
+        left: rect.left,
+        widthGap: window.innerWidth - rect.width,
+      }
+    })
+
+    expect(shape.left).toBeLessThanOrEqual(2)
+    expect(shape.bottomGap).toBeLessThanOrEqual(2)
+    expect(shape.widthGap).toBeLessThanOrEqual(2)
+
+    await sheet.locator('[data-emoji="📝"]').click()
+
+    await expect(sheet).toBeHidden()
+    await expect(page.getByTestId('document-icon-button')).toContainText('📝')
+
+    await expectNoHorizontalOverflow(page)
+  })
 })
 
 test.describe('mobile 320px', () => {

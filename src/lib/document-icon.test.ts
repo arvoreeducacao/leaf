@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest'
 
-import { notionIconValue, readDocumentIcon } from '@/lib/document-icon'
+import {
+  normalizeDocumentIcon,
+  notionIconValue,
+  readDocumentIcon,
+} from '@/lib/document-icon'
 
 describe('readDocumentIcon', () => {
   it('reads an https url as an image', () => {
@@ -63,6 +67,41 @@ describe('readDocumentIcon', () => {
     const long = `https://files.example.com/${'a'.repeat(1024)}.png`
 
     expect(readDocumentIcon(long)).toBeNull()
+  })
+
+  it('reads an uploaded file as an image instead of text', () => {
+    expect(readDocumentIcon('/api/uploads/2026/09/logo.png')).toEqual({
+      kind: 'image',
+      url: '/api/uploads/2026/09/logo.png',
+      fromNotionLibrary: false,
+    })
+  })
+
+  it('refuses an upload path that walks out of the uploads folder', () => {
+    expect(readDocumentIcon('/api/uploads/../../etc/passwd')).toBeNull()
+  })
+})
+
+describe('normalizeDocumentIcon', () => {
+  it('keeps an emoji, an https url and an upload path', () => {
+    expect(normalizeDocumentIcon('🌿')).toBe('🌿')
+    expect(normalizeDocumentIcon('  📝  ')).toBe('📝')
+    expect(normalizeDocumentIcon('https://files.example.com/a.png')).toBe(
+      'https://files.example.com/a.png',
+    )
+    expect(normalizeDocumentIcon('/api/uploads/a.png')).toBe(
+      '/api/uploads/a.png',
+    )
+  })
+
+  it('refuses anything the renderer would not show', () => {
+    expect(normalizeDocumentIcon(null)).toBeNull()
+    expect(normalizeDocumentIcon(42)).toBeNull()
+    expect(normalizeDocumentIcon('')).toBeNull()
+    expect(normalizeDocumentIcon('   ')).toBeNull()
+    expect(normalizeDocumentIcon('http://files.example.com/a.png')).toBeNull()
+    expect(normalizeDocumentIcon('javascript://alert(1)')).toBeNull()
+    expect(normalizeDocumentIcon('a'.repeat(65))).toBeNull()
   })
 })
 
