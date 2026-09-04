@@ -46,11 +46,14 @@ export function CustomizeSidebar({
 }: Props) {
   const t = useTranslations('nav')
   const listRef = useRef<HTMLUListElement>(null)
+  const detachDragRef = useRef<(() => void) | null>(null)
   const [dragging, setDragging] = useState<{
     id: SidebarSectionId
     to: number
   } | null>(null)
   const [status, setStatus] = useState('')
+
+  useEffect(() => () => detachDragRef.current?.(), [])
 
   useEffect(() => {
     function handleEscape(event: KeyboardEvent) {
@@ -108,8 +111,6 @@ export function CustomizeSidebar({
 
     event.preventDefault()
 
-    const handle = event.currentTarget
-    const { pointerId } = event
     const centers = [...(listRef.current?.children ?? [])].map((row) => {
       const rect = row.getBoundingClientRect()
 
@@ -127,23 +128,23 @@ export function CustomizeSidebar({
       }
     }
 
+    function detach() {
+      window.removeEventListener('pointermove', handleMove)
+      window.removeEventListener('pointerup', handleEnd)
+      window.removeEventListener('pointercancel', handleEnd)
+      detachDragRef.current = null
+    }
+
     function handleEnd() {
-      handle.removeEventListener('pointermove', handleMove)
-      handle.removeEventListener('pointerup', handleEnd)
-      handle.removeEventListener('pointercancel', handleEnd)
-
-      if (handle.hasPointerCapture(pointerId)) {
-        handle.releasePointerCapture(pointerId)
-      }
-
+      detach()
       setDragging(null)
       commit(id, to, false)
     }
 
-    handle.setPointerCapture(pointerId)
-    handle.addEventListener('pointermove', handleMove)
-    handle.addEventListener('pointerup', handleEnd)
-    handle.addEventListener('pointercancel', handleEnd)
+    window.addEventListener('pointermove', handleMove)
+    window.addEventListener('pointerup', handleEnd)
+    window.addEventListener('pointercancel', handleEnd)
+    detachDragRef.current = detach
     setDragging({ id, to: from })
   }
 
