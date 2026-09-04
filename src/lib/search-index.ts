@@ -13,6 +13,7 @@ export const MAX_RECENT_RESULTS = 7
 const MAX_QUERY_TOKENS = 8
 const MAX_ASK_TOKENS = 12
 const MIN_ASK_TOKEN_LENGTH = 3
+const MIN_INDEXED_TOKEN_LENGTH = 3
 const MAX_TOKEN_LENGTH = 32
 const MAX_INDEXED_BODY = 200_000
 const SNIPPET_WORDS = 12
@@ -132,7 +133,11 @@ export function buildMatchExpression(query: string): string | null {
     return null
   }
 
-  return tokens.map((token) => `+${token}*`).join(' ')
+  return tokens
+    .map((token) =>
+      token.length < MIN_INDEXED_TOKEN_LENGTH ? `${token}*` : `+${token}*`,
+    )
+    .join(' ')
 }
 
 export function foldForSearch(value: string): string {
@@ -392,6 +397,7 @@ export async function searchAccessibleDocuments(
       and d.deleted_at is null
       and ${accessCondition(viewer)}
     order by
+      (match(f.title) against (${match} in boolean mode) > 0) desc,
       match(f.title) against (${match} in boolean mode) * 10
       + match(f.body) against (${match} in boolean mode) desc,
       d.updated_at desc

@@ -130,6 +130,35 @@ async function seed() {
   })
 }
 
+async function seedTable() {
+  const now = new Date()
+
+  await db.insert(documents).values([
+    {
+      id: 'doc-table',
+      ownerId: owner.id,
+      orgId: org,
+      title: 'Reading plan US — items',
+      content: '[]',
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      id: 'doc-about-the-table',
+      ownerId: owner.id,
+      orgId: org,
+      title: 'Cycle notes',
+      content: paragraph(
+        `The list of items is long. ${'We reviewed the items again. '.repeat(60)}`,
+      ),
+      createdAt: now,
+      updatedAt: now,
+    },
+  ])
+
+  await reconcileSearchIndex()
+}
+
 beforeEach(async () => {
   await resetDatabase()
   await seed()
@@ -143,8 +172,12 @@ describe('buildMatchExpression', () => {
 
   it('drops punctuation and boolean operators', () => {
     expect(buildMatchExpression('  NEAR("a" OR b) -c  ')).toBe(
-      '+NEAR* +a* +OR* +b* +c*',
+      '+NEAR* a* OR* b* c*',
     )
+  })
+
+  it('does not demand a word too short for the index to keep', () => {
+    expect(buildMatchExpression('Super Autor US')).toBe('+Super* +Autor* US*')
   })
 
   it('returns null when there is nothing to match', () => {
@@ -341,6 +374,25 @@ describe('searchAccessibleDocuments', () => {
 
   it('returns nothing for a blank query', async () => {
     expect(await searchAccessibleDocuments(viewerOf(owner), '   ')).toEqual([])
+  })
+
+  it('finds a table by its title even though it has no body', async () => {
+    await seedTable()
+
+    const hits = await searchAccessibleDocuments(
+      viewerOf(owner),
+      'Reading plan US — items',
+    )
+
+    expect(hits.map((hit) => hit.id)).toContain('doc-table')
+  })
+
+  it('ranks the title above a document that only mentions the words', async () => {
+    await seedTable()
+
+    const hits = await searchAccessibleDocuments(viewerOf(owner), 'items')
+
+    expect(hits[0].id).toBe('doc-table')
   })
 })
 
