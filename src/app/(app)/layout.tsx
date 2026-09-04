@@ -2,6 +2,7 @@ import { getLocale } from 'next-intl/server'
 import { redirect } from 'next/navigation'
 
 import { AppShell } from '@/components/app/app-shell'
+import { FavoritesProvider } from '@/components/app/favorites-provider'
 import { PendingJoinRedirect } from '@/components/app/pending-join-redirect'
 import { SidebarPreferencesProvider } from '@/components/app/sidebar-preferences-provider'
 import { isAiEnabled } from '@/lib/ai-config'
@@ -20,6 +21,7 @@ import {
   acceptPendingInvites,
   listOrganizationDocuments,
 } from '@/lib/organizations'
+import { listFavoriteDocuments } from '@/lib/favorites'
 import { readSidebarLayout } from '@/lib/sidebar-layout-store'
 import { readSidebarPreferences } from '@/lib/sidebar-preferences'
 import type { TeamspaceSection } from '@/lib/teamspaces'
@@ -52,6 +54,7 @@ export default async function AppLayout({
     shared,
     trashed,
     organizationDocuments,
+    favorites,
     sidebarLayout,
   ] = await Promise.all([
     listPrivateDocuments(session.user.id),
@@ -60,6 +63,7 @@ export default async function AppLayout({
     membership
       ? listOrganizationDocuments(membership.orgId, session.user.id)
       : Promise.resolve([]),
+    listFavoriteDocuments(session.user.id),
     readSidebarLayout(session.user.id),
   ])
 
@@ -102,9 +106,11 @@ export default async function AppLayout({
 
   return (
     <SidebarPreferencesProvider initial={sidebarPreferences}>
-      <AppShell
+      <FavoritesProvider ids={favorites.map((document) => document.id)}>
+        <AppShell
         activeOrgId={membership?.orgId ?? null}
         aiEnabled={isAiEnabled()}
+        favorites={favorites}
         connectedAppsEnabled={isMcpEnabled()}
         locale={locale}
         hiddenOrganizationDocuments={organizationTree.hidden}
@@ -123,9 +129,10 @@ export default async function AppLayout({
         trashed={trashed}
         user={{ name: session.user.name, email: session.user.email }}
       >
-        <PendingJoinRedirect />
-        {children}
-      </AppShell>
+          <PendingJoinRedirect />
+          {children}
+        </AppShell>
+      </FavoritesProvider>
     </SidebarPreferencesProvider>
   )
 }

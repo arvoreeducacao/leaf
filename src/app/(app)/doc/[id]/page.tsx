@@ -2,6 +2,8 @@ import type { Metadata } from 'next'
 import { getTranslations } from 'next-intl/server'
 import { notFound, redirect } from 'next/navigation'
 
+import type { ActiveTrailScope } from '@/components/app/active-trail-bridge'
+import { ActiveTrail } from '@/components/app/active-trail'
 import { DocumentBreadcrumb } from '@/components/app/document-breadcrumb'
 import { DocumentCover } from '@/components/app/document-cover'
 import { DocumentHeader } from '@/components/app/document-header'
@@ -64,11 +66,34 @@ export default async function DocumentPage({ params }: Props) {
     listDocumentLinkTargets(documentIdsInContent(document.content)),
   ])
 
+  const scope: ActiveTrailScope = document.teamspaceId
+    ? { id: document.teamspaceId, kind: 'teamspace' }
+    : document.orgAccess !== null
+      ? { kind: 'organization' }
+      : document.ownerId === session.user.id
+        ? { kind: 'private' }
+        : { kind: 'none' }
+
   const isDatabase = document.kind === 'database'
   const hasCover = document.cover !== null
 
   return (
     <>
+      <ActiveTrail
+        trail={{
+          documentId: document.id,
+          nodes: [
+            ...crumbs,
+            {
+              icon: document.icon,
+              id: document.id,
+              kind: document.kind,
+              title: document.title,
+            },
+          ],
+          scope,
+        }}
+      />
       {document.cover ? (
         <DocumentCover
           canEdit={canEdit(access)}

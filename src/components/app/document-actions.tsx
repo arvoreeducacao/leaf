@@ -6,12 +6,15 @@ import { useState, useTransition } from 'react'
 import { toast } from 'sonner'
 
 import { DocumentHistoryDialog } from '@/components/app/document-history-dialog'
+import { useFavorites } from '@/components/app/favorites-provider'
 import { MoveDocumentDialog } from '@/components/app/move-document-dialog'
 import { MoveToTeamspaceDialog } from '@/components/app/move-to-teamspace-dialog'
 import { RenameDocumentDialog } from '@/components/app/rename-document-dialog'
 import {
   ArrowUpRightIcon,
   ClipboardContentIcon,
+  FavoriteFilledIcon,
+  FavoriteIcon,
   FileCodeIcon,
   FileDownloadIcon,
   HierarchyIcon,
@@ -26,6 +29,7 @@ import {
   duplicateDocument,
   moveToTrash,
   restoreDocument,
+  toggleFavorite,
 } from '@/lib/document-actions'
 
 type ExportFormat = 'md' | 'html'
@@ -62,6 +66,8 @@ export function useDocumentActions({
   const tTeamspace = useTranslations('teamspace')
   const router = useRouter()
   const pathname = usePathname()
+  const favorites = useFavorites()
+  const favorited = favorites.isFavorite(documentId)
   const [renaming, setRenaming] = useState(false)
   const [moving, setMoving] = useState(false)
   const [movingToTeamspace, setMovingToTeamspace] = useState(false)
@@ -132,6 +138,25 @@ export function useDocumentActions({
     })
   }
 
+  function handleToggleFavorite() {
+    const next = !favorited
+
+    favorites.setFavorite(documentId, next)
+
+    startTransition(async () => {
+      const result = await toggleFavorite(documentId)
+
+      if (!result.ok) {
+        favorites.setFavorite(documentId, !next)
+        toast.error(result.error)
+
+        return
+      }
+
+      router.refresh()
+    })
+  }
+
   function handleTrash() {
     startTransition(async () => {
       const result = await moveToTrash(documentId)
@@ -170,6 +195,14 @@ export function useDocumentActions({
   }
 
   const entries: Array<MenuEntry> = []
+
+  entries.push({
+    key: 'favorite',
+    label: favorited ? t('unfavorite') : t('favorite'),
+    icon: favorited ? FavoriteFilledIcon : FavoriteIcon,
+    onSelect: handleToggleFavorite,
+    disabled: pending,
+  })
 
   if (canEdit) {
     entries.push({
@@ -295,5 +328,5 @@ export function useDocumentActions({
     </>
   ) : null
 
-  return { entries, dialogs }
+  return { dialogs, entries, favorited, toggleFavorite: handleToggleFavorite }
 }

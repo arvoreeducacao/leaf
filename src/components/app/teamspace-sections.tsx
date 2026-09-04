@@ -169,6 +169,7 @@ function TeamspaceGroup({
               hasOrganization={hasOrganization}
               nodes={teamspace.documents}
               onNavigate={onNavigate}
+              section={`teamspace:${teamspace.id}`}
             />
             <SidebarOverflowLink
               hidden={teamspace.hiddenDocuments}

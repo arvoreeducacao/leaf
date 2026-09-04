@@ -475,6 +475,30 @@ export const sidebarPreferences = mysqlTable('sidebar_preferences', {
     .default(sql`CURRENT_TIMESTAMP(3)`),
 })
 
+export const documentFavorites = mysqlTable(
+  'document_favorites',
+  {
+    id: varchar('id', { length: APP_ID }).primaryKey(),
+    userId: varchar('user_id', { length: AUTH_ID })
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    documentId: varchar('document_id', { length: APP_ID })
+      .notNull()
+      .references(() => documents.id, { onDelete: 'cascade' }),
+    position: int('position').notNull().default(0),
+    createdAt: datetime('created_at', { mode: 'date', fsp: 3 })
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP(3)`),
+  },
+  (table) => [
+    uniqueIndex('document_favorites_user_document_idx').on(
+      table.userId,
+      table.documentId,
+    ),
+    index('document_favorites_user_id_idx').on(table.userId),
+  ],
+)
+
 export type Document = typeof documents.$inferSelect
 export type DocumentKind = Document['kind']
 export type DatabaseProperty = typeof databaseProperties.$inferSelect
@@ -723,3 +747,4 @@ export type OAuthConsent = typeof oauthConsents.$inferSelect
 export type GithubDocument = typeof githubDocuments.$inferSelect
 export type GithubDocumentKind = GithubDocument['kind']
 export type SidebarPreference = typeof sidebarPreferences.$inferSelect
+export type DocumentFavorite = typeof documentFavorites.$inferSelect

@@ -5,6 +5,10 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
+import {
+  scopeMatches,
+  useActiveTrail,
+} from '@/components/app/active-trail-bridge'
 import { DocumentIcon } from '@/components/app/document-icon'
 import { DocumentRowMenu } from '@/components/app/document-row-menu'
 import {
@@ -12,6 +16,7 @@ import {
   sidebarIcon,
   sidebarRow,
   sidebarRowActive,
+  sidebarRowHere,
 } from '@/components/app/sidebar-styles'
 import { ChevronDownIcon, ChevronRightIcon } from '@/components/icons/outline'
 import {
@@ -19,6 +24,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
+import { graftActiveTrail } from '@/lib/document-trail'
 import type { DocumentNode } from '@/lib/documents'
 import { readStoredValue, writeStoredValue } from '@/shared/storage'
 import { cn } from '@/shared/utils'
@@ -29,6 +35,7 @@ type Props = Readonly<{
   nodes: Array<DocumentNode>
   emptyLabel: string
   hasOrganization: boolean
+  section: string
   onNavigate?: () => void
 }>
 
@@ -55,13 +62,26 @@ export function DocumentTree({
   nodes,
   emptyLabel,
   hasOrganization,
+  section,
   onNavigate,
 }: Props) {
   const pathname = usePathname()
   const activeId = pathname.startsWith('/doc/') ? pathname.slice(5) : null
-  const parents = useMemo(() => parentsOf(nodes), [nodes])
+  const trail = useActiveTrail()
+  const mine =
+    trail && trail.documentId === activeId && scopeMatches(trail.scope, section)
+      ? trail
+      : null
+  const grafted = useMemo(
+    () => (mine ? graftActiveTrail(nodes, mine.nodes) : { markedId: null, nodes }),
+    [mine, nodes],
+  )
+  const visibleNodes = grafted.nodes
+  const markedId = grafted.markedId
+  const parents = useMemo(() => parentsOf(visibleNodes), [visibleNodes])
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set())
   const touched = useRef(false)
+  const treeRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const stored = readStoredValue<Array<string>>(expandedStorageKey, [])
@@ -82,13 +102,15 @@ export function DocumentTree({
   }, [])
 
   useEffect(() => {
-    if (!activeId) {
+    const target = markedId ?? activeId
+
+    if (!target) {
       return
     }
 
     setExpanded((current) => {
       const next = new Set(current)
-      let parent = parents.get(activeId) ?? null
+      let parent = parents.get(target) ?? null
 
       while (parent) {
         next.add(parent)
@@ -97,7 +119,7 @@ export function DocumentTree({
 
       return next.size === current.size ? current : next
     })
-  }, [activeId, parents])
+  }, [activeId, markedId, parents])
 
   function toggle(id: string) {
     setExpanded((current) => {
@@ -123,21 +145,34 @@ export function DocumentTree({
     writeStoredValue(expandedStorageKey, [...expanded])
   }, [expanded])
 
-  if (nodes.length === 0) {
+  useEffect(() => {
+    if (!markedId) {
+      return
+    }
+
+    treeRef.current
+      ?.querySelector('[data-marked]')
+      ?.scrollIntoView({ block: 'nearest' })
+  }, [expanded, markedId])
+
+  if (visibleNodes.length === 0) {
     return <p className={sidebarEmpty}>{emptyLabel}</p>
   }
 
   return (
-    <TreeLevel
-      activeId={activeId}
-      ancestors={[]}
-      depth={0}
-      expanded={expanded}
-      hasOrganization={hasOrganization}
-      nodes={nodes}
-      onNavigate={onNavigate}
-      onToggle={toggle}
-    />
+    <div ref={treeRef}>
+      <TreeLevel
+        activeId={activeId}
+        ancestors={[]}
+        depth={0}
+        expanded={expanded}
+        hasOrganization={hasOrganization}
+        markedId={markedId}
+        nodes={visibleNodes}
+        onNavigate={onNavigate}
+        onToggle={toggle}
+      />
+    </div>
   )
 }
 
@@ -147,6 +182,7 @@ function TreeLevel({
   ancestors,
   expanded,
   activeId,
+  markedId,
   hasOrganization,
   onToggle,
   onNavigate,
@@ -156,6 +192,7 @@ function TreeLevel({
   ancestors: Array<string>
   expanded: ReadonlySet<string>
   activeId: string | null
+  markedId: string | null
   hasOrganization: boolean
   onToggle: (id: string) => void
   onNavigate?: () => void
@@ -168,6 +205,7 @@ function TreeLevel({
       {nodes.map((node) => {
         const open = expanded.has(node.id)
         const active = activeId === node.id
+        const here = !active && markedId === node.id
         const hasChildren = node.children.length > 0
         const deep = depth > maxVisualDepth
         const nodeKind = node.kind === 'row' ? 'page' : node.kind
@@ -191,9 +229,11 @@ function TreeLevel({
                 'group/row gap-1',
                 indentByDepth[visualDepth],
                 active && sidebarRowActive,
+                here && sidebarRowHere,
               )}
               documentId={node.id}
               hasOrganization={hasOrganization}
+              marked={active || here}
               owned={node.owned}
               title={node.title}
             >
@@ -245,6 +285,7 @@ function TreeLevel({
                 depth={depth + 1}
                 expanded={expanded}
                 hasOrganization={hasOrganization}
+                markedId={markedId}
                 nodes={node.children}
                 onNavigate={onNavigate}
                 onToggle={onToggle}

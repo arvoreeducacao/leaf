@@ -110,7 +110,9 @@
     "allDocuments": "All documents",
     "filterPlaceholder": "Filter by title",
     "filterLabel": "Filter documents by title",
-    "filterEmpty": "No document with that name"
+    "filterEmpty": "No document with that name",
+    "favoritesSection": "Favorites",
+    "emptyFavorites": "Nothing favorited yet. Use the star at the top of a page to keep it here."
   },
   "palette": {
     "title": "Search and commands",
@@ -172,7 +174,10 @@
     "editedAt": "Edited {time}",
     "copyLink": "Copy link",
     "linkCopied": "Link copied",
-    "linkCopyFailed": "Could not copy the link"
+    "linkCopyFailed": "Could not copy the link",
+    "favorite": "Add to favorites",
+    "unfavorite": "Remove from favorites",
+    "breadcrumbCollapsed": "Show {count} more levels of the path"
   },
   "cover": {
     "add": "Add cover",
@@ -573,7 +578,8 @@
     "commentEmpty": "Write something before sending.",
     "commentTooFast": "You've commented too many times in a row. Wait a minute.",
     "domainRestricted": "Only @{domain} accounts.",
-    "coverInvalid": "Choose a valid image for the cover."
+    "coverInvalid": "Choose a valid image for the cover.",
+    "favoriteLimit": "You already have {count} favorites. Remove one before adding another."
   },
   "org": {
     "title": "Organization",

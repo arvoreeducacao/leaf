@@ -3,6 +3,9 @@ export const sidebarRow =
 
 export const sidebarRowActive = 'bg-surface-active text-content-strong'
 
+export const sidebarRowHere =
+  'text-content-strong ring-1 ring-focus/60 ring-inset'
+
 export const sidebarIcon = 'size-4 shrink-0 text-content-subtle'
 
 export const sidebarEmpty = 'px-2 py-1 text-caption text-content-disabled'

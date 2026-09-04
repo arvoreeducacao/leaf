@@ -1,4 +1,5 @@
 export const sidebarSectionIds = [
+  'favorites',
   'recents',
   'private',
   'teamspaces',
@@ -48,10 +49,15 @@ export function normalizeSidebarLayout(value: unknown): SidebarLayout {
       : {}
   const order = knownSections(source.order)
 
-  return {
-    hidden: knownSections(source.hidden),
-    order: [...order, ...sidebarSectionIds.filter((id) => !order.includes(id))],
+  for (const id of sidebarSectionIds) {
+    if (order.includes(id)) {
+      continue
+    }
+
+    order.splice(Math.min(sidebarSectionIds.indexOf(id), order.length), 0, id)
   }
+
+  return { hidden: knownSections(source.hidden), order }
 }
 
 export function parseSidebarLayout(raw: string | null | undefined) {
