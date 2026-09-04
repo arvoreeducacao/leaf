@@ -22,6 +22,7 @@ type Props = Readonly<{
   title: string
   owned: boolean
   hasOrganization: boolean
+  marked?: boolean
   className?: string
   children: React.ReactNode
 }>
@@ -31,6 +32,7 @@ export function DocumentRowMenu({
   title,
   owned,
   hasOrganization,
+  marked = false,
   className,
   children,
 }: Props) {
@@ -47,7 +49,7 @@ export function DocumentRowMenu({
     <>
       <ContextMenu>
         <ContextMenuTrigger asChild>
-          <div className={className}>
+          <div className={className} data-marked={marked || undefined}>
             {children}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

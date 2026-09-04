@@ -61,6 +61,7 @@ type Props = Readonly<{
   organizations: Array<OrganizationOption>
   activeOrgId: string | null
   teamspaces: Array<TeamspaceSection>
+  favorites: Array<DocumentSummary>
   recents: Array<DocumentSummary>
   shared: Array<DocumentSummary>
   trashed: Array<DocumentSummary>
@@ -77,6 +78,7 @@ function NavContent({
   organizations,
   activeOrgId,
   teamspaces,
+  favorites,
   recents,
   shared,
   trashed,
@@ -97,6 +99,7 @@ function NavContent({
   organizations: Array<OrganizationOption>
   activeOrgId: string | null
   teamspaces: Array<TeamspaceSection>
+  favorites: Array<DocumentSummary>
   recents: Array<DocumentSummary>
   shared: Array<DocumentSummary>
   trashed: Array<DocumentSummary>
@@ -115,6 +118,16 @@ function NavContent({
   const stopCustomizing = useCallback(() => setCustomizing(false), [])
 
   const sectionNodes: Record<SidebarSectionId, React.ReactNode> = {
+    favorites: (
+      <SidebarSection collapseId="favorites" title={t('favoritesSection')}>
+        <DocumentList
+          documents={favorites}
+          emptyLabel={t('emptyFavorites')}
+          hasOrganization={organizationName !== null}
+          onNavigate={onNavigate}
+        />
+      </SidebarSection>
+    ),
     organization: organizationName ? (
       <SidebarSection
         collapseId="organization"
@@ -127,6 +140,7 @@ function NavContent({
           hasOrganization={organizationName !== null}
           nodes={organizationDocuments}
           onNavigate={onNavigate}
+          section="organization"
         />
         <SidebarOverflowLink
           hidden={hiddenOrganizationDocuments}
@@ -142,6 +156,7 @@ function NavContent({
           hasOrganization={organizationName !== null}
           nodes={owned}
           onNavigate={onNavigate}
+          section="private"
         />
         <SidebarOverflowLink
           hidden={hiddenOwnedDocuments}
@@ -182,6 +197,7 @@ function NavContent({
   }
 
   const sectionTitles: Record<SidebarSectionId, string> = {
+    favorites: t('favoritesSection'),
     organization: t('organizationSection'),
     private: t('privateSection'),
     recents: t('recentsSection'),
@@ -283,6 +299,7 @@ export function AppShell({
   organizations,
   activeOrgId,
   teamspaces,
+  favorites,
   recents,
   shared,
   trashed,
@@ -400,6 +417,7 @@ export function AppShell({
             organizationName={organizationName}
             organizations={organizations}
             owned={owned}
+            favorites={favorites}
             recents={recents}
             shared={shared}
             teamspaces={teamspaces}
@@ -479,6 +497,7 @@ export function AppShell({
             organizationName={organizationName}
             organizations={organizations}
             owned={owned}
+            favorites={favorites}
             recents={recents}
             shared={shared}
             teamspaces={teamspaces}

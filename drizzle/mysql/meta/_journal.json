@@ -99,6 +99,13 @@
       "when": 1788800000000,
       "tag": "0013_sidebar_preferences",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "5",
+      "when": 1788524853333,
+      "tag": "0014_document_favorites",
+      "breakpoints": true
     }
   ]
 }

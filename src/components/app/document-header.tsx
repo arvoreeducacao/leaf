@@ -9,6 +9,7 @@ import { AddCoverButton } from '@/components/app/add-cover-button'
 import { DocumentIcon } from '@/components/app/document-icon'
 import { DocumentMenu } from '@/components/app/document-menu'
 import { DocumentStatus } from '@/components/app/document-status'
+import { FavoriteButton } from '@/components/app/favorite-button'
 import { PresenceIndicator } from '@/components/app/presence-indicator'
 import { useTopbarSlot } from '@/components/app/topbar-slot'
 import { CommentsPanel } from '@/components/comments/comments-panel'
@@ -121,23 +122,23 @@ export function DocumentHeader({
         {sharedWithOrganization ? (
           <>
             <span
-              className="inline-flex shrink-0 items-center rounded-large px-1.5 py-0.5"
+              className="hidden min-w-0 shrink items-center rounded-large px-1.5 py-0.5 desktop:inline-flex"
               data-testid="document-org-tag"
               title={t('orgTagHint')}
             >
               <PeopleIcon aria-hidden="true" className="mr-1.5 size-4 shrink-0" />
-              {t('orgTag')}
+              <span className="min-w-0 truncate">{t('orgTag')}</span>
             </span>
             <ChevronRightIcon
               aria-hidden="true"
-              className="size-3 shrink-0 text-content-disabled"
+              className="hidden size-3 shrink-0 text-content-disabled desktop:block"
             />
           </>
         ) : null}
         {teamspaceName ? (
           <>
             <span
-              className="inline-flex min-w-0 max-w-40 shrink items-center rounded-large px-1.5 py-0.5"
+              className="hidden min-w-0 max-w-40 shrink items-center rounded-large px-1.5 py-0.5 tablet:inline-flex"
               data-testid="document-teamspace-tag"
               title={tTeamspace('badgeHint')}
             >
@@ -146,7 +147,7 @@ export function DocumentHeader({
             </span>
             <ChevronRightIcon
               aria-hidden="true"
-              className="size-3 shrink-0 text-content-disabled"
+              className="hidden size-3 shrink-0 text-content-disabled tablet:block"
             />
           </>
         ) : null}
@@ -157,7 +158,7 @@ export function DocumentHeader({
             className="size-3 shrink-0 text-content-disabled"
           />
         ) : null}
-        <span className="inline-flex min-w-0 items-center rounded-large px-1.5 py-0.5 text-content-strong">
+        <span className="inline-flex min-w-0 shrink-0 basis-24 items-center rounded-large px-1.5 py-0.5 text-content-strong">
           <DocumentIcon className="mr-1.5 size-4" icon={icon} kind={kind} />
           <span className="min-w-0 truncate">
             {value.trim().length > 0 ? value : t('untitled')}
@@ -166,13 +167,16 @@ export function DocumentHeader({
       </div>
 
       <div className="flex shrink-0 items-center justify-end gap-1">
-        <DocumentStatus />
+        <span className="hidden desktop:contents">
+          <DocumentStatus />
+        </span>
         {updatedAt ? (
-          <span className="hidden shrink-0 px-1.5 text-caption text-content-subtle tablet:inline">
+          <span className="hidden shrink-0 px-1.5 text-caption text-content-subtle desktop-xlarge:inline">
             {t('editedAt', { time: format.relativeTime(updatedAt, now) })}
           </span>
         ) : null}
         <PresenceIndicator />
+        <FavoriteButton documentId={documentId} />
         <CommentsPanel documentId={documentId} initialOpenCount={openComments} />
         <ShareButton canShare={isOwner} documentId={documentId} />
         <ButtonIcon

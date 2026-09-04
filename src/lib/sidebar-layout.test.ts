@@ -15,11 +15,26 @@ describe('normalizeSidebarLayout', () => {
     expect(normalizeSidebarLayout({})).toEqual(defaultSidebarLayout)
   })
 
-  it('keeps the stored order and appends sections it does not know about yet', () => {
+  it('keeps the stored order and inserts new sections where they belong', () => {
     expect(normalizeSidebarLayout({ order: ['private'] })).toEqual({
       hidden: [],
-      order: ['private', 'recents', 'teamspaces', 'organization', 'shared'],
+      order: [
+        'favorites',
+        'recents',
+        'private',
+        'teamspaces',
+        'organization',
+        'shared',
+      ],
     })
+  })
+
+  it('puts a section added after the person saved a layout at its default place', () => {
+    expect(
+      normalizeSidebarLayout({
+        order: ['recents', 'private', 'teamspaces', 'organization', 'shared'],
+      }).order[0],
+    ).toBe('favorites')
   })
 
   it('drops unknown ids and repeated ones', () => {
@@ -30,7 +45,14 @@ describe('normalizeSidebarLayout', () => {
       }),
     ).toEqual({
       hidden: ['shared'],
-      order: ['private', 'shared', 'recents', 'teamspaces', 'organization'],
+      order: [
+        'favorites',
+        'recents',
+        'private',
+        'teamspaces',
+        'organization',
+        'shared',
+      ],
     })
   })
 
@@ -39,7 +61,14 @@ describe('normalizeSidebarLayout', () => {
 
     expect(parseSidebarLayout(stored)).toEqual({
       hidden: ['shared'],
-      order: ['shared', 'recents', 'private', 'teamspaces', 'organization'],
+      order: [
+        'favorites',
+        'recents',
+        'private',
+        'teamspaces',
+        'organization',
+        'shared',
+      ],
     })
     expect(parseSidebarLayout('{ not json')).toEqual(defaultSidebarLayout)
     expect(parseSidebarLayout(null)).toEqual(defaultSidebarLayout)
@@ -50,6 +79,7 @@ describe('moveSection', () => {
   it('moves a section to the asked position', () => {
     expect(moveSection(defaultSidebarLayout, 'teamspaces', 0).order).toEqual([
       'teamspaces',
+      'favorites',
       'recents',
       'private',
       'organization',
@@ -58,10 +88,11 @@ describe('moveSection', () => {
   })
 
   it('clamps positions outside the list and keeps the layout when nothing moves', () => {
-    expect(moveSection(defaultSidebarLayout, 'recents', -3).order).toEqual(
+    expect(moveSection(defaultSidebarLayout, 'favorites', -3).order).toEqual(
       defaultSidebarLayout.order,
     )
     expect(moveSection(defaultSidebarLayout, 'recents', 9).order).toEqual([
+      'favorites',
       'private',
       'teamspaces',
       'organization',
@@ -83,6 +114,7 @@ describe('toggleSectionVisibility', () => {
 
     expect(hidden.hidden).toEqual(['organization'])
     expect(visibleSectionIds(hidden)).toEqual([
+      'favorites',
       'recents',
       'private',
       'teamspaces',

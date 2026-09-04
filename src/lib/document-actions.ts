@@ -7,7 +7,7 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 
 import { db } from '@/db'
-import { documents } from '@/db/schema'
+import { documentFavorites, documents } from '@/db/schema'
 import { getActiveMembership } from '@/lib/active-org'
 import { getSession } from '@/lib/auth'
 import {
@@ -16,6 +16,12 @@ import {
   getTrashedDocumentAccess,
 } from '@/lib/authz'
 import { copyDatabaseInto } from '@/lib/databases'
+import {
+  countFavorites,
+  favoriteLimit,
+  isFavorite,
+  nextFavoritePosition,
+} from '@/lib/favorites'
 import { persistDocumentContent } from '@/lib/document-content'
 import {
   type CoverCredit,
@@ -460,6 +466,49 @@ export async function deleteForever(id: string): Promise<ActionResult> {
   for (const documentId of subtree) {
     await removeDocumentFromIndex(documentId)
   }
+
+  revalidatePath('/', 'layout')
+
+  return { ok: true }
+}
+
+export async function toggleFavorite(id: string): Promise<ActionResult> {
+  const session = await requireSession()
+  const access = await getDocumentAccess(id, session)
+
+  if (!access) {
+    return notAllowedResult()
+  }
+
+  const favorited = await isFavorite(session.user.id, id)
+
+  if (favorited) {
+    await db
+      .delete(documentFavorites)
+      .where(
+        and(
+          eq(documentFavorites.userId, session.user.id),
+          eq(documentFavorites.documentId, id),
+        ),
+      )
+
+    revalidatePath('/', 'layout')
+
+    return { ok: true }
+  }
+
+  if ((await countFavorites(session.user.id)) >= favoriteLimit) {
+    const t = await errorMessages()
+
+    return { ok: false, error: t('favoriteLimit', { count: favoriteLimit }) }
+  }
+
+  await db.insert(documentFavorites).values({
+    id: nanoid(12),
+    userId: session.user.id,
+    documentId: id,
+    position: await nextFavoritePosition(session.user.id),
+  })
 
   revalidatePath('/', 'layout')
 

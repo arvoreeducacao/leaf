@@ -110,7 +110,9 @@
     "allDocuments": "Todos os documentos",
     "filterPlaceholder": "Filtrar por título",
     "filterLabel": "Filtrar documentos por título",
-    "filterEmpty": "Nenhum documento com esse nome"
+    "filterEmpty": "Nenhum documento com esse nome",
+    "favoritesSection": "Favoritos",
+    "emptyFavorites": "Nada favoritado ainda. Use a estrela no topo de uma página para deixá-la aqui."
   },
   "palette": {
     "title": "Busca e comandos",
@@ -172,7 +174,10 @@
     "editedAt": "Editada {time}",
     "copyLink": "Copiar link",
     "linkCopied": "Link copiado",
-    "linkCopyFailed": "Não foi possível copiar o link"
+    "linkCopyFailed": "Não foi possível copiar o link",
+    "favorite": "Favoritar",
+    "unfavorite": "Remover dos favoritos",
+    "breadcrumbCollapsed": "Mostrar mais {count} níveis do caminho"
   },
   "cover": {
     "add": "Adicionar capa",
@@ -573,7 +578,8 @@
     "commentEmpty": "Escreva algo antes de enviar.",
     "commentTooFast": "Você comentou muitas vezes seguidas. Espere um minuto.",
     "domainRestricted": "Somente contas @{domain}.",
-    "coverInvalid": "Escolha uma imagem válida para a capa."
+    "coverInvalid": "Escolha uma imagem válida para a capa.",
+    "favoriteLimit": "Você já tem {count} favoritos. Remova um antes de adicionar outro."
   },
   "org": {
     "title": "Organização",
