@@ -5,10 +5,19 @@ const schemeLike = /^([a-z][a-z0-9+.-]*:)?\/\//i
 const galleryName = /^[a-z0-9-]{1,64}$/
 const galleryColor = /^[a-z]{1,20}$/
 const defaultGalleryColor = 'gray'
+const uploadPathPrefix = '/api/uploads/'
 
 export type DocumentIconSource =
   | Readonly<{ kind: 'image'; url: string; fromNotionLibrary: boolean }>
   | Readonly<{ kind: 'text'; text: string }>
+
+export function isUploadedIconPath(value: string): boolean {
+  return (
+    value.startsWith(uploadPathPrefix) &&
+    !value.includes('..') &&
+    value.length <= maxUrlLength
+  )
+}
 
 function httpsIconUrl(value: string): string | null {
   if (value.length > maxUrlLength) {
@@ -37,6 +46,12 @@ export function readDocumentIcon(
     return null
   }
 
+  if (trimmed.startsWith('/')) {
+    return isUploadedIconPath(trimmed)
+      ? { kind: 'image', url: trimmed, fromNotionLibrary: false }
+      : null
+  }
+
   const url = httpsIconUrl(trimmed)
 
   if (url) {
@@ -52,6 +67,16 @@ export function readDocumentIcon(
   }
 
   return { kind: 'text', text: trimmed }
+}
+
+export function normalizeDocumentIcon(value: unknown): string | null {
+  if (typeof value !== 'string') {
+    return null
+  }
+
+  const trimmed = value.trim()
+
+  return readDocumentIcon(trimmed) ? trimmed : null
 }
 
 export type NotionIconPayload = Readonly<{

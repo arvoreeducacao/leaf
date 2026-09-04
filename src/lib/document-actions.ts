@@ -31,6 +31,7 @@ import {
   normalizeCoverCredit,
   serializeCoverCredit,
 } from '@/lib/document-cover'
+import { normalizeDocumentIcon } from '@/lib/document-icon'
 import { listOwnedDocuments, listSubtreeIds } from '@/lib/documents'
 import { indexDocument, removeDocumentFromIndex } from '@/lib/search-index'
 import { registerUnsplashDownload, unsplashAccessKey } from '@/lib/unsplash'
@@ -101,6 +102,53 @@ export async function renameDocument(
     .where(eq(documents.id, id))
 
   await indexDocument(id)
+
+  revalidatePath('/', 'layout')
+  revalidatePath(`/doc/${id}`)
+
+  return { ok: true }
+}
+
+export async function setDocumentIcon(
+  id: string,
+  icon: string,
+): Promise<ActionResult> {
+  const session = await requireSession()
+  const access = await getDocumentAccess(id, session)
+
+  if (!canEdit(access)) {
+    return notAllowedResult()
+  }
+
+  const value = normalizeDocumentIcon(icon)
+
+  if (!value) {
+    return { ok: false, error: (await errorMessages())('iconInvalid') }
+  }
+
+  await db
+    .update(documents)
+    .set({ icon: value, updatedAt: new Date() })
+    .where(and(eq(documents.id, id), isNull(documents.deletedAt)))
+
+  revalidatePath('/', 'layout')
+  revalidatePath(`/doc/${id}`)
+
+  return { ok: true }
+}
+
+export async function removeDocumentIcon(id: string): Promise<ActionResult> {
+  const session = await requireSession()
+  const access = await getDocumentAccess(id, session)
+
+  if (!canEdit(access)) {
+    return notAllowedResult()
+  }
+
+  await db
+    .update(documents)
+    .set({ icon: null, updatedAt: new Date() })
+    .where(and(eq(documents.id, id), isNull(documents.deletedAt)))
 
   revalidatePath('/', 'layout')
   revalidatePath(`/doc/${id}`)

@@ -1,6 +1,7 @@
 'use client'
 
 import { useFormatter, useNow, useTranslations } from 'next-intl'
+import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { toast } from 'sonner'
@@ -10,6 +11,7 @@ import { DocumentIcon } from '@/components/app/document-icon'
 import { DocumentMenu } from '@/components/app/document-menu'
 import { DocumentStatus } from '@/components/app/document-status'
 import { FavoriteButton } from '@/components/app/favorite-button'
+import { IconPicker } from '@/components/app/icon-picker'
 import { PresenceIndicator } from '@/components/app/presence-indicator'
 import { useTopbarSlot } from '@/components/app/topbar-slot'
 import { CommentsPanel } from '@/components/comments/comments-panel'
@@ -17,9 +19,10 @@ import {
   documentTitleInputId,
   requestEditorFocus,
 } from '@/components/editor/focus-bridge'
-import { ClipboardContentIcon } from '@/components/icons'
+import { ClipboardContentIcon, HappyIcon } from '@/components/icons'
 import { ChevronRightIcon, PeopleIcon } from '@/components/icons/outline'
 import { ShareButton } from '@/components/sharing/share-button'
+import { Button } from '@/components/ui/button'
 import { ButtonIcon } from '@/components/ui/button-icon'
 import { renameDocument } from '@/lib/document-actions'
 import { readDocumentIcon } from '@/lib/document-icon'
@@ -60,10 +63,13 @@ export function DocumentHeader({
 }: Props) {
   const t = useTranslations('document')
   const tTeamspace = useTranslations('teamspace')
+  const tIcon = useTranslations('icon')
   const format = useFormatter()
   const now = useNow()
+  const router = useRouter()
   const titleId = documentTitleInputId
   const slot = useTopbarSlot()
+  const [iconPickerOpen, setIconPickerOpen] = useState(false)
   const [value, setValue] = useState(title)
   const [saving, setSaving] = useState(false)
   const lastSaved = useRef(title)
@@ -115,6 +121,14 @@ export function DocumentHeader({
       toast.error(result.error)
     }
   }
+
+  const bigIcon = (
+    <DocumentIcon className="size-[78px] text-[70px]" icon={icon} kind={kind} />
+  )
+
+  const inlineIcon = (
+    <DocumentIcon className="size-7 text-[26px]" icon={icon} kind={kind} />
+  )
 
   const topbar = (
     <>
@@ -219,27 +233,55 @@ export function DocumentHeader({
               hasCover && '-mt-[63px] tablet:-mt-[79px]',
             )}
           >
-            <DocumentIcon
-              className="size-[78px] text-[70px]"
-              icon={icon}
-              kind={kind}
-            />
+            {canEdit ? (
+              <button
+                aria-label={tIcon('change')}
+                className="-ml-1 flex cursor-pointer rounded-large p-1 outline-none transition-colors hover:bg-surface-hover focus-visible:ring-2 focus-visible:ring-ring"
+                data-testid="document-icon-button"
+                onClick={() => setIconPickerOpen(true)}
+                type="button"
+              >
+                {bigIcon}
+              </button>
+            ) : (
+              bigIcon
+            )}
           </div>
         ) : null}
 
-        {canEdit && !hasCover ? (
+        {canEdit && (!hasIcon || !hasCover) ? (
           <div className="mb-1 flex gap-1 transition-opacity tablet:opacity-0 tablet:focus-within:opacity-100 tablet:group-hover/header:opacity-100">
-            <AddCoverButton documentId={documentId} />
+            {hasIcon ? null : (
+              <Button
+                className="text-content-subtle"
+                onClick={() => setIconPickerOpen(true)}
+                size="sm"
+                type="button"
+                variant="ghost"
+              >
+                <HappyIcon aria-hidden="true" />
+                {tIcon('add')}
+              </Button>
+            )}
+            {hasCover ? null : <AddCoverButton documentId={documentId} />}
           </div>
         ) : null}
 
         <div className={wide ? 'flex items-center gap-1.5' : undefined}>
         {hasIcon && wide ? (
-          <DocumentIcon
-            className="size-7 text-[26px]"
-            icon={icon}
-            kind={kind}
-          />
+          canEdit ? (
+            <button
+              aria-label={tIcon('change')}
+              className="-ml-0.5 flex cursor-pointer rounded-medium p-0.5 outline-none transition-colors hover:bg-surface-hover focus-visible:ring-2 focus-visible:ring-ring"
+              data-testid="document-icon-button"
+              onClick={() => setIconPickerOpen(true)}
+              type="button"
+            >
+              {inlineIcon}
+            </button>
+          ) : (
+            inlineIcon
+          )
         ) : null}
         {canEdit ? (
           <h1 className={wide ? 'flex min-w-0 flex-1 items-center' : undefined}>
@@ -292,6 +334,16 @@ export function DocumentHeader({
         )}
         </div>
       </div>
+
+      {canEdit ? (
+        <IconPicker
+          currentIcon={icon ?? null}
+          documentId={documentId}
+          onApplied={() => router.refresh()}
+          onOpenChange={setIconPickerOpen}
+          open={iconPickerOpen}
+        />
+      ) : null}
     </>
   )
 }

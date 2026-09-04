@@ -235,6 +235,40 @@
       "slate": "Ardósia"
     }
   },
+  "icon": {
+    "add": "Adicionar ícone",
+    "change": "Alterar ícone",
+    "remove": "Remover",
+    "removed": "Ícone removido",
+    "random": "Aleatório",
+    "pickerTitle": "Ícone da página",
+    "pickerDescription": "Escolha um emoji, envie uma imagem ou cole um link",
+    "tabEmoji": "Emojis",
+    "tabUpload": "Enviar",
+    "tabLink": "Link",
+    "searchLabel": "Buscar emoji",
+    "searchPlaceholder": "Buscar um emoji",
+    "searchEmpty": "Nenhum emoji para \"{query}\"",
+    "uploadPick": "Escolher imagem",
+    "uploadHint": "Imagens de até 5 MB. Quadradas funcionam melhor.",
+    "uploading": "Enviando imagem",
+    "uploadFailed": "Não foi possível enviar a imagem",
+    "linkLabel": "Endereço da imagem",
+    "linkPlaceholder": "https://",
+    "linkSubmit": "Usar link",
+    "linkInvalid": "Cole um endereço https:// de uma imagem",
+    "linkHint": "Funciona com qualquer imagem publicada na web",
+    "groups": {
+      "smileys": "Rostos e emoções",
+      "people": "Pessoas e gestos",
+      "nature": "Animais e natureza",
+      "food": "Comida e bebida",
+      "activity": "Atividades",
+      "travel": "Viagens e lugares",
+      "objects": "Objetos",
+      "symbols": "Símbolos"
+    }
+  },
   "database": {
     "untitled": "Base sem título",
     "newDatabase": "Nova base de dados",
@@ -579,6 +613,7 @@
     "commentTooFast": "Você comentou muitas vezes seguidas. Espere um minuto.",
     "domainRestricted": "Somente contas @{domain}.",
     "coverInvalid": "Escolha uma imagem válida para a capa.",
+    "iconInvalid": "Escolha um emoji ou uma imagem válida para o ícone.",
     "favoriteLimit": "Você já tem {count} favoritos. Remova um antes de adicionar outro."
   },
   "org": {
