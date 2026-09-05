@@ -125,6 +125,7 @@ export const passkey = mysqlTable(
 export const organizations = mysqlTable('organizations', {
   id: varchar('id', { length: APP_ID }).primaryKey(),
   name: varchar('name', { length: 255 }).notNull(),
+  icon: varchar('icon', { length: 1024 }),
   inviteToken: varchar('invite_token', { length: 64 }).unique(),
   createdAt: datetime('created_at', { mode: 'date', fsp: 3 })
     .notNull()
@@ -311,8 +312,11 @@ export const databaseViews = mysqlTable(
       .notNull()
       .references(() => documents.id, { onDelete: 'cascade' }),
     name: varchar('name', { length: 120 }).notNull(),
-    type: mysqlEnum('type', ['table', 'board']).notNull().default('table'),
+    type: mysqlEnum('type', ['table', 'board', 'form'])
+      .notNull()
+      .default('table'),
     config: longtext('config'),
+    publicToken: varchar('public_token', { length: 64 }).unique(),
     position: int('position').notNull().default(0),
     createdAt: datetime('created_at', { mode: 'date', fsp: 3 })
       .notNull()
@@ -325,6 +329,19 @@ export const databaseViews = mysqlTable(
     ),
   ],
 )
+
+export const formWebhooks = mysqlTable('form_webhooks', {
+  viewId: varchar('view_id', { length: APP_ID })
+    .primaryKey()
+    .references(() => databaseViews.id, { onDelete: 'cascade' }),
+  url: varchar('url', { length: 500 }).notNull(),
+  createdAt: datetime('created_at', { mode: 'date', fsp: 3 })
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP(3)`),
+  updatedAt: datetime('updated_at', { mode: 'date', fsp: 3 })
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP(3)`),
+})
 
 export const documentRealtimeState = mysqlTable(
   'document_realtime_state',
@@ -554,6 +571,7 @@ export type DocumentKind = Document['kind']
 export type DatabaseProperty = typeof databaseProperties.$inferSelect
 export type DatabasePropertyType = DatabaseProperty['type']
 export type DatabaseView = typeof databaseViews.$inferSelect
+export type FormWebhook = typeof formWebhooks.$inferSelect
 export type DatabaseViewType = DatabaseView['type']
 export type DatabaseViewDraft = typeof databaseViewDrafts.$inferSelect
 export type DocumentShare = typeof documentShares.$inferSelect

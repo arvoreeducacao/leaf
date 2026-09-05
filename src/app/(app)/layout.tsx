@@ -120,6 +120,7 @@ export default async function AppLayout({
         organizations={memberships.map((item) => ({
           id: item.orgId,
           name: item.orgName,
+          icon: item.orgIcon,
         }))}
         owned={ownedTree.nodes}
         recents={recents}

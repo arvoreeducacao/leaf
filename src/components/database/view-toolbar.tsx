@@ -9,6 +9,7 @@ import {
   EyeIcon,
   FilterIcon,
   LayoutGridRearrangeIcon,
+  ListCheckIcon,
   ListReorderIcon,
   MapGridIcon,
   TrashIcon,
@@ -56,6 +57,7 @@ function UnsavedDot() {
 const viewIcon: Record<DatabaseViewType, typeof MapGridIcon> = {
   table: MapGridIcon,
   board: LayoutGridRearrangeIcon,
+  form: ListCheckIcon,
 }
 
 type Props = Readonly<{
@@ -102,6 +104,7 @@ export function ViewToolbar({
   const t = useTranslations('database')
   const [renaming, setRenaming] = useState<string | null>(null)
   const activeView = views.find((view) => view.id === activeViewId)
+  const isForm = activeView?.type === 'form'
 
   const hidden = new Set(config.hiddenPropertyIds)
 
@@ -240,6 +243,10 @@ export function ViewToolbar({
                   <LayoutGridRearrangeIcon aria-hidden="true" />
                   {t('view_board')}
                 </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => onCreateView('form')}>
+                  <ListCheckIcon aria-hidden="true" />
+                  {t('view_form')}
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </li>
@@ -247,126 +254,137 @@ export function ViewToolbar({
       </ul>
 
       <div className="-mx-1 flex shrink-0 items-center gap-1 overflow-x-auto px-1">
-        {activeView?.type === 'board' ? (
-          <FieldSelect
-            label={t('groupBy')}
-            onChange={(value) =>
-              onConfigChange({
-                ...config,
-                groupByPropertyId: value.length > 0 ? value : null,
-              })
-            }
-            options={[
-              { value: '', label: t('noGroup') },
-              ...properties
-                .filter((property) => isGroupableType(property.type))
-                .map((property) => ({
-                  value: property.id,
-                  label: property.name,
-                })),
-            ]}
-            value={groupPropertyId ?? ''}
-          />
-        ) : null}
-
-        <PropertyPicker
-          disabled={config.filters.length >= MAX_FILTERS}
-          onPick={addFilter}
-          placeholder={t('searchProperty')}
-          properties={properties}
-          titleLabel={t('titleColumn')}
-        >
-          <ButtonIcon
-            aria-label={t('filtersActive', { count: config.filters.length })}
-            className="relative"
-            size="medium"
-            variant="ghost"
-          >
-            <FilterIcon
-              aria-hidden="true"
-              className={config.filters.length > 0 ? 'text-brand' : undefined}
+        {isForm ? null : (
+          <>
+          {activeView?.type === 'board' ? (
+            <FieldSelect
+              label={t('groupBy')}
+              onChange={(value) =>
+                onConfigChange({
+                  ...config,
+                  groupByPropertyId: value.length > 0 ? value : null,
+                })
+              }
+              options={[
+                { value: '', label: t('noGroup') },
+                ...properties
+                  .filter((property) => isGroupableType(property.type))
+                  .map((property) => ({
+                    value: property.id,
+                    label: property.name,
+                  })),
+              ]}
+              value={groupPropertyId ?? ''}
             />
-            {filtersChanged ? <UnsavedDot /> : null}
-          </ButtonIcon>
-        </PropertyPicker>
+          ) : null}
 
-        <PropertyPicker
-          disabled={config.sorts.length >= MAX_SORTS}
-          onPick={addSort}
-          placeholder={t('sortByProperty')}
-          properties={properties}
-          titleLabel={t('titleColumn')}
-        >
-          <ButtonIcon
-            aria-label={t('sortsActive', { count: config.sorts.length })}
-            className="relative"
-            size="medium"
-            variant="ghost"
+          <PropertyPicker
+            disabled={config.filters.length >= MAX_FILTERS}
+            onPick={addFilter}
+            placeholder={t('searchProperty')}
+            properties={properties}
+            titleLabel={t('titleColumn')}
           >
-            <ListReorderIcon
-              aria-hidden="true"
-              className={config.sorts.length > 0 ? 'text-brand' : undefined}
-            />
-            {sortsChanged ? <UnsavedDot /> : null}
-          </ButtonIcon>
-        </PropertyPicker>
-
-        <ViewSearch
-          onChange={onSearchChange}
-          placeholder={t('searchRows')}
-          value={search}
-        />
-
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
             <ButtonIcon
-              aria-label={t('properties')}
+              aria-label={t('filtersActive', { count: config.filters.length })}
+              className="relative"
               size="medium"
               variant="ghost"
             >
-              <EyeIcon aria-hidden="true" />
+              <FilterIcon
+                aria-hidden="true"
+                className={config.filters.length > 0 ? 'text-brand' : undefined}
+              />
+              {filtersChanged ? <UnsavedDot /> : null}
             </ButtonIcon>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>{t('properties')}</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            {properties.map((property) => (
-              <DropdownMenuCheckboxItem
-                checked={!hidden.has(property.id)}
-                key={property.id}
-                onCheckedChange={(checked) =>
-                  onConfigChange({
-                    ...config,
-                    hiddenPropertyIds: checked
-                      ? config.hiddenPropertyIds.filter(
-                          (id) => id !== property.id,
-                        )
-                      : [...config.hiddenPropertyIds, property.id],
-                  })
-                }
-                onSelect={(event) => event.preventDefault()}
+          </PropertyPicker>
+
+          <PropertyPicker
+            disabled={config.sorts.length >= MAX_SORTS}
+            onPick={addSort}
+            placeholder={t('sortByProperty')}
+            properties={properties}
+            titleLabel={t('titleColumn')}
+          >
+            <ButtonIcon
+              aria-label={t('sortsActive', { count: config.sorts.length })}
+              className="relative"
+              size="medium"
+              variant="ghost"
+            >
+              <ListReorderIcon
+                aria-hidden="true"
+                className={config.sorts.length > 0 ? 'text-brand' : undefined}
+              />
+              {sortsChanged ? <UnsavedDot /> : null}
+            </ButtonIcon>
+          </PropertyPicker>
+
+          <ViewSearch
+            onChange={onSearchChange}
+            placeholder={t('searchRows')}
+            value={search}
+          />
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <ButtonIcon
+                aria-label={t('properties')}
+                size="medium"
+                variant="ghost"
               >
-                <PropertyIcon type={property.type} />
-                {property.name}
-              </DropdownMenuCheckboxItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
+                <EyeIcon aria-hidden="true" />
+              </ButtonIcon>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>{t('properties')}</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {properties.map((property) => (
+                <DropdownMenuCheckboxItem
+                  checked={!hidden.has(property.id)}
+                  key={property.id}
+                  onCheckedChange={(checked) =>
+                    onConfigChange({
+                      ...config,
+                      hiddenPropertyIds: checked
+                        ? config.hiddenPropertyIds.filter(
+                            (id) => id !== property.id,
+                          )
+                        : [...config.hiddenPropertyIds, property.id],
+                    })
+                  }
+                  onSelect={(event) => event.preventDefault()}
+                >
+                  <PropertyIcon type={property.type} />
+                  {property.name}
+                </DropdownMenuCheckboxItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          </>
+        )}
 
         {canEdit ? (
           <div className="ml-1 flex items-center">
-            <Button
-              className="h-9 rounded-r-none px-2 tablet:h-7"
-              onClick={onCreateRow}
-              size="sm"
-            >
-              {t('newRowShort')}
-            </Button>
+            {isForm ? null : (
+              <Button
+                className="h-9 rounded-r-none px-2 tablet:h-7"
+                onClick={onCreateRow}
+                size="sm"
+              >
+                {t('newRowShort')}
+              </Button>
+            )}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <ButtonIcon
                   aria-label={t('addView')}
-                  className="h-9 w-6 rounded-l-none border-l border-l-primary-600 tablet:h-7"
+                  className={cn(
+                    'h-9 tablet:h-7',
+                    isForm
+                      ? 'w-9 tablet:w-7'
+                      : 'w-6 rounded-l-none border-l border-l-primary-600',
+                  )}
                   size="medium"
                   variant="primary"
                 >
@@ -381,6 +399,10 @@ export function ViewToolbar({
                 <DropdownMenuItem onSelect={() => onCreateView('board')}>
                   <LayoutGridRearrangeIcon aria-hidden="true" />
                   {t('view_board')}
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => onCreateView('form')}>
+                  <ListCheckIcon aria-hidden="true" />
+                  {t('view_form')}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
