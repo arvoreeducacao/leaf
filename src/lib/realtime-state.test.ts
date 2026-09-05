@@ -18,7 +18,7 @@ import {
   writeRealtimeState,
 } from '@/lib/realtime-state'
 
-const owner = { id: 'user-owner', email: 'owner@arvore.com.br', name: 'Owner' }
+const owner = { id: 'user-owner', email: 'owner@example.com', name: 'Owner' }
 const docId = 'doc-with-state'
 
 beforeEach(async () => {

@@ -257,7 +257,7 @@ describe('convertNodes', () => {
     const blocks = convertNodes(
       [
         node({
-          bookmark: { caption: [], url: 'https://arvore.com.br' },
+          bookmark: { caption: [], url: 'https://example.com' },
           id: 'bm1',
           type: 'bookmark',
         }),
@@ -269,7 +269,7 @@ describe('convertNodes', () => {
 
     expect(blocks[0].type).toBe('paragraph')
     expect(content[0].type).toBe('link')
-    expect(content[0].href).toBe('https://arvore.com.br')
+    expect(content[0].href).toBe('https://example.com')
   })
 
   it('turns an embeddable link into an embed block instead of a bare link', () => {
@@ -300,7 +300,7 @@ describe('convertNodes', () => {
     const blocks = convertNodes(
       [
         node({
-          embed: { caption: [], url: 'https://arvore.com.br/relatorio' },
+          embed: { caption: [], url: 'https://example.com/relatorio' },
           id: 'em2',
           type: 'embed',
         }),

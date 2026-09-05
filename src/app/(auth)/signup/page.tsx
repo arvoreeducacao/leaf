@@ -18,11 +18,19 @@ export default async function SignupPage() {
     redirect('/')
   }
 
-  const { restrictedDomain, ssoEnabled } = authAccessConfig()
+  const { googleEnabled, restrictedDomain, sso } = authAccessConfig()
 
-  if (ssoEnabled) {
+  if (sso) {
     redirect('/login')
   }
 
-  return <AuthForm mode="signup" restrictedDomain={restrictedDomain} />
+  return (
+    <AuthForm
+      googleEnabled={googleEnabled}
+      mode="signup"
+      passwordEnabled
+      restrictedDomain={restrictedDomain}
+      sso={null}
+    />
+  )
 }

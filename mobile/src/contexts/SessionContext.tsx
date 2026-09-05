@@ -8,7 +8,7 @@ import {
   type ReactNode,
 } from 'react'
 
-import { arvoreSsoProviderId, authClient } from '@/lib/auth-client'
+import { authClient, ssoProviderId } from '@/lib/auth-client'
 import { hasStoredSession } from '@/lib/session-store'
 
 export type SessionStatus = 'loading' | 'signed-out' | 'signed-in'
@@ -51,7 +51,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   const signIn = useCallback(async (): Promise<SignInOutcome> => {
     const result = await authClient.signIn.social({
-      provider: arvoreSsoProviderId,
+      provider: ssoProviderId,
       callbackURL: '/',
       errorCallbackURL: '/login',
     })

@@ -8,7 +8,7 @@ vi.mock('@/lib/auth', () => ({
 
 import { GET } from '@/app/api/mobile/enter/route'
 
-const entryUrl = 'https://leaf.arvore.com.br/api/mobile/enter'
+const entryUrl = 'https://leaf.example.com/api/mobile/enter'
 
 function betterCallStyleError(status: number) {
   const error = new Error('token invalid') as Error & { status: string; statusCode: number }

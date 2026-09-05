@@ -156,7 +156,7 @@ function buildPlan(): NotionPlan {
     pages,
     pathToPageKey: new Map(pages.map((page) => [page.key, page.key])),
     rowValuesByKey: new Map([
-      ['row-1.md', ['Not started', ['ana@arvore.com.br'], 'TASK-12']],
+      ['row-1.md', ['Not started', ['ana@example.com'], 'TASK-12']],
       ['row-2.md', ['Done', ['Someone Unknown'], 'TASK-13']],
     ]),
   }
@@ -172,7 +172,7 @@ beforeEach(async () => {
     {
       id: 'user-owner',
       name: 'Owner',
-      email: 'owner@arvore.com.br',
+      email: 'owner@example.com',
       emailVerified: false,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -180,7 +180,7 @@ beforeEach(async () => {
     {
       id: 'user-ana',
       name: 'Ana Souza',
-      email: 'ana@arvore.com.br',
+      email: 'ana@example.com',
       emailVerified: false,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -188,18 +188,18 @@ beforeEach(async () => {
   ])
   await db
     .insert(organizations)
-    .values({ id: 'org-arvore', name: 'Árvore', createdAt: new Date() })
+    .values({ id: 'org-acme', name: 'Acme', createdAt: new Date() })
   await db.insert(organizationMembers).values([
     {
       id: 'member-owner',
-      orgId: 'org-arvore',
+      orgId: 'org-acme',
       userId: 'user-owner',
       role: 'admin',
       createdAt: new Date(),
     },
     {
       id: 'member-ana',
-      orgId: 'org-arvore',
+      orgId: 'org-acme',
       userId: 'user-ana',
       role: 'member',
       createdAt: new Date(),
@@ -212,7 +212,7 @@ async function runImport() {
 
   for await (const event of importNotionPlan(
     buildPlan(),
-    { id: 'user-owner', orgAccess: 'editor', orgId: 'org-arvore' },
+    { id: 'user-owner', orgAccess: 'editor', orgId: 'org-acme' },
     messages,
   )) {
     expect(event.type).not.toBe('error')

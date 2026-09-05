@@ -2,6 +2,7 @@
   "name": "leaf",
   "version": "0.1.0",
   "private": true,
+  "license": "MIT",
   "scripts": {
     "dev": "concurrently -n next,s3,ws -c cyan,magenta,green \"next dev\" \"node scripts/dev-s3.mjs\" \"node scripts/dev-realtime.mjs\"",
     "dev:next": "next dev",
@@ -22,6 +23,7 @@
     "@aws-sdk/client-s3": "^3.1121.0",
     "@better-auth/expo": "1.7.2",
     "@better-auth/oauth-provider": "1.7.2",
+    "@better-auth/passkey": "1.7.2",
     "@blocknote/core": "^0.54.0",
     "@blocknote/react": "0.54.0",
     "@blocknote/server-util": "^0.54.0",

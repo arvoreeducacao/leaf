@@ -1,19 +1,20 @@
 import Constants from 'expo-constants'
 
-const productionHost = 'leaf.arvore.com.br'
+const extra = Constants.expoConfig?.extra ?? {}
 
 const configuredUrl =
-  (Constants.expoConfig?.extra?.leafUrl as string | undefined)?.trim() ||
+  (extra.leafUrl as string | undefined)?.trim() ||
   process.env.EXPO_PUBLIC_LEAF_URL?.trim() ||
-  `https://${productionHost}`
+  'http://localhost:3000'
 
 const leafUrl = new URL(configuredUrl)
 
 export const config = {
   leafUrl: leafUrl.origin,
   leafHost: leafUrl.host,
-  isProductionHost: leafUrl.host === productionHost,
+  isProductionHost: leafUrl.host === (extra.appBoundDomain as string | null),
   appScheme: Constants.expoConfig?.scheme?.toString() ?? 'app.leaf',
+  ssoProviderId: (extra.ssoProviderId as string | undefined)?.trim() || 'sso',
   userAgentSuffix: 'LeafApp/1.0',
   connectivityProbePath: '/manifest.webmanifest',
   loginPath: '/login',

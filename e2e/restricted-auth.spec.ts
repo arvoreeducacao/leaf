@@ -1,29 +1,29 @@
 import { expect, test } from '@playwright/test'
 
-import { password } from './helpers'
+import { continueWithEmail, password } from './helpers'
 
 let counter = 0
 
 function allowedEmail(prefix: string) {
   counter += 1
 
-  return `${prefix}-${Date.now()}-${process.pid}-${counter}@arvore.com.br`
+  return `${prefix}-${Date.now()}-${process.pid}-${counter}@example.com`
 }
 
 test.describe('domain restriction', () => {
-  test('only the Árvore account signs in and only it can be invited', async ({
+  test('only the allowed domain signs in and only it can be invited', async ({
     page,
   }) => {
     await page.goto('/signup')
 
-    await expect(page.getByText('Use seu email @arvore.com.br')).toBeVisible()
+    await expect(page.getByText('Use seu email @example.com')).toBeVisible()
 
-    await page.getByLabel('Email').fill('person@gmail.com')
+    await continueWithEmail(page, 'person@gmail.com')
     await page.getByLabel('Senha').fill(password)
     await page.getByRole('button', { name: 'Criar conta' }).click()
 
     await expect(
-      page.getByText('Use seu email @arvore.com.br para entrar no Leaf.'),
+      page.getByText('Use seu email @example.com para entrar no Leaf.'),
     ).toBeVisible()
     await expect(page).toHaveURL(/\/signup$/)
 
@@ -43,7 +43,7 @@ test.describe('domain restriction', () => {
     await page.getByRole('button', { name: 'Convidar', exact: true }).click()
 
     await expect(
-      page.getByText('Somente contas @arvore.com.br.').first(),
+      page.getByText('Somente contas @example.com.').first(),
     ).toBeVisible()
 
     const invited = allowedEmail('guest')

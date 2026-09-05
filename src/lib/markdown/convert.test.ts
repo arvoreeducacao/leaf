@@ -20,7 +20,7 @@ const fixture = [
   '',
   '## Class summary',
   '',
-  'Paragraph with **bold**, *italic*, `code` and a [link](https://arvore.com.br).',
+  'Paragraph with **bold**, *italic*, `code` and a [link](https://example.com).',
   '',
   '- First item',
   '  - Nested item',
@@ -66,7 +66,7 @@ describe('markdown round-trip', () => {
         '',
         '## Class summary',
         '',
-        'Paragraph with **bold**, *italic*, `code` and a [link](https://arvore.com.br).',
+        'Paragraph with **bold**, *italic*, `code` and a [link](https://example.com).',
         '',
         '* First item',
         '  * Nested item',
@@ -251,9 +251,9 @@ describe('import sanitization', () => {
   })
 
   it('accepts only http, https and mailto', () => {
-    expect(sanitizeUrl('https://arvore.com.br')).toBe('https://arvore.com.br')
-    expect(sanitizeUrl('http://arvore.com.br')).toBe('http://arvore.com.br')
-    expect(sanitizeUrl('mailto:hi@arvore.com.br')).toBe('mailto:hi@arvore.com.br')
+    expect(sanitizeUrl('https://example.com')).toBe('https://example.com')
+    expect(sanitizeUrl('http://example.com')).toBe('http://example.com')
+    expect(sanitizeUrl('mailto:hi@example.com')).toBe('mailto:hi@example.com')
     expect(sanitizeUrl('/api/uploads/u/1.png')).toBe('/api/uploads/u/1.png')
     expect(sanitizeUrl('javascript:alert(1)')).toBe('')
     expect(sanitizeUrl('JaVaScRiPt:alert(1)')).toBe('')
@@ -327,7 +327,7 @@ describe('export with an internal image', () => {
         },
         {
           type: 'link',
-          href: 'https://arvore.com.br',
+          href: 'https://example.com',
           content: [{ type: 'text', text: 'external', styles: {} }],
         },
       ],
@@ -339,7 +339,7 @@ describe('export with an internal image', () => {
 
     expect(markdown).toContain('http://localhost:3000/api/uploads/u/abc.png')
     expect(markdown).toContain('http://localhost:3000/doc/xyz')
-    expect(markdown).toContain('https://arvore.com.br')
+    expect(markdown).toContain('https://example.com')
   })
 
   it('keeps the url relative when there is no origin', async () => {
@@ -365,12 +365,12 @@ describe('exported html', () => {
 
   it('does not emit classname on the html of a link', async () => {
     const content = await markdownToContent(
-      'See the [guide](https://arvore.com.br).',
+      'See the [guide](https://example.com).',
     )
     const html = await contentToHTML(content, 'Doc')
 
     expect(html).not.toContain('classname=')
-    expect(html).toContain('href="https://arvore.com.br"')
+    expect(html).toContain('href="https://example.com"')
   })
 })
 
@@ -424,7 +424,7 @@ describe('htmlToBlocks', () => {
     '<ul><li>uma coisa</li><li>outra coisa</li></ul>',
     '<blockquote>o motivo, citado</blockquote>',
     '<table><tr><th>etapa</th></tr><tr><td>ligar o Hive</td></tr></table>',
-    '<a href="https://leaf.arvore.com.br/doc/1">o documento</a>',
+    '<a href="https://leaf.example.com/doc/1">o documento</a>',
   ].join('\n')
 
   it('keeps the text and the shape of a page written by hand', async () => {
@@ -438,7 +438,7 @@ describe('htmlToBlocks', () => {
     expect(kinds).toContain('table')
     expect(text).toContain('Artefatos no Leaf')
     expect(text).toContain('outra coisa')
-    expect(text).toContain('https://leaf.arvore.com.br/doc/1')
+    expect(text).toContain('https://leaf.example.com/doc/1')
   })
 
   it('drops the script, the style and the diagram, which is the price of the port', async () => {

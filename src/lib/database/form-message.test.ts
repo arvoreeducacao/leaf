@@ -147,7 +147,7 @@ describe('slackPayloadFor', () => {
       'Ícones de acessibilidade',
       values,
       'Nome',
-      'https://leaf.arvore.com.br/doc/abc123',
+      'https://leaf.example.com/doc/abc123',
       'Abrir no Leaf',
     )
 
@@ -169,7 +169,7 @@ describe('slackPayloadFor', () => {
     const last = blocks[blocks.length - 1]
 
     expect(last.type).toBe('actions')
-    expect(last.elements?.[0].url).toBe('https://leaf.arvore.com.br/doc/abc123')
+    expect(last.elements?.[0].url).toBe('https://leaf.example.com/doc/abc123')
     expect(last.elements?.[0].text.text).toBe('Abrir no Leaf')
   })
 

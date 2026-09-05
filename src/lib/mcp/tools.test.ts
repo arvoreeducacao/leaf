@@ -52,10 +52,10 @@ import {
   uploadImageTool,
 } from '@/lib/mcp/tools'
 
-const owner = { id: 'mcp-owner', email: 'dono@arvore.com.br' }
-const editor = { id: 'mcp-editor', email: 'editor@arvore.com.br' }
-const member = { id: 'mcp-member', email: 'membro@arvore.com.br' }
-const stranger = { id: 'mcp-stranger', email: 'fora@arvore.com.br' }
+const owner = { id: 'mcp-owner', email: 'dono@example.com' }
+const editor = { id: 'mcp-editor', email: 'editor@example.com' }
+const member = { id: 'mcp-member', email: 'membro@example.com' }
+const stranger = { id: 'mcp-stranger', email: 'fora@example.com' }
 
 const org = 'org-mcp'
 const teamspace = 'ts-mcp'

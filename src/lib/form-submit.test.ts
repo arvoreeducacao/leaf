@@ -80,7 +80,7 @@ async function seed(viewConfig: string, withWebhook = true) {
   await db.insert(user).values({
     id: 'user-owner',
     name: 'Owner',
-    email: 'owner@arvore.com.br',
+    email: 'owner@example.com',
     emailVerified: false,
     createdAt: now,
     updatedAt: now,

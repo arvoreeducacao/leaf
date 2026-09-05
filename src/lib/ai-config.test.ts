@@ -103,14 +103,14 @@ describe('readAiConfig', () => {
       readAiConfig({
         ANTHROPIC_API_KEY: 'sk-ant',
         LEAF_AI_MODEL: 'claude-opus-5',
-        LEAF_AI_BASE_URL: 'https://gateway.arvore.dev/anthropic',
+        LEAF_AI_BASE_URL: 'https://gateway.example.com/anthropic',
         LEAF_AI_MAX_OUTPUT_TOKENS: '12000',
       }),
     ).toEqual({
       provider: 'anthropic',
       model: 'claude-opus-5',
       apiKey: 'sk-ant',
-      baseUrl: 'https://gateway.arvore.dev/anthropic',
+      baseUrl: 'https://gateway.example.com/anthropic',
       maxOutputTokens: 12_000,
     })
   })

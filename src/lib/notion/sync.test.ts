@@ -294,7 +294,7 @@ beforeEach(async () => {
   await db.insert(user).values({
     id: owner.id,
     name: 'Owner',
-    email: 'owner@arvore.com.br',
+    email: 'owner@example.com',
     emailVerified: false,
     createdAt: new Date(),
     updatedAt: new Date(),

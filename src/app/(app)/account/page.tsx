@@ -3,6 +3,8 @@ import { getTranslations } from 'next-intl/server'
 import { redirect } from 'next/navigation'
 
 import { AccountForm } from '@/components/account/account-form'
+import { PasskeyManager } from '@/components/account/passkey-manager'
+import { Separator } from '@/components/ui/separator'
 import { getSession } from '@/lib/auth'
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -26,6 +28,10 @@ export default async function AccountPage() {
         name={session.user.name}
         userId={session.user.id}
       />
+
+      <Separator />
+
+      <PasskeyManager />
     </div>
   )
 }
