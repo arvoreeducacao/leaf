@@ -18,10 +18,6 @@ import { Input } from '@/components/ui/input'
 import { Sheet, SheetContent, SheetHeader } from '@/components/ui/sheet'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
-  removeDocumentIcon,
-  setDocumentIcon,
-} from '@/lib/document-actions'
-import {
   type EmojiEntry,
   emojiGroups,
   randomEmoji,
@@ -31,11 +27,17 @@ import { isUploadedIconPath, readDocumentIcon } from '@/lib/document-icon'
 import { useIsMobile } from '@/shared/hooks/use-mobile'
 import { cn } from '@/shared/utils'
 
+export type IconPickerResult = { ok: true } | { ok: false; error: string }
+
 type Props = Readonly<{
-  documentId: string
+  title: string
+  description: string
+  removedMessage: string
   open: boolean
   onOpenChange: (open: boolean) => void
   currentIcon: string | null
+  onApply: (icon: string) => Promise<IconPickerResult>
+  onRemove: () => Promise<IconPickerResult>
   onApplied: () => void
 }>
 
@@ -46,10 +48,14 @@ function isHttpsUrl(value: string) {
 }
 
 export function IconPicker({
-  documentId,
+  title,
+  description,
+  removedMessage,
   open,
   onOpenChange,
   currentIcon,
+  onApply,
+  onRemove,
   onApplied,
 }: Props) {
   const t = useTranslations('icon')
@@ -73,7 +79,7 @@ export function IconPicker({
 
   function apply(icon: string) {
     startTransition(async () => {
-      const result = await setDocumentIcon(documentId, icon)
+      const result = await onApply(icon)
 
       if (!result.ok) {
         toast.error(result.error)
@@ -88,7 +94,7 @@ export function IconPicker({
 
   function remove() {
     startTransition(async () => {
-      const result = await removeDocumentIcon(documentId)
+      const result = await onRemove()
 
       if (!result.ok) {
         toast.error(result.error)
@@ -98,7 +104,7 @@ export function IconPicker({
 
       onOpenChange(false)
       onApplied()
-      toast.success(t('removed'))
+      toast.success(removedMessage)
     })
   }
 
@@ -316,8 +322,8 @@ export function IconPicker({
         >
           <SheetHeader
             className="shrink-0"
-            subtitle={t('pickerDescription')}
-            title={t('pickerTitle')}
+            subtitle={description}
+            title={title}
             type="close"
           />
           <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-6">{body}</div>
@@ -330,9 +336,9 @@ export function IconPicker({
     <Dialog onOpenChange={onOpenChange} open={open}>
       <DialogContent className="flex max-h-[85dvh] flex-col overflow-hidden tablet:max-w-135">
         <DialogHeader className="shrink-0">
-          <DialogTitle>{t('pickerTitle')}</DialogTitle>
+          <DialogTitle>{title}</DialogTitle>
           <DialogDescription className="text-content">
-            {t('pickerDescription')}
+            {description}
           </DialogDescription>
         </DialogHeader>
         <div className="-mx-1 min-h-0 flex-1 overflow-y-auto px-1">{body}</div>

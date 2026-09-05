@@ -24,7 +24,11 @@ import { ChevronRightIcon, PeopleIcon } from '@/components/icons/outline'
 import { ShareButton } from '@/components/sharing/share-button'
 import { Button } from '@/components/ui/button'
 import { ButtonIcon } from '@/components/ui/button-icon'
-import { renameDocument } from '@/lib/document-actions'
+import {
+  removeDocumentIcon,
+  renameDocument,
+  setDocumentIcon,
+} from '@/lib/document-actions'
 import { readDocumentIcon } from '@/lib/document-icon'
 import { cn } from '@/shared/utils'
 
@@ -338,10 +342,14 @@ export function DocumentHeader({
       {canEdit ? (
         <IconPicker
           currentIcon={icon ?? null}
-          documentId={documentId}
+          description={tIcon('pickerDescription')}
           onApplied={() => router.refresh()}
+          onApply={(next) => setDocumentIcon(documentId, next)}
           onOpenChange={setIconPickerOpen}
+          onRemove={() => removeDocumentIcon(documentId)}
           open={iconPickerOpen}
+          removedMessage={tIcon('removed')}
+          title={tIcon('pickerTitle')}
         />
       ) : null}
     </>

@@ -6,9 +6,9 @@ import { useRouter } from 'next/navigation'
 import { useState, useTransition } from 'react'
 import { toast } from 'sonner'
 
-import { LeafMark } from '@/components/app/leaf-mark'
 import { sidebarRow } from '@/components/app/sidebar-styles'
 import { ChevronDownIcon, PeopleIcon, PlusIcon } from '@/components/icons/outline'
+import { OrganizationMark } from '@/components/org/organization-mark'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,28 +22,17 @@ import {
 import { setActiveOrganization } from '@/lib/org-actions'
 import { cn } from '@/shared/utils'
 
-export type OrganizationOption = Readonly<{ id: string; name: string }>
+export type OrganizationOption = Readonly<{
+  id: string
+  name: string
+  icon: string | null
+}>
 
 type Props = Readonly<{
   organizations: ReadonlyArray<OrganizationOption>
   activeOrgId: string | null
   onNavigate?: () => void
 }>
-
-function WorkspaceMark({ name }: Readonly<{ name: string | null }>) {
-  return (
-    <span
-      aria-hidden="true"
-      className="flex size-5 shrink-0 items-center justify-center rounded-small bg-surface-subtle font-semibold text-caption text-content"
-    >
-      {name ? (
-        name.trim().charAt(0).toUpperCase()
-      ) : (
-        <LeafMark className="size-3.5 text-brand" />
-      )}
-    </span>
-  )
-}
 
 export function OrgSwitcher({
   organizations,
@@ -67,7 +56,7 @@ export function OrgSwitcher({
         className={cn(sidebarRow, 'font-medium text-content-strong')}
         data-testid="org-switcher"
       >
-        <WorkspaceMark name={null} />
+        <OrganizationMark icon={null} name={null} />
         <span className="min-w-0 flex-1 truncate">{tCommon('appName')}</span>
       </span>
     )
@@ -106,7 +95,10 @@ export function OrgSwitcher({
           data-testid="org-switcher"
           type="button"
         >
-          <WorkspaceMark name={active?.name ?? null} />
+          <OrganizationMark
+            icon={active?.icon ?? null}
+            name={active?.name ?? null}
+          />
           <span className="min-w-0 flex-1 truncate">
             {active?.name ?? t('title')}
           </span>
@@ -129,6 +121,10 @@ export function OrgSwitcher({
               key={organization.id}
               value={organization.id}
             >
+              <OrganizationMark
+                icon={organization.icon}
+                name={organization.name}
+              />
               <span className="truncate">{organization.name}</span>
             </DropdownMenuRadioItem>
           ))}
