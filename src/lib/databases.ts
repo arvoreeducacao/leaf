@@ -9,6 +9,7 @@ import {
   documents,
 } from '@/db/schema'
 import type { DatabaseProperty, DatabaseView, Document } from '@/db/schema'
+import { firstImageInContent } from '@/lib/database/card-preview'
 import type { Person } from '@/lib/database/people'
 import type { DatabaseRow } from '@/lib/database/views'
 import {
@@ -54,12 +55,14 @@ export function toDatabaseRow(
     | 'createdAt'
     | 'updatedAt'
   >,
+  preview: string | null = null,
 ): DatabaseRow {
   return {
     id: document.id,
     title: document.title,
     icon: document.icon,
     cover: document.cover,
+    preview,
     values: parseValues(document.properties),
     createdAt: toIso(document.createdAt),
     updatedAt: toIso(document.updatedAt),
@@ -125,6 +128,35 @@ export async function listDatabaseRows(
   return rows.map(toDatabaseRow)
 }
 
+export async function listRowPreviews(
+  databaseId: string,
+): Promise<Map<string, string>> {
+  const rows = await db
+    .select({ id: documents.id, content: documents.content })
+    .from(documents)
+    .where(
+      and(
+        eq(documents.parentId, databaseId),
+        eq(documents.kind, 'row'),
+        isNull(documents.cover),
+        isNull(documents.deletedAt),
+      ),
+    )
+    .limit(MAX_DATABASE_ROWS)
+
+  const previews = new Map<string, string>()
+
+  for (const row of rows) {
+    const image = firstImageInContent(row.content)
+
+    if (image) {
+      previews.set(row.id, image)
+    }
+  }
+
+  return previews
+}
+
 export async function listDatabaseTemplates(
   databaseId: string,
 ): Promise<Array<DatabaseRow>> {
@@ -180,14 +212,17 @@ export async function loadDatabase(
     return null
   }
 
-  const [properties, views, rows, templates, people, slackLinks] =
+  const views = await listDatabaseViews(databaseId)
+  const showsCards = views.some((view) => view.type === 'gallery')
+
+  const [properties, rows, templates, people, slackLinks, previews] =
     await Promise.all([
       listDatabaseProperties(databaseId),
-      listDatabaseViews(databaseId),
       listDatabaseRows(databaseId),
       listDatabaseTemplates(databaseId),
       listDatabasePeople(document.orgId, viewerId),
       listFormSlackLinks(databaseId),
+      showsCards ? listRowPreviews(databaseId) : new Map<string, string>(),
     ])
 
   return {
@@ -199,7 +234,10 @@ export async function loadDatabase(
       views.map((view) => view.id),
       viewerId,
     ),
-    rows,
+    rows: rows.map((row) => ({
+      ...row,
+      preview: previews.get(row.id) ?? null,
+    })),
     templates,
     defaultTemplateId: document.defaultTemplateId,
     people,
