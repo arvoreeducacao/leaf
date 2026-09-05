@@ -8,6 +8,7 @@ import {
   type DatabaseRow,
   type ViewConfig,
   applyFilters,
+  applySearch,
   applySorts,
   boardPropertyOf,
   emptyViewConfig,
@@ -454,5 +455,82 @@ describe('the id column', () => {
   it('is never offered as something to group a board by', () => {
     expect(operatorsFor('uniqueId')).toContain('is')
     expect(operatorsFor('uniqueId')).not.toContain('isEmpty')
+  })
+})
+
+
+describe('the search inside a database', () => {
+  const searchRows = [
+    row('a', 'Relatório de leitura', { status: 'todo', points: 3 }),
+    row('b', 'Plano de aula', { status: 'done', points: 10 }),
+    row('c', 'Sem nada', {}),
+  ]
+
+  it('gives everything back when nobody typed anything', () => {
+    expect(applySearch(searchRows, '   ', properties).map((i) => i.id)).toEqual([
+      'a',
+      'b',
+      'c',
+    ])
+  })
+
+  it('finds by a piece of the name, ignoring accent and case', () => {
+    expect(applySearch(searchRows, 'RELATORIO', properties).map((i) => i.id)).toEqual(
+      ['a'],
+    )
+  })
+
+  it('finds by what a column shows, not only by the name', () => {
+    expect(applySearch(searchRows, 'Done', properties).map((i) => i.id)).toEqual([
+      'b',
+    ])
+  })
+
+  it('finds by a number the way the person reads it', () => {
+    expect(applySearch(searchRows, '10', properties).map((i) => i.id)).toEqual(['b'])
+  })
+
+  it('gives nothing back when the word is in no row', () => {
+    expect(applySearch(searchRows, 'planilha', properties)).toEqual([])
+  })
+})
+
+describe('a filter that is still being set up', () => {
+  it('does not hide anything while nobody chose a value', () => {
+    expect(
+      applyFilters(
+        rows,
+        [{ propertyId: 'status', operator: 'is', value: null }],
+        properties,
+      ).map((item) => item.id),
+    ).toEqual(['a', 'b', 'c'])
+
+    expect(
+      applyFilters(
+        rows,
+        [{ propertyId: TITLE_PROPERTY_ID, operator: 'contains', value: '' }],
+        properties,
+      ).map((item) => item.id),
+    ).toEqual(['a', 'b', 'c'])
+  })
+
+  it('still lets the unchecked box be a real filter', () => {
+    expect(
+      applyFilters(
+        rows,
+        [{ propertyId: 'done', operator: 'is', value: false }],
+        properties,
+      ).map((item) => item.id),
+    ).toEqual(['b', 'c'])
+  })
+
+  it('keeps filtering the moment a value shows up', () => {
+    expect(
+      applyFilters(
+        rows,
+        [{ propertyId: 'status', operator: 'is', value: 'todo' }],
+        properties,
+      ).map((item) => item.id),
+    ).toEqual(['a'])
   })
 })

@@ -7,7 +7,12 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 
 import { db } from '@/db'
-import { databaseProperties, databaseViews, documents } from '@/db/schema'
+import {
+  databaseProperties,
+  databaseViewDrafts,
+  databaseViews,
+  documents,
+} from '@/db/schema'
 import type {
   DatabaseProperty,
   DatabasePropertyType,
@@ -770,6 +775,117 @@ export async function updateDatabaseView(
     .update(databaseViews)
     .set(next)
     .where(eq(databaseViews.id, viewId))
+
+  revalidatePath(`/doc/${view.databaseId}`)
+
+  return { ok: true }
+}
+
+export async function saveDatabaseViewDraft(
+  viewId: string,
+  config: ViewConfig,
+): Promise<DatabaseActionResult> {
+  const view = await databaseIdOfView(viewId)
+
+  if (!view) {
+    return notAllowed()
+  }
+
+  const session = await requireSession()
+  const access = await getDocumentAccess(view.databaseId, session)
+
+  if (!access) {
+    return notAllowed()
+  }
+
+  const serialized = serializeViewConfig(
+    parseViewConfig(serializeViewConfig(config)),
+  )
+
+  const existing = await db.query.databaseViewDrafts.findFirst({
+    where: and(
+      eq(databaseViewDrafts.viewId, viewId),
+      eq(databaseViewDrafts.userId, session.user.id),
+    ),
+  })
+
+  if (existing) {
+    await db
+      .update(databaseViewDrafts)
+      .set({ config: serialized, updatedAt: new Date() })
+      .where(eq(databaseViewDrafts.id, existing.id))
+
+    return { ok: true }
+  }
+
+  await db.insert(databaseViewDrafts).values({
+    id: nanoid(12),
+    viewId,
+    userId: session.user.id,
+    config: serialized,
+    updatedAt: new Date(),
+  })
+
+  return { ok: true }
+}
+
+export async function clearDatabaseViewDraft(
+  viewId: string,
+): Promise<DatabaseActionResult> {
+  const view = await databaseIdOfView(viewId)
+
+  if (!view) {
+    return notAllowed()
+  }
+
+  const session = await requireSession()
+  const access = await getDocumentAccess(view.databaseId, session)
+
+  if (!access) {
+    return notAllowed()
+  }
+
+  await db
+    .delete(databaseViewDrafts)
+    .where(
+      and(
+        eq(databaseViewDrafts.viewId, viewId),
+        eq(databaseViewDrafts.userId, session.user.id),
+      ),
+    )
+
+  return { ok: true }
+}
+
+export async function publishDatabaseViewDraft(
+  viewId: string,
+  config: ViewConfig,
+): Promise<DatabaseActionResult> {
+  const view = await databaseIdOfView(viewId)
+
+  if (!view || !(await canEditDatabase(view.databaseId))) {
+    return notAllowed()
+  }
+
+  const session = await requireSession()
+
+  await db
+    .update(databaseViews)
+    .set({
+      config: serializeViewConfig(
+        parseViewConfig(serializeViewConfig(config)),
+      ),
+    })
+    .where(eq(databaseViews.id, viewId))
+
+  await db
+    .delete(databaseViewDrafts)
+    .where(
+      and(
+        eq(databaseViewDrafts.viewId, viewId),
+        eq(databaseViewDrafts.userId, session.user.id),
+      ),
+    )
 
   revalidatePath(`/doc/${view.databaseId}`)
 
