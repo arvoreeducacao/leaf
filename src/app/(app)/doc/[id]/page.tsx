@@ -22,6 +22,7 @@ import {
   listAncestors,
   listDocumentLinkTargets,
 } from '@/lib/documents'
+import { authIssuer as appBaseUrl } from '@/lib/mcp-config'
 import { isRealtimeEnabled, realtimePort } from '@/lib/realtime-config'
 import { getTeamspace } from '@/lib/teamspaces'
 import { isUnsplashEnabled } from '@/lib/unsplash'
@@ -63,7 +64,9 @@ export default async function DocumentPage({ params }: Props) {
     listAncestors(document.id),
     countOpenComments(document.id),
     document.teamspaceId ? getTeamspace(document.teamspaceId) : null,
-    listDocumentLinkTargets(documentIdsInContent(document.content)),
+    listDocumentLinkTargets(
+      documentIdsInContent(document.content, appBaseUrl()),
+    ),
   ])
 
   const scope: ActiveTrailScope = document.teamspaceId

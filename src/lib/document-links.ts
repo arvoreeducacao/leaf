@@ -41,6 +41,7 @@ function pathOfSameOrigin(href: string, origin?: string): string | null {
 
 export function documentIdsInContent(
   content: string | null | undefined,
+  origin?: string,
 ): Array<string> {
   if (typeof content !== 'string' || content.length === 0) {
     return []
@@ -49,7 +50,7 @@ export function documentIdsInContent(
   const ids = new Set<string>()
 
   for (const match of content.matchAll(hrefInContentPattern)) {
-    const id = documentIdFromHref(match[1])
+    const id = documentIdFromHref(match[1], origin)
 
     if (id !== null) {
       ids.add(id)
