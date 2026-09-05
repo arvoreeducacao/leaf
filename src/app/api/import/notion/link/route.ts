@@ -14,9 +14,12 @@ import {
 import { createNotionClient } from '@/lib/notion/api'
 import { getNotionConnection } from '@/lib/notion/connection'
 import { assetKeyFor } from '@/lib/notion/import'
-import type { ImportEvent } from '@/lib/notion/import'
 import { notionIdFromLink } from '@/lib/notion/link'
 import { buildNotionImportMessages } from '@/lib/notion/messages'
+import {
+  importEventStream,
+  importStreamHeaders,
+} from '@/lib/notion/stream'
 import { syncNotion } from '@/lib/notion/sync'
 import { storage } from '@/lib/storage'
 
@@ -90,59 +93,35 @@ export async function POST(request: Request) {
     teamspaceId: placement.teamspaceId,
   }
 
-  const encoder = new TextEncoder()
-
-  const stream = new ReadableStream<Uint8Array>({
-    async start(controller) {
-      function send(event: ImportEvent) {
-        controller.enqueue(encoder.encode(`${JSON.stringify(event)}\n`))
-      }
-
-      try {
-        const client = createNotionClient(connection.accessToken, {
-          signal: request.signal,
-        })
-
-        for await (const event of syncNotion(
-          client,
-          wholeWorkspace
-            ? 'workspace'
-            : [{ id: pageId as string, kind: 'page' }],
-          owner,
-          messages,
-          request.signal,
-          {
-            comments: body.comments === true,
-            force: body.force === true,
-            storeAsset: async (bytes, contentType, fileName) => {
-              const key = assetKeyFor(fileName)
-
-              await storage.put(key, Buffer.from(bytes), contentType)
-
-              return `/api/uploads/${key}`
-            },
-          },
-        )) {
-          send(event)
-
-          if (event.type === 'done') {
-            revalidatePath('/', 'layout')
-          }
-        }
-      } catch {
-        send({ type: 'error', error: t('unfinished') })
-      } finally {
-        controller.close()
-      }
-    },
+  const client = createNotionClient(connection.accessToken, {
+    signal: request.signal,
   })
 
-  return new Response(stream, {
-    headers: {
-      'Cache-Control': 'no-store',
-      'Content-Type': 'application/x-ndjson; charset=utf-8',
-      'X-Accel-Buffering': 'no',
+  const stream = importEventStream(
+    syncNotion(
+      client,
+      wholeWorkspace ? 'workspace' : [{ id: pageId as string, kind: 'page' }],
+      owner,
+      messages,
+      request.signal,
+      {
+        comments: body.comments === true,
+        force: body.force === true,
+        storeAsset: async (bytes, contentType, fileName) => {
+          const key = assetKeyFor(fileName)
+
+          await storage.put(key, Buffer.from(bytes), contentType)
+
+          return `/api/uploads/${key}`
+        },
+      },
+    ),
+    {
+      failure: t('unfinished'),
+      onDone: () => revalidatePath('/', 'layout'),
     },
-  })
+  )
+
+  return new Response(stream, { headers: importStreamHeaders })
 }
 

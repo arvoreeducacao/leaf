@@ -12,9 +12,12 @@ import {
   serializeImportDestination,
 } from '@/lib/import-destination'
 import { importNotionZip } from '@/lib/notion/import'
-import type { ImportEvent } from '@/lib/notion/import'
 import { MAX_ZIP_BYTES, MAX_ZIP_LABEL, ZIP_EXTENSIONS } from '@/lib/notion/limits'
 import { buildNotionImportMessages } from '@/lib/notion/messages'
+import {
+  importEventStream,
+  importStreamHeaders,
+} from '@/lib/notion/stream'
 
 export const runtime = 'nodejs'
 
@@ -113,40 +116,14 @@ export async function POST(request: Request) {
     parentId: staysUnderParent ? parentId : null,
     teamspaceId: placement.teamspaceId,
   }
-  const encoder = new TextEncoder()
 
-  const stream = new ReadableStream<Uint8Array>({
-    async start(controller) {
-      function send(event: ImportEvent) {
-        controller.enqueue(encoder.encode(`${JSON.stringify(event)}\n`))
-      }
-
-      try {
-        for await (const event of importNotionZip(
-          data,
-          owner,
-          messages,
-          request.signal,
-        )) {
-          send(event)
-
-          if (event.type === 'done') {
-            revalidatePath('/', 'layout')
-          }
-        }
-      } catch {
-        send({ type: 'error', error: t('unfinished') })
-      } finally {
-        controller.close()
-      }
+  const stream = importEventStream(
+    importNotionZip(data, owner, messages, request.signal),
+    {
+      failure: t('unfinished'),
+      onDone: () => revalidatePath('/', 'layout'),
     },
-  })
+  )
 
-  return new Response(stream, {
-    headers: {
-      'Cache-Control': 'no-store',
-      'Content-Type': 'application/x-ndjson; charset=utf-8',
-      'X-Accel-Buffering': 'no',
-    },
-  })
+  return new Response(stream, { headers: importStreamHeaders })
 }
