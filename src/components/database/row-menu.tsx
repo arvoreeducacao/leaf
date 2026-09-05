@@ -6,10 +6,10 @@ import { useState } from 'react'
 import { toast } from 'sonner'
 
 import {
-  ArrowExpandIcon,
   ArrowUpRightIcon,
   ClipboardContentIcon,
   EllipsisVerticalIcon,
+  ExpandIcon,
   HierarchyIcon,
   TrashIcon,
 } from '@/components/icons'
@@ -69,7 +69,7 @@ function useRowActions({
 
   const entries: Array<MenuEntry> = [
     {
-      icon: ArrowExpandIcon,
+      icon: ExpandIcon,
       key: 'open',
       label: t('openRow'),
       onSelect: () => router.push(rowPath),
