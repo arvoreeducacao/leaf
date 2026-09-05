@@ -46,6 +46,7 @@ jobs:
           push: true
           build-args: |
             LEAF_BUILD_ID=${{ github.sha }}
+            PREVIOUS_IMAGE=${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:latest
           tags: |
             ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
             ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:latest
