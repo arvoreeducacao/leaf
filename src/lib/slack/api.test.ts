@@ -38,6 +38,14 @@ describe('encodeArguments', () => {
     expect(body.get('unfurl_links')).toBe('false')
   })
 
+  it('serializes blocks as json, which is what Slack parses', () => {
+    const blocks = [{ text: { text: '*oi*', type: 'mrkdwn' }, type: 'section' }]
+    const body = encodeArguments({ blocks, channel: 'C01' })
+
+    expect(body.get('blocks')).toBe(JSON.stringify(blocks))
+    expect(body.get('blocks')).not.toContain('[object Object]')
+  })
+
   it('leaves out what was not given', () => {
     const body = encodeArguments({ channel: 'C01', thread_ts: undefined })
 
