@@ -219,14 +219,14 @@ test.describe('organizations', () => {
 
     await page.goto('/org')
     await page
-      .getByRole('button', { name: 'Excluir', exact: true })
+      .getByRole('button', { name: 'Excluir teamspace', exact: true })
       .first()
       .click()
     await expect(
       page.getByText('O 1 documento deste teamspace volta para a organização.'),
     ).toBeVisible()
     await page
-      .getByRole('button', { name: 'Excluir', exact: true })
+      .getByRole('button', { name: 'Excluir teamspace', exact: true })
       .last()
       .click()
     await expect(page.getByText('Teamspace excluído')).toBeVisible()
