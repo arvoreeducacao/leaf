@@ -46,7 +46,9 @@ function at(minutes: number) {
 }
 
 const viewConfig = serializeViewConfig({
+  ...emptyViewConfig,
   groupByPropertyId: 'prop-status',
+  datePropertyId: 'prop-points',
   filters: [{ propertyId: 'prop-points', operator: 'greaterThan', value: 1 }],
   sorts: [{ propertyId: 'title', direction: 'asc' }],
   hiddenPropertyIds: ['prop-points'],
@@ -314,6 +316,17 @@ describe('duplicating a database', () => {
     expect(ids.has(config?.questions[0]?.propertyId ?? '')).toBe(true)
     expect(ids.has(config?.automations[0]?.propertyId ?? '')).toBe(true)
     expect(config?.automations[0]?.value).toBe('todo')
+  })
+
+  it('repoints the date column of the copied view', async () => {
+    await copyDatabaseInto('base', 'copia', owner.id, at(10))
+    const snapshot = await loadDatabase('copia')
+    const table = snapshot?.views.find((view) => view.type === 'table')
+    const config = parseViewConfig(table?.config ?? null)
+    const ids = new Set(snapshot?.properties.map((item) => item.id))
+
+    expect(config.datePropertyId).not.toBe('prop-points')
+    expect(ids.has(config.datePropertyId ?? '')).toBe(true)
   })
 
   it('does not hand the public link of the form to the copy', async () => {

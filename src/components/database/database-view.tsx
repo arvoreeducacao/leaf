@@ -297,6 +297,7 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
           name: t('copyOfView', { name: source.name }),
           type: source.type,
           config: serializeViewConfig(published),
+          publicToken: null,
           position: views.length,
           createdAt: new Date(),
         }

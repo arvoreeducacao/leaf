@@ -260,8 +260,15 @@ function remapConfig(
   }
 
   return serializeViewConfig({
+    ...config,
     groupByPropertyId: config.groupByPropertyId
       ? remap(config.groupByPropertyId)
+      : null,
+    datePropertyId: config.datePropertyId
+      ? remap(config.datePropertyId)
+      : null,
+    endDatePropertyId: config.endDatePropertyId
+      ? remap(config.endDatePropertyId)
       : null,
     filters: config.filters.map((filter) => ({
       ...filter,
