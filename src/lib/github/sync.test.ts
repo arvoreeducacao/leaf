@@ -23,7 +23,7 @@ import type { GithubSyncMessages } from '@/lib/github/messages'
 import type { GithubSyncSummary } from '@/lib/github/sync'
 import { DATABASE_KEY, cursorKey, syncGithub } from '@/lib/github/sync'
 
-const repo = 'arvoreeducacao/leaf'
+const repo = 'acme/leaf'
 
 const messages: GithubSyncMessages = {
   boardView: 'Board',
@@ -149,7 +149,7 @@ beforeEach(async () => {
 
   await db.insert(user).values({
     createdAt: new Date(),
-    email: 'owner@arvore.com.br',
+    email: 'owner@example.com',
     emailVerified: false,
     id: owner.id,
     name: 'Owner',

@@ -43,7 +43,7 @@ vi.mock('next/headers', () => ({
   }),
 }))
 
-const activeSession = { user: { id: 'user-owner', email: 'owner@arvore.com.br' } }
+const activeSession = { user: { id: 'user-owner', email: 'owner@example.com' } }
 
 vi.mock('@/lib/auth', () => ({
   getSession: async () => activeSession,
@@ -64,7 +64,7 @@ import { resetInviteLimiter } from '@/lib/authz'
 import { inviteToOrganization } from '@/lib/org-actions'
 import { inviteToDocument } from '@/lib/share-actions'
 
-const orgId = 'org-arvore'
+const orgId = 'org-acme'
 const documentId = 'doc-restricted'
 
 function restrict(domains: string | null) {
@@ -104,7 +104,7 @@ beforeEach(async () => {
 
   await db
     .insert(organizations)
-    .values({ id: orgId, name: 'Árvore School', createdAt: now })
+    .values({ id: orgId, name: 'Acme School', createdAt: now })
 
   await db.insert(organizationMembers).values({
     id: 'member-owner',
@@ -139,33 +139,33 @@ describe('organization invite', () => {
   })
 
   it('blocks an email outside the domain with an active restriction', async () => {
-    restrict('arvore.com.br')
+    restrict('example.com')
 
     const result = await inviteToOrganization('outside@gmail.com', 'member')
 
     expect(result).toEqual({
       ok: false,
-      error: 'org.errorDomainRestricted:{"domain":"arvore.com.br"}',
+      error: 'org.errorDomainRestricted:{"domain":"example.com"}',
     })
     expect(await db.select().from(organizationInvites)).toHaveLength(0)
   })
 
   it('accepts an email from the allowed domain', async () => {
-    restrict('arvore.com.br')
+    restrict('example.com')
 
-    const result = await inviteToOrganization('guest@arvore.com.br', 'member')
+    const result = await inviteToOrganization('guest@example.com', 'member')
 
     expect(result.ok).toBe(true)
     expect(await db.select().from(organizationInvites)).toHaveLength(1)
   })
 
   it('accepts any domain from the list', async () => {
-    restrict('arvore.com.br,arvore.dev')
+    restrict('example.com,example.dev')
 
-    expect((await inviteToOrganization('one@arvore.dev', 'member')).ok).toBe(
+    expect((await inviteToOrganization('one@example.dev', 'member')).ok).toBe(
       true,
     )
-    expect((await inviteToOrganization('other@arvore.com', 'member')).ok).toBe(
+    expect((await inviteToOrganization('other@nope.com', 'member')).ok).toBe(
       false,
     )
     expect(await db.select().from(organizationInvites)).toHaveLength(1)
@@ -181,23 +181,23 @@ describe('document sharing', () => {
   })
 
   it('blocks an email outside the domain with an active restriction', async () => {
-    restrict('arvore.com.br')
+    restrict('example.com')
 
     const result = await inviteToDocument(documentId, 'outside@gmail.com', 'editor')
 
     expect(result).toEqual({
       ok: false,
-      error: 'errors.domainRestricted:{"domain":"arvore.com.br"}',
+      error: 'errors.domainRestricted:{"domain":"example.com"}',
     })
     expect(await db.select().from(documentShares)).toHaveLength(0)
   })
 
   it('accepts a guest from the domain who is not in the organization', async () => {
-    restrict('arvore.com.br')
+    restrict('example.com')
 
     const result = await inviteToDocument(
       documentId,
-      'GUEST@Arvore.com.br',
+      'GUEST@Example.com',
       'editor',
     )
 
@@ -206,6 +206,6 @@ describe('document sharing', () => {
     const shares = await db.select().from(documentShares)
 
     expect(shares).toHaveLength(1)
-    expect(shares[0].granteeEmail).toBe('guest@arvore.com.br')
+    expect(shares[0].granteeEmail).toBe('guest@example.com')
   })
 })

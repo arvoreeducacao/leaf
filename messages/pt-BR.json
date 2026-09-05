@@ -23,8 +23,8 @@
     "account": "Conta | Leaf"
   },
   "auth": {
-    "loginTitle": "Entrar na sua conta",
-    "loginSubtitle": "Use o email e a senha da sua conta",
+    "loginTitle": "Bem-vindo ao Leaf",
+    "loginSubtitle": "Entre na sua conta para escrever e compartilhar documentos.",
     "loginSubmit": "Entrar",
     "loginSwitchText": "Ainda não tem conta?",
     "loginSwitchLabel": "Criar conta",
@@ -43,13 +43,16 @@
     "signOutFailed": "Não foi possível sair da conta",
     "domainHint": "Use seu email @{domain}",
     "domainRestricted": "Use seu email @{domain} para entrar no Leaf.",
-    "ssoTitle": "Bem-vindo ao Leaf",
-    "ssoSubtitle": "Entre com sua conta Árvore para escrever e compartilhar documentos.",
     "ssoDomainHint": "Use sua conta @{domain}",
-    "ssoSubmit": "Entrar com a conta Árvore",
-    "ssoFailed": "Não foi possível entrar com a conta Árvore. Tente de novo.",
-    "ssoDomainBlocked": "A conta conectada à Árvore não é @{domain}. Entre com outra conta para usar o Leaf.",
-    "ssoSwitchAccount": "Entrar com outra conta"
+    "ssoFailed": "Não foi possível entrar. Tente de novo.",
+    "ssoDomainBlocked": "A conta que você usou não é @{domain}. Entre com outra conta para usar o Leaf.",
+    "ssoSwitchAccount": "Entrar com outra conta",
+    "emailPlaceholder": "Insira seu endereço de email...",
+    "continue": "Continuar",
+    "continueWith": "ou continue com",
+    "signInWith": "entre com",
+    "passkey": "Chave de acesso",
+    "passkeyFailed": "Não foi possível entrar com a chave de acesso. Tente de novo."
   },
   "settings": {
     "account": "Conta",
@@ -90,7 +93,18 @@
     "nameRequired": "Escreva um nome",
     "nameHint": "É o nome que aparece nos comentários e ao lado do seu cursor.",
     "emailLabel": "E-mail",
-    "emailHint": "Vem do login e não se edita aqui."
+    "emailHint": "Vem do login e não se edita aqui.",
+    "passkeyTitle": "Chaves de acesso",
+    "passkeyHint": "Entre pela digital, pelo rosto ou pelo PIN do aparelho, sem digitar senha.",
+    "passkeyAdd": "Cadastrar chave neste aparelho",
+    "passkeyEmpty": "Nenhuma chave cadastrada ainda.",
+    "passkeyUnnamed": "Chave de acesso",
+    "passkeyCreated": "Cadastrada em {date}",
+    "passkeyRemove": "Remover",
+    "passkeyAdded": "Chave cadastrada",
+    "passkeyAddFailed": "Não foi possível cadastrar a chave",
+    "passkeyRemoved": "Chave removida",
+    "passkeyRemoveFailed": "Não foi possível remover a chave"
   },
   "nav": {
     "navigation": "Navegação",
@@ -600,6 +614,7 @@
     "slackSave": "Salvar",
     "slackConfigured": "Canal configurado. O endereço fica guardado no servidor e não aparece aqui.",
     "slackRemove": "Trocar de canal",
+    "openInLeaf": "Abrir no Leaf",
     "webhookInvalid": "Endereço inválido. Use o webhook de entrada do Slack, que começa com https://hooks.slack.com/services/",
     "presentationSection": "Apresentação",
     "headline": "Título do formulário",
@@ -639,7 +654,6 @@
     "slackPushComments": "Mandar os comentários daqui para a thread",
     "channelInvalid": "Não reconheci esse canal. Cole o link do canal ou o ID.",
     "channelUnreachable": "O Leaf não consegue ver esse canal. Convide o app para ele e tente de novo.",
-    "slackOpenRow": "Abrir a resposta no Leaf",
     "slackReplyHint": "Respondendo nesta thread você comenta na resposta."
   },
   "editor": {
@@ -740,7 +754,7 @@
     "createSubtitle": "Uma organização reúne a sua equipe. Quem cria vira a pessoa dona",
     "createHelp": "Você pode participar de várias organizações. Se alguém já convidou você, entre com o email do convite e a organização aparece aqui",
     "nameLabel": "Nome da organização",
-    "namePlaceholder": "Escola Árvore",
+    "namePlaceholder": "Escola Girassol",
     "create": "Criar organização",
     "created": "Organização criada",
     "rename": "Salvar nome",

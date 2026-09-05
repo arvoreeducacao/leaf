@@ -3,17 +3,17 @@ import { describe, expect, it } from 'vitest'
 import { parseChannelRef } from './config'
 
 describe('parseChannelRef', () => {
-  it('aceita o id do canal', () => {
+  it('accepts the channel id', () => {
     expect(parseChannelRef('C01DB3YUUEQ')).toBe('C01DB3YUUEQ')
   })
 
-  it('aceita o link de arquivo do canal', () => {
+  it('accepts the channel archive link', () => {
     expect(
       parseChannelRef('https://leianaarvore.slack.com/archives/C01DB3YUUEQ'),
     ).toBe('C01DB3YUUEQ')
   })
 
-  it('aceita link com mensagem no fim', () => {
+  it('accepts a link that ends on a message', () => {
     expect(
       parseChannelRef(
         'https://leianaarvore.slack.com/archives/C01DB3YUUEQ/p1788525945625709',
@@ -21,17 +21,17 @@ describe('parseChannelRef', () => {
     ).toBe('C01DB3YUUEQ')
   })
 
-  it('recusa nome de canal', () => {
+  it('rejects a channel name', () => {
     expect(parseChannelRef('#feedbacks-e-duvidas-produto')).toBeNull()
   })
 
-  it('recusa domínio parecido', () => {
+  it('rejects a lookalike domain', () => {
     expect(
       parseChannelRef('https://leianaarvore.slack.com.evil.test/archives/C01AB'),
     ).toBeNull()
   })
 
-  it('recusa vazio', () => {
+  it('rejects an empty reference', () => {
     expect(parseChannelRef('   ')).toBeNull()
   })
 })

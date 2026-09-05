@@ -16,7 +16,7 @@ describe('embeddablePastedUrl', () => {
   })
 
   it('ignores a link nobody can frame', () => {
-    expect(embeddablePastedUrl('https://arvore.com.br')).toBeNull()
+    expect(embeddablePastedUrl('https://example.com')).toBeNull()
     expect(embeddablePastedUrl('')).toBeNull()
     expect(embeddablePastedUrl(null)).toBeNull()
   })

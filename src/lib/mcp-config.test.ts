@@ -14,7 +14,7 @@ afterEach(() => {
 })
 
 describe('flags do MCP', () => {
-  it('fica ligado por padrão fora de produção e desligado em produção', () => {
+  it('is on by default outside production and off in production', () => {
     vi.stubEnv('LEAF_MCP_ENABLED', undefined)
     vi.stubEnv('NODE_ENV', 'development')
     expect(isMcpEnabled()).toBe(true)
@@ -29,7 +29,7 @@ describe('flags do MCP', () => {
     expect(isMcpEnabled()).toBe(false)
   })
 
-  it('a escrita depende do MCP ligado e de LEAF_MCP_WRITE', () => {
+  it('writing depends on MCP being on and on LEAF_MCP_WRITE', () => {
     vi.stubEnv('NODE_ENV', 'development')
     vi.stubEnv('LEAF_MCP_ENABLED', '1')
     vi.stubEnv('LEAF_MCP_WRITE', undefined)
@@ -45,7 +45,7 @@ describe('flags do MCP', () => {
 })
 
 describe('issuer e resource', () => {
-  it('deriva tudo de BETTER_AUTH_URL sem barra final', () => {
+  it('derives everything from BETTER_AUTH_URL without a trailing slash', () => {
     vi.stubEnv('BETTER_AUTH_URL', 'https://leaf.exemplo.org/')
 
     expect(authIssuer()).toBe('https://leaf.exemplo.org')
@@ -55,7 +55,7 @@ describe('issuer e resource', () => {
     )
   })
 
-  it('só aceita o host do issuer em produção', () => {
+  it('accepts only the issuer host in production', () => {
     vi.stubEnv('BETTER_AUTH_URL', 'https://leaf.exemplo.org')
     vi.stubEnv('NODE_ENV', 'production')
 

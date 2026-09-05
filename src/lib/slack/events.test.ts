@@ -7,19 +7,19 @@ function callback(event: Record<string, unknown>) {
 }
 
 describe('challengeOf', () => {
-  it('devolve o desafio da verificação de URL', () => {
+  it('returns the challenge of the URL verification', () => {
     expect(challengeOf({ challenge: 'abc', type: 'url_verification' })).toBe(
       'abc',
     )
   })
 
-  it('devolve nulo para outro tipo', () => {
+  it('returns null for any other type', () => {
     expect(challengeOf(callback({ type: 'message' }))).toBeNull()
   })
 })
 
 describe('parseMessageEvent', () => {
-  it('lê uma resposta de thread', () => {
+  it('reads a thread reply', () => {
     expect(
       parseMessageEvent(
         callback({
@@ -41,7 +41,7 @@ describe('parseMessageEvent', () => {
     })
   })
 
-  it('marca mensagem de bot', () => {
+  it('marks a message from a bot', () => {
     const parsed = parseMessageEvent(
       callback({
         bot_id: 'B1',
@@ -56,7 +56,7 @@ describe('parseMessageEvent', () => {
     expect(parsed?.botId).toBe('B1')
   })
 
-  it('lê a mensagem editada de um message_changed', () => {
+  it('reads the edited message out of a message_changed', () => {
     const parsed = parseMessageEvent(
       callback({
         channel: 'C01',
@@ -76,7 +76,7 @@ describe('parseMessageEvent', () => {
     expect(parsed).toMatchObject({ messageTs: '2.2', text: 'corrigido' })
   })
 
-  it('ignora subtipo que não relaya', () => {
+  it('ignores a subtype that is not relayed', () => {
     expect(
       parseMessageEvent(
         callback({
@@ -89,11 +89,11 @@ describe('parseMessageEvent', () => {
     ).toBeNull()
   })
 
-  it('ignora evento que não é mensagem', () => {
+  it('ignores an event that is not a message', () => {
     expect(parseMessageEvent(callback({ type: 'reaction_added' }))).toBeNull()
   })
 
-  it('ignora corpo que não é event_callback', () => {
+  it('ignores a body that is not an event_callback', () => {
     expect(parseMessageEvent({ type: 'url_verification' })).toBeNull()
   })
 })

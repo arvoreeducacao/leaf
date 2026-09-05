@@ -5,11 +5,10 @@ import {
 } from '@/lib/comments'
 import { isSlackWebhook } from '@/lib/database/form-message'
 import { getFormSlack } from '@/lib/form-webhooks'
-import { authIssuer } from '@/lib/mcp-config'
 
 import { type SlackClient, createSlackClient } from './api'
-import { escapeSlackText } from './text'
 import { SLACK_TIMEOUT_MS, slackBotToken } from './config'
+import { escapeSlackText } from './text'
 import { getThreadOfDocument, getThreadOfMessage, saveThread } from './threads'
 
 export { escapeSlackText }
@@ -27,9 +26,10 @@ export type ThreadMessage = Readonly<{
 
 export type IngestOutcome = 'created' | 'updated' | 'ignored'
 
-export function rowUrl(documentId: string): string {
-  return `${authIssuer()}/doc/${documentId}`
-}
+export type SlackAnnouncePayload = Readonly<{
+  text: string
+  blocks: ReadonlyArray<unknown>
+}>
 
 export function botClient(): SlackClient | null {
   const token = slackBotToken()
@@ -37,10 +37,13 @@ export function botClient(): SlackClient | null {
   return token === null ? null : createSlackClient(token)
 }
 
-async function postToWebhook(url: string, text: string): Promise<void> {
+async function postToWebhook(
+  url: string,
+  payload: SlackAnnouncePayload,
+): Promise<void> {
   try {
     await fetch(url, {
-      body: JSON.stringify({ text }),
+      body: JSON.stringify(payload),
       headers: { 'content-type': 'application/json' },
       method: 'POST',
       signal: AbortSignal.timeout(SLACK_TIMEOUT_MS),
@@ -53,11 +56,20 @@ async function postToWebhook(url: string, text: string): Promise<void> {
 export type AnnounceInput = Readonly<{
   viewId: string
   documentId: string
-  text: string
-  openLabel: string
+  payload: SlackAnnouncePayload
   replyHint: string
   client?: SlackClient | null
 }>
+
+function withReplyHint(
+  payload: SlackAnnouncePayload,
+  replyHint: string,
+): ReadonlyArray<unknown> {
+  return [
+    ...payload.blocks,
+    { elements: [{ text: replyHint, type: 'mrkdwn' }], type: 'context' },
+  ]
+}
 
 export async function announceSubmission(
   input: AnnounceInput,
@@ -71,17 +83,12 @@ export async function announceSubmission(
   const client = input.client === undefined ? botClient() : input.client
 
   if (link.channelId && client) {
-    const body = [
-      input.text,
-      `<${rowUrl(input.documentId)}|${input.openLabel}>`,
-      link.pullThread ? `_${input.replyHint}_` : null,
-    ]
-      .filter((line): line is string => line !== null)
-      .join('\n\n')
-
     const posted = await client.postMessage({
+      blocks: link.pullThread
+        ? withReplyHint(input.payload, input.replyHint)
+        : input.payload.blocks,
       channelId: link.channelId,
-      text: body,
+      text: input.payload.text,
     })
 
     if (!posted) {
@@ -99,7 +106,7 @@ export async function announceSubmission(
   }
 
   if (link.url && isSlackWebhook(link.url)) {
-    await postToWebhook(link.url, input.text)
+    await postToWebhook(link.url, input.payload)
 
     return true
   }

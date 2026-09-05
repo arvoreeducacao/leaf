@@ -14,7 +14,7 @@ import { account, documents, session, user } from '@/db/schema'
 import { resetDatabase } from '@/db/testing'
 import { auth } from '@/lib/auth'
 
-const email = 'person@arvore.com.br'
+const email = 'person@example.com'
 
 async function endpointContext() {
   return {
@@ -28,7 +28,7 @@ async function endpointContext() {
     body: {},
     redirect: (url: string) => new Response(null, { status: 302 }),
     json: (value: unknown) => value,
-    path: '/callback/arvore',
+    path: '/callback/sso',
     method: 'GET',
   }
 }
@@ -38,15 +38,15 @@ async function ssoSignIn() {
 
   return handleOAuthUserInfo(context as never, {
     account: {
-      accountId: 'arvore-identity-id',
-      issuer: 'https://auth.arvore.com.br/api-arvore',
-      providerId: 'arvore',
+      accountId: 'sso-identity-id',
+      issuer: 'https://auth.example.com/oidc',
+      providerId: 'sso',
     },
     userInfo: {
       email,
       emailVerified: true,
-      id: 'arvore-identity-id',
-      name: 'Person from Árvore',
+      id: 'sso-identity-id',
+      name: 'Person from Acme',
     },
   })
 }
@@ -58,8 +58,8 @@ beforeEach(async () => {
   process.env.BETTER_AUTH_URL ??= 'http://localhost:3000'
 })
 
-describe('linking the Árvore SSO account to the email and password account', () => {
-  it('keeps the same person and their documents', async () => {
+describe('linking the SSO account to the email and password account', () => {
+  it('refuses to absorb a password account that never proved the email', async () => {
     const created = await auth.api.signUpEmail({
       body: { email, name: 'Person', password: 'strong-password-123' },
     })
@@ -72,8 +72,7 @@ describe('linking the Árvore SSO account to the email and password account', ()
 
     const linked = await ssoSignIn()
 
-    expect(linked.error).toBeNull()
-    expect(linked.data?.user.id).toBe(created.user.id)
+    expect(linked.error).toBe('account not linked')
     expect(await db.select().from(user)).toHaveLength(1)
 
     const accounts = await db
@@ -81,10 +80,7 @@ describe('linking the Árvore SSO account to the email and password account', ()
       .from(account)
       .where(eq(account.userId, created.user.id))
 
-    expect(accounts.map((row) => row.providerId).sort()).toEqual([
-      'arvore',
-      'credential',
-    ])
+    expect(accounts.map((row) => row.providerId)).toEqual(['credential'])
 
     const owned = await db
       .select()

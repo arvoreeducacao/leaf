@@ -24,16 +24,16 @@ afterEach(() => {
 
 describe('repository list parsing', () => {
   it('qualifies bare names with the org and keeps explicit owners', () => {
-    expect(parseRepoList('leaf, other/thing', 'arvoreeducacao')).toEqual([
-      'arvoreeducacao/leaf',
+    expect(parseRepoList('leaf, other/thing', 'acme')).toEqual([
+      'acme/leaf',
       'other/thing',
     ])
   })
 
   it('drops blanks, duplicates and malformed entries', () => {
     expect(
-      parseRepoList(' leaf , , leaf, a/b/c, bad name, ', 'arvoreeducacao'),
-    ).toEqual(['arvoreeducacao/leaf'])
+      parseRepoList(' leaf , , leaf, a/b/c, bad name, ', 'acme'),
+    ).toEqual(['acme/leaf'])
   })
 
   it('caps the list', () => {
@@ -56,13 +56,21 @@ describe('github configuration', () => {
     expect(githubConfig()).toBeNull()
   })
 
-  it('defaults the org and qualifies the repositories', () => {
+  it('stays off when bare names have no org to qualify them', () => {
     process.env.GITHUB_TOKEN = 'ghp_token'
-    process.env.LEAF_GITHUB_REPOS = 'leaf,api-arvore'
+    process.env.LEAF_GITHUB_REPOS = 'leaf,docs'
+
+    expect(githubConfig()).toBeNull()
+  })
+
+  it('qualifies the repositories with the configured org', () => {
+    process.env.GITHUB_TOKEN = 'ghp_token'
+    process.env.LEAF_GITHUB_ORG = 'acme'
+    process.env.LEAF_GITHUB_REPOS = 'leaf,docs'
 
     expect(githubConfig()).toEqual({
-      org: 'arvoreeducacao',
-      repos: ['arvoreeducacao/leaf', 'arvoreeducacao/api-arvore'],
+      org: 'acme',
+      repos: ['acme/leaf', 'acme/docs'],
       token: 'ghp_token',
     })
   })
@@ -77,9 +85,9 @@ describe('service trigger credentials', () => {
 
   it('accepts a long secret and lowercases the owner email', () => {
     process.env.LEAF_GITHUB_SYNC_SECRET = 'a-secret-long-enough'
-    process.env.LEAF_GITHUB_SYNC_OWNER = 'Bot@Arvore.com.BR'
+    process.env.LEAF_GITHUB_SYNC_OWNER = 'Bot@Example.COM'
 
     expect(githubSyncSecret()).toBe('a-secret-long-enough')
-    expect(githubSyncOwnerEmail()).toBe('bot@arvore.com.br')
+    expect(githubSyncOwnerEmail()).toBe('bot@example.com')
   })
 })

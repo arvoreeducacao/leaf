@@ -50,7 +50,7 @@ describe('POST /api/slack/events', () => {
     vi.unstubAllEnvs()
   })
 
-  it('recusa quando o segredo não está configurado', async () => {
+  it('refuses when the signing secret is missing', async () => {
     vi.stubEnv('SLACK_SIGNING_SECRET', '')
 
     const response = await POST(request(reply))
@@ -59,7 +59,7 @@ describe('POST /api/slack/events', () => {
     expect(ingest).not.toHaveBeenCalled()
   })
 
-  it('recusa assinatura que não confere', async () => {
+  it('refuses a signature that does not match', async () => {
     const response = await POST(
       request(reply, { 'x-slack-signature': 'v0=naovale' }),
     )
@@ -68,7 +68,7 @@ describe('POST /api/slack/events', () => {
     expect(ingest).not.toHaveBeenCalled()
   })
 
-  it('recusa carimbo velho, mesmo assinado', async () => {
+  it('refuses an old stamp even when it is signed', async () => {
     const body = JSON.stringify(reply)
     const timestamp = String(Math.floor(Date.now() / 1000) - 3600)
 
@@ -86,7 +86,7 @@ describe('POST /api/slack/events', () => {
     expect(response.status).toBe(401)
   })
 
-  it('devolve o desafio da verificação de URL', async () => {
+  it('answers the challenge of the URL verification', async () => {
     const response = await POST(
       request({ challenge: 'desafio-123', type: 'url_verification' }),
     )
@@ -96,7 +96,7 @@ describe('POST /api/slack/events', () => {
     expect(ingest).not.toHaveBeenCalled()
   })
 
-  it('entrega a resposta da thread para virar comentário', async () => {
+  it('hands the thread reply over to become a comment', async () => {
     const response = await POST(request(reply))
 
     expect(response.status).toBe(200)
@@ -110,7 +110,7 @@ describe('POST /api/slack/events', () => {
     })
   })
 
-  it('responde 200 para evento que não interessa', async () => {
+  it('answers 200 to an event it does not care about', async () => {
     const response = await POST(
       request({ event: { type: 'reaction_added' }, type: 'event_callback' }),
     )
@@ -119,7 +119,7 @@ describe('POST /api/slack/events', () => {
     expect(ingest).not.toHaveBeenCalled()
   })
 
-  it('recusa corpo que não é json', async () => {
+  it('refuses a body that is not json', async () => {
     const body = 'nao-e-json'
     const timestamp = String(Math.floor(Date.now() / 1000))
 

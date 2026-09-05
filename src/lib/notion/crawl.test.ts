@@ -74,7 +74,7 @@ const notionAuthors: Record<string, { id: string; name?: string; person?: { emai
   'user-ana': {
     id: 'user-ana',
     name: 'Ana Souza',
-    person: { email: 'ana@arvore.com.br' },
+    person: { email: 'ana@example.com' },
   },
   'user-outside': { id: 'user-outside', name: 'Someone from Outside' },
 }
@@ -291,7 +291,7 @@ beforeEach(async () => {
     {
       id: 'user-owner',
       name: 'Owner',
-      email: 'owner@arvore.com.br',
+      email: 'owner@example.com',
       emailVerified: false,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -299,7 +299,7 @@ beforeEach(async () => {
     {
       id: 'user-ana',
       name: 'Ana Souza',
-      email: 'ana@arvore.com.br',
+      email: 'ana@example.com',
       emailVerified: false,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -495,7 +495,7 @@ describe('open Notion comments', () => {
 
     expect(threads).toHaveLength(3)
     expect(threads[0].discussionId).toBe('disc-1')
-    expect(threads[0].authorEmail).toBe('ana@arvore.com.br')
+    expect(threads[0].authorEmail).toBe('ana@example.com')
     expect(threads[1].authorEmail).toBeNull()
     expect(threads[1].authorName).toBe('Someone from Outside')
   })

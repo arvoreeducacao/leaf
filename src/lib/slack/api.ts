@@ -18,6 +18,7 @@ export type SlackPerson = Readonly<{
 export type PostMessageInput = Readonly<{
   channelId: string
   text: string
+  blocks?: ReadonlyArray<unknown>
   threadTs?: string
   username?: string
   iconUrl?: string | null
@@ -91,6 +92,7 @@ export function createSlackClient(
         text: input.text,
         unfurl_links: false,
         unfurl_media: false,
+        ...(input.blocks === undefined ? {} : { blocks: input.blocks }),
         ...(input.threadTs === undefined ? {} : { thread_ts: input.threadTs }),
         ...(input.username === undefined ? {} : { username: input.username }),
         ...(input.iconUrl ? { icon_url: input.iconUrl } : {}),

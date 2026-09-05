@@ -6,11 +6,11 @@ const SECRET = 'segredo-de-assinatura'
 const BODY = '{"type":"event_callback"}'
 
 describe('signBody', () => {
-  it('assina no formato v0 do Slack', () => {
+  it('signs in the v0 format of Slack', () => {
     expect(signBody(SECRET, '1700000000', BODY)).toMatch(/^v0=[0-9a-f]{64}$/)
   })
 
-  it('muda a assinatura quando o corpo muda', () => {
+  it('changes the signature when the body changes', () => {
     expect(signBody(SECRET, '1700000000', BODY)).not.toBe(
       signBody(SECRET, '1700000000', `${BODY} `),
     )
@@ -18,15 +18,15 @@ describe('signBody', () => {
 })
 
 describe('isFreshTimestamp', () => {
-  it('aceita o que está dentro da janela', () => {
+  it('accepts what falls inside the window', () => {
     expect(isFreshTimestamp('1700000000', 1_700_000_100)).toBe(true)
   })
 
-  it('recusa o que passou da janela', () => {
+  it('rejects what fell outside the window', () => {
     expect(isFreshTimestamp('1700000000', 1_700_000_600)).toBe(false)
   })
 
-  it('recusa carimbo que não é número', () => {
+  it('rejects a stamp that is not a number', () => {
     expect(isFreshTimestamp('agora', 1_700_000_000)).toBe(false)
   })
 })
@@ -39,7 +39,7 @@ describe('verifySlackSignature', () => {
     timestamp: '1700000000',
   }
 
-  it('aceita a assinatura correta', () => {
+  it('accepts the right signature', () => {
     expect(
       verifySlackSignature({
         ...base,
@@ -48,7 +48,7 @@ describe('verifySlackSignature', () => {
     ).toBe(true)
   })
 
-  it('recusa assinatura de outro segredo', () => {
+  it('rejects a signature from another secret', () => {
     expect(
       verifySlackSignature({
         ...base,
@@ -57,11 +57,11 @@ describe('verifySlackSignature', () => {
     ).toBe(false)
   })
 
-  it('recusa assinatura de tamanho diferente', () => {
+  it('rejects a signature of a different length', () => {
     expect(verifySlackSignature({ ...base, signature: 'v0=curta' })).toBe(false)
   })
 
-  it('recusa quando o carimbo está velho, mesmo assinado', () => {
+  it('rejects an old stamp even when it is signed', () => {
     expect(
       verifySlackSignature({
         ...base,

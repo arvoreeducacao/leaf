@@ -41,8 +41,8 @@ const phase = {
 }
 
 const people = personOptions([
-  { id: 'u1', name: 'Rafael', email: 'rafael@arvore.com.br' },
-  { id: 'u2', name: 'Raposo', email: 'raposo@arvore.com.br' },
+  { id: 'u1', name: 'Rafael', email: 'rafael@example.com' },
+  { id: 'u2', name: 'Raposo', email: 'raposo@example.com' },
 ])
 
 const points = { id: 'points', type: 'number' as const, options: null }

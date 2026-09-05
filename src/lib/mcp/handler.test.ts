@@ -15,7 +15,7 @@ import { handleMcpRequest, resetMcpLimiter } from '@/lib/mcp/handler'
 import { resetMcpKeyCache } from '@/lib/mcp/token'
 
 const kid = 'jwk-handler'
-const person = { id: 'handler-user', email: 'pessoa@arvore.com.br' }
+const person = { id: 'handler-user', email: 'pessoa@example.com' }
 
 let privateKey: CryptoKey
 
@@ -102,7 +102,7 @@ const initialize = rpc('initialize', {
 })
 
 describe('endpoint MCP', () => {
-  it('responde 404 com a flag desligada', async () => {
+  it('answers 404 with the flag turned off', async () => {
     vi.stubEnv('LEAF_MCP_ENABLED', 'false')
 
     const response = await handleMcpRequest(post(initialize, await token()))
@@ -110,7 +110,7 @@ describe('endpoint MCP', () => {
     expect(response.status).toBe(404)
   })
 
-  it('responde 401 com WWW-Authenticate apontando o resource metadata quando não há bearer', async () => {
+  it('answers 401 with WWW-Authenticate pointing at the resource metadata when there is no bearer', async () => {
     const response = await handleMcpRequest(post(initialize, null))
 
     expect(response.status).toBe(401)
@@ -120,12 +120,12 @@ describe('endpoint MCP', () => {
     expect(response.headers.get('cache-control')).toBe('no-store')
   })
 
-  it('responde 401 para token inválido e para usuário que não existe mais', async () => {
+  it('answers 401 for an invalid token and for a user who no longer exists', async () => {
     expect((await handleMcpRequest(post(initialize, 'token-falso'))).status).toBe(401)
     expect((await handleMcpRequest(post(initialize, await token('user-removido')))).status).toBe(401)
   })
 
-  it('só aceita POST', async () => {
+  it('accepts POST only', async () => {
     const url = new URL(mcpResourceUrl())
     const response = await handleMcpRequest(
       new Request(url, { method: 'GET', headers: { host: url.host, authorization: `Bearer ${await token()}` } }),
@@ -134,7 +134,7 @@ describe('endpoint MCP', () => {
     expect(response.status).toBe(405)
   })
 
-  it('inicializa e executa uma tool como o usuário do token', async () => {
+  it('initializes and runs a tool as the user behind the token', async () => {
     const bearer = await token()
     const initialized = await handleMcpRequest(post(initialize, bearer))
 
@@ -156,14 +156,14 @@ describe('endpoint MCP', () => {
     expect(response.status).toBe(403)
   })
 
-  it('recusa body acima de 1 MB e JSON inválido', async () => {
+  it('refuses a body over 1 MB and invalid JSON', async () => {
     const huge = `{"jsonrpc":"2.0","id":1,"method":"ping","params":{"x":"${'a'.repeat(1_000_001)}"}}`
 
     expect((await handleMcpRequest(post(huge, await token()))).status).toBe(413)
     expect((await handleMcpRequest(post('{nao-json', await token()))).status).toBe(400)
   })
 
-  it('aplica rate limit por usuário', async () => {
+  it('rate limits per user', async () => {
     const bearer = await token()
     let last = 200
 

@@ -144,30 +144,42 @@ async function linkThread() {
   })
 }
 
+const payload = {
+  blocks: [
+    {
+      text: { text: '*Ícones de acessibilidade*', type: 'mrkdwn' },
+      type: 'section',
+    },
+  ],
+  text: '*Ícones de acessibilidade*',
+}
+
 const announce = {
   documentId: 'slack-row',
-  openLabel: 'Abrir a resposta no Leaf',
+  payload,
   replyHint: 'Respondendo nesta thread você comenta na resposta.',
-  text: '*Ícones de acessibilidade*',
   viewId: 'slack-view',
 }
 
 describe('escapeSlackText', () => {
-  it('escapa o que quebraria a mensagem', () => {
+  it('escapes what would break the message', () => {
     expect(escapeSlackText('a < b & c > d')).toBe('a &lt; b &amp; c &gt; d')
   })
 })
 
 describe('announceSubmission', () => {
-  it('posta no canal e guarda a thread da linha', async () => {
+  it('posts to the channel and keeps the thread of the row', async () => {
     await seed()
     const { client, posted } = recorder()
 
     expect(await announceSubmission({ ...announce, client })).toBe(true)
     expect(posted).toHaveLength(1)
     expect(posted[0].channelId).toBe(CHANNEL)
-    expect(posted[0].text).toContain('/doc/slack-row|Abrir a resposta no Leaf')
-    expect(posted[0].text).toContain('Respondendo nesta thread')
+    expect(posted[0].text).toBe(payload.text)
+    expect(posted[0].blocks?.at(-1)).toEqual({
+      elements: [{ text: announce.replyHint, type: 'mrkdwn' }],
+      type: 'context',
+    })
 
     const thread = await db.query.slackThreads.findFirst()
 
@@ -178,33 +190,34 @@ describe('announceSubmission', () => {
     })
   })
 
-  it('não promete a thread quando o retorno está desligado', async () => {
+  it('does not promise the thread when pulling is off', async () => {
     await seed({ pullThread: false })
     const { client, posted } = recorder()
 
     expect(await announceSubmission({ ...announce, client })).toBe(true)
-    expect(posted[0].text).not.toContain('Respondendo nesta thread')
+    expect(posted[0].blocks).toEqual(payload.blocks)
   })
 
-  it('cai no webhook antigo quando não há canal', async () => {
+  it('falls back to the old webhook when there is no channel', async () => {
     await seed({ channelId: null, url: WEBHOOK })
 
-    const calls: Array<string> = []
+    const calls: Array<{ url: string; body: string }> = []
 
-    vi.stubGlobal('fetch', async (url: string) => {
-      calls.push(String(url))
+    vi.stubGlobal('fetch', async (url: string, init: RequestInit) => {
+      calls.push({ body: String(init.body), url: String(url) })
 
       return new Response('ok')
     })
 
     expect(await announceSubmission({ ...announce, client: null })).toBe(true)
-    expect(calls).toEqual([WEBHOOK])
+    expect(calls.map((call) => call.url)).toEqual([WEBHOOK])
+    expect(JSON.parse(calls[0].body)).toEqual(payload)
     expect(await db.query.slackThreads.findFirst()).toBeUndefined()
 
     vi.unstubAllGlobals()
   })
 
-  it('não anuncia quando o formulário não tem destino', async () => {
+  it('stays silent when the form has nowhere to post', async () => {
     await seed({ channelId: null })
     const { client, posted } = recorder()
 
@@ -223,7 +236,7 @@ describe('ingestThreadReply', () => {
     userId: 'U9',
   }
 
-  it('vira comentário com o rosto de quem falou no Slack', async () => {
+  it('becomes a comment wearing the face of whoever spoke on Slack', async () => {
     await seed()
     await linkThread()
 
@@ -246,7 +259,7 @@ describe('ingestThreadReply', () => {
     })
   })
 
-  it('ignora o que o próprio bot escreveu', async () => {
+  it('ignores what the bot itself wrote', async () => {
     await seed()
     await linkThread()
 
@@ -258,7 +271,7 @@ describe('ingestThreadReply', () => {
     expect(await listDocumentComments('slack-row')).toHaveLength(0)
   })
 
-  it('ignora a mensagem que abriu a thread', async () => {
+  it('ignores the message that opened the thread', async () => {
     await seed()
     await linkThread()
 
@@ -272,7 +285,7 @@ describe('ingestThreadReply', () => {
     ).toBe('ignored')
   })
 
-  it('ignora thread que não é de nenhuma resposta', async () => {
+  it('ignores a thread that belongs to no response', async () => {
     await seed()
 
     const { client } = recorder()
@@ -280,7 +293,7 @@ describe('ingestThreadReply', () => {
     expect(await ingestThreadReply(reply, client)).toBe('ignored')
   })
 
-  it('ignora quando o retorno da thread está desligado', async () => {
+  it('ignores replies when pulling the thread is off', async () => {
     await seed({ pullThread: false })
     await linkThread()
 
@@ -290,7 +303,7 @@ describe('ingestThreadReply', () => {
     expect(await listDocumentComments('slack-row')).toHaveLength(0)
   })
 
-  it('a mesma mensagem duas vezes atualiza em vez de duplicar', async () => {
+  it('the same message twice updates instead of duplicating', async () => {
     await seed()
     await linkThread()
 
@@ -307,7 +320,7 @@ describe('ingestThreadReply', () => {
     expect(threads[0].body).toBe('corrigindo: qualquer livro')
   })
 
-  it('ignora mensagem sem texto', async () => {
+  it('ignores a message with no text', async () => {
     await seed()
     await linkThread()
 
@@ -327,7 +340,7 @@ describe('pushCommentToThread', () => {
     documentId: 'slack-row',
   }
 
-  it('responde na thread com o nome e a foto de quem comentou', async () => {
+  it('replies in the thread with the name and face of the commenter', async () => {
     await seed()
     await linkThread()
 
@@ -342,7 +355,7 @@ describe('pushCommentToThread', () => {
     })
   })
 
-  it('fica quieto quando o envio está desligado', async () => {
+  it('stays quiet when pushing is off', async () => {
     await seed({ pushComments: false })
     await linkThread()
 
@@ -352,7 +365,7 @@ describe('pushCommentToThread', () => {
     expect(posted).toHaveLength(0)
   })
 
-  it('fica quieto quando a linha não tem thread', async () => {
+  it('stays quiet when the row has no thread', async () => {
     await seed()
 
     const { client, posted } = recorder()
@@ -363,7 +376,7 @@ describe('pushCommentToThread', () => {
 })
 
 describe('reactOnComment', () => {
-  it('carimba o visto e tira o visto na mensagem da thread', async () => {
+  it('stamps and unstamps the check on the thread message', async () => {
     await seed()
     await linkThread()
 

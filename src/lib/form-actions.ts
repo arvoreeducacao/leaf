@@ -14,7 +14,7 @@ import {
   getDocumentAccess,
   registerFormSubmissionAttempt,
 } from '@/lib/authz'
-import { isSlackWebhook, slackMessageFor } from '@/lib/database/form-message'
+import { isSlackWebhook, slackPayloadFor } from '@/lib/database/form-message'
 import { buildSubmission } from '@/lib/database/forms'
 import { serializeValues } from '@/lib/database/values'
 import { MAX_DATABASE_ROWS } from '@/lib/databases'
@@ -25,6 +25,7 @@ import {
   setFormThreadSync,
 } from '@/lib/form-webhooks'
 import { getFormByToken } from '@/lib/forms'
+import { authIssuer as appBaseUrl } from '@/lib/mcp-config'
 import { indexDocument } from '@/lib/search-index'
 import { parseChannelRef, slackBotToken } from '@/lib/slack/config'
 import { announceSubmission, botClient } from '@/lib/slack/sync'
@@ -274,15 +275,16 @@ export async function submitForm(
   if (record.config.notify) {
     await announceSubmission({
       documentId: id,
-      openLabel: t('slackOpenRow'),
-      replyHint: t('slackReplyHint'),
-      text: slackMessageFor(
+      payload: slackPayloadFor(
         record.config,
         record.properties,
         built.submission.title,
         built.submission.values,
         (await getTranslations('database'))('titleColumn'),
+        `${appBaseUrl()}/doc/${id}`,
+        t('openInLeaf'),
       ),
+      replyHint: t('slackReplyHint'),
       viewId: record.view.id,
     })
   }

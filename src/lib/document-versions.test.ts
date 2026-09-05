@@ -20,8 +20,8 @@ import {
   recordDocumentVersion,
 } from '@/lib/document-versions'
 
-const author = { id: 'user-author', email: 'author@arvore.com.br', name: 'Ana' }
-const mate = { id: 'user-mate', email: 'mate@arvore.com.br', name: '' }
+const author = { id: 'user-author', email: 'author@example.com', name: 'Ana' }
+const mate = { id: 'user-mate', email: 'mate@example.com', name: '' }
 
 const docId = 'doc-versioned'
 const start = new Date('2026-08-30T12:00:00.000Z')

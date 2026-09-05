@@ -31,8 +31,8 @@ import {
   loadRowContext,
 } from '@/lib/databases'
 
-const owner = { id: 'user-owner', email: 'owner@arvore.com.br' }
-const guest = { id: 'user-guest', email: 'guest@arvore.com.br' }
+const owner = { id: 'user-owner', email: 'owner@example.com' }
+const guest = { id: 'user-guest', email: 'guest@example.com' }
 
 const statusOptions = [
   { id: 'todo', name: 'To do', color: 'gray' as const },

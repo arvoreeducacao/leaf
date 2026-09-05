@@ -97,6 +97,31 @@ export const verification = mysqlTable('verification', {
     .notNull(),
 })
 
+export const passkey = mysqlTable(
+  'passkey',
+  {
+    id: varchar('id', { length: AUTH_ID }).primaryKey(),
+    name: varchar('name', { length: 255 }),
+    publicKey: text('public_key').notNull(),
+    userId: varchar('user_id', { length: AUTH_ID })
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    credentialID: varchar('credential_id', { length: 255 }).notNull(),
+    counter: int('counter').notNull(),
+    deviceType: varchar('device_type', { length: 64 }).notNull(),
+    backedUp: boolean('backed_up').notNull(),
+    transports: varchar('transports', { length: 255 }),
+    createdAt: datetime('created_at', { mode: 'date', fsp: 3 })
+      .$defaultFn(() => new Date())
+      .notNull(),
+    aaguid: varchar('aaguid', { length: 64 }),
+  },
+  (table) => [
+    index('passkey_user_idx').on(table.userId),
+    uniqueIndex('passkey_credential_idx').on(table.credentialID),
+  ],
+)
+
 export const organizations = mysqlTable('organizations', {
   id: varchar('id', { length: APP_ID }).primaryKey(),
   name: varchar('name', { length: 255 }).notNull(),
