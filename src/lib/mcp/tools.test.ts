@@ -136,7 +136,7 @@ async function expectToolError(promise: Promise<unknown>, code: McpToolError['co
 }
 
 describe('search_documents', () => {
-  it('só devolve documentos que a pessoa acessa', async () => {
+  it('returns only documents the person can reach', async () => {
     const asMember = await searchDocuments(contextFor(member), { query: 'leitura' })
     const ids = asMember.results.map((hit) => hit.id).sort()
 
@@ -149,7 +149,7 @@ describe('search_documents', () => {
 })
 
 describe('get_document', () => {
-  it('renderiza markdown e filtra filhos pelo acesso do leitor', async () => {
+  it('renders markdown and filters children by the reader access', async () => {
     const result = await getDocumentTool(contextFor(member), { documentId: 'doc-shared' })
 
     expect(result.access).toBe('viewer')
@@ -161,12 +161,12 @@ describe('get_document', () => {
     expect(asOwner.children.map((child) => child.id)).toEqual(['doc-child'])
   })
 
-  it('devolve not_found para quem não tem acesso e para id malformado', async () => {
+  it('returns not_found for whoever has no access and for a malformed id', async () => {
     await expectToolError(getDocumentTool(contextFor(stranger), { documentId: 'doc-private' }), 'not_found')
     await expectToolError(getDocumentTool(contextFor(owner), { documentId: 'doc private' }), 'invalid_argument')
   })
 
-  it('traz as propriedades resolvidas de uma linha de base', async () => {
+  it('brings the resolved properties of a database row', async () => {
     const result = await getDocumentTool(contextFor(owner), { documentId: 'row-6a' })
 
     expect(result.properties).toEqual({ Livros: '12' })
@@ -175,14 +175,14 @@ describe('get_document', () => {
 })
 
 describe('list_documents', () => {
-  it('lista próprios, compartilhados, da organização e dos teamspaces onde é membro', async () => {
+  it('lists own, shared, organization and teamspace documents where the person is a member', async () => {
     const result = await listDocumentsTool(contextFor(member), {})
     const bySource = Object.fromEntries(result.documents.map((doc) => [doc.id, doc.source]))
 
     expect(bySource).toEqual({ 'doc-shared': 'shared', 'doc-org': 'organization', 'doc-team': 'teamspace' })
   })
 
-  it('não vaza nada para quem está fora', async () => {
+  it('leaks nothing to an outsider', async () => {
     const result = await listDocumentsTool(contextFor(stranger), {})
 
     expect(result.documents).toEqual([])
@@ -190,7 +190,7 @@ describe('list_documents', () => {
 })
 
 describe('list_organizations', () => {
-  it('só mostra emails para quem administra a organização', async () => {
+  it('shows emails only to whoever administers the organization', async () => {
     const asOwner = await listOrganizationsTool(contextFor(owner))
     const asMember = await listOrganizationsTool(contextFor(member))
 
@@ -205,7 +205,7 @@ describe('list_organizations', () => {
 })
 
 describe('get_database', () => {
-  it('resolve valores por nome de propriedade e respeita o acesso', async () => {
+  it('resolves values by property name and respects access', async () => {
     const result = await getDatabaseTool(contextFor(owner), { databaseId: 'db-turmas' })
 
     expect(result.properties.map((property) => property.name)).toEqual(['Livros'])
@@ -218,7 +218,7 @@ describe('get_database', () => {
 })
 
 describe('list_comments', () => {
-  it('lista as threads para quem lê e recusa quem não lê', async () => {
+  it('lists threads for a reader and refuses whoever cannot read', async () => {
     const result = await listCommentsTool(contextFor(member), { documentId: 'doc-shared' })
 
     expect(result.threads.map((thread) => thread.body)).toEqual(['Revisar o cronograma'])
@@ -230,7 +230,7 @@ describe('list_comments', () => {
 describe('upload_image', () => {
   const png = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x01])
 
-  it('guarda a imagem e devolve o endereço que entra na página', async () => {
+  it('stores the image and returns the address that goes into the page', async () => {
     const before = stored.length
     const result = await uploadImageTool(contextFor(member), {
       data: png.toString('base64'),
@@ -244,7 +244,7 @@ describe('upload_image', () => {
     expect(stored.at(-1)?.contentType).toBe('image/png')
   })
 
-  it('aceita SVG e guarda sem o script e sem o onload', async () => {
+  it('accepts SVG and stores it without the script and without the onload', async () => {
     const before = stored.length
     const result = await uploadImageTool(contextFor(member), {
       data: Buffer.from(
@@ -260,7 +260,7 @@ describe('upload_image', () => {
     )
   })
 
-  it('recusa o que diz ser SVG e não é', async () => {
+  it('refuses what claims to be SVG and is not', async () => {
     await expectToolError(
       uploadImageTool(contextFor(member), {
         data: Buffer.from('só um texto qualquer').toString('base64'),
@@ -270,7 +270,7 @@ describe('upload_image', () => {
     )
   })
 
-  it('recusa bytes que não são do tipo que dizem ser', async () => {
+  it('refuses bytes that are not the type they claim to be', async () => {
     await expectToolError(
       uploadImageTool(contextFor(member), {
         data: Buffer.from('MZ ainda não é imagem').toString('base64'),
@@ -280,7 +280,7 @@ describe('upload_image', () => {
     )
   })
 
-  it('recusa o que não é base64 e o que passa de 500 kB', async () => {
+  it('refuses what is not base64 and what goes over 500 kB', async () => {
     await expectToolError(
       uploadImageTool(contextFor(member), { data: 'não é base64!', contentType: 'image/png' }),
       'invalid_argument',
@@ -297,7 +297,7 @@ describe('upload_image', () => {
     )
   })
 
-  it('não guarda nada sem o escopo leaf:write', async () => {
+  it('stores nothing without the leaf:write scope', async () => {
     await expectToolError(
       uploadImageTool(contextFor(owner, readScopes), {
         data: png.toString('base64'),
@@ -309,7 +309,7 @@ describe('upload_image', () => {
 })
 
 describe('create_document', () => {
-  it('cria uma página privada do usuário do token', async () => {
+  it('creates a page private to the user behind the token', async () => {
     const result = await createDocumentTool(contextFor(member), {
       title: 'Nova página',
       markdown: '# Título\n\nParágrafo.',
@@ -323,7 +323,7 @@ describe('create_document', () => {
     expect(created?.content).toContain('Parágrafo.')
   })
 
-  it('exige canEdit no pai e herda organização e teamspace dele', async () => {
+  it('requires canEdit on the parent and inherits its organization and teamspace', async () => {
     await expectToolError(
       createDocumentTool(contextFor(member), { title: 'Sub', parentId: 'doc-shared' }),
       'forbidden',
@@ -336,14 +336,14 @@ describe('create_document', () => {
     expect(created?.orgId).toBe(org)
   })
 
-  it('não cria sem o escopo leaf:write', async () => {
+  it('creates nothing without the leaf:write scope', async () => {
     await expectToolError(
       createDocumentTool(contextFor(owner, readScopes), { title: 'Sem escopo' }),
       'write_disabled',
     )
   })
 
-  it('cria a página a partir de uma página de HTML, sem o script e sem o desenho', async () => {
+  it('creates the page from an HTML page, without the script and without the drawing', async () => {
     const result = await createDocumentTool(contextFor(member), {
       title: 'Artefato migrado',
       html: [
@@ -365,7 +365,7 @@ describe('create_document', () => {
     expect(created?.content).not.toContain('color:red')
   })
 
-  it('recusa markdown e html na mesma chamada, em vez de escolher um', async () => {
+  it('refuses markdown and html in the same call, instead of picking one', async () => {
     await expectToolError(
       createDocumentTool(contextFor(member), {
         title: 'Os dois',
@@ -376,7 +376,7 @@ describe('create_document', () => {
     )
   })
 
-  it('cria uma página vazia quando não vem corpo nenhum', async () => {
+  it('creates an empty page when no body comes in', async () => {
     const result = await createDocumentTool(contextFor(member), { title: 'Só o título' })
     const created = await db.query.documents.findFirst({ where: eq(documents.id, result.id) })
 
@@ -385,7 +385,7 @@ describe('create_document', () => {
 })
 
 describe('update_document', () => {
-  it('anexa markdown para quem edita e recusa quem só lê', async () => {
+  it('appends markdown for an editor and refuses a reader', async () => {
     const result = await updateDocumentTool(contextFor(editor), {
       documentId: 'doc-shared',
       markdown: 'Linha nova.',
@@ -417,7 +417,7 @@ describe('update_document', () => {
     expect(updated?.content).toContain('Só isto.')
   })
 
-  it('recusa escrever se a página foi editada há menos de 15 s', async () => {
+  it('refuses to write if the page was edited less than 15 s ago', async () => {
     await db
       .update(documents)
       .set({ updatedAt: new Date() })
@@ -429,7 +429,7 @@ describe('update_document', () => {
     )
   })
 
-  it('não edita bases de dados nem sem escopo de escrita', async () => {
+  it('edits no databases, and nothing without the write scope', async () => {
     await expectToolError(
       updateDocumentTool(contextFor(owner), { documentId: 'db-turmas', markdown: 'x' }),
       'invalid_argument',
@@ -440,7 +440,7 @@ describe('update_document', () => {
     )
   })
 
-  it('substitui o corpo por uma página de HTML', async () => {
+  it('replaces the body with an HTML page', async () => {
     await updateDocumentTool(contextFor(owner), {
       documentId: 'doc-private',
       html: '<h2>Migrado</h2><p>O texto sobrevive.</p><svg><text>o desenho</text></svg>',
@@ -454,7 +454,7 @@ describe('update_document', () => {
     expect(updated?.content).not.toContain('Segredo')
   })
 
-  it('recusa uma chamada sem markdown e sem html', async () => {
+  it('refuses a call without markdown and without html', async () => {
     await expectToolError(
       updateDocumentTool(contextFor(owner), { documentId: 'doc-private' }),
       'invalid_argument',
@@ -474,7 +474,7 @@ async function connectedClient(context: McpToolContext) {
 }
 
 describe('servidor MCP', () => {
-  it('só registra as tools de escrita quando o token tem leaf:write', async () => {
+  it('registers the write tools only when the token carries leaf:write', async () => {
     const readOnly = await connectedClient(contextFor(owner, readScopes))
     const readNames = (await readOnly.client.listTools()).tools.map((tool) => tool.name).sort()
 
@@ -498,7 +498,7 @@ describe('servidor MCP', () => {
     expect(writeNames).toContain('update_document')
   })
 
-  it('devolve erro genérico com isError para documento inacessível', async () => {
+  it('returns a generic error with isError for an unreachable document', async () => {
     const { client, close } = await connectedClient(contextFor(stranger, readScopes))
     const result = await client.callTool({ name: 'get_document', arguments: { documentId: 'doc-private' } })
 
