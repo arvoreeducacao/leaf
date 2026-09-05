@@ -260,6 +260,7 @@ export const databaseProperties = mysqlTable(
       'url',
       'person',
       'status',
+      'uniqueId',
     ])
       .notNull()
       .default('text'),

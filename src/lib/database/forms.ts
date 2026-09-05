@@ -61,8 +61,13 @@ export const emptyFormConfig: FormConfig = {
   automations: [],
 }
 
+const filledByTheDatabase: ReadonlyArray<DatabasePropertyType> = [
+  'person',
+  'uniqueId',
+]
+
 export function isQuestionableType(type: DatabasePropertyType): boolean {
-  return type !== 'person'
+  return !filledByTheDatabase.includes(type)
 }
 
 export function automationAccepts(
@@ -77,7 +82,7 @@ export function automationAccepts(
     return type === 'person'
   }
 
-  return type !== 'person'
+  return !filledByTheDatabase.includes(type)
 }
 
 function trimTo(value: unknown, max: number): string {

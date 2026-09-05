@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 
 import type {
   DatabaseProperty,
+  DatabasePropertyType,
   DatabaseView,
   DatabaseViewType,
 } from '@/db/schema'
@@ -21,10 +22,16 @@ import {
   renameDatabaseProperty,
   renameDatabaseRow,
   setDatabaseRowValue,
+  setDatabaseUniqueIdPrefix,
   updateDatabaseView,
 } from '@/lib/database-actions'
 import { type FormConfig, emptyFormConfig } from '@/lib/database/forms'
 import { personOptions } from '@/lib/database/people'
+import {
+  type PropertyRefresh,
+  parseUniqueIdConfig,
+  serializeUniqueIdConfig,
+} from '@/lib/database/unique-id'
 import { parseOptions, serializeOptions } from '@/lib/database/values'
 import {
   type ViewConfig,
@@ -45,6 +52,19 @@ import type { DatabaseHandlers } from './types'
 import { ViewToolbar } from './view-toolbar'
 
 const configSaveDelay = 500
+
+const optionKinds: ReadonlyArray<DatabasePropertyType> = [
+  'select',
+  'multiSelect',
+  'status',
+]
+
+function keepsSelectOptions(
+  from: DatabasePropertyType,
+  to: DatabasePropertyType,
+): boolean {
+  return optionKinds.includes(from) && optionKinds.includes(to)
+}
 
 type Props = Readonly<{
   snapshot: DatabaseSnapshot
@@ -115,6 +135,30 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
         timers.delete(viewId)
         void guard(() => updateDatabaseView(viewId, { config: next }))
       }, configSaveDelay),
+    )
+  }
+
+  function applyRefresh(propertyId: string, refresh: PropertyRefresh | null) {
+    if (!refresh) {
+      return
+    }
+
+    setProperties((current) =>
+      current.map((item) =>
+        item.id === propertyId ? { ...item, options: refresh.options } : item,
+      ),
+    )
+
+    const byRow = new Map(
+      refresh.values.map((item) => [item.rowId, item.value]),
+    )
+
+    setRows((current) =>
+      current.map((row) =>
+        byRow.has(row.id)
+          ? { ...row, values: { ...row.values, [propertyId]: byRow.get(row.id) ?? null } }
+          : row,
+      ),
     )
   }
 
@@ -239,11 +283,13 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
               databaseId: snapshot.id,
               name,
               type,
-              options: null,
+              options: result.refresh?.options ?? null,
               position: current.length,
               createdAt: new Date(),
             } satisfies DatabaseProperty,
           ])
+
+          applyRefresh(result.id, result.refresh)
         } catch {
           fail()
         }
@@ -271,18 +317,46 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
             ? {
                 ...item,
                 type,
-                options:
-                  type === 'select' ||
-                  type === 'multiSelect' ||
-                  type === 'status'
-                    ? item.options
-                    : null,
+                options: keepsSelectOptions(item.type, type)
+                  ? item.options
+                  : null,
               }
             : item,
         ),
       )
 
-      void guard(() => changeDatabasePropertyType(propertyId, type))
+      void (async () => {
+        try {
+          const result = await changeDatabasePropertyType(propertyId, type)
+
+          if (!result.ok) {
+            toast.error(result.error)
+
+            return
+          }
+
+          applyRefresh(propertyId, result.refresh)
+        } catch {
+          fail()
+        }
+      })()
+    },
+    changeUniqueIdPrefix(propertyId, prefix) {
+      setProperties((current) =>
+        current.map((item) =>
+          item.id === propertyId
+            ? {
+                ...item,
+                options: serializeUniqueIdConfig({
+                  prefix,
+                  next: parseUniqueIdConfig(item.options).next,
+                }),
+              }
+            : item,
+        ),
+      )
+
+      void guard(() => setDatabaseUniqueIdPrefix(propertyId, prefix))
     },
     hideProperty(propertyId) {
       changeConfig({

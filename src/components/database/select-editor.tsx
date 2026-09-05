@@ -201,7 +201,12 @@ export function SelectEditor({
   }
 
   const summary = (
-    <span className="flex min-w-0 flex-1 flex-wrap items-center gap-1">
+    <span
+      className={cn(
+        'flex min-w-0 flex-1 items-center gap-1',
+        compact ? 'overflow-hidden' : 'flex-wrap',
+      )}
+    >
       {chosen.length > 0 ? (
         chosen.map((option) => <Chip key={option.id} option={option} />)
       ) : (

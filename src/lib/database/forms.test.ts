@@ -53,7 +53,17 @@ const severity = property({
   ]),
 })
 
-const properties = [status, submittedAt, participant, description, attachments, severity]
+const ticket = property({ id: 'ticket', name: 'ID', type: 'uniqueId' })
+
+const properties = [
+  status,
+  submittedAt,
+  participant,
+  description,
+  attachments,
+  severity,
+  ticket,
+]
 
 const context = { submittedOn: '2026-09-05', submitterId: 'user-1' }
 
@@ -146,8 +156,10 @@ describe('resolveQuestions', () => {
     ).toEqual(['desc'])
   })
 
-  it('never asks for a person property', () => {
-    const config = parseFormConfig({ questions: [{ propertyId: 'who' }] })
+  it('never asks for a property the database fills by itself', () => {
+    const config = parseFormConfig({
+      questions: [{ propertyId: 'who' }, { propertyId: 'ticket' }],
+    })
 
     expect(resolveQuestions(config!, properties, titleName)).toEqual([])
   })

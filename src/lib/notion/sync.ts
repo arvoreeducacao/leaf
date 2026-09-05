@@ -11,6 +11,7 @@ import {
   user,
 } from '@/db/schema'
 import type { DatabasePropertyType } from '@/db/schema'
+import { fillMissingUniqueIds } from '@/lib/database/assign-unique-ids'
 import type { Person } from '@/lib/database/people'
 import { listDatabasePeople } from '@/lib/databases'
 import {
@@ -665,6 +666,7 @@ export async function* syncNotion(
   }
 
   const touchedDocIds = new Set<string>()
+  const touchedDatabaseIds = new Set<string>()
   const seen = new Set<string>()
   const queue: Array<QueueItem> = []
 
@@ -931,6 +933,7 @@ export async function* syncNotion(
           )
 
           touchedDocIds.add(rowDoc.documentId)
+          touchedDatabaseIds.add(documentId)
 
           const values: Record<string, PropertyValue> = {}
 
@@ -1300,6 +1303,10 @@ export async function* syncNotion(
     }
 
     return blocks.map(walkBlock)
+  }
+
+  for (const databaseId of touchedDatabaseIds) {
+    await fillMissingUniqueIds(databaseId)
   }
 
   const touched = [...touchedDocIds]
