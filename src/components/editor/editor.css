@@ -135,7 +135,7 @@
 }
 
 .leaf-editor .bn-inline-content a {
-  @apply text-content-strong no-underline;
+  @apply cursor-pointer text-content-strong no-underline;
   border-bottom: 0.05em solid var(--line-stronger);
   transition: background-color 100ms ease-in;
 }
