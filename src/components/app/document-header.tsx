@@ -40,7 +40,7 @@ type Props = Readonly<{
   breadcrumb: React.ReactNode
   wide?: boolean
   icon?: string | null
-  kind?: 'page' | 'database' | 'row'
+  kind?: 'page' | 'database' | 'row' | 'template'
   updatedAt?: Date | null
   hasCover?: boolean
 }>

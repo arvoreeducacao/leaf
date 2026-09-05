@@ -34,6 +34,7 @@ import type { Person } from '@/lib/database/people'
 import {
   MAX_FILTERS,
   MAX_SORTS,
+  type DatabaseRow,
   type ViewConfig,
   isGroupableType,
   operatorsFor,
@@ -43,6 +44,7 @@ import { cn } from '@/shared/utils'
 import { FieldSelect } from './field-select'
 import { PropertyIcon } from './property-icon'
 import { PropertyPicker } from './property-picker'
+import { TemplateMenu } from './template-menu'
 import { ViewSearch } from './view-search'
 
 function UnsavedDot() {
@@ -73,6 +75,11 @@ type Props = Readonly<{
   onDeleteView: (id: string) => void
   onConfigChange: (config: ViewConfig) => void
   onCreateRow: () => void
+  onUseTemplate: (templateId: string) => void
+  databaseId: string
+  databaseTitle: string
+  templates: ReadonlyArray<DatabaseRow>
+  defaultTemplateId: string | null
   onSearchChange: (value: string) => void
   search: string
   filtersChanged: boolean
@@ -94,6 +101,11 @@ export function ViewToolbar({
   onDeleteView,
   onConfigChange,
   onCreateRow,
+  onUseTemplate,
+  databaseId,
+  databaseTitle,
+  templates,
+  defaultTemplateId,
   onSearchChange,
   search,
   filtersChanged,
@@ -378,7 +390,7 @@ export function ViewToolbar({
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <ButtonIcon
-                  aria-label={t('addView')}
+                  aria-label={isForm ? t('addView') : t('templatesMenu')}
                   className={cn(
                     'h-9 tablet:h-7',
                     isForm
@@ -391,20 +403,30 @@ export function ViewToolbar({
                   <CaretDownIcon aria-hidden="true" />
                 </ButtonIcon>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onSelect={() => onCreateView('table')}>
-                  <MapGridIcon aria-hidden="true" />
-                  {t('view_table')}
-                </DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => onCreateView('board')}>
-                  <LayoutGridRearrangeIcon aria-hidden="true" />
-                  {t('view_board')}
-                </DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => onCreateView('form')}>
-                  <ListCheckIcon aria-hidden="true" />
-                  {t('view_form')}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
+              {isForm ? (
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onSelect={() => onCreateView('table')}>
+                    <MapGridIcon aria-hidden="true" />
+                    {t('view_table')}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => onCreateView('board')}>
+                    <LayoutGridRearrangeIcon aria-hidden="true" />
+                    {t('view_board')}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => onCreateView('form')}>
+                    <ListCheckIcon aria-hidden="true" />
+                    {t('view_form')}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              ) : (
+                <TemplateMenu
+                  databaseId={databaseId}
+                  databaseTitle={databaseTitle}
+                  defaultTemplateId={defaultTemplateId}
+                  onUseTemplate={onUseTemplate}
+                  templates={templates}
+                />
+              )}
             </DropdownMenu>
           </div>
         ) : null}

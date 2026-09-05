@@ -135,7 +135,7 @@ export default async function DocumentPage({ params }: Props) {
           <DatabaseSurface canEdit={canEdit(access)} databaseId={document.id} />
         ) : (
           <>
-            {document.kind === 'row' ? (
+            {document.kind === 'row' || document.kind === 'template' ? (
               <div className="px-4 tablet:px-[54px]">
                 <RowPropertiesSurface
                   canEdit={canEdit(access)}

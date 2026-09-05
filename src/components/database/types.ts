@@ -8,7 +8,10 @@ export type DatabaseHandlers = Readonly<{
     value: PropertyValue,
   ) => void
   renameRow: (rowId: string, title: string) => void
-  createRow: (seed?: Readonly<Record<string, PropertyValue>>) => void
+  createRow: (
+    seed?: Readonly<Record<string, PropertyValue>>,
+    templateId?: string | null,
+  ) => void
   deleteRow: (rowId: string) => void
   createOption: (
     propertyId: string,

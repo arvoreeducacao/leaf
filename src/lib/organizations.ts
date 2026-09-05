@@ -1,4 +1,14 @@
-import { and, asc, count, desc, eq, isNotNull, isNull, ne } from 'drizzle-orm'
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  isNotNull,
+  isNull,
+  ne,
+  notInArray,
+} from 'drizzle-orm'
 import { nanoid } from 'nanoid'
 
 import { db } from '@/db'
@@ -10,6 +20,7 @@ import {
   user,
 } from '@/db/schema'
 import type { InviteRole, OrganizationRole } from '@/db/schema'
+import { UNLISTED_DOCUMENT_KINDS } from '@/lib/document-kinds'
 import type { DocumentSummary } from '@/lib/documents'
 
 export type Membership = Readonly<{
@@ -280,7 +291,7 @@ export async function listOrganizationDocuments(
         isNotNull(documents.orgAccess),
         isNull(documents.teamspaceId),
         isNull(documents.deletedAt),
-        ne(documents.kind, 'row'),
+        notInArray(documents.kind, [...UNLISTED_DOCUMENT_KINDS]),
       ),
     )
     .orderBy(desc(documents.updatedAt))

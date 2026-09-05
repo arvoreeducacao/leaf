@@ -292,10 +292,15 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
 
       void guard(() => renameDatabaseRow(rowId, trimmed))
     },
-    createRow(seed = {}) {
+    createRow(seed = {}, templateId = null) {
       void (async () => {
         try {
-          const result = await createDatabaseRow(snapshot.id, seed)
+          const result = await createDatabaseRow(
+            snapshot.id,
+            seed,
+            '',
+            templateId,
+          )
 
           if (!result.ok) {
             toast.error(result.error)
@@ -648,7 +653,14 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
         compact={compact}
         config={config}
         onConfigChange={changeConfig}
-        onCreateRow={() => handlers.createRow()}
+        databaseId={snapshot.id}
+        databaseTitle={snapshot.title}
+        defaultTemplateId={snapshot.defaultTemplateId}
+        onCreateRow={() =>
+          handlers.createRow({}, snapshot.defaultTemplateId)
+        }
+        onUseTemplate={(templateId) => handlers.createRow({}, templateId)}
+        templates={snapshot.templates}
         onCreateView={createView}
         onDeleteView={deleteView}
         onRenameView={renameView}

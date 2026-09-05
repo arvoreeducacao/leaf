@@ -134,6 +134,13 @@
       "when": 1788626199425,
       "tag": "0018_form_webhooks",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "5",
+      "when": 1788626259425,
+      "tag": "0019_database_templates",
+      "breakpoints": true
     }
   ]
 }

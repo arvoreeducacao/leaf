@@ -1,9 +1,19 @@
-import { and, desc, eq, inArray, isNull, ne, not, sql } from 'drizzle-orm'
+import {
+  and,
+  desc,
+  eq,
+  inArray,
+  isNull,
+  not,
+  notInArray,
+  sql,
+} from 'drizzle-orm'
 import { cache } from 'react'
 
 import { db } from '@/db'
 import { documentShares, documents } from '@/db/schema'
 import type { Document } from '@/db/schema'
+import { UNLISTED_DOCUMENT_KINDS } from '@/lib/document-kinds'
 
 export type DocumentSummary = Pick<
   Document,
@@ -38,7 +48,7 @@ export async function listOwnedDocuments(
       and(
         eq(documents.ownerId, userId),
         isNull(documents.deletedAt),
-        ne(documents.kind, 'row'),
+        notInArray(documents.kind, [...UNLISTED_DOCUMENT_KINDS]),
       ),
     )
     .orderBy(desc(documents.updatedAt))
@@ -66,7 +76,7 @@ export async function listPrivateDocuments(
         isNull(documents.deletedAt),
         isNull(documents.orgAccess),
         isNull(documents.teamspaceId),
-        ne(documents.kind, 'row'),
+        notInArray(documents.kind, [...UNLISTED_DOCUMENT_KINDS]),
       ),
     )
     .orderBy(desc(documents.updatedAt))
@@ -92,7 +102,7 @@ export async function listSharedDocuments(
       and(
         eq(documentShares.granteeEmail, email.toLowerCase()),
         isNull(documents.deletedAt),
-        ne(documents.kind, 'row'),
+        notInArray(documents.kind, [...UNLISTED_DOCUMENT_KINDS]),
       ),
     )
     .orderBy(desc(documents.updatedAt))
@@ -118,7 +128,7 @@ export async function listTrashedDocuments(
       and(
         eq(documents.ownerId, userId),
         not(isNull(documents.deletedAt)),
-        sql`(${documents.kind} <> 'row' or not exists (
+        sql`(${documents.kind} not in ('row', 'template') or not exists (
           select 1 from documents parent
           where parent.id = ${documents.parentId} and parent.deleted_at is not null
         ))`,

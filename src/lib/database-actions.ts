@@ -499,6 +499,7 @@ export async function createDatabaseRow(
   databaseId: string,
   seed: Readonly<Record<string, unknown>> = {},
   title = '',
+  templateId: string | null = null,
 ): Promise<RowResult> {
   const session = await canEditDatabase(databaseId)
 
@@ -519,6 +520,10 @@ export async function createDatabaseRow(
   }
 
   const properties = await listDatabaseProperties(databaseId)
+  const template = templateId
+    ? await templateOfDatabase(templateId, databaseId)
+    : null
+  const templateValues = parseValues(template?.properties ?? null)
   const values: Record<string, ReturnType<typeof normalizeValue>> = {}
 
   for (const property of properties) {
@@ -534,17 +539,25 @@ export async function createDatabaseRow(
 
     const raw = seed[property.id]
 
-    if (raw === undefined) {
+    if (raw !== undefined) {
+      values[property.id] = await normalizeForProperty(
+        property,
+        raw,
+        database.orgId,
+        session.user.id,
+      )
+
       continue
     }
 
-    values[property.id] = await normalizeForProperty(
-      property,
-      raw,
-      database.orgId,
-      session.user.id,
-    )
+    const inherited = templateValues[property.id]
+
+    if (inherited !== undefined) {
+      values[property.id] = inherited
+    }
   }
+
+  const rowTitle = untitledRow(title || (template?.title ?? ''))
 
   const id = nanoid(12)
   const now = new Date()
@@ -557,7 +570,9 @@ export async function createDatabaseRow(
     teamspaceId: database.teamspaceId,
     orgAccess: database.orgAccess,
     kind: 'row',
-    title: untitledRow(title),
+    title: rowTitle,
+    icon: template?.icon ?? null,
+    content: template?.content ?? null,
     properties: serializeValues(values),
     createdAt: now,
     updatedAt: now,
@@ -575,8 +590,8 @@ export async function createDatabaseRow(
     ok: true,
     row: toDatabaseRow({
       id,
-      title: untitledRow(title),
-      icon: null,
+      title: rowTitle,
+      icon: template?.icon ?? null,
       properties: serializeValues(values),
       createdAt: now,
       updatedAt: now,
@@ -590,7 +605,10 @@ export async function setDatabaseRowValue(
   value: unknown,
 ): Promise<DatabaseActionResult> {
   const row = await db.query.documents.findFirst({
-    where: and(eq(documents.id, rowId), eq(documents.kind, 'row')),
+    where: and(
+      eq(documents.id, rowId),
+      inArray(documents.kind, ['row', 'template']),
+    ),
   })
 
   if (!row || !row.parentId || row.deletedAt !== null) {
@@ -688,6 +706,149 @@ export async function deleteDatabaseRow(
 
   revalidatePath(`/doc/${row.parentId}`)
   revalidatePath('/', 'layout')
+
+  return { ok: true }
+}
+
+async function templateOfDatabase(templateId: string, databaseId: string) {
+  const template = await db.query.documents.findFirst({
+    where: and(
+      eq(documents.id, templateId),
+      eq(documents.parentId, databaseId),
+      eq(documents.kind, 'template'),
+      isNull(documents.deletedAt),
+    ),
+  })
+
+  return template ?? null
+}
+
+export async function createDatabaseTemplate(
+  databaseId: string,
+): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
+  const session = await canEditDatabase(databaseId)
+
+  if (!session) {
+    return notAllowed()
+  }
+
+  const database = await getDatabaseDocument(databaseId)
+
+  if (!database) {
+    return notAllowed()
+  }
+
+  const id = nanoid(12)
+  const now = new Date()
+
+  await db.insert(documents).values({
+    id,
+    ownerId: database.ownerId,
+    parentId: databaseId,
+    orgId: database.orgId,
+    teamspaceId: database.teamspaceId,
+    orgAccess: database.orgAccess,
+    kind: 'template',
+    title: (await getTranslations('database'))('templateUntitled'),
+    createdAt: now,
+    updatedAt: now,
+  })
+
+  revalidatePath(`/doc/${databaseId}`)
+  revalidatePath('/', 'layout')
+
+  return { ok: true, id }
+}
+
+export async function duplicateDatabaseTemplate(
+  templateId: string,
+): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
+  const template = await db.query.documents.findFirst({
+    where: and(eq(documents.id, templateId), eq(documents.kind, 'template')),
+  })
+
+  if (!template?.parentId || template.deletedAt !== null) {
+    return notAllowed()
+  }
+
+  if (!(await canEditDatabase(template.parentId))) {
+    return notAllowed()
+  }
+
+  const id = nanoid(12)
+  const now = new Date()
+
+  await db.insert(documents).values({
+    id,
+    ownerId: template.ownerId,
+    parentId: template.parentId,
+    orgId: template.orgId,
+    teamspaceId: template.teamspaceId,
+    orgAccess: template.orgAccess,
+    kind: 'template',
+    title: untitledRow(
+      (await getTranslations('database'))('templateCopy', {
+        title: template.title,
+      }),
+    ),
+    icon: template.icon,
+    content: template.content,
+    properties: template.properties,
+    createdAt: now,
+    updatedAt: now,
+  })
+
+  revalidatePath(`/doc/${template.parentId}`)
+  revalidatePath('/', 'layout')
+
+  return { ok: true, id }
+}
+
+export async function deleteDatabaseTemplate(
+  templateId: string,
+): Promise<DatabaseActionResult> {
+  const template = await db.query.documents.findFirst({
+    where: and(eq(documents.id, templateId), eq(documents.kind, 'template')),
+  })
+
+  if (!template?.parentId || !(await canEditDatabase(template.parentId))) {
+    return notAllowed()
+  }
+
+  await db
+    .update(documents)
+    .set({ deletedAt: new Date() })
+    .where(and(eq(documents.id, templateId), isNull(documents.deletedAt)))
+
+  await db
+    .update(documents)
+    .set({ defaultTemplateId: null })
+    .where(eq(documents.defaultTemplateId, templateId))
+
+  revalidatePath(`/doc/${template.parentId}`)
+  revalidatePath('/', 'layout')
+
+  return { ok: true }
+}
+
+export async function setDefaultDatabaseTemplate(
+  databaseId: string,
+  templateId: string | null,
+): Promise<DatabaseActionResult> {
+  if (!(await canEditDatabase(databaseId))) {
+    return notAllowed()
+  }
+
+  if (templateId && !(await templateOfDatabase(templateId, databaseId))) {
+    return notAllowed()
+  }
+
+  await db
+    .update(documents)
+    .set({ defaultTemplateId: templateId })
+    .where(eq(documents.id, databaseId))
+
+  revalidatePath(`/doc/${databaseId}`)
 
   return { ok: true }
 }

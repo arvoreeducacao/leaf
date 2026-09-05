@@ -29,6 +29,8 @@ export type DatabaseSnapshot = Readonly<{
   views: Array<DatabaseView>
   drafts: Record<string, string | null>
   rows: Array<DatabaseRow>
+  templates: Array<DatabaseRow>
+  defaultTemplateId: string | null
   people: Array<Person>
   viewerId: string | null
   notifyingViewIds: Array<string>
@@ -112,6 +114,31 @@ export async function listDatabaseRows(
   return rows.map(toDatabaseRow)
 }
 
+export async function listDatabaseTemplates(
+  databaseId: string,
+): Promise<Array<DatabaseRow>> {
+  const rows = await db
+    .select({
+      id: documents.id,
+      title: documents.title,
+      icon: documents.icon,
+      properties: documents.properties,
+      createdAt: documents.createdAt,
+      updatedAt: documents.updatedAt,
+    })
+    .from(documents)
+    .where(
+      and(
+        eq(documents.parentId, databaseId),
+        eq(documents.kind, 'template'),
+        isNull(documents.deletedAt),
+      ),
+    )
+    .orderBy(asc(documents.createdAt), asc(documents.id))
+
+  return rows.map(toDatabaseRow)
+}
+
 export async function listDatabasePeople(
   orgId: string | null,
   viewerId: string | null = null,
@@ -141,13 +168,15 @@ export async function loadDatabase(
     return null
   }
 
-  const [properties, views, rows, people, notifyingViewIds] = await Promise.all([
-    listDatabaseProperties(databaseId),
-    listDatabaseViews(databaseId),
-    listDatabaseRows(databaseId),
-    listDatabasePeople(document.orgId, viewerId),
-    listFormWebhookViewIds(databaseId),
-  ])
+  const [properties, views, rows, templates, people, notifyingViewIds] =
+    await Promise.all([
+      listDatabaseProperties(databaseId),
+      listDatabaseViews(databaseId),
+      listDatabaseRows(databaseId),
+      listDatabaseTemplates(databaseId),
+      listDatabasePeople(document.orgId, viewerId),
+      listFormWebhookViewIds(databaseId),
+    ])
 
   return {
     id: document.id,
@@ -159,6 +188,8 @@ export async function loadDatabase(
       viewerId,
     ),
     rows,
+    templates,
+    defaultTemplateId: document.defaultTemplateId,
     people,
     viewerId,
     notifyingViewIds,
@@ -199,19 +230,33 @@ export async function getRowDocument(rowId: string) {
   return document ?? null
 }
 
+export async function getRowOrTemplateDocument(rowId: string) {
+  const document = await db.query.documents.findFirst({
+    where: and(
+      eq(documents.id, rowId),
+      inArray(documents.kind, ['row', 'template']),
+    ),
+  })
+
+  return document ?? null
+}
+
 export type RowContext = Readonly<{
   databaseId: string
   databaseTitle: string
+  databaseIcon: string | null
   properties: Array<DatabaseProperty>
   row: DatabaseRow
   people: Array<Person>
+  isTemplate: boolean
+  isDefaultTemplate: boolean
 }>
 
 export async function loadRowContext(
   rowId: string,
   viewerId: string | null = null,
 ): Promise<RowContext | null> {
-  const row = await getRowDocument(rowId)
+  const row = await getRowOrTemplateDocument(rowId)
 
   if (!row || !row.parentId) {
     return null
@@ -231,9 +276,12 @@ export async function loadRowContext(
   return {
     databaseId: database.id,
     databaseTitle: database.title,
+    databaseIcon: database.icon,
     properties,
     row: toDatabaseRow(row),
     people,
+    isTemplate: row.kind === 'template',
+    isDefaultTemplate: database.defaultTemplateId === row.id,
   }
 }
 
@@ -332,7 +380,10 @@ export async function copyDatabaseInto(
 
   const rows = await db
     .select({
+      id: documents.id,
+      kind: documents.kind,
       title: documents.title,
+      icon: documents.icon,
       content: documents.content,
       properties: documents.properties,
     })
@@ -340,7 +391,7 @@ export async function copyDatabaseInto(
     .where(
       and(
         eq(documents.parentId, sourceId),
-        eq(documents.kind, 'row'),
+        inArray(documents.kind, ['row', 'template']),
         isNull(documents.deletedAt),
       ),
     )
@@ -348,6 +399,7 @@ export async function copyDatabaseInto(
     .limit(MAX_DATABASE_ROWS)
 
   const created: Array<string> = []
+  const templateIdByOldId = new Map<string, string>()
 
   for (const [index, row] of rows.entries()) {
     const values = parseValues(row.properties)
@@ -364,7 +416,11 @@ export async function copyDatabaseInto(
     const id = nanoid(12)
     const stamp = new Date(now.getTime() + index)
 
-    created.push(id)
+    if (row.kind === 'template') {
+      templateIdByOldId.set(row.id, id)
+    } else {
+      created.push(id)
+    }
 
     await db.insert(documents).values({
       id,
@@ -373,8 +429,9 @@ export async function copyDatabaseInto(
       orgId: target.orgId,
       teamspaceId: target.teamspaceId,
       orgAccess: target.orgAccess,
-      kind: 'row',
+      kind: row.kind,
       title: row.title,
+      icon: row.icon,
       content: row.content,
       properties: serializeValues(
         remapped as Parameters<typeof serializeValues>[0],
@@ -382,6 +439,18 @@ export async function copyDatabaseInto(
       createdAt: stamp,
       updatedAt: stamp,
     })
+  }
+
+  const source = await getDatabaseDocument(sourceId)
+  const copiedDefault = source?.defaultTemplateId
+    ? templateIdByOldId.get(source.defaultTemplateId)
+    : undefined
+
+  if (copiedDefault) {
+    await db
+      .update(documents)
+      .set({ defaultTemplateId: copiedDefault })
+      .where(eq(documents.id, targetId))
   }
 
   return created

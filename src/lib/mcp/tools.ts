@@ -1,4 +1,4 @@
-import { and, desc, eq, isNull, ne } from 'drizzle-orm'
+import { and, desc, eq, isNull, notInArray } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
 
 import { db } from '@/db'
@@ -6,6 +6,7 @@ import { documents } from '@/db/schema'
 import type { Document } from '@/db/schema'
 import { canEdit, getDocumentAccess } from '@/lib/authz'
 import type { AccessLevel } from '@/lib/authz'
+import { UNLISTED_DOCUMENT_KINDS } from '@/lib/document-kinds'
 import { listDocumentComments } from '@/lib/comments'
 import { personOptions } from '@/lib/database/people'
 import { parseOptions, valueOf, valueToText } from '@/lib/database/values'
@@ -203,7 +204,7 @@ async function listAccessibleChildren(
       and(
         eq(documents.parentId, parentId),
         isNull(documents.deletedAt),
-        ne(documents.kind, 'row'),
+        notInArray(documents.kind, [...UNLISTED_DOCUMENT_KINDS]),
       ),
     )
     .orderBy(desc(documents.updatedAt))

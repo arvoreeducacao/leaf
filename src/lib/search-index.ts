@@ -395,6 +395,7 @@ export async function searchAccessibleDocuments(
     join documents d on d.id = f.document_id
     where match(f.title, f.body) against (${match} in boolean mode)
       and d.deleted_at is null
+      and d.kind <> 'template'
       and ${accessCondition(viewer)}
     order by
       (match(f.title) against (${match} in boolean mode) > 0) desc,
@@ -440,6 +441,7 @@ export async function searchAccessibleDocumentBodies(
     join documents d on d.id = f.document_id
     where match(f.title, f.body) against (${match} in boolean mode)
       and d.deleted_at is null
+      and d.kind <> 'template'
       and ${accessCondition(viewer)}
     order by
       match(f.title) against (${match} in boolean mode) * 10
@@ -464,7 +466,9 @@ export async function listRecentAccessibleDocuments(
   >(sql`
     select d.id as id, d.title as title, d.icon as icon
     from documents d
-    where d.deleted_at is null and ${accessCondition(viewer)}
+    where d.deleted_at is null
+      and d.kind <> 'template'
+      and ${accessCondition(viewer)}
     order by d.updated_at desc
     limit ${limit}
   `)
