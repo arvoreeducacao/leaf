@@ -59,6 +59,7 @@ const messages: NotionImportMessages = {
 
 type World = {
   editedAt: Record<string, string>
+  pageCalls: Array<string>
   search?: Array<Record<string, unknown>>
   childText: string
   dbInline: boolean
@@ -70,6 +71,7 @@ type World = {
 function makeWorld(): World {
   return {
     childText: 'child body',
+    pageCalls: [],
     dbInline: true,
     rootIcon: { color: 'gray', name: 'alien-pixel' },
     editedAt: {
@@ -218,6 +220,8 @@ function makeClient(world: World): NotionClient {
       contentType: 'image/png',
     }),
     page: async (id: string) => {
+      world.pageCalls.push(norm(id))
+
       const page = pages[norm(id)]
 
       if (!page) {
@@ -428,6 +432,49 @@ describe('resumable Notion sync', () => {
     expect(root?.content).not.toContain('"type":"database"')
     expect(root?.content).toContain(`/doc/${database?.id}`)
     expect(root?.content).toContain('Tasks')
+  })
+
+  it('takes the icon from the listing instead of reading the page again', async () => {
+    const world = makeWorld()
+
+    const listing = (icon: unknown) => [
+      {
+        icon,
+        id: rootId,
+        last_edited_time: world.editedAt[rootId],
+        object: 'page',
+        parent: { type: 'workspace' },
+        properties: title('Reading plan'),
+      },
+      {
+        id: childId,
+        last_edited_time: world.editedAt[childId],
+        object: 'page',
+        parent: { block_id: 'col-1', type: 'block_id' },
+        properties: title('Class A'),
+      },
+    ]
+
+    world.search = listing({ icon: world.rootIcon, type: 'icon' })
+
+    await run(world, 'workspace')
+
+    world.search = listing({
+      icon: { color: 'gray', name: 'fireworks' },
+      type: 'icon',
+    })
+    world.pageCalls = []
+
+    const summary = await run(world, 'workspace')
+
+    expect(summary.pages).toBe(0)
+    expect(world.pageCalls).not.toContain(norm(rootId))
+
+    const after = await db.query.documents.findFirst({
+      where: eq(documents.title, 'Reading plan'),
+    })
+
+    expect(after?.icon).toBe('https://www.notion.so/icons/fireworks_gray.svg')
   })
 
   it('repairs the icon of a page the rerun skips', async () => {
