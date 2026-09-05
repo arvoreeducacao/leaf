@@ -55,6 +55,22 @@ function asRecord(value: unknown): Record<string, unknown> | null {
     : null
 }
 
+export function encodeArguments(
+  payload: Record<string, unknown>,
+): URLSearchParams {
+  const body = new URLSearchParams()
+
+  for (const [key, value] of Object.entries(payload)) {
+    if (value === undefined || value === null) {
+      continue
+    }
+
+    body.set(key, typeof value === 'string' ? value : String(value))
+  }
+
+  return body
+}
+
 export function createSlackClient(
   token: string,
   options: SlackClientOptions = {},
@@ -67,10 +83,10 @@ export function createSlackClient(
   ): Promise<SlackResponse | null> {
     try {
       const response = await call(`${API_BASE}/${method}`, {
-        body: JSON.stringify(payload),
+        body: encodeArguments(payload),
         headers: {
           authorization: `Bearer ${token}`,
-          'content-type': 'application/json; charset=utf-8',
+          'content-type': 'application/x-www-form-urlencoded; charset=utf-8',
         },
         method: 'POST',
         signal: options.signal ?? AbortSignal.timeout(SLACK_TIMEOUT_MS),
