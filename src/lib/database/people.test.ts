@@ -118,4 +118,14 @@ describe('personOptions', () => {
     expect(options.map((option) => option.id)).toEqual(['u1', 'u2'])
     expect(options[0].name).toBe('Rafael Andrade')
   })
+
+  it('carries the picture, so the cell can show the face instead of the initials', () => {
+    const options = personOptions([
+      { id: 'u1', name: 'Rafael Andrade', email: 'rafael@example.com', image: '/api/uploads/u/abc.png' },
+      { id: 'u2', name: 'Ricardo Raposo', email: 'ricardo@example.com' },
+    ])
+
+    expect(options[0].image).toBe('/api/uploads/u/abc.png')
+    expect(options[1].image).toBeNull()
+  })
 })

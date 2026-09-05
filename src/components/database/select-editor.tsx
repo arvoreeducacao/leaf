@@ -10,7 +10,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { UserAvatar } from '@/components/ui/user-avatar'
 import {
   type SelectOption,
   groupOf,
@@ -23,20 +23,6 @@ import { optionChipClass, optionDotClass } from './option-colors'
 
 export type EditorVariant = 'option' | 'person' | 'status'
 
-export function initialsOf(name: string): string {
-  const words = name.trim().split(/\s+/).filter(Boolean)
-
-  if (words.length === 0) {
-    return '?'
-  }
-
-  if (words.length === 1) {
-    return words[0].slice(0, 2).toUpperCase()
-  }
-
-  return `${words[0][0]}${words[words.length - 1][0]}`.toUpperCase()
-}
-
 export function PersonChip({
   option,
   onRemove,
@@ -47,14 +33,17 @@ export function PersonChip({
   removeLabel?: string
 }>) {
   return (
-    <span className="inline-flex h-6 max-w-full shrink-0 items-center gap-1.5 rounded-pill bg-surface-hover pr-2 pl-0.5 text-caption leading-none">
-      <Avatar className="size-5">
-        <AvatarFallback
-          className={cn('text-[9px] font-bold', optionChipClass[option.color])}
-        >
-          {initialsOf(option.name)}
-        </AvatarFallback>
-      </Avatar>
+    <span
+      className={cn(
+        'inline-flex h-5 max-w-full shrink-0 items-center gap-1.5 text-body-small leading-5',
+        onRemove ? 'rounded-pill bg-surface-hover pr-1.5 pl-0.5' : null,
+      )}
+    >
+      <UserAvatar
+        image={option.image}
+        name={option.name}
+        userId={option.id}
+      />
       <span className="truncate text-content-strong">{option.name}</span>
       {onRemove ? (
         <button
