@@ -2,6 +2,7 @@ import { and, asc, eq } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
 
 import { db } from '@/db'
+import { fillMissingUniqueIds } from '@/lib/database/assign-unique-ids'
 import {
   databaseProperties,
   databaseViews,
@@ -452,6 +453,8 @@ export async function* syncGithub(
       warn(messages.repoFailed(repo))
     }
   }
+
+  await fillMissingUniqueIds(database.documentId)
 
   if (skipped > 0) {
     warn(messages.skippedUnchanged(skipped))

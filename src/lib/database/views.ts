@@ -4,6 +4,7 @@ import type {
   DatabaseViewType,
 } from '@/db/schema'
 
+import { parseUniqueIdConfig, toUniqueIdNumber } from './unique-id'
 import {
   type PropertyValue,
   type PropertyValues,
@@ -52,6 +53,7 @@ const operatorsByType: Record<
   checkbox: ['is'],
   person: ['isMe', 'contains', 'notContains', 'isEmpty', 'isNotEmpty'],
   status: ['is', 'isNot', 'isEmpty', 'isNotEmpty'],
+  uniqueId: ['is', 'contains', 'greaterThan', 'lessThan'],
 }
 
 export function operatorsFor(
@@ -285,6 +287,32 @@ function matchesFilter(
     return value === target
   }
 
+  if (property.type === 'uniqueId') {
+    const prefix = parseUniqueIdConfig(property.options).prefix
+
+    if (filter.operator === 'contains') {
+      const haystack = valueToText(value, 'uniqueId', [], 'pt-BR', prefix)
+
+      return haystack.toLowerCase().includes(textOf(filter.value))
+    }
+
+    const target = toUniqueIdNumber(filter.value)
+
+    if (typeof value !== 'number' || target === null) {
+      return false
+    }
+
+    if (filter.operator === 'greaterThan') {
+      return value > target
+    }
+
+    if (filter.operator === 'lessThan') {
+      return value < target
+    }
+
+    return value === target
+  }
+
   if (property.type === 'date') {
     const target = typeof filter.value === 'string' ? filter.value : ''
 
@@ -384,7 +412,7 @@ function comparableOf(
 
   const { value, options } = readValue(row, property, people)
 
-  if (property.type === 'number') {
+  if (property.type === 'number' || property.type === 'uniqueId') {
     return {
       empty: typeof value !== 'number',
       text: '',

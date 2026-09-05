@@ -17,6 +17,19 @@ import { getActiveMembership } from '@/lib/active-org'
 import { getSession } from '@/lib/auth'
 import { canEdit, getDocumentAccess } from '@/lib/authz'
 import {
+  reserveUniqueIdNumbers,
+  seedUniqueIdProperty,
+  unwrapUniqueIdProperty,
+} from '@/lib/database/assign-unique-ids'
+import { personOptions } from '@/lib/database/people'
+import {
+  MAX_UNIQUE_ID_PREFIX,
+  type PropertyRefresh,
+  normalizeUniqueIdPrefix,
+  parseUniqueIdConfig,
+  serializeUniqueIdConfig,
+} from '@/lib/database/unique-id'
+import {
   MAX_PROPERTIES,
   MAX_PROPERTY_NAME,
   MAX_SELECT_OPTIONS,
@@ -37,7 +50,6 @@ import {
   viewTypes,
 } from '@/lib/database/views'
 import type { DatabaseRow } from '@/lib/database/views'
-import { personOptions } from '@/lib/database/people'
 import {
   getDatabaseDocument,
   listDatabasePeople,
@@ -190,7 +202,10 @@ export async function addDatabaseProperty(
   databaseId: string,
   type: DatabasePropertyType,
   name: string,
-): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
+): Promise<
+  | { ok: true; id: string; refresh: PropertyRefresh | null }
+  | { ok: false; error: string }
+> {
   if (!(await canEditDatabase(databaseId))) {
     return notAllowed()
   }
@@ -231,9 +246,12 @@ export async function addDatabaseProperty(
     createdAt: new Date(),
   })
 
+  const refresh =
+    type === 'uniqueId' ? await seedUniqueIdProperty(databaseId, id) : null
+
   revalidatePath(`/doc/${databaseId}`)
 
-  return { ok: true, id }
+  return { ok: true, id, refresh }
 }
 
 export async function renameDatabaseProperty(
@@ -265,7 +283,9 @@ export async function renameDatabaseProperty(
 export async function changeDatabasePropertyType(
   propertyId: string,
   type: DatabasePropertyType,
-): Promise<DatabaseActionResult> {
+): Promise<
+  { ok: true; refresh: PropertyRefresh | null } | { ok: false; error: string }
+> {
   const property = await databaseIdOfProperty(propertyId)
 
   if (!property || !(await canEditDatabase(property.databaseId))) {
@@ -276,12 +296,58 @@ export async function changeDatabasePropertyType(
     return notAllowed()
   }
 
+  const optionKinds: ReadonlyArray<DatabasePropertyType> = [
+    'select',
+    'multiSelect',
+    'status',
+  ]
   const keepsOptions =
-    type === 'select' || type === 'multiSelect' || type === 'status'
+    optionKinds.includes(type) && optionKinds.includes(property.type)
+
+  const unwrapped =
+    property.type === 'uniqueId'
+      ? await unwrapUniqueIdProperty(property.databaseId, property, type)
+      : null
 
   await db
     .update(databaseProperties)
     .set({ type, options: keepsOptions ? property.options : null })
+    .where(eq(databaseProperties.id, propertyId))
+
+  const refresh =
+    type === 'uniqueId'
+      ? await seedUniqueIdProperty(property.databaseId, propertyId, [property])
+      : unwrapped
+
+  revalidatePath(`/doc/${property.databaseId}`)
+
+  return { ok: true, refresh }
+}
+
+export async function setDatabaseUniqueIdPrefix(
+  propertyId: string,
+  prefix: string,
+): Promise<DatabaseActionResult> {
+  const property = await databaseIdOfProperty(propertyId)
+
+  if (!property || !(await canEditDatabase(property.databaseId))) {
+    return notAllowed()
+  }
+
+  if (property.type !== 'uniqueId') {
+    return notAllowed()
+  }
+
+  const config = parseUniqueIdConfig(property.options)
+
+  await db
+    .update(databaseProperties)
+    .set({
+      options: serializeUniqueIdConfig({
+        prefix: normalizeUniqueIdPrefix(prefix.slice(0, MAX_UNIQUE_ID_PREFIX)),
+        next: config.next,
+      }),
+    })
     .where(eq(databaseProperties.id, propertyId))
 
   revalidatePath(`/doc/${property.databaseId}`)
@@ -451,6 +517,16 @@ export async function createDatabaseRow(
   const values: Record<string, ReturnType<typeof normalizeValue>> = {}
 
   for (const property of properties) {
+    if (property.type === 'uniqueId') {
+      const [number] = await reserveUniqueIdNumbers(property.id, 1)
+
+      if (number !== undefined) {
+        values[property.id] = number
+      }
+
+      continue
+    }
+
     const raw = seed[property.id]
 
     if (raw === undefined) {
@@ -529,7 +605,7 @@ export async function setDatabaseRowValue(
     ),
   })
 
-  if (!property) {
+  if (!property || property.type === 'uniqueId') {
     return notAllowed()
   }
 

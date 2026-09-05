@@ -1,6 +1,8 @@
 import type { DatabaseProperty, DatabasePropertyType } from '@/db/schema'
 import { sanitizeUrl } from '@/lib/markdown/sanitize'
 
+import { formatUniqueId, toUniqueIdNumber } from './unique-id'
+
 export const propertyTypes: ReadonlyArray<DatabasePropertyType> = [
   'text',
   'number',
@@ -11,6 +13,7 @@ export const propertyTypes: ReadonlyArray<DatabasePropertyType> = [
   'url',
   'person',
   'status',
+  'uniqueId',
 ]
 
 export const optionColors = [
@@ -287,6 +290,10 @@ export function normalizeValue(
     return coerceNumber(value)
   }
 
+  if (type === 'uniqueId') {
+    return toUniqueIdNumber(value)
+  }
+
   if (type === 'date') {
     return coerceDate(value)
   }
@@ -376,6 +383,7 @@ export function valueToText(
   type: DatabasePropertyType,
   options: ReadonlyArray<SelectOption>,
   locale = 'pt-BR',
+  uniqueIdPrefix = '',
 ): string {
   if (type === 'checkbox') {
     return value === true ? '✓' : ''
@@ -383,6 +391,10 @@ export function valueToText(
 
   if (value === null || value === undefined) {
     return ''
+  }
+
+  if (type === 'uniqueId') {
+    return formatUniqueId(value, uniqueIdPrefix)
   }
 
   if (type === 'number') {

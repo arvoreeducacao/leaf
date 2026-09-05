@@ -5,6 +5,7 @@ import {
 } from '@/lib/databases'
 import { markdownToBlocks } from '@/lib/markdown/convert'
 
+import { parseUniqueIdConfig } from './unique-id'
 import { parseOptions, valueOf, valueToText } from './values'
 
 function escapeCell(value: string): string {
@@ -46,6 +47,7 @@ export async function databaseToMarkdown(
           property.type,
           options,
           locale,
+          parseUniqueIdConfig(property.options).prefix,
         )
       }),
     ]),

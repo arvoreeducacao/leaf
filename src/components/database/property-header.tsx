@@ -29,6 +29,11 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import type { DatabaseProperty, DatabasePropertyType } from '@/db/schema'
+import {
+  MAX_UNIQUE_ID_PREFIX,
+  normalizeUniqueIdPrefix,
+  parseUniqueIdConfig,
+} from '@/lib/database/unique-id'
 import { propertyTypes } from '@/lib/database/values'
 
 import { PropertyIcon } from './property-icon'
@@ -38,6 +43,7 @@ type Props = Readonly<{
   canEdit: boolean
   onRename: (name: string) => void
   onChangeType: (type: DatabasePropertyType) => void
+  onChangePrefix: (prefix: string) => void
   onHide: () => void
   onDelete: () => void
 }>
@@ -47,13 +53,41 @@ export function PropertyHeader({
   canEdit,
   onRename,
   onChangeType,
+  onChangePrefix,
   onHide,
   onDelete,
 }: Props) {
   const t = useTranslations('database')
   const tCommon = useTranslations('common')
   const [renaming, setRenaming] = useState(false)
+  const [prefixing, setPrefixing] = useState(false)
   const [confirming, setConfirming] = useState(false)
+
+  if (prefixing) {
+    return (
+      <input
+        aria-label={t('uniqueIdPrefixLabel')}
+        autoFocus
+        className="h-8 tablet:h-7 w-full min-w-0 rounded-medium border border-line-contrast bg-surface-card px-2 text-body-small text-content-strong outline-none focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-1"
+        defaultValue={parseUniqueIdConfig(property.options).prefix}
+        maxLength={MAX_UNIQUE_ID_PREFIX}
+        onBlur={(event) => {
+          onChangePrefix(normalizeUniqueIdPrefix(event.target.value))
+          setPrefixing(false)
+        }}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter') {
+            event.currentTarget.blur()
+          }
+
+          if (event.key === 'Escape') {
+            setPrefixing(false)
+          }
+        }}
+        placeholder={t('uniqueIdPrefixPlaceholder')}
+      />
+    )
+  }
 
   if (renaming) {
     return (
@@ -103,6 +137,11 @@ export function PropertyHeader({
               <DropdownMenuItem onSelect={() => setRenaming(true)}>
                 {t('renameProperty')}
               </DropdownMenuItem>
+              {property.type === 'uniqueId' ? (
+                <DropdownMenuItem onSelect={() => setPrefixing(true)}>
+                  {t('uniqueIdPrefix')}
+                </DropdownMenuItem>
+              ) : null}
               <DropdownMenuSub>
                 <DropdownMenuSubTrigger>
                   {t('changeType')}

@@ -7,6 +7,7 @@ import { useState } from 'react'
 import { AddIcon } from '@/components/icons'
 import type { DatabaseProperty } from '@/db/schema'
 import { type Person, optionsFor } from '@/lib/database/people'
+import { parseUniqueIdConfig } from '@/lib/database/unique-id'
 import { valueOf, valueToText } from '@/lib/database/values'
 import type { BoardGroup, DatabaseRow } from '@/lib/database/views'
 import { isMultiValueType } from '@/lib/database/views'
@@ -264,7 +265,13 @@ function BoardCard({
           {properties.map((property) => {
             const options = optionsFor(property, people)
             const value = valueOf(row.values, property, options)
-            const text = valueToText(value, property.type, options, locale)
+            const text = valueToText(
+              value,
+              property.type,
+              options,
+              locale,
+              parseUniqueIdConfig(property.options).prefix,
+            )
 
             if (text.length === 0) {
               return null

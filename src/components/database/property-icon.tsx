@@ -1,5 +1,6 @@
 import type { DatabasePropertyType } from '@/db/schema'
 import {
+  BadgeIDIcon,
   CalculatorIcon,
   CalendarIcon,
   ChartPieIcon,
@@ -23,6 +24,7 @@ const iconByType: Record<DatabasePropertyType, IconComponent> = {
   url: WorldIcon,
   person: UsersIcon,
   status: ChartPieIcon,
+  uniqueId: BadgeIDIcon,
 }
 
 type Props = Readonly<{ type: DatabasePropertyType; className?: string }>
