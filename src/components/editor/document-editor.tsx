@@ -18,7 +18,7 @@ const BlockNoteEditor = dynamic(() => import('./block-note-editor'), {
 export type RealtimeConfig = Readonly<{
   url: string | null
   port: number
-  user: Readonly<{ id: string; name: string }>
+  user: Readonly<{ id: string; name: string; image: string | null }>
 }>
 
 type Props = Readonly<{
@@ -55,7 +55,7 @@ export function DocumentEditor({
       documentId,
       url: realtime?.url ?? null,
       port: realtime?.port ?? 0,
-      user: realtime?.user ?? { id: '', name: '' },
+      user: realtime?.user ?? { id: '', name: '', image: null },
       anonymousName: t('someone'),
       fallbackContent: initialContent,
       fallbackUpdatedAt: initialUpdatedAt,

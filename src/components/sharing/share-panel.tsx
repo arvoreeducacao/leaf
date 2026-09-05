@@ -26,6 +26,7 @@ import {
 import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
+import { UserAvatar } from '@/components/ui/user-avatar'
 import type { ShareRole } from '@/db/schema'
 import {
   disablePublicLink,
@@ -371,13 +372,29 @@ export function SharePanel({ documentId, canManage }: Props) {
               className="flex min-w-0 flex-wrap items-center gap-2 py-1"
               key={person.id}
             >
+              {person.userId ? (
+                <UserAvatar
+                  email={person.email}
+                  image={person.image}
+                  name={person.name ?? person.email}
+                  userId={person.userId}
+                />
+              ) : null}
               <span className="flex min-w-0 flex-1 flex-col gap-1">
                 <span
                   className="truncate text-body-small text-content-strong"
                   title={person.email}
                 >
-                  {person.email}
+                  {person.name ?? person.email}
                 </span>
+                {person.name ? (
+                  <span
+                    className="truncate text-body-small text-content"
+                    title={person.email}
+                  >
+                    {person.email}
+                  </span>
+                ) : null}
                 {person.external ? (
                   <span className="flex items-center gap-2">
                     <Badge variant="warning">{t('externalGuest')}</Badge>

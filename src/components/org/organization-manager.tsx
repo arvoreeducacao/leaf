@@ -30,6 +30,7 @@ import {
 } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
 import { Switch } from '@/components/ui/switch'
+import { UserAvatar } from '@/components/ui/user-avatar'
 import type { InviteRole, OrganizationRole } from '@/db/schema'
 import {
   cancelOrganizationInvite,
@@ -327,6 +328,13 @@ export function OrganizationManager({
                 className="flex min-w-0 flex-wrap items-center gap-2 rounded-large border border-line-subtle px-3 py-2"
                 key={person.memberId}
               >
+                <UserAvatar
+                  className="size-7"
+                  email={person.email}
+                  image={person.image}
+                  name={person.name}
+                  userId={person.userId}
+                />
                 <span className="flex min-w-0 flex-1 basis-full flex-col tablet:basis-0">
                   <span
                     className="truncate font-bold text-body-small text-content-strong"

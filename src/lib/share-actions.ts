@@ -28,6 +28,9 @@ export type SharePerson = Readonly<{
   email: string
   role: ShareRole
   external: boolean
+  userId: string | null
+  name: string | null
+  image: string | null
 }>
 
 export type ShareState = Readonly<{
@@ -98,8 +101,12 @@ async function readState(
       id: documentShares.id,
       email: documentShares.granteeEmail,
       role: documentShares.role,
+      userId: user.id,
+      name: user.name,
+      image: user.image,
     })
     .from(documentShares)
+    .leftJoin(user, eq(user.email, documentShares.granteeEmail))
     .where(eq(documentShares.documentId, documentId))
     .orderBy(asc(documentShares.createdAt))
 

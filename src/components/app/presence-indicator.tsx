@@ -56,13 +56,20 @@ export function PresenceIndicator() {
                 >
                   <span
                     aria-hidden="true"
-                    className="flex size-5.5 items-center justify-center rounded-full font-semibold text-[10px]"
+                    className="relative flex size-5.5 items-center justify-center overflow-hidden rounded-full font-semibold text-[10px]"
                     style={{
                       backgroundColor: color,
                       color: realtimeTextColorFor(color),
                     }}
                   >
                     {realtimeInitials(peer.name)}
+                    {peer.image ? (
+                      <img
+                        alt=""
+                        className="absolute inset-0 size-full object-cover"
+                        src={peer.image}
+                      />
+                    ) : null}
                   </span>
                 </li>
               )

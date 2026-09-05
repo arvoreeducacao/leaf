@@ -163,6 +163,7 @@ export default async function DocumentPage({ params }: Props) {
                         name:
                           authorNameOf(session.user.name, session.user.email) ??
                           '',
+                        image: session.user.image ?? null,
                       },
                     }
                   : null

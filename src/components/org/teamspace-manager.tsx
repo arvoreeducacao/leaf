@@ -18,6 +18,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
+import { UserAvatar } from '@/components/ui/user-avatar'
 import type { TeamspaceAccess, TeamspaceRole } from '@/db/schema'
 import type { OrganizationPerson } from '@/lib/organizations'
 import type { TeamspaceActionResult } from '@/lib/teamspace-actions'
@@ -132,6 +133,12 @@ export function TeamspaceManager({ teamspaces, orgPeople }: Props) {
                     className="flex min-w-0 flex-wrap items-center gap-2"
                     key={person.memberId}
                   >
+                    <UserAvatar
+                      email={person.email}
+                      image={person.image}
+                      name={person.name}
+                      userId={person.userId}
+                    />
                     <span
                       className="min-w-0 flex-1 truncate text-body-small text-content-strong"
                       title={person.email}

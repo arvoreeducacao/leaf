@@ -31,6 +31,7 @@ export type TeamspacePerson = Readonly<{
   userId: string
   name: string
   email: string
+  image: string | null
   role: TeamspaceRole
 }>
 
@@ -176,6 +177,7 @@ export async function listTeamspacePeople(
       userId: user.id,
       name: user.name,
       email: user.email,
+      image: user.image,
       role: teamspaceMembers.role,
     })
     .from(teamspaceMembers)
