@@ -111,11 +111,7 @@ export type NotionList<T> = Readonly<{
   next_cursor?: string | null
 }>
 
-export type NotionSearchResult = Readonly<{
-  id: string
-  object?: string
-  parent?: Record<string, unknown>
-}>
+export type NotionSearchResult = NotionPageObject
 
 export type NotionClient = Readonly<{
   page: (id: string) => Promise<NotionPageObject>

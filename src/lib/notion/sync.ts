@@ -672,6 +672,11 @@ export async function* syncNotion(
 
   const deferredRoots: Array<QueueItem> = []
 
+  const listed = new Map<
+    string,
+    { icon: string | null; lastEdited: Date | null; title: string }
+  >()
+
   if (roots === 'workspace') {
     const found = new Map<
       string,
@@ -697,6 +702,14 @@ export async function* syncNotion(
         parentId,
         parentType: parent.type ?? 'workspace',
       })
+
+      if ((result.object ?? 'page') === 'page') {
+        listed.set(normalizeNotionId(result.id), {
+          icon: notionIconValue(result.icon),
+          lastEdited: stamp(result.last_edited_time),
+          title: pageTitle(result, messages.untitled),
+        })
+      }
     }
 
     const seededDatabases = new Set<string>()
@@ -1010,6 +1023,30 @@ export async function* syncNotion(
           total: 0,
           type: 'progress',
         }
+
+        continue
+      }
+
+      const alreadyListed = listed.get(idKey)
+      const known = mappings.get(idKey)
+
+      if (
+        !options?.force &&
+        alreadyListed &&
+        known?.lastEditedAt &&
+        alreadyListed.lastEdited &&
+        known.lastEditedAt.getTime() >= alreadyListed.lastEdited.getTime()
+      ) {
+        skipped += 1
+
+        await refreshIcon(idKey, known.documentId, alreadyListed.icon)
+
+        if (!rootDocId) {
+          rootDocId = known.documentId
+          rootTitle = alreadyListed.title
+        }
+
+        enqueueKnownChildren(item.id, known.documentId)
 
         continue
       }
