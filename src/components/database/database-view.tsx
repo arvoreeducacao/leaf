@@ -14,13 +14,16 @@ import {
   addDatabaseProperty,
   addSelectOption,
   changeDatabasePropertyType,
+  clearDatabaseViewDraft,
   createDatabaseRow,
   createDatabaseView,
   deleteDatabaseProperty,
   deleteDatabaseRow,
   deleteDatabaseView,
+  publishDatabaseViewDraft,
   renameDatabaseProperty,
   renameDatabaseRow,
+  saveDatabaseViewDraft,
   setDatabaseRowValue,
   setDatabaseUniqueIdPrefix,
   updateDatabaseView,
@@ -35,10 +38,12 @@ import { parseOptions, serializeOptions } from '@/lib/database/values'
 import {
   type ViewConfig,
   applyFilters,
+  applySearch,
   applySorts,
   boardPropertyOf,
   groupRows,
   parseViewConfig,
+  serializeViewConfig,
   visibleProperties,
 } from '@/lib/database/views'
 import type { DatabaseSnapshot } from '@/lib/databases'
@@ -47,6 +52,7 @@ import { cn } from '@/shared/utils'
 import { BoardView } from './board-view'
 import { TableView } from './table-view'
 import type { DatabaseHandlers } from './types'
+import { ViewFilterBar } from './view-filter-bar'
 import { ViewToolbar } from './view-toolbar'
 
 const configSaveDelay = 500
@@ -76,11 +82,20 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
   const [views, setViews] = useState(snapshot.views)
   const [rows, setRows] = useState(snapshot.rows)
   const [activeViewId, setActiveViewId] = useState(snapshot.views[0]?.id ?? '')
-  const [configs, setConfigs] = useState<Record<string, ViewConfig>>(() =>
+  const [saved, setSaved] = useState<Record<string, ViewConfig>>(() =>
     Object.fromEntries(
       snapshot.views.map((view) => [view.id, parseViewConfig(view.config)]),
     ),
   )
+  const [drafts, setDrafts] = useState<Record<string, ViewConfig>>(() =>
+    Object.fromEntries(
+      Object.entries(snapshot.drafts).map(([viewId, raw]) => [
+        viewId,
+        parseViewConfig(raw),
+      ]),
+    ),
+  )
+  const [search, setSearch] = useState('')
 
   const saveTimers = useRef(new Map<string, ReturnType<typeof setTimeout>>())
 
@@ -115,11 +130,30 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
   const activeView =
     views.find((view) => view.id === activeViewId) ?? views[0] ?? null
 
-  const config = activeView
-    ? (configs[activeView.id] ?? parseViewConfig(activeView.config))
+  const savedConfig = activeView
+    ? (saved[activeView.id] ?? parseViewConfig(activeView.config))
     : parseViewConfig(null)
 
-  function persistConfig(viewId: string, next: ViewConfig) {
+  const draftConfig = activeView ? drafts[activeView.id] : undefined
+
+  const config = draftConfig ?? savedConfig
+
+  const hasDraft =
+    draftConfig !== undefined &&
+    serializeViewConfig(draftConfig) !== serializeViewConfig(savedConfig)
+
+  const filtersChanged =
+    hasDraft &&
+    JSON.stringify(config.filters) !== JSON.stringify(savedConfig.filters)
+
+  const sortsChanged =
+    hasDraft && JSON.stringify(config.sorts) !== JSON.stringify(savedConfig.sorts)
+
+  function persistDraft(viewId: string, next: ViewConfig | null) {
+    if (!snapshot.viewerId) {
+      return
+    }
+
     const timers = saveTimers.current
     const running = timers.get(viewId)
 
@@ -131,7 +165,11 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
       viewId,
       setTimeout(() => {
         timers.delete(viewId)
-        void guard(() => updateDatabaseView(viewId, { config: next }))
+        void guard(() =>
+          next === null
+            ? clearDatabaseViewDraft(viewId)
+            : saveDatabaseViewDraft(viewId, next),
+        )
       }, configSaveDelay),
     )
   }
@@ -165,11 +203,62 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
       return
     }
 
-    setConfigs((current) => ({ ...current, [activeView.id]: next }))
+    const matchesSaved =
+      serializeViewConfig(next) === serializeViewConfig(savedConfig)
 
-    if (canEdit) {
-      persistConfig(activeView.id, next)
+    setDrafts((current) => {
+      if (matchesSaved) {
+        const { [activeView.id]: _removed, ...rest } = current
+
+        return rest
+      }
+
+      return { ...current, [activeView.id]: next }
+    })
+
+    persistDraft(activeView.id, matchesSaved ? null : next)
+  }
+
+  function resetView() {
+    if (!activeView) {
+      return
     }
+
+    const viewId = activeView.id
+
+    setDrafts((current) => {
+      const { [viewId]: _removed, ...rest } = current
+
+      return rest
+    })
+
+    persistDraft(viewId, null)
+  }
+
+  function publishView() {
+    if (!activeView || !hasDraft || draftConfig === undefined) {
+      return
+    }
+
+    const viewId = activeView.id
+    const published = draftConfig
+
+    setSaved((current) => ({ ...current, [viewId]: published }))
+    setDrafts((current) => {
+      const { [viewId]: _removed, ...rest } = current
+
+      return rest
+    })
+
+    const timers = saveTimers.current
+    const running = timers.get(viewId)
+
+    if (running) {
+      clearTimeout(running)
+      timers.delete(viewId)
+    }
+
+    void guard(() => publishDatabaseViewDraft(viewId, published))
   }
 
   const handlers: DatabaseHandlers = {
@@ -395,7 +484,7 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
         }
 
         setViews((current) => [...current, view])
-        setConfigs((current) => ({
+        setSaved((current) => ({
           ...current,
           [view.id]: parseViewConfig(null),
         }))
@@ -432,6 +521,11 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
     const remaining = views.filter((view) => view.id !== viewId)
 
     setViews(remaining)
+    setDrafts((current) => {
+      const { [viewId]: _removed, ...rest } = current
+
+      return rest
+    })
 
     if (activeViewId === viewId) {
       setActiveViewId(remaining[0]?.id ?? '')
@@ -453,18 +547,31 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
   const filtered = useMemo(
     () =>
       applySorts(
-        applyFilters(
-          rows,
-          config.filters,
+        applySearch(
+          applyFilters(
+            rows,
+            config.filters,
+            properties,
+            snapshot.viewerId,
+            people,
+          ),
+          search,
           properties,
-          snapshot.viewerId,
           people,
         ),
         config.sorts,
         properties,
         people,
       ),
-    [config.filters, config.sorts, people, properties, rows, snapshot.viewerId],
+    [
+      config.filters,
+      config.sorts,
+      people,
+      properties,
+      rows,
+      search,
+      snapshot.viewerId,
+    ],
   )
 
   const groupProperty = useMemo(
@@ -508,18 +615,36 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
         canEdit={canEdit}
         compact={compact}
         config={config}
-        onCreateRow={() => handlers.createRow()}
         onConfigChange={changeConfig}
+        onCreateRow={() => handlers.createRow()}
         onCreateView={createView}
         onDeleteView={deleteView}
         onRenameView={renameView}
+        filtersChanged={filtersChanged}
+        onSearchChange={setSearch}
+        onSelectView={setActiveViewId}
         groupPropertyId={
           activeView.type === 'board' ? (resolvedGroupProperty?.id ?? null) : null
         }
-        onSelectView={setActiveViewId}
         people={snapshot.people}
         properties={properties}
+        search={search}
+        sortsChanged={sortsChanged}
         views={views}
+      />
+
+      <ViewFilterBar
+        canEdit={canEdit}
+        compact={compact}
+        config={config}
+        filtersChanged={filtersChanged}
+        hasDraft={hasDraft}
+        onConfigChange={changeConfig}
+        onPublish={publishView}
+        onReset={resetView}
+        people={snapshot.people}
+        properties={properties}
+        sortsChanged={sortsChanged}
       />
 
       {rows.length === 0 ? (
@@ -551,12 +676,12 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
 
       {filtered.length === 0 && rows.length > 0 ? (
         <p className={cn('py-3 text-body-small text-content', gutter)}>
-          {t('noResults')}
+          {search.trim().length > 0 ? t('noSearchResults') : t('noResults')}
         </p>
       ) : null}
 
       <p className={cn('pt-2 text-caption text-content-subtle', gutter)}>
-        {t('rowCount', { count: rows.length })}
+        {t('rowCount', { count: filtered.length })}
       </p>
     </section>
   )

@@ -1,8 +1,13 @@
-import { and, asc, eq, isNull } from 'drizzle-orm'
+import { and, asc, eq, inArray, isNull } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
 
 import { db } from '@/db'
-import { databaseProperties, databaseViews, documents } from '@/db/schema'
+import {
+  databaseProperties,
+  databaseViewDrafts,
+  databaseViews,
+  documents,
+} from '@/db/schema'
 import type { DatabaseProperty, DatabaseView, Document } from '@/db/schema'
 import type { Person } from '@/lib/database/people'
 import type { DatabaseRow } from '@/lib/database/views'
@@ -21,6 +26,7 @@ export type DatabaseSnapshot = Readonly<{
   title: string
   properties: Array<DatabaseProperty>
   views: Array<DatabaseView>
+  drafts: Record<string, string | null>
   rows: Array<DatabaseRow>
   people: Array<Person>
   viewerId: string | null
@@ -145,10 +151,40 @@ export async function loadDatabase(
     title: document.title,
     properties,
     views,
+    drafts: await listViewDrafts(
+      views.map((view) => view.id),
+      viewerId,
+    ),
     rows,
     people,
     viewerId,
   }
+}
+
+export async function listViewDrafts(
+  viewIds: ReadonlyArray<string>,
+  viewerId: string | null,
+): Promise<Record<string, string | null>> {
+  if (!viewerId || viewIds.length === 0) {
+    return {}
+  }
+
+  const drafts = await db
+    .select({
+      viewId: databaseViewDrafts.viewId,
+      config: databaseViewDrafts.config,
+    })
+    .from(databaseViewDrafts)
+    .where(
+      and(
+        eq(databaseViewDrafts.userId, viewerId),
+        inArray(databaseViewDrafts.viewId, [...viewIds]),
+      ),
+    )
+
+  return Object.fromEntries(
+    drafts.map((draft) => [draft.viewId, draft.config]),
+  )
 }
 
 export async function getRowDocument(rowId: string) {
