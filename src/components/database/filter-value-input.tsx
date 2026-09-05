@@ -15,6 +15,7 @@ type Props = Readonly<{
   operator: FilterOperator
   value: PropertyValue
   people: ReadonlyArray<Person>
+  label?: string
   onChange: (value: PropertyValue) => void
 }>
 
@@ -23,9 +24,11 @@ export function FilterValueInput({
   operator,
   value,
   people,
+  label,
   onChange,
 }: Props) {
   const t = useTranslations('database')
+  const fieldLabel = label ?? t('filterValue')
 
   if (!operatorNeedsValue(operator)) {
     return null
@@ -37,7 +40,7 @@ export function FilterValueInput({
   if (!property) {
     return (
       <input
-        aria-label={t('filterValue')}
+        aria-label={fieldLabel}
         className={inputClass}
         onChange={(event) => onChange(event.target.value)}
         type="text"
@@ -50,7 +53,7 @@ export function FilterValueInput({
     return (
       <FieldSelect
         className="w-full"
-        label={t('filterValue')}
+        label={fieldLabel}
         onChange={(next) => onChange(next === 'true')}
         options={[
           { value: 'true', label: t('checked') },
@@ -72,7 +75,7 @@ export function FilterValueInput({
     return (
       <FieldSelect
         className="w-full"
-        label={t('filterValue')}
+        label={fieldLabel}
         onChange={onChange}
         options={[
           { value: '', label: t('selectPlaceholder') },
@@ -89,7 +92,7 @@ export function FilterValueInput({
   if (property.type === 'date') {
     return (
       <input
-        aria-label={t('filterValue')}
+        aria-label={fieldLabel}
         className={inputClass}
         onChange={(event) => onChange(event.target.value)}
         type="date"
@@ -100,7 +103,7 @@ export function FilterValueInput({
 
   return (
     <input
-      aria-label={t('filterValue')}
+      aria-label={fieldLabel}
       className={inputClass}
       inputMode={property.type === 'number' ? 'decimal' : undefined}
       onChange={(event) =>

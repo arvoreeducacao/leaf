@@ -18,7 +18,12 @@ import {
 import { resetDatabase } from '@/db/testing'
 import { getDocumentAccess } from '@/lib/authz'
 import { serializeOptions, serializeValues } from '@/lib/database/values'
-import { parseViewConfig, serializeViewConfig } from '@/lib/database/views'
+import { emptyFormConfig } from '@/lib/database/forms'
+import {
+  emptyViewConfig,
+  parseViewConfig,
+  serializeViewConfig,
+} from '@/lib/database/views'
 import {
   copyDatabaseInto,
   listDatabaseRows,
@@ -26,8 +31,8 @@ import {
   loadRowContext,
 } from '@/lib/databases'
 
-const owner = { id: 'user-owner', email: 'owner@arvore.com.br' }
-const guest = { id: 'user-guest', email: 'guest@arvore.com.br' }
+const owner = { id: 'user-owner', email: 'owner@example.com' }
+const guest = { id: 'user-guest', email: 'guest@example.com' }
 
 const statusOptions = [
   { id: 'todo', name: 'To do', color: 'gray' as const },
@@ -45,6 +50,27 @@ const viewConfig = serializeViewConfig({
   filters: [{ propertyId: 'prop-points', operator: 'greaterThan', value: 1 }],
   sorts: [{ propertyId: 'title', direction: 'asc' }],
   hiddenPropertyIds: ['prop-points'],
+  form: null,
+})
+
+const formConfig = serializeViewConfig({
+  ...emptyViewConfig,
+  form: {
+    ...emptyFormConfig,
+    questions: [
+      {
+        propertyId: 'prop-status',
+        label: '',
+        description: '',
+        required: true,
+        attachment: false,
+        long: false,
+      },
+    ],
+    automations: [
+      { kind: 'presetValue', propertyId: 'prop-status', value: 'todo' },
+    ],
+  },
 })
 
 beforeEach(async () => {
@@ -142,15 +168,27 @@ beforeEach(async () => {
     },
   ])
 
-  await db.insert(databaseViews).values({
-    id: 'view-1',
-    databaseId: 'base',
-    name: 'Table',
-    type: 'table',
-    config: viewConfig,
-    position: 0,
-    createdAt: now,
-  })
+  await db.insert(databaseViews).values([
+    {
+      id: 'view-1',
+      databaseId: 'base',
+      name: 'Table',
+      type: 'table',
+      config: viewConfig,
+      position: 0,
+      createdAt: now,
+    },
+    {
+      id: 'view-form',
+      databaseId: 'base',
+      name: 'Form',
+      type: 'form',
+      config: formConfig,
+      publicToken: 'token-da-base-original',
+      position: 1,
+      createdAt: now,
+    },
+  ])
 })
 
 describe('reading a database', () => {
@@ -261,8 +299,30 @@ describe('duplicating a database', () => {
 
     expect(created).toHaveLength(2)
     expect(snapshot?.properties).toHaveLength(2)
-    expect(snapshot?.views).toHaveLength(1)
+    expect(snapshot?.views).toHaveLength(2)
     expect(snapshot?.rows.map((row) => row.title)).toEqual(['Alfa', 'Beta'])
+  })
+
+  it('repoints the questions and automations of the copied form', async () => {
+    await copyDatabaseInto('base', 'copia', owner.id, at(10))
+    const snapshot = await loadDatabase('copia')
+    const form = snapshot?.views.find((view) => view.type === 'form')
+    const config = parseViewConfig(form?.config ?? null).form
+    const ids = new Set(snapshot?.properties.map((item) => item.id))
+
+    expect(config?.questions[0]?.propertyId).not.toBe('prop-status')
+    expect(ids.has(config?.questions[0]?.propertyId ?? '')).toBe(true)
+    expect(ids.has(config?.automations[0]?.propertyId ?? '')).toBe(true)
+    expect(config?.automations[0]?.value).toBe('todo')
+  })
+
+  it('does not hand the public link of the form to the copy', async () => {
+    await copyDatabaseInto('base', 'copia', owner.id, at(10))
+    const snapshot = await loadDatabase('copia')
+    const form = snapshot?.views.find((view) => view.type === 'form')
+
+    expect(form).toBeDefined()
+    expect(form?.publicToken).toBeNull()
   })
 
   it('repoints the row values at the new properties', async () => {
@@ -298,13 +358,10 @@ describe('duplicating a database', () => {
   })
 })
 
-
 describe('the view each person is looking at', () => {
   const mine = serializeViewConfig({
-    groupByPropertyId: null,
+    ...emptyViewConfig,
     filters: [{ propertyId: 'prop-status', operator: 'is', value: 'todo' }],
-    sorts: [],
-    hiddenPropertyIds: [],
   })
 
   beforeEach(async () => {

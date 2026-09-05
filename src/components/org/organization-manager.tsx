@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useId, useState } from 'react'
 import { toast } from 'sonner'
 
+import { IconPicker } from '@/components/app/icon-picker'
 import {
   ClipboardIcon,
   GlobeIcon,
@@ -16,6 +17,7 @@ import { ConfirmInviteLinkChange } from '@/components/org/confirm-invite-link-ch
 import { ConfirmRemoveMember } from '@/components/org/confirm-remove-member'
 import { DeleteOrganizationDialog } from '@/components/org/delete-organization-dialog'
 import { LeaveOrganizationDialog } from '@/components/org/leave-organization-dialog'
+import { OrganizationMark } from '@/components/org/organization-mark'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { ButtonIcon } from '@/components/ui/button-icon'
@@ -40,7 +42,9 @@ import {
   inviteToOrganization,
   leaveOrganization,
   removeMember,
+  removeOrganizationIcon,
   renameOrganization,
+  setOrganizationIcon,
   updateMemberRole,
 } from '@/lib/org-actions'
 import type { OrgActionResult } from '@/lib/org-actions'
@@ -48,6 +52,7 @@ import type { OrganizationPerson, PendingInvite } from '@/lib/organizations'
 
 type Props = Readonly<{
   orgName: string
+  orgIcon: string | null
   role: OrganizationRole
   memberId: string
   people: ReadonlyArray<OrganizationPerson>
@@ -65,6 +70,7 @@ function joinUrlFor(token: string) {
 
 export function OrganizationManager({
   orgName,
+  orgIcon,
   role,
   memberId,
   people,
@@ -95,6 +101,7 @@ export function OrganizationManager({
   const [confirmingLink, setConfirmingLink] = useState<
     'disable' | 'reset' | null
   >(null)
+  const [iconPickerOpen, setIconPickerOpen] = useState(false)
 
   const canManage = role === 'owner' || role === 'admin'
   const canLeave = role !== 'owner'
@@ -256,34 +263,62 @@ export function OrganizationManager({
       </header>
 
       <section className="flex flex-col gap-3">
-        {canManage ? (
-          <form
-            className="flex flex-col gap-3 tablet:flex-row tablet:items-end"
-            onSubmit={submitName}
-          >
-            <div className="flex min-w-0 flex-1 flex-col gap-2">
-              <Label htmlFor={nameId}>{t('nameLabel')}</Label>
-              <Input
-                aria-describedby={nameError ? nameErrorId : undefined}
-                aria-invalid={nameError ? true : undefined}
-                className="max-w-full"
-                disabled={pending}
-                id={nameId}
-                maxLength={80}
-                onChange={(event) => setName(event.target.value)}
-                value={name}
-              />
-            </div>
-            <Button
-              aria-busy={pending}
-              className="w-full tablet:w-auto"
-              disabled={pending || name.trim() === orgName}
-              type="submit"
-              variant="secondary"
+        <div className="flex flex-wrap items-end gap-4">
+          {canManage ? (
+            <button
+              aria-label={orgIcon ? t('iconChange') : t('iconAdd')}
+              className="cursor-pointer rounded-large outline-none transition-opacity hover:opacity-80 focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-60"
+              data-testid="org-icon-button"
+              disabled={pending}
+              onClick={() => setIconPickerOpen(true)}
+              type="button"
             >
-              {t('rename')}
-            </Button>
-          </form>
+              <OrganizationMark icon={orgIcon} name={orgName} size="large" />
+            </button>
+          ) : (
+            <OrganizationMark icon={orgIcon} name={orgName} size="large" />
+          )}
+
+          {canManage ? (
+            <form
+              className="flex min-w-0 flex-1 flex-col gap-3 tablet:flex-row tablet:items-end"
+              onSubmit={submitName}
+            >
+              <div className="flex min-w-0 flex-1 flex-col gap-2">
+                <Label htmlFor={nameId}>{t('nameLabel')}</Label>
+                <Input
+                  aria-describedby={nameError ? nameErrorId : undefined}
+                  aria-invalid={nameError ? true : undefined}
+                  className="max-w-full"
+                  disabled={pending}
+                  id={nameId}
+                  maxLength={80}
+                  onChange={(event) => setName(event.target.value)}
+                  value={name}
+                />
+              </div>
+              <Button
+                aria-busy={pending}
+                className="w-full tablet:w-auto"
+                disabled={pending || name.trim() === orgName}
+                type="submit"
+                variant="secondary"
+              >
+                {t('rename')}
+              </Button>
+            </form>
+          ) : (
+            <div className="flex min-w-0 flex-1 flex-col gap-1">
+              <span className="font-bold text-body-small text-content">
+                {t('nameLabel')}
+              </span>
+              <p className="text-body-medium text-content-strong">{orgName}</p>
+            </div>
+          )}
+        </div>
+
+        {canManage ? (
+          <p className="text-body-small text-content">{t('iconHelp')}</p>
         ) : null}
 
         {canManage && nameError ? (
@@ -295,15 +330,6 @@ export function OrganizationManager({
             {nameError}
           </p>
         ) : null}
-
-        {canManage ? null : (
-          <div className="flex flex-col gap-1">
-            <span className="font-bold text-body-small text-content">
-              {t('nameLabel')}
-            </span>
-            <p className="text-body-medium text-content-strong">{orgName}</p>
-          </div>
-        )}
       </section>
 
       <Separator />
@@ -649,6 +675,20 @@ export function OrganizationManager({
           </>
         ) : null}
       </section>
+
+      {canManage ? (
+        <IconPicker
+          currentIcon={orgIcon}
+          description={t('iconPickerDescription')}
+          onApplied={() => router.refresh()}
+          onApply={setOrganizationIcon}
+          onOpenChange={setIconPickerOpen}
+          onRemove={removeOrganizationIcon}
+          open={iconPickerOpen}
+          removedMessage={t('iconRemoved')}
+          title={t('iconPickerTitle')}
+        />
+      ) : null}
 
       <ConfirmRemoveMember
         name={removingName}

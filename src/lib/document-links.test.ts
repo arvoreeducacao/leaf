@@ -18,8 +18,8 @@ describe('documentIdFromHref', () => {
   it('reads an absolute link of the same origin', () => {
     expect(
       documentIdFromHref(
-        'https://leaf.arvore.com.br/doc/DQJ_0aM01VfV',
-        'https://leaf.arvore.com.br',
+        'https://leaf.example.com/doc/DQJ_0aM01VfV',
+        'https://leaf.example.com',
       ),
     ).toBe('DQJ_0aM01VfV')
   })
@@ -28,7 +28,7 @@ describe('documentIdFromHref', () => {
     expect(
       documentIdFromHref(
         'https://evil.example.com/doc/DQJ_0aM01VfV',
-        'https://leaf.arvore.com.br',
+        'https://leaf.example.com',
       ),
     ).toBeNull()
   })

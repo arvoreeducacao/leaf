@@ -11,11 +11,11 @@ const emailDomainErrorCode = 'EMAIL_DOMAIN_NOT_ALLOWED'
 
 const copy = {
   title: 'Bem-vindo ao Leaf',
-  subtitle: 'Entre com sua conta Árvore para escrever e compartilhar documentos.',
-  submit: 'Entrar com a conta Árvore',
-  hint: 'Use sua conta @arvore.com.br',
-  failed: 'Não foi possível entrar com a conta Árvore. Tente de novo.',
-  domainBlocked: 'A conta conectada à Árvore não é @arvore.com.br. Entre com outra conta para usar o Leaf.',
+  subtitle: 'Entre na sua conta para escrever e compartilhar documentos.',
+  submit: 'Entrar',
+  failed: 'Não foi possível entrar. Tente de novo.',
+  domainBlocked:
+    'A conta que você usou não tem acesso ao Leaf. Entre com outra conta.',
 }
 
 function messageForErrorCode(code: string | undefined): string | null {
@@ -94,7 +94,6 @@ export default function LoginScreen() {
 
         <View style={styles.actions}>
           <LeafButton busy={pending} label={copy.submit} onPress={handleSignIn} />
-          <Text style={[styles.hint, { color: colors.contentSubtle }]}>{copy.hint}</Text>
         </View>
       </View>
     </View>
@@ -149,9 +148,5 @@ const styles = StyleSheet.create({
   actions: {
     marginTop: 32,
     gap: 12,
-  },
-  hint: {
-    fontSize: 13,
-    lineHeight: 18,
   },
 })

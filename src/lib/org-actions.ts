@@ -21,6 +21,7 @@ import {
 } from '@/lib/active-org'
 import { getSession } from '@/lib/auth'
 import { registerInviteAttempt } from '@/lib/authz'
+import { normalizeDocumentIcon } from '@/lib/document-icon'
 import { emailDomainPolicy, isEmailDomainAllowed } from '@/lib/email-domain'
 import { joinTokenPattern } from '@/lib/join-link'
 import {
@@ -142,6 +143,50 @@ export async function renameOrganization(
   await db
     .update(organizations)
     .set({ name: trimmed })
+    .where(eq(organizations.id, membership.orgId))
+
+  revalidatePath('/', 'layout')
+
+  return { ok: true }
+}
+
+export async function setOrganizationIcon(
+  icon: string,
+): Promise<OrgActionResult> {
+  const session = await requireSession()
+  const membership = await getActiveMembership(session.user.id)
+
+  if (!membership || !canManageOrganization(membership.role)) {
+    return failure('errorNotAllowed')
+  }
+
+  const value = normalizeDocumentIcon(icon)
+
+  if (!value) {
+    return failure('errorIconInvalid')
+  }
+
+  await db
+    .update(organizations)
+    .set({ icon: value })
+    .where(eq(organizations.id, membership.orgId))
+
+  revalidatePath('/', 'layout')
+
+  return { ok: true }
+}
+
+export async function removeOrganizationIcon(): Promise<OrgActionResult> {
+  const session = await requireSession()
+  const membership = await getActiveMembership(session.user.id)
+
+  if (!membership || !canManageOrganization(membership.role)) {
+    return failure('errorNotAllowed')
+  }
+
+  await db
+    .update(organizations)
+    .set({ icon: null })
     .where(eq(organizations.id, membership.orgId))
 
   revalidatePath('/', 'layout')

@@ -30,6 +30,7 @@ import {
   setDatabaseUniqueIdPrefix,
   updateDatabaseView,
 } from '@/lib/database-actions'
+import { type FormConfig, emptyFormConfig } from '@/lib/database/forms'
 import { personOptions } from '@/lib/database/people'
 import {
   type PropertyRefresh,
@@ -54,6 +55,7 @@ import { cn } from '@/shared/utils'
 
 import { BoardView } from './board-view'
 import { CalendarView } from './calendar-view'
+import { FormEditor } from './form-editor'
 import { GalleryView } from './gallery-view'
 import { ListView } from './list-view'
 import { TableView } from './table-view'
@@ -90,6 +92,9 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
   const [rows, setRows] = useState(snapshot.rows)
   const params = useSearchParams()
   const requestedViewId = params.get('v')
+  const [notifyingViewIds, setNotifyingViewIds] = useState(
+    () => new Set(snapshot.notifyingViewIds),
+  )
   const [activeViewId, setActiveViewId] = useState(
     snapshot.views.find((view) => view.id === requestedViewId)?.id ??
       snapshot.views[0]?.id ??
@@ -549,7 +554,8 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
           databaseId: snapshot.id,
           name,
           type,
-          config: null,
+          config: result.config,
+          publicToken: null,
           position: views.length,
           createdAt: new Date(),
         }
@@ -557,7 +563,7 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
         setViews((current) => [...current, view])
         setSaved((current) => ({
           ...current,
-          [view.id]: parseViewConfig(null),
+          [view.id]: parseViewConfig(result.config),
         }))
         setActiveViewId(view.id)
       } catch {
@@ -679,6 +685,32 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
 
   const gutter = compact ? '' : 'px-4 tablet:px-24'
 
+  function changeForm(form: FormConfig) {
+    changeConfig({ ...config, form })
+  }
+
+  function changeNotifying(viewId: string, notifying: boolean) {
+    setNotifyingViewIds((current) => {
+      const next = new Set(current)
+
+      if (notifying) {
+        next.add(viewId)
+      } else {
+        next.delete(viewId)
+      }
+
+      return next
+    })
+  }
+
+  function changeToken(viewId: string, token: string | null) {
+    setViews((current) =>
+      current.map((view) =>
+        view.id === viewId ? { ...view, publicToken: token } : view,
+      ),
+    )
+  }
+
   return (
     <section
       className={cn(
@@ -707,26 +739,44 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
         views={views}
       />
 
-      <ViewFilterBar
-        canEdit={canEdit}
-        compact={compact}
-        config={config}
-        filtersChanged={filtersChanged}
-        hasDraft={hasDraft}
-        onConfigChange={changeConfig}
-        onPublish={publishView}
-        onPublishAsNewView={publishAsNewView}
-        onReset={resetView}
-        people={snapshot.people}
-        properties={properties}
-        sortsChanged={sortsChanged}
-      />
+      {activeView.type === 'form' ? null : (
+        <ViewFilterBar
+          canEdit={canEdit}
+          compact={compact}
+          config={config}
+          filtersChanged={filtersChanged}
+          hasDraft={hasDraft}
+          onConfigChange={changeConfig}
+          onPublish={publishView}
+          onPublishAsNewView={publishAsNewView}
+          onReset={resetView}
+          people={snapshot.people}
+          properties={properties}
+          sortsChanged={sortsChanged}
+        />
+      )}
 
-      {rows.length === 0 ? (
+      {activeView.type !== 'form' && rows.length === 0 ? (
         <p className={cn('py-3 text-body-small text-content', gutter)}>
           {t('noRows')}{' '}
           <span className="text-content-subtle">{t('noRowsHint')}</span>
         </p>
+      ) : null}
+
+      {activeView.type === 'form' ? (
+        <FormEditor
+          canEdit={canEdit}
+          compact={compact}
+          config={config.form ?? emptyFormConfig}
+          notifying={notifyingViewIds.has(activeView.id)}
+          onChange={changeForm}
+          onNotifyingChange={(notifying) =>
+            changeNotifying(activeView.id, notifying)
+          }
+          onTokenChange={(token) => changeToken(activeView.id, token)}
+          properties={properties}
+          view={activeView}
+        />
       ) : null}
 
       {activeView.type === 'board' ? (
@@ -801,7 +851,9 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
         />
       ) : null}
 
-      {filtered.length === 0 && rows.length > 0 ? (
+      {activeView.type !== 'form' &&
+      filtered.length === 0 &&
+      rows.length > 0 ? (
         <p className={cn('py-3 text-body-small text-content', gutter)}>
           {search.trim().length > 0 ? t('noSearchResults') : t('noResults')}
         </p>

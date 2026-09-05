@@ -51,7 +51,7 @@ const next = spawn(
       NODE_ENV: 'production',
       DATABASE_URL: databaseUrl,
       LEAF_DIST_DIR: process.env.LEAF_DIST_DIR ?? '.next-e2e',
-      LEAF_ALLOWED_EMAIL_DOMAINS: 'arvore.com.br',
+      LEAF_ALLOWED_EMAIL_DOMAINS: 'example.com',
       BETTER_AUTH_SECRET:
         process.env.E2E_AUTH_SECRET ?? 'leaf-e2e-secret-do-not-use-in-production',
       BETTER_AUTH_URL: `http://127.0.0.1:${port}`,

@@ -43,12 +43,12 @@ import {
   otherOwnersInOrganization,
 } from '@/lib/organizations'
 
-const owner = { id: 'user-owner', email: 'owner@arvore.com.br' }
-const editor = { id: 'user-editor', email: 'editor@arvore.com.br' }
-const viewer = { id: 'user-viewer', email: 'reader@arvore.com.br' }
-const stranger = { id: 'user-stranger', email: 'outside@arvore.com.br' }
-const orgAdmin = { id: 'user-org-admin', email: 'admin@arvore.com.br' }
-const orgMember = { id: 'user-org-member', email: 'member@arvore.com.br' }
+const owner = { id: 'user-owner', email: 'owner@example.com' }
+const editor = { id: 'user-editor', email: 'editor@example.com' }
+const viewer = { id: 'user-viewer', email: 'reader@example.com' }
+const stranger = { id: 'user-stranger', email: 'outside@example.com' }
+const orgAdmin = { id: 'user-org-admin', email: 'admin@example.com' }
+const orgMember = { id: 'user-org-member', email: 'member@example.com' }
 const outsider = { id: 'user-outsider', email: 'external@otherschool.com.br' }
 
 const liveToken = 'kQ4nPz7bLxRfT2aWmC9uVhJ8'
@@ -58,7 +58,7 @@ function sessionFor(person: { id: string; email: string }) {
   return { user: person }
 }
 
-const mainOrg = 'org-arvore'
+const mainOrg = 'org-acme'
 const otherOrg = 'org-other-school'
 
 beforeEach(async () => {
@@ -90,7 +90,7 @@ beforeEach(async () => {
   )
 
   await db.insert(organizations).values([
-    { id: mainOrg, name: 'Árvore School', createdAt: now },
+    { id: mainOrg, name: 'Acme School', createdAt: now },
     { id: otherOrg, name: 'Other School', createdAt: now },
   ])
 
@@ -581,7 +581,7 @@ describe('organizations', () => {
   it('returns the organization and the role of each person', async () => {
     await expect(getMembership(owner.id)).resolves.toMatchObject({
       orgId: mainOrg,
-      orgName: 'Árvore School',
+      orgName: 'Acme School',
       role: 'owner',
     })
     await expect(getMembership(orgMember.id)).resolves.toMatchObject({

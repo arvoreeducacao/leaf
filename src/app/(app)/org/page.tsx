@@ -86,6 +86,7 @@ export default async function OrganizationPage({ searchParams }: Props) {
         invites={invites}
         inviteToken={inviteToken}
         memberId={membership.memberId}
+        orgIcon={membership.orgIcon}
         orgName={membership.orgName}
         people={people}
         role={membership.role}

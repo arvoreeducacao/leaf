@@ -19,7 +19,7 @@ import {
   listSubtreeIds,
 } from '@/lib/documents'
 
-const owner = { id: 'user-owner', email: 'owner@arvore.com.br' }
+const owner = { id: 'user-owner', email: 'owner@example.com' }
 
 const tree = [
   { id: 'root', parentId: null, title: 'Root' },

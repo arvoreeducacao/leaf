@@ -17,6 +17,7 @@ import {
   serializeViewConfig,
 } from '@/lib/database/views'
 import { parseValues, serializeValues } from '@/lib/database/values'
+import { listFormWebhookViewIds } from '@/lib/form-webhooks'
 import { listOrganizationPeople } from '@/lib/organizations'
 
 export const MAX_DATABASE_ROWS = 5_000
@@ -30,6 +31,7 @@ export type DatabaseSnapshot = Readonly<{
   rows: Array<DatabaseRow>
   people: Array<Person>
   viewerId: string | null
+  notifyingViewIds: Array<string>
 }>
 
 function toIso(value: Date | string): string {
@@ -147,11 +149,12 @@ export async function loadDatabase(
     return null
   }
 
-  const [properties, views, rows, people] = await Promise.all([
+  const [properties, views, rows, people, notifyingViewIds] = await Promise.all([
     listDatabaseProperties(databaseId),
     listDatabaseViews(databaseId),
     listDatabaseRows(databaseId),
     listDatabasePeople(document.orgId, viewerId),
+    listFormWebhookViewIds(databaseId),
   ])
 
   return {
@@ -166,6 +169,7 @@ export async function loadDatabase(
     rows,
     people,
     viewerId,
+    notifyingViewIds,
   }
 }
 
@@ -268,6 +272,19 @@ function remapConfig(
       propertyId: remap(sort.propertyId),
     })),
     hiddenPropertyIds: config.hiddenPropertyIds.map(remap),
+    form: config.form
+      ? {
+          ...config.form,
+          questions: config.form.questions.map((question) => ({
+            ...question,
+            propertyId: remap(question.propertyId),
+          })),
+          automations: config.form.automations.map((automation) => ({
+            ...automation,
+            propertyId: remap(automation.propertyId),
+          })),
+        }
+      : null,
   })
 }
 

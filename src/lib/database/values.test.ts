@@ -51,17 +51,17 @@ describe('property values', () => {
     expect(normalizeValue('url', 'JaVaScRiPt:alert(1)')).toBe('')
     expect(normalizeValue('url', 'data:text/html;base64,PHNjcmlwdD4=')).toBe('')
     expect(normalizeValue('url', '  java\u0000script:alert(1)  ')).toBe('')
-    expect(normalizeValue('url', 'https://arvore.com.br')).toBe(
-      'https://arvore.com.br',
+    expect(normalizeValue('url', 'https://example.com')).toBe(
+      'https://example.com',
     )
-    expect(normalizeValue('url', 'mailto:hi@arvore.com.br')).toBe(
-      'mailto:hi@arvore.com.br',
+    expect(normalizeValue('url', 'mailto:hi@example.com')).toBe(
+      'mailto:hi@example.com',
     )
     expect(normalizeValue('url', '/doc/abc')).toBe('/doc/abc')
   })
 
   it('only returns an href for a link the browser can open safely', () => {
-    expect(linkHrefFor('https://arvore.com.br')).toBe('https://arvore.com.br')
+    expect(linkHrefFor('https://example.com')).toBe('https://example.com')
     expect(linkHrefFor('/doc/abc')).toBe('/doc/abc')
     expect(linkHrefFor('javascript:alert(1)')).toBeNull()
     expect(linkHrefFor('data:text/html,<script>')).toBeNull()

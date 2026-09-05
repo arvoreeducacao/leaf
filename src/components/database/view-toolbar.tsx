@@ -33,7 +33,7 @@ import {
   SettingsIcon,
   SortIcon,
 } from './icons'
-import { layoutIcon, layoutOrder } from './layouts'
+import { createOrder, layoutIcon } from './layouts'
 import { PropertyPicker } from './property-picker'
 import { ViewSearch } from './view-search'
 import { ViewSettings } from './view-settings'
@@ -95,6 +95,7 @@ export function ViewToolbar({
 }: Props) {
   const t = useTranslations('database')
   const [renaming, setRenaming] = useState<string | null>(null)
+  const isForm = activeView.type === 'form'
 
   function propertyOf(propertyId: string) {
     return properties.find((property) => property.id === propertyId) ?? null
@@ -223,7 +224,7 @@ export function ViewToolbar({
                 </ButtonIcon>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start">
-                {layoutOrder.map((type) => {
+                {createOrder.map((type) => {
                   const Icon = layoutIcon[type]
 
                   return (
@@ -243,6 +244,8 @@ export function ViewToolbar({
       </ul>
 
       <div className="-mx-1 flex shrink-0 items-center overflow-x-auto px-1">
+        {isForm ? null : (
+          <>
         <PropertyPicker
           disabled={config.filters.length >= MAX_FILTERS}
           onPick={addFilter}
@@ -314,21 +317,30 @@ export function ViewToolbar({
             <SettingsIcon aria-hidden="true" />
           </ButtonIcon>
         </ViewSettings>
+          </>
+        )}
 
         {canEdit ? (
           <div className="ml-1.5 flex h-9 items-center tablet:h-7">
-            <Button
-              className="h-full rounded-r-none px-2 font-regular"
-              onClick={onCreateRow}
-              size="sm"
-            >
-              {t('newRowShort')}
-            </Button>
+            {isForm ? null : (
+              <Button
+                className="h-full rounded-r-none px-2 font-regular"
+                onClick={onCreateRow}
+                size="sm"
+              >
+                {t('newRowShort')}
+              </Button>
+            )}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <ButtonIcon
                   aria-label={t('newRowOptions')}
-                  className="h-full !w-6 rounded-l-none border-l border-l-primary-600 p-0"
+                  className={cn(
+                    'h-full p-0',
+                    isForm
+                      ? 'w-9 rounded-large tablet:w-7'
+                      : '!w-6 rounded-l-none border-l border-l-primary-600',
+                  )}
                   size="medium"
                   variant="primary"
                 >
@@ -338,7 +350,7 @@ export function ViewToolbar({
               <DropdownMenuContent align="end">
                 <DropdownMenuLabel>{t('addView')}</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                {layoutOrder.map((type) => {
+                {createOrder.map((type) => {
                   const Icon = layoutIcon[type]
 
                   return (

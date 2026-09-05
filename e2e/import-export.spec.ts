@@ -7,7 +7,7 @@ const markdownFixture = [
   '',
   '## Class A',
   '',
-  'Paragraph with **bold** and a [link](https://arvore.com.br).',
+  'Paragraph with **bold** and a [link](https://example.com).',
   '',
   '- [ ] Send the invite',
   '- [x] Confirm attendance',
@@ -93,7 +93,7 @@ test.describe('import and export', () => {
 
     expect(markdown).toContain('# Reading plan')
     expect(markdown).toContain('**bold**')
-    expect(markdown).toContain('https://arvore.com.br')
+    expect(markdown).toContain('https://example.com')
 
     const html = await page.evaluate(async (id) => {
       const response = await fetch(`/api/documents/${id}/export?format=html`)

@@ -5,7 +5,7 @@ import * as SecureStore from 'expo-secure-store'
 
 import { config } from '@/constants/config'
 
-export const arvoreSsoProviderId = 'arvore'
+export const ssoProviderId = config.ssoProviderId
 
 export const authClient = createAuthClient({
   baseURL: config.leafUrl,

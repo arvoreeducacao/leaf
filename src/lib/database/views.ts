@@ -6,6 +6,11 @@ import type {
 
 import { parseUniqueIdConfig, toUniqueIdNumber } from './unique-id'
 import {
+  type FormConfig,
+  parseFormConfig,
+  serializeFormConfig,
+} from './forms'
+import {
   type PropertyValue,
   type PropertyValues,
   type SelectOption,
@@ -21,6 +26,7 @@ export const TITLE_PROPERTY_ID = 'title'
 export const viewTypes: ReadonlyArray<DatabaseViewType> = [
   'table',
   'board',
+  'form',
   'gallery',
   'list',
   'calendar',
@@ -111,6 +117,7 @@ export type ViewConfig = Readonly<{
   wrapCells: boolean
   showVerticalLines: boolean
   showPageIcon: boolean
+  form: FormConfig | null
 }>
 
 export const emptyViewConfig: ViewConfig = {
@@ -123,6 +130,7 @@ export const emptyViewConfig: ViewConfig = {
   wrapCells: true,
   showVerticalLines: true,
   showPageIcon: true,
+  form: null,
 }
 
 export type DatabaseRow = Readonly<{
@@ -216,6 +224,7 @@ export function parseViewConfig(raw: string | null): ViewConfig {
     wrapCells: source.wrapCells !== false,
     showVerticalLines: source.showVerticalLines !== false,
     showPageIcon: source.showPageIcon !== false,
+    form: parseFormConfig(source.form),
   }
 }
 
@@ -230,6 +239,7 @@ export function serializeViewConfig(config: ViewConfig): string {
     wrapCells: config.wrapCells,
     showVerticalLines: config.showVerticalLines,
     showPageIcon: config.showPageIcon,
+    form: config.form ? serializeFormConfig(config.form) : null,
   })
 }
 

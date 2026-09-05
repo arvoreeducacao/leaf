@@ -37,7 +37,7 @@ export default async function JoinPage({ params }: Props) {
     return (
       <JoinSignInCard
         orgName={organization.name}
-        showSignup={!authAccessConfig().ssoEnabled}
+        showSignup={authAccessConfig().sso === null}
         token={token}
       />
     )
@@ -47,6 +47,7 @@ export default async function JoinPage({ params }: Props) {
     <JoinOrganizationCard
       alreadyMember={await isMemberOf(organization.id, session.user.id)}
       memberCount={organization.memberCount}
+      orgIcon={organization.icon}
       orgId={organization.id}
       orgName={organization.name}
       token={token}
