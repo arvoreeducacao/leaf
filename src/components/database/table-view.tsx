@@ -115,31 +115,48 @@ export function TableView({
                       scope="row"
                     >
                       <div className="flex h-9 items-center gap-1 px-2">
-                        <DocumentIcon
-                          className="size-4 text-content-subtle"
-                          icon={row.icon}
-                        />
-                        <input
-                          aria-label={t('rowTitleLabel')}
-                          className="h-full w-full min-w-0 bg-transparent font-regular text-body-small text-content-strong outline-none transition-colors placeholder:text-content-subtle focus-visible:outline-2 focus-visible:outline-focus focus-visible:-outline-offset-2 disabled:text-content"
-                          defaultValue={row.title}
-                          disabled={!canEdit}
-                          key={`${row.id}-${row.title}`}
-                          onBlur={(event) =>
-                            handlers.renameRow(row.id, event.target.value)
-                          }
-                          onKeyDown={(event) => {
-                            if (event.key === 'Enter') {
-                              event.currentTarget.blur()
-                            }
-                          }}
-                          placeholder={t('untitledRow')}
-                        />
                         <Link
-                          className="hidden h-6 shrink-0 cursor-pointer items-center gap-1 rounded-large px-1.5 font-medium text-caption text-content uppercase transition-colors hover:bg-surface-hover hover:text-content-strong group-hover/row:inline-flex focus-visible:inline-flex focus-visible:outline-2 focus-visible:outline-focus"
+                          aria-hidden="true"
+                          className="flex size-6 shrink-0 cursor-pointer items-center justify-center rounded-medium transition-colors hover:bg-surface-hover"
+                          href={`/doc/${row.id}`}
+                          tabIndex={-1}
+                        >
+                          <DocumentIcon
+                            className="size-4 text-content-subtle"
+                            icon={row.icon}
+                          />
+                        </Link>
+                        {canEdit ? (
+                          <input
+                            aria-label={t('rowTitleLabel')}
+                            className="h-full w-full min-w-0 bg-transparent font-regular text-body-small text-content-strong outline-none transition-colors placeholder:text-content-subtle focus-visible:outline-2 focus-visible:outline-focus focus-visible:-outline-offset-2"
+                            defaultValue={row.title}
+                            key={`${row.id}-${row.title}`}
+                            onBlur={(event) =>
+                              handlers.renameRow(row.id, event.target.value)
+                            }
+                            onKeyDown={(event) => {
+                              if (event.key === 'Enter') {
+                                event.currentTarget.blur()
+                              }
+                            }}
+                            placeholder={t('untitledRow')}
+                          />
+                        ) : (
+                          <Link
+                            className="w-full min-w-0 cursor-pointer truncate font-regular text-body-small text-content-strong transition-colors hover:underline focus-visible:outline-2 focus-visible:outline-focus focus-visible:-outline-offset-2"
+                            href={`/doc/${row.id}`}
+                          >
+                            {row.title.trim().length > 0
+                              ? row.title
+                              : t('untitledRow')}
+                          </Link>
+                        )}
+                        <Link
+                          className="hidden h-6 shrink-0 cursor-pointer items-center gap-1 rounded-large border border-line-strong bg-surface-card px-1.5 font-medium text-caption text-content uppercase transition-colors hover:bg-surface-hover hover:text-content-strong group-hover/row:inline-flex focus-visible:inline-flex focus-visible:outline-2 focus-visible:outline-focus"
                           href={`/doc/${row.id}`}
                         >
-                          <ArrowExpandIcon aria-hidden="true" className="size-3.5" />
+                          <ArrowExpandIcon aria-hidden="true" className="size-3" />
                           {t('openRowShort')}
                         </Link>
                         <div className="shrink-0 opacity-0 transition-opacity group-hover/row:opacity-100 focus-within:opacity-100">
