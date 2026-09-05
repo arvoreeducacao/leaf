@@ -15,6 +15,7 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
+import { UserAvatar } from '@/components/ui/user-avatar'
 import { MAX_COMMENT_LENGTH } from '@/lib/comment-limits'
 import type { CommentReply, CommentThread } from '@/lib/comments'
 import { cn } from '@/shared/utils'
@@ -49,7 +50,14 @@ function Meta({
   editedLabel: string
 }>) {
   return (
-    <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+    <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+      {comment.authorId ? (
+        <UserAvatar
+          image={comment.authorImage}
+          name={comment.authorName ?? unknownAuthor}
+          userId={comment.authorId}
+        />
+      ) : null}
       <span className="font-bold text-body-small text-content-strong">
         {comment.authorName ?? unknownAuthor}
       </span>

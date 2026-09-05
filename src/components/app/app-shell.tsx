@@ -49,7 +49,7 @@ import type { TeamspaceSection } from '@/lib/teamspaces'
 import { cn } from '@/shared/utils'
 
 type Props = Readonly<{
-  user: { name: string; email: string }
+  user: { id: string; name: string; email: string; image: string | null }
   aiEnabled: boolean
   locale: string
   connectedAppsEnabled: boolean
@@ -103,7 +103,7 @@ function NavContent({
   recents: Array<DocumentSummary>
   shared: Array<DocumentSummary>
   trashed: Array<DocumentSummary>
-  user: { name: string; email: string }
+  user: { id: string; name: string; email: string; image: string | null }
   locale: string
   connectedAppsEnabled: boolean
   layout: SidebarLayout
@@ -277,8 +277,10 @@ function NavContent({
             compact
             connectedAppsEnabled={connectedAppsEnabled}
             email={user.email}
+            image={user.image}
             locale={locale}
             name={user.name}
+            userId={user.id}
           />
         </div>
       </div>

@@ -70,12 +70,14 @@ export type RealtimePeer = Readonly<{
   clientId: number
   userId: string | null
   name: string
+  image: string | null
   isSelf: boolean
 }>
 
 type AwarenessUserState = Readonly<{
   id?: unknown
   name?: unknown
+  image?: unknown
 }>
 
 export function peersFromAwareness(
@@ -102,6 +104,7 @@ export function peersFromAwareness(
       clientId,
       userId,
       name,
+      image: typeof user.image === 'string' ? user.image : null,
       isSelf: clientId === localClientId,
     })
   }

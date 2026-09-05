@@ -229,6 +229,14 @@ function textOf(value: PropertyValue): string {
   return typeof value === 'string' ? value.trim().toLowerCase() : ''
 }
 
+function waitsForValue(filter: ViewFilter): boolean {
+  return (
+    operatorNeedsValue(filter.operator) &&
+    typeof filter.value !== 'boolean' &&
+    isEmptyValue(filter.value)
+  )
+}
+
 function matchesFilter(
   row: DatabaseRow,
   filter: ViewFilter,
@@ -236,6 +244,10 @@ function matchesFilter(
   viewerId: string | null,
   people: ReadonlyArray<SelectOption>,
 ): boolean {
+  if (waitsForValue(filter)) {
+    return true
+  }
+
   if (filter.propertyId === TITLE_PROPERTY_ID) {
     const title = row.title.trim().toLowerCase()
     const target = textOf(filter.value)
@@ -380,6 +392,47 @@ function matchesFilter(
   }
 
   return haystack.includes(needle)
+}
+
+export function foldText(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
+}
+
+export function applySearch(
+  rows: ReadonlyArray<DatabaseRow>,
+  term: string,
+  properties: ReadonlyArray<PropertyLike>,
+  people: ReadonlyArray<SelectOption> = [],
+): Array<DatabaseRow> {
+  const needle = foldText(term)
+
+  if (needle.length === 0) {
+    return [...rows]
+  }
+
+  return rows.filter((row) => {
+    if (foldText(row.title).includes(needle)) {
+      return true
+    }
+
+    return properties.some((property) => {
+      const { value, options } = readValue(row, property, people)
+
+      return foldText(
+        valueToText(
+          value,
+          property.type,
+          options,
+          'pt-BR',
+          parseUniqueIdConfig(property.options).prefix,
+        ),
+      ).includes(needle)
+    })
+  })
 }
 
 export function applyFilters(

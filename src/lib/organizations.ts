@@ -24,6 +24,7 @@ export type OrganizationPerson = Readonly<{
   userId: string
   name: string
   email: string
+  image: string | null
   role: OrganizationRole
   createdAt: Date
 }>
@@ -165,6 +166,7 @@ export async function listOrganizationPeople(
       userId: user.id,
       name: user.name,
       email: user.email,
+      image: user.image,
       role: organizationMembers.role,
       createdAt: organizationMembers.createdAt,
     })

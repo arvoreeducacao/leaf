@@ -516,6 +516,30 @@ export const documentFavorites = mysqlTable(
   ],
 )
 
+export const databaseViewDrafts = mysqlTable(
+  'database_view_drafts',
+  {
+    id: varchar('id', { length: APP_ID }).primaryKey(),
+    viewId: varchar('view_id', { length: APP_ID })
+      .notNull()
+      .references(() => databaseViews.id, { onDelete: 'cascade' }),
+    userId: varchar('user_id', { length: AUTH_ID })
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    config: longtext('config'),
+    updatedAt: datetime('updated_at', { mode: 'date', fsp: 3 })
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP(3)`),
+  },
+  (table) => [
+    uniqueIndex('database_view_drafts_view_user_idx').on(
+      table.viewId,
+      table.userId,
+    ),
+    index('database_view_drafts_user_id_idx').on(table.userId),
+  ],
+)
+
 export type Document = typeof documents.$inferSelect
 export type DocumentKind = Document['kind']
 export type DatabaseProperty = typeof databaseProperties.$inferSelect
@@ -523,6 +547,7 @@ export type DatabasePropertyType = DatabaseProperty['type']
 export type DatabaseView = typeof databaseViews.$inferSelect
 export type FormWebhook = typeof formWebhooks.$inferSelect
 export type DatabaseViewType = DatabaseView['type']
+export type DatabaseViewDraft = typeof databaseViewDrafts.$inferSelect
 export type DocumentShare = typeof documentShares.$inferSelect
 export type ShareRole = DocumentShare['role']
 export type Organization = typeof organizations.$inferSelect

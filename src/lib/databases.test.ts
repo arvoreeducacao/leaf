@@ -9,6 +9,7 @@ vi.mock('@/db', async () => {
 import { db } from '@/db'
 import {
   databaseProperties,
+  databaseViewDrafts,
   databaseViews,
   documentShares,
   documents,
@@ -354,5 +355,53 @@ describe('duplicating a database', () => {
     const rows = await listDatabaseRows('copia')
 
     expect(rows.map((row) => row.title)).not.toContain('Deleted')
+  })
+})
+
+
+describe('the view each person is looking at', () => {
+  const mine = serializeViewConfig({
+    groupByPropertyId: null,
+    filters: [{ propertyId: 'prop-status', operator: 'is', value: 'todo' }],
+    sorts: [],
+    hiddenPropertyIds: [],
+  })
+
+  beforeEach(async () => {
+    await db.insert(databaseViewDrafts).values({
+      id: 'draft-1',
+      viewId: 'view-1',
+      userId: owner.id,
+      config: mine,
+      updatedAt: now,
+    })
+  })
+
+  it('hands the person back their own unsaved view', async () => {
+    const snapshot = await loadDatabase('base', owner.id)
+
+    expect(parseViewConfig(snapshot?.drafts['view-1'] ?? null).filters).toEqual([
+      { propertyId: 'prop-status', operator: 'is', value: 'todo' },
+    ])
+  })
+
+  it('does not leak it to anybody else', async () => {
+    const snapshot = await loadDatabase('base', guest.id)
+
+    expect(snapshot?.drafts).toEqual({})
+  })
+
+  it('leaves the shared view untouched while the draft exists', async () => {
+    const snapshot = await loadDatabase('base', owner.id)
+
+    expect(parseViewConfig(snapshot?.views[0]?.config ?? null).filters).toEqual([
+      { propertyId: 'prop-points', operator: 'greaterThan', value: 1 },
+    ])
+  })
+
+  it('gives nothing back to someone who is not signed in', async () => {
+    const snapshot = await loadDatabase('base', null)
+
+    expect(snapshot?.drafts).toEqual({})
   })
 })
