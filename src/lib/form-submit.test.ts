@@ -147,12 +147,12 @@ function captureFetch(behaviour: 'ok' | 'throws' = 'ok') {
 
 const answers = { title: 'Floresta não abre', 'prop-severity': 'high' }
 
-describe('a resposta do formulário no Slack', () => {
+describe('the form response on Slack', () => {
   beforeEach(() => {
     vi.unstubAllGlobals()
   })
 
-  it('manda uma mensagem para o canal configurado', async () => {
+  it('posts a message to the configured channel', async () => {
     await seed(config())
 
     const calls = captureFetch()
@@ -165,7 +165,7 @@ describe('a resposta do formulário no Slack', () => {
     expect(calls[0].text).toContain('*Gravidade*\nAlta')
   })
 
-  it('fecha a mensagem com o botão que abre a linha criada', async () => {
+  it('closes the message with the button that opens the row it just created', async () => {
     await seed(config())
 
     const calls = captureFetch()
@@ -181,7 +181,7 @@ describe('a resposta do formulário no Slack', () => {
     expect(last?.elements?.[0].url).toContain(`/doc/${rows[0].id}`)
   })
 
-  it('fica quieta quando o aviso está desligado', async () => {
+  it('stays quiet when the notice is turned off', async () => {
     await seed(config({ notify: false }))
 
     const calls = captureFetch()
@@ -190,7 +190,7 @@ describe('a resposta do formulário no Slack', () => {
     expect(calls).toHaveLength(0)
   })
 
-  it('fica quieta quando nenhum canal foi configurado', async () => {
+  it('stays quiet when no channel was configured', async () => {
     await seed(config(), false)
 
     const calls = captureFetch()
@@ -199,7 +199,7 @@ describe('a resposta do formulário no Slack', () => {
     expect(calls).toHaveLength(0)
   })
 
-  it('grava a resposta mesmo quando o Slack não responde', async () => {
+  it('saves the response even when Slack does not answer', async () => {
     await seed(config())
     captureFetch('throws')
 
@@ -212,7 +212,7 @@ describe('a resposta do formulário no Slack', () => {
     expect(rows.map((row) => row.title)).toEqual(['Floresta não abre'])
   })
 
-  it('não manda nada quando o formulário parou de receber respostas', async () => {
+  it('posts nothing when the form stopped accepting responses', async () => {
     await seed(config({ accepting: false }))
 
     const calls = captureFetch()

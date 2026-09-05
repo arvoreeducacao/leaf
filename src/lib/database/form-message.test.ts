@@ -151,7 +151,7 @@ describe('slackPayloadFor', () => {
       'Abrir no Leaf',
     )
 
-  it('põe um bloco por pergunta respondida, com o título na frente', () => {
+  it('puts one block per answered question, with the title first', () => {
     const blocks = payload().blocks as Array<{
       type: string
       text?: { text: string }
@@ -161,7 +161,7 @@ describe('slackPayloadFor', () => {
     expect(blocks.filter((block) => block.type === 'section')).toHaveLength(4)
   })
 
-  it('fecha com o botão que abre a linha no Leaf', () => {
+  it('closes with the button that opens the row in Leaf', () => {
     const blocks = payload().blocks as Array<{
       type: string
       elements?: Array<{ type: string; url: string; text: { text: string } }>
@@ -173,7 +173,7 @@ describe('slackPayloadFor', () => {
     expect(last.elements?.[0].text.text).toBe('Abrir no Leaf')
   })
 
-  it('deixa o botão de fora quando não há endereço da linha', () => {
+  it('leaves the button out when there is no row address', () => {
     const blocks = slackPayloadFor(
       config,
       properties,
@@ -187,7 +187,7 @@ describe('slackPayloadFor', () => {
     expect(blocks.every((block) => block.type === 'section')).toBe(true)
   })
 
-  it('mantém o texto puro, para quem recebe a notificação sem blocos', () => {
+  it('keeps the plain text, for whoever gets the notification without blocks', () => {
     const { text } = payload()
 
     expect(text).toContain('*Ícones de acessibilidade*')

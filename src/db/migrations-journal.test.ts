@@ -21,8 +21,8 @@ function describeEntry(entry: JournalEntry) {
   return `${entry.tag} (${new Date(entry.when).toISOString()})`
 }
 
-describe('journal de migrações', () => {
-  it('carimba cada migração depois da anterior', () => {
+describe('the migrations journal', () => {
+  it('stamps every migration after the one before it', () => {
     const outOfOrder = journal.entries.flatMap((entry, index) => {
       const previous = journal.entries[index - 1]
 
@@ -38,7 +38,7 @@ describe('journal de migrações', () => {
     expect(outOfOrder).toEqual([])
   })
 
-  it('não carimba migração no futuro', () => {
+  it('never stamps a migration in the future', () => {
     const now = Date.now()
 
     const ahead = journal.entries
@@ -48,7 +48,7 @@ describe('journal de migrações', () => {
     expect(ahead).toEqual([])
   })
 
-  it('tem um arquivo para cada entrada e uma entrada para cada arquivo', () => {
+  it('has one file per entry and one entry per file', () => {
     const files = readdirSync(folder)
       .filter((name) => name.endsWith('.sql'))
       .map((name) => name.replace(/\.sql$/, ''))

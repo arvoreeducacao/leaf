@@ -72,8 +72,8 @@ async function mint(overrides: Claims = {}) {
   return builder.sign(overrides.key ?? signing.privateKey)
 }
 
-describe('verificação do access token do MCP', () => {
-  it('aceita um token assinado pela chave do Leaf com iss, aud e typ certos', async () => {
+describe('verifying the MCP access token', () => {
+  it('accepts a token signed by the Leaf key with the right iss, aud and typ', async () => {
     const result = await verifyMcpAccessToken(await mint())
 
     expect(result.status).toBe('ok')
@@ -85,13 +85,13 @@ describe('verificação do access token do MCP', () => {
     }
   })
 
-  it('recusa assinatura de outra chave', async () => {
+  it('refuses a signature from another key', async () => {
     const token = await mint({ key: foreign.privateKey })
 
     expect(await verifyMcpAccessToken(token)).toEqual({ status: 'invalid' })
   })
 
-  it('recusa kid desconhecido mesmo com assinatura válida', async () => {
+  it('refuses an unknown kid even with a valid signature', async () => {
     const token = await mint({ kid: 'outra-chave' })
 
     expect(await verifyMcpAccessToken(token)).toEqual({ status: 'invalid' })
@@ -109,26 +109,26 @@ describe('verificação do access token do MCP', () => {
     expect(await verifyMcpAccessToken(token)).toEqual({ status: 'invalid' })
   })
 
-  it('recusa audience de outro resource', async () => {
+  it('refuses an audience from another resource', async () => {
     const token = await mint({ aud: `${authIssuer()}/api/outra-coisa` })
 
     expect(await verifyMcpAccessToken(token)).toEqual({ status: 'invalid' })
   })
 
-  it('recusa typ que não seja at+jwt', async () => {
+  it('refuses a typ that is not at+jwt', async () => {
     const token = await mint({ typ: 'JWT' })
 
     expect(await verifyMcpAccessToken(token)).toEqual({ status: 'invalid' })
   })
 
-  it('recusa algoritmo fora da lista', async () => {
+  it('refuses an algorithm outside the list', async () => {
     const rsa = await generateKeyPair('RS256', { extractable: true })
     const token = await mint({ alg: 'RS256', key: rsa.privateKey })
 
     expect(await verifyMcpAccessToken(token)).toEqual({ status: 'invalid' })
   })
 
-  it('recusa lixo e tokens sem sub', async () => {
+  it('refuses garbage and tokens without a sub', async () => {
     expect(await verifyMcpAccessToken('nao-e-um-jwt')).toEqual({ status: 'invalid' })
 
     const withoutSub = await new SignJWT({ scope: 'leaf:read', client_id: 'c' })
