@@ -12,6 +12,7 @@ export type CommentReply = Readonly<{
   id: string
   authorId: string | null
   authorName: string | null
+  authorImage: string | null
   body: string
   createdAt: number
   updatedAt: number
@@ -83,6 +84,7 @@ export async function listDocumentComments(
       authorId: comments.authorId,
       authorName: user.name,
       authorEmail: user.email,
+      authorImage: user.image,
       resolvedAt: comments.resolvedAt,
       createdAt: comments.createdAt,
       updatedAt: comments.updatedAt,
@@ -103,6 +105,7 @@ export async function listDocumentComments(
       id: row.id,
       authorId: row.authorId,
       authorName: authorNameOf(row.authorName, row.authorEmail),
+      authorImage: row.authorImage,
       body: row.body,
       createdAt: row.createdAt.getTime(),
       updatedAt: row.updatedAt.getTime(),
@@ -127,6 +130,7 @@ export async function listDocumentComments(
       id: row.id,
       authorId: row.authorId,
       authorName: authorNameOf(row.authorName, row.authorEmail),
+      authorImage: row.authorImage,
       body: row.body,
       createdAt: row.createdAt.getTime(),
       updatedAt: row.updatedAt.getTime(),

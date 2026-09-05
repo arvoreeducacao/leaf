@@ -18,6 +18,7 @@ import {
   realtimeRoomName,
   realtimeSyncTimeoutMs,
 } from '@/lib/realtime'
+import { avatarUrlFor } from '@/lib/avatar'
 import { peersFromAwareness, realtimeColorFor } from '@/lib/realtime-user'
 
 import { publishPresence, resetPresence } from './presence-bridge'
@@ -26,6 +27,7 @@ import { markLive, unmarkLive } from '@/lib/offline/live-documents'
 export type DocumentUser = Readonly<{
   id: string
   name: string
+  image: string
   color: string
 }>
 
@@ -47,7 +49,7 @@ type Options = Readonly<{
   documentId: string
   url: string | null
   port: number
-  user: Readonly<{ id: string; name: string }>
+  user: Readonly<{ id: string; name: string; image: string | null }>
   anonymousName: string
   fallbackContent: string | null
   fallbackUpdatedAt: number | null
@@ -135,6 +137,7 @@ export function useDocumentSession({
     const localUser: DocumentUser = {
       id: user.id,
       name: user.name,
+      image: avatarUrlFor(user.id, user.image),
       color: realtimeColorFor(user.id, 'light'),
     }
 

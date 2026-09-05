@@ -17,8 +17,8 @@ import {
   Sun3Icon,
   SyncIcon,
   TeamIcon,
+  UserIcon,
 } from '@/components/icons'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -29,6 +29,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { UserAvatar } from '@/components/ui/user-avatar'
 import { sidebarRow } from '@/components/app/sidebar-styles'
 import { clearOfflineCaches } from '@/components/app/service-worker-registration'
 import { locales } from '@/i18n/config'
@@ -39,8 +40,10 @@ import { useInstallPrompt } from '@/shared/hooks/use-install-prompt'
 import { cn } from '@/shared/utils'
 
 type Props = Readonly<{
+  userId: string
   name: string
   email: string
+  image: string | null
   locale: string
   compact?: boolean
   connectedAppsEnabled?: boolean
@@ -57,24 +60,11 @@ const localeLabelKeys = {
   'en-US': 'localeEnUS',
 } as const
 
-function initials(name: string, email: string) {
-  const source = name.trim() || email
-  const parts = source.split(/\s+/).filter(Boolean)
-
-  if (parts.length === 0) {
-    return '?'
-  }
-
-  if (parts.length === 1) {
-    return parts[0].slice(0, 2).toUpperCase()
-  }
-
-  return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase()
-}
-
 export function UserMenu({
+  userId,
   name,
   email,
+  image,
   locale,
   compact = false,
   connectedAppsEnabled = false,
@@ -137,11 +127,12 @@ export function UserMenu({
           data-testid="user-menu-trigger"
           type="button"
         >
-          <Avatar className="size-5 shrink-0">
-            <AvatarFallback className="bg-surface-subtle font-semibold text-[10px] text-content">
-              {initials(name, email)}
-            </AvatarFallback>
-          </Avatar>
+          <UserAvatar
+            email={email}
+            image={image}
+            name={name}
+            userId={userId}
+          />
           <span
             className={cn(
               'min-w-0 flex-1 truncate',
@@ -162,6 +153,12 @@ export function UserMenu({
           </span>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
+        <DropdownMenuItem asChild>
+          <Link href="/account">
+            <UserIcon aria-hidden="true" />
+            {t('account')}
+          </Link>
+        </DropdownMenuItem>
         <DropdownMenuItem asChild>
           <Link href="/org">
             <TeamIcon aria-hidden="true" />
