@@ -3,7 +3,7 @@
 import { useLocale, useTranslations } from 'next-intl'
 import { useEffect, useRef, useState } from 'react'
 
-import { CheckboxActiveIcon, CheckboxIcon } from '@/components/icons'
+import { CheckIcon } from '@/components/icons'
 import type { DatabaseProperty } from '@/db/schema'
 import { type Person, personOptions } from '@/lib/database/people'
 import {
@@ -137,23 +137,26 @@ export function PropertyCell({
       <span
         className={cn(
           'flex items-center',
-          compact ? compactFrame : 'min-h-9',
+          compact ? compactFrame : 'min-h-9 px-2 py-1',
         )}
       >
         <button
           aria-checked={checked}
           aria-label={label}
-          className="flex size-6 cursor-pointer items-center justify-center rounded-medium text-content-strong transition-colors hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-1 disabled:cursor-not-allowed disabled:text-content-disabled"
+          className={cn(
+            'flex size-4 cursor-pointer items-center justify-center rounded-small border transition-colors focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-1 disabled:cursor-not-allowed',
+            checked
+              ? 'border-brand bg-brand text-white'
+              : 'border-line-strong hover:bg-surface-hover',
+          )}
           disabled={readOnly}
           onClick={() => onCommit(!checked)}
           role="checkbox"
           type="button"
         >
           {checked ? (
-            <CheckboxActiveIcon aria-hidden="true" className="size-5" />
-          ) : (
-            <CheckboxIcon aria-hidden="true" className="size-5" />
-          )}
+            <CheckIcon aria-hidden="true" className="size-3" />
+          ) : null}
         </button>
       </span>
     )
