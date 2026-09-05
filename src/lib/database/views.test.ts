@@ -12,6 +12,7 @@ import {
   applySorts,
   boardPropertyOf,
   emptyViewConfig,
+  filterOptionIds,
   filterValueFor,
   groupRows,
   operatorsFor,
@@ -605,5 +606,109 @@ describe('the label of a filter on a multi value column', () => {
         [cycles],
       ).map((item) => item.id),
     ).toEqual(['x'])
+  })
+})
+
+describe('a filter that holds more than one option', () => {
+  const cycles = {
+    id: 'cycles',
+    type: 'multiSelect' as const,
+    options: serializeOptions([
+      { id: 'c1', name: '2026-05', color: 'purple' },
+      { id: 'c2', name: '2026-06', color: 'blue' },
+      { id: 'c3', name: '2026-07', color: 'lime' },
+    ]),
+  }
+
+  const list = [
+    row('x', 'X', { cycles: ['c1'] }),
+    row('y', 'Y', { cycles: ['c2'] }),
+    row('z', 'Z', { cycles: ['c3'] }),
+  ]
+
+  const marked = [
+    row('a', 'Alfa', { status: 'todo' }),
+    row('b', 'Beta', { status: 'done' }),
+    row('c', 'Gama', {}),
+  ]
+
+  const assigned = [
+    row('a', 'Alfa', { owners: ['u1'] }),
+    row('b', 'Beta', { owners: ['u2'] }),
+    row('c', 'Gama', {}),
+  ]
+
+  it('keeps a row that holds any of the chosen options', () => {
+    expect(
+      applyFilters(
+        list,
+        [{ propertyId: 'cycles', operator: 'contains', value: ['c1', 'c3'] }],
+        [cycles],
+      ).map((item) => item.id),
+    ).toEqual(['x', 'z'])
+  })
+
+  it('drops a row that holds any of the refused options', () => {
+    expect(
+      applyFilters(
+        list,
+        [
+          {
+            propertyId: 'cycles',
+            operator: 'notContains',
+            value: ['c1', 'c3'],
+          },
+        ],
+        [cycles],
+      ).map((item) => item.id),
+    ).toEqual(['y'])
+  })
+
+  it('accepts any of the chosen values on a single value column', () => {
+    expect(
+      applyFilters(
+        marked,
+        [{ propertyId: 'status', operator: 'is', value: ['todo', 'done'] }],
+        [status],
+      ).map((item) => item.id),
+    ).toEqual(['a', 'b'])
+  })
+
+  it('refuses every chosen value on a single value column', () => {
+    expect(
+      applyFilters(
+        marked,
+        [{ propertyId: 'status', operator: 'isNot', value: ['todo'] }],
+        [status],
+      ).map((item) => item.id),
+    ).toEqual(['b', 'c'])
+  })
+
+  it('keeps a row assigned to any of the chosen people', () => {
+    expect(
+      applyFilters(
+        assigned,
+        [{ propertyId: 'owners', operator: 'contains', value: ['u1', 'u2'] }],
+        [owners],
+        null,
+        people,
+      ).map((item) => item.id),
+    ).toEqual(['a', 'b'])
+  })
+
+  it('shows every row while no option is chosen yet', () => {
+    expect(
+      applyFilters(
+        list,
+        [{ propertyId: 'cycles', operator: 'contains', value: [] }],
+        [cycles],
+      ).map((item) => item.id),
+    ).toEqual(['x', 'y', 'z'])
+  })
+
+  it('still reads a filter saved as a single option', () => {
+    expect(filterOptionIds('c1')).toEqual(['c1'])
+    expect(filterOptionIds(['c1', 'c2'])).toEqual(['c1', 'c2'])
+    expect(filterOptionIds(null)).toEqual([])
   })
 })

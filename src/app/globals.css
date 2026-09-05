@@ -176,6 +176,7 @@
   --color-content: var(--content);
   --color-content-muted: var(--content-muted);
   --color-content-subtle: var(--content-subtle);
+  --color-content-tertiary: var(--content-tertiary);
   --color-content-disabled: var(--content-disabled);
   --color-content-inverse: var(--content-inverse);
 
@@ -185,6 +186,7 @@
   --color-surface-sunken: var(--surface-sunken);
   --color-surface-subtle: var(--surface-subtle);
   --color-surface-hover: var(--surface-hover);
+  --color-surface-input: var(--surface-input);
   --color-surface-active: var(--surface-active);
   --color-surface-grabber: var(--surface-grabber);
   --color-overlay: var(--overlay);
@@ -216,6 +218,9 @@
   --color-warn-surface-strong: var(--warn-surface-strong);
   --color-positive: var(--positive);
   --color-positive-surface-strong: var(--positive-surface-strong);
+  --color-attention: var(--attention);
+  --color-attention-surface: var(--attention-surface);
+  --color-attention-surface-strong: var(--attention-surface-strong);
 
   --color-code-surface: var(--code-surface);
   --color-code-content: var(--code-content);
@@ -303,6 +308,7 @@
   --content: #5f5e59;
   --content-muted: #7d7a75;
   --content-subtle: #7d7a75;
+  --content-tertiary: #a19e99;
   --content-disabled: #c7c6c3;
   --content-inverse: #ffffff;
 
@@ -312,6 +318,7 @@
   --surface-sunken: #f7f7f5;
   --surface-subtle: #f1f1ef;
   --surface-hover: rgba(33, 27, 23, 0.05);
+  --surface-input: rgba(66, 35, 3, 0.03);
   --surface-active: rgba(33, 27, 23, 0.09);
   --surface-grabber: rgba(55, 53, 47, 0.24);
   --overlay: rgba(15, 15, 15, 0.4);
@@ -352,6 +359,9 @@
   --warn-surface-strong: #f6e5b3;
   --positive: #0f7b6c;
   --positive-surface-strong: #ddedea;
+  --attention: #d5803b;
+  --attention-surface: rgba(213, 128, 59, 0.14);
+  --attention-surface-strong: rgba(213, 128, 59, 0.24);
 
   --code-surface: #f7f6f3;
   --code-content: #eb5757;
@@ -398,6 +408,7 @@
   --content: #9b9b9b;
   --content-muted: #9b9b9b;
   --content-subtle: #7f7f7f;
+  --content-tertiary: #6f6f6f;
   --content-disabled: #5a5a5a;
   --content-inverse: #191919;
 
@@ -407,6 +418,7 @@
   --surface-sunken: #191919;
   --surface-subtle: #2f2f2f;
   --surface-hover: rgba(255, 255, 255, 0.055);
+  --surface-input: rgba(255, 255, 255, 0.035);
   --surface-active: rgba(255, 255, 255, 0.08);
   --surface-grabber: rgba(255, 255, 255, 0.24);
   --overlay: rgba(15, 15, 15, 0.6);
@@ -447,6 +459,9 @@
   --warn-surface-strong: rgba(223, 171, 1, 0.28);
   --positive: #4dab9a;
   --positive-surface-strong: rgba(77, 171, 154, 0.28);
+  --attention: #e5a663;
+  --attention-surface: rgba(213, 128, 59, 0.2);
+  --attention-surface-strong: rgba(213, 128, 59, 0.32);
 
   --code-surface: #2f2f2f;
   --code-content: #ff7369;
