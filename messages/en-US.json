@@ -713,7 +713,9 @@
     "saveOffline": "Saved on this device",
     "blockTurnInto": "Turn into",
     "blockDuplicate": "Duplicate block",
-    "blockRemove": "Delete block"
+    "blockRemove": "Delete block",
+    "linkPreviewEmpty": "Empty page",
+    "linkPreviewMissing": "This page could not be opened"
   },
   "blocknote": {
     "placeholder": "Type / for commands",

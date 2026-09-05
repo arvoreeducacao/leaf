@@ -41,6 +41,7 @@ import { DocumentImport } from './document-import'
 import type { DocumentImportHandle } from './document-import'
 import { focusDocumentTitle, onEditorFocusRequest } from './focus-bridge'
 import { LeafFormattingToolbarController } from './formatting-toolbar'
+import { LeafLinkToolbarController } from './link-toolbar'
 import { renderRealtimeCursor } from './realtime-cursor'
 import {
   onSaveRetryRequest,
@@ -429,6 +430,7 @@ export default function BlockNoteEditor({
           editor={editor}
           emojiPicker={false}
           formattingToolbar={false}
+          linkToolbar={false}
           onBlur={handleBlur}
           onChange={handleChange}
           slashMenu={false}
@@ -438,6 +440,7 @@ export default function BlockNoteEditor({
             canComment={canComment}
             canUseAi={canUseAi}
           />
+          <LeafLinkToolbarController />
           {canUseAi ? <AIMenuController aiMenu={aiMenu} /> : null}
           <SuggestionMenuController
             getItems={async (query) =>

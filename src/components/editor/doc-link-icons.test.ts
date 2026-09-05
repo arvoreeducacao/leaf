@@ -67,6 +67,16 @@ describe('documentLinkIconRules', () => {
     )
   })
 
+  it('does not double the icon inside the hover preview card', () => {
+    const css = documentLinkIconRules([
+      { id: 'fff', icon: '🕐', kind: 'page' },
+    ])
+
+    expect(css).toContain(
+      '.leaf-editor a.leaf-doc-link-preview::before{content:none;}',
+    )
+  })
+
   it('refuses an id that would break out of the selector', () => {
     expect(
       documentLinkIconRules([
