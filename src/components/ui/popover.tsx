@@ -20,7 +20,6 @@ function PopoverTrigger({
       data-slot="popover-trigger"
       {...props}
       className={cn(className)}
-      style={{ height: 'auto !important' }}
     />
   )
 }

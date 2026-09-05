@@ -27,6 +27,7 @@ export const MAX_DATABASE_ROWS = 5_000
 export type DatabaseSnapshot = Readonly<{
   id: string
   title: string
+  icon: string | null
   properties: Array<DatabaseProperty>
   views: Array<DatabaseView>
   drafts: Record<string, string | null>
@@ -229,6 +230,7 @@ export async function loadDatabase(
   return {
     id: document.id,
     title: document.title,
+    icon: document.icon,
     properties,
     views,
     drafts: await listViewDrafts(

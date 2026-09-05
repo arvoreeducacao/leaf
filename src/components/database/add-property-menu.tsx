@@ -17,7 +17,7 @@ import { propertyTypes } from '@/lib/database/values'
 import { PropertyIcon } from './property-icon'
 
 type Props = Readonly<{
-  onAdd: (type: DatabasePropertyType) => void
+  onAdd: (type: DatabasePropertyType) => Promise<string | null>
   hasOrganization: boolean
 }>
 
@@ -37,7 +37,7 @@ export function AddPropertyMenu({ onAdd, hasOrganization }: Props) {
       <DropdownMenuContent align="end">
         <DropdownMenuLabel>{t('addProperty')}</DropdownMenuLabel>
         {offered.map((type) => (
-          <DropdownMenuItem key={type} onSelect={() => onAdd(type)}>
+          <DropdownMenuItem key={type} onSelect={() => void onAdd(type)}>
             <PropertyIcon type={type} />
             {t(`type_${type}`)}
           </DropdownMenuItem>

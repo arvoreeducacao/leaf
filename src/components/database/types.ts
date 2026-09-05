@@ -17,7 +17,8 @@ export type DatabaseHandlers = Readonly<{
     propertyId: string,
     name: string,
   ) => Promise<SelectOption | null>
-  addProperty: (type: DatabasePropertyType) => void
+  deleteOption: (propertyId: string, optionId: string) => void
+  addProperty: (type: DatabasePropertyType) => Promise<string | null>
   renameProperty: (propertyId: string, name: string) => void
   changePropertyType: (propertyId: string, type: DatabasePropertyType) => void
   changeUniqueIdPrefix: (propertyId: string, prefix: string) => void

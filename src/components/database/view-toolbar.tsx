@@ -1,7 +1,7 @@
 'use client'
 
 import { useTranslations } from 'next-intl'
-import { useState } from 'react'
+import { type ReactNode, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { ButtonIcon } from '@/components/ui/button-icon'
@@ -76,6 +76,7 @@ type Props = Readonly<{
   search: string
   filtersChanged: boolean
   sortsChanged: boolean
+  formActions?: ReactNode
   compact?: boolean
 }>
 
@@ -101,6 +102,7 @@ export function ViewToolbar({
   search,
   filtersChanged,
   sortsChanged,
+  formActions = null,
   compact = false,
 }: Props) {
   const t = useTranslations('database')
@@ -254,6 +256,7 @@ export function ViewToolbar({
       </ul>
 
       <div className="-mx-1 flex shrink-0 items-center overflow-x-auto px-1">
+        {isForm ? formActions : null}
         {isForm ? null : (
           <>
         <PropertyPicker
