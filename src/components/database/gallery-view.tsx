@@ -26,7 +26,10 @@ type Props = Readonly<{
   compact?: boolean
 }>
 
-function Cover({ cover }: Readonly<{ cover: string | null }>) {
+function Cover({
+  cover,
+  preview,
+}: Readonly<{ cover: string | null; preview: string | null }>) {
   const gradient = gradientOfCover(cover)
 
   if (gradient) {
@@ -39,13 +42,15 @@ function Cover({ cover }: Readonly<{ cover: string | null }>) {
     )
   }
 
-  if (cover) {
+  const image = cover ?? preview
+
+  if (image) {
     return (
       <img
         alt=""
         className="block h-28 w-full object-cover"
         draggable={false}
-        src={cover}
+        src={image}
       />
     )
   }
@@ -79,7 +84,7 @@ export function GalleryView({
                 title={row.title}
               >
                 <article className="group/card flex h-full flex-col overflow-hidden rounded-large border border-line bg-surface-card shadow-down-small transition-colors hover:border-line-strong">
-                  <Cover cover={row.cover} />
+                  <Cover cover={row.cover} preview={row.preview} />
                   <div className="flex flex-1 flex-col gap-2 p-3">
                     <div className="flex items-start gap-1">
                       <Link

@@ -138,6 +138,7 @@ export type DatabaseRow = Readonly<{
   title: string
   icon: string | null
   cover: string | null
+  preview: string | null
   values: PropertyValues
   createdAt: string
   updatedAt: string
