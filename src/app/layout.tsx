@@ -5,6 +5,7 @@ import { NextIntlClientProvider } from 'next-intl'
 import { getLocale, getTranslations } from 'next-intl/server'
 
 import { ServiceWorkerRegistration } from '@/components/app/service-worker-registration'
+import { StaleBuildRecovery } from '@/components/app/stale-build-recovery'
 import { ThemeProvider } from '@/components/app/theme-provider'
 import { Toaster } from '@/components/ui/sonner'
 
@@ -55,6 +56,7 @@ export default async function RootLayout({ children }: Props) {
             {children}
             <Toaster />
             <ServiceWorkerRegistration />
+            <StaleBuildRecovery />
           </NextIntlClientProvider>
         </ThemeProvider>
       </body>

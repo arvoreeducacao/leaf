@@ -1,15 +1,24 @@
 import { describe, expect, it, vi } from 'vitest'
 
-vi.stubGlobal('self', { location: { origin: 'https://leaf.example.com' } })
+vi.stubGlobal('self', { location: { origin: 'https://leaf.arvore.com.br' } })
 
-const { assetsCache, dataCache, isCacheable, isCurrentCache, pagesCache, routeFor } =
-  await import('../../../public/sw.js')
+const {
+  assetsCache,
+  buildIdFrom,
+  cacheVersionFor,
+  dataCache,
+  fallbackBuildId,
+  isCacheable,
+  isCurrentCache,
+  pagesCache,
+  routeFor,
+} = await import('../../../public/sw.js')
 
 function get(
   path: string,
   init: Readonly<{ mode?: string; method?: string; rsc?: boolean }> = {},
 ) {
-  const url = new URL(path, 'https://leaf.example.com')
+  const url = new URL(path, 'https://leaf.arvore.com.br')
   const request = {
     method: init.method ?? 'GET',
     mode: init.mode ?? 'cors',
@@ -73,5 +82,28 @@ describe('service worker caching rules', () => {
     expect(isCurrentCache(pagesCache)).toBe(true)
     expect(isCurrentCache(dataCache)).toBe(true)
     expect(isCurrentCache('leaf-offline-v0-pages')).toBe(false)
+  })
+
+  it('drops every cache a previous build left behind', () => {
+    const previous = cacheVersionFor('9f1c2ab')
+
+    expect(isCurrentCache(`${previous}-assets`)).toBe(false)
+    expect(isCurrentCache(`${previous}-pages`)).toBe(false)
+    expect(isCurrentCache(`${previous}-data`)).toBe(false)
+  })
+})
+
+describe('service worker build identity', () => {
+  it('takes the build from the script url, so each deploy owns its caches', () => {
+    expect(buildIdFrom('https://leaf.arvore.com.br/sw.js?v=9f1c2ab')).toBe('9f1c2ab')
+    expect(cacheVersionFor(buildIdFrom('https://leaf.arvore.com.br/sw.js?v=9f1c2ab'))).toBe(
+      'leaf-offline-9f1c2ab',
+    )
+  })
+
+  it('falls back when the script url carries no build', () => {
+    expect(buildIdFrom('https://leaf.arvore.com.br/sw.js')).toBe(fallbackBuildId)
+    expect(buildIdFrom(undefined)).toBe(fallbackBuildId)
+    expect(buildIdFrom('nao-e-uma-url')).toBe(fallbackBuildId)
   })
 })

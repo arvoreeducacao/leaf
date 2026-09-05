@@ -40,6 +40,18 @@ export function writeSessionFlag(key: string, value: string) {
   }
 }
 
+export function readSessionFlag(key: string): string | null {
+  if (typeof window === 'undefined') {
+    return null
+  }
+
+  try {
+    return window.sessionStorage.getItem(key)
+  } catch {
+    return null
+  }
+}
+
 export function takeSessionFlag(key: string): string | null {
   if (typeof window === 'undefined') {
     return null

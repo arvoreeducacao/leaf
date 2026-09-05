@@ -44,6 +44,8 @@ jobs:
           context: .
           file: ./Dockerfile
           push: true
+          build-args: |
+            LEAF_BUILD_ID=${{ github.sha }}
           tags: |
             ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
             ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:latest
