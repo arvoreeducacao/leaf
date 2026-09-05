@@ -35,6 +35,7 @@ import {
   type FormQuestion,
   TITLE_QUESTION_ID,
   acceptsAttachment,
+  acceptsLongAnswer,
   automationAccepts,
   automationKinds,
   isQuestionableType,
@@ -308,6 +309,7 @@ export function FormEditor({
                           description: '',
                           required: false,
                           attachment: false,
+                          long: false,
                         },
                       ])
                     }
@@ -430,13 +432,33 @@ export function FormEditor({
                     </span>
                   </label>
 
+                  {property &&
+                  acceptsLongAnswer(property.type) &&
+                  !question.attachment ? (
+                    <label className="flex items-center gap-2">
+                      <Switch
+                        checked={question.long}
+                        disabled={!canEdit}
+                        onCheckedChange={(checked) =>
+                          patchQuestion(index, { long: checked })
+                        }
+                      />
+                      <span className="text-body-small text-content">
+                        {t('longAnswer')}
+                      </span>
+                    </label>
+                  ) : null}
+
                   {property && acceptsAttachment(property.type) ? (
                     <label className="flex items-center gap-2">
                       <Switch
                         checked={question.attachment}
                         disabled={!canEdit}
                         onCheckedChange={(checked) =>
-                          patchQuestion(index, { attachment: checked })
+                          patchQuestion(index, {
+                            attachment: checked,
+                            long: checked ? false : question.long,
+                          })
                         }
                       />
                       <span className="flex items-center gap-1 text-body-small text-content">

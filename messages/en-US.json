@@ -566,6 +566,7 @@
     "questionDescription": "Question help text",
     "questionDescriptionHint": "Explain what you expect in this answer",
     "required": "Required",
+    "longAnswer": "Long answer",
     "asAttachment": "Accept images",
     "moveUp": "Move question up",
     "moveDown": "Move question down",

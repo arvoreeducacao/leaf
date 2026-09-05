@@ -257,9 +257,6 @@ export function FormField(props: Props) {
     )
   }
 
-  const longText =
-    question.type === 'text' && question.propertyId !== 'title'
-
   return (
     <div className="flex flex-col gap-2">
       <label className="flex flex-col gap-1" htmlFor={fieldId}>
@@ -267,10 +264,11 @@ export function FormField(props: Props) {
         {description}
       </label>
 
-      {longText ? (
+      {question.long ? (
         <Textarea
           aria-describedby={describedBy}
           aria-invalid={invalid}
+          className="max-w-none"
           disabled={disabled}
           id={fieldId}
           onChange={(event) => onChange(event.target.value)}
@@ -281,6 +279,7 @@ export function FormField(props: Props) {
         <Input
           aria-describedby={describedBy}
           aria-invalid={invalid}
+          className="max-w-none"
           disabled={disabled}
           id={fieldId}
           inputMode={question.type === 'number' ? 'decimal' : undefined}

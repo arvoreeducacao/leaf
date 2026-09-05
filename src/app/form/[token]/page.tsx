@@ -74,7 +74,7 @@ export default async function PublicFormPage({ params }: Props) {
   if (result.status === 'rate-limited') {
     return (
       <FormShell>
-        <main className="mx-auto flex w-full max-w-content flex-1 flex-col gap-3 px-4 pt-20 tablet:px-8">
+        <main className="mx-auto flex w-full max-w-135 flex-1 flex-col gap-3 px-4 pt-20 tablet:px-8">
           <LockIcon aria-hidden="true" className="size-7 text-content-subtle" />
           <h1 className="font-semibold text-content-strong text-heading-large">
             {t('rateLimitedTitle')}
@@ -96,7 +96,7 @@ export default async function PublicFormPage({ params }: Props) {
 
   return (
     <FormShell>
-      <main className="mx-auto w-full max-w-content flex-1 px-4 py-10 tablet:px-8 tablet:py-16">
+      <main className="mx-auto w-full max-w-135 flex-1 px-4 py-10 tablet:px-8 tablet:py-16">
         <FormRunner form={result.form} />
       </main>
     </FormShell>

@@ -32,6 +32,7 @@ export type FormQuestion = Readonly<{
   description: string
   required: boolean
   attachment: boolean
+  long: boolean
 }>
 
 export type FormAutomation = Readonly<{
@@ -100,6 +101,7 @@ function readQuestion(raw: unknown): FormQuestion | null {
     description: trimTo(source.description, MAX_FORM_TEXT),
     required: source.required === true,
     attachment: source.attachment === true,
+    long: source.long === true,
   }
 }
 
@@ -205,12 +207,17 @@ export type ResolvedQuestion = Readonly<{
   description: string
   required: boolean
   attachment: boolean
+  long: boolean
 }>
 
 export const UPLOAD_PREFIX = '/api/uploads/'
 export const MAX_ATTACHMENTS = 10
 
 export function acceptsAttachment(type: DatabasePropertyType): boolean {
+  return type === 'text'
+}
+
+export function acceptsLongAnswer(type: DatabasePropertyType): boolean {
   return type === 'text'
 }
 
@@ -236,6 +243,7 @@ export function seedFormConfig(
       description: '',
       required: true,
       attachment: false,
+      long: false,
     },
   ]
 
@@ -249,6 +257,7 @@ export function seedFormConfig(
         description: '',
         required: false,
         attachment: false,
+        long: false,
       })
     }
 
@@ -302,6 +311,7 @@ export function resolveQuestions(
           description: question.description,
           required: question.required,
           attachment: false,
+          long: false,
         },
       ]
     }
@@ -321,6 +331,10 @@ export function resolveQuestions(
         description: question.description,
         required: question.required,
         attachment: question.attachment && acceptsAttachment(property.type),
+        long:
+          question.long &&
+          !question.attachment &&
+          acceptsLongAnswer(property.type),
       },
     ]
   })

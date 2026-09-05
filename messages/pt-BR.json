@@ -566,6 +566,7 @@
     "questionDescription": "Explicação da pergunta",
     "questionDescriptionHint": "Explique o que você espera nesta resposta",
     "required": "Obrigatória",
+    "longAnswer": "Resposta longa",
     "asAttachment": "Receber imagens",
     "moveUp": "Subir pergunta",
     "moveDown": "Descer pergunta",

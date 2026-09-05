@@ -112,7 +112,14 @@ describe('parseFormConfig', () => {
     })
 
     expect(config?.questions).toEqual([
-      { propertyId: 'desc', label: '', description: '', required: false, attachment: false },
+      {
+        propertyId: 'desc',
+        label: '',
+        description: '',
+        required: false,
+        attachment: false,
+        long: false,
+      },
     ])
   })
 
@@ -153,6 +160,20 @@ describe('resolveQuestions', () => {
     expect(
       resolveQuestions(config!, properties, titleName).map((item) => item.name),
     ).toEqual(['Descrição', 'Quão grave?'])
+  })
+
+  it('only offers a long answer on a text property that is not an attachment', () => {
+    const config = parseFormConfig({
+      questions: [
+        { propertyId: 'desc', long: true },
+        { propertyId: 'severity', long: true },
+        { propertyId: 'files', long: true, attachment: true },
+      ],
+    })
+
+    expect(
+      resolveQuestions(config!, properties, titleName).map((item) => item.long),
+    ).toEqual([true, false, false])
   })
 
   it('only marks an attachment question on a text property', () => {
@@ -239,10 +260,10 @@ describe('buildSubmission', () => {
   const config = {
     ...seedFormConfig(properties, titleName),
     questions: [
-      { propertyId: TITLE_QUESTION_ID, label: '', description: '', required: true, attachment: false },
-      { propertyId: 'desc', label: '', description: '', required: true, attachment: false },
-      { propertyId: 'severity', label: '', description: '', required: false, attachment: false },
-      { propertyId: 'files', label: '', description: '', required: false, attachment: true },
+      { propertyId: TITLE_QUESTION_ID, label: '', description: '', required: true, attachment: false, long: false },
+      { propertyId: 'desc', label: '', description: '', required: true, attachment: false, long: true },
+      { propertyId: 'severity', label: '', description: '', required: false, attachment: false, long: false },
+      { propertyId: 'files', label: '', description: '', required: false, attachment: true, long: false },
     ],
   }
 
