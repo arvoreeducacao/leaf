@@ -342,7 +342,11 @@ export const formWebhooks = mysqlTable('form_webhooks', {
   viewId: varchar('view_id', { length: APP_ID })
     .primaryKey()
     .references(() => databaseViews.id, { onDelete: 'cascade' }),
-  url: varchar('url', { length: 500 }).notNull(),
+  url: varchar('url', { length: 500 }),
+  channelId: varchar('channel_id', { length: 32 }),
+  channelName: varchar('channel_name', { length: 120 }),
+  pullThread: boolean('pull_thread').notNull().default(true),
+  pushComments: boolean('push_comments').notNull().default(true),
   createdAt: datetime('created_at', { mode: 'date', fsp: 3 })
     .notNull()
     .default(sql`CURRENT_TIMESTAMP(3)`),
@@ -350,6 +354,30 @@ export const formWebhooks = mysqlTable('form_webhooks', {
     .notNull()
     .default(sql`CURRENT_TIMESTAMP(3)`),
 })
+
+export const slackThreads = mysqlTable(
+  'slack_threads',
+  {
+    documentId: varchar('document_id', { length: APP_ID })
+      .primaryKey()
+      .references(() => documents.id, { onDelete: 'cascade' }),
+    viewId: varchar('view_id', { length: APP_ID }).references(
+      () => databaseViews.id,
+      { onDelete: 'set null' },
+    ),
+    channelId: varchar('channel_id', { length: 32 }).notNull(),
+    messageTs: varchar('message_ts', { length: 32 }).notNull(),
+    createdAt: datetime('created_at', { mode: 'date', fsp: 3 })
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP(3)`),
+  },
+  (table) => [
+    uniqueIndex('slack_threads_channel_message_ts_idx').on(
+      table.channelId,
+      table.messageTs,
+    ),
+  ],
+)
 
 export const documentRealtimeState = mysqlTable(
   'document_realtime_state',
@@ -430,6 +458,11 @@ export const comments = mysqlTable(
       { onDelete: 'set null' },
     ),
     body: varchar('body', { length: 2000 }).notNull(),
+    origin: mysqlEnum('origin', ['leaf', 'slack']).notNull().default('leaf'),
+    externalId: varchar('external_id', { length: 64 }),
+    externalAuthorId: varchar('external_author_id', { length: 32 }),
+    externalAuthorName: varchar('external_author_name', { length: 255 }),
+    externalAuthorImage: varchar('external_author_image', { length: 1024 }),
     resolvedAt: datetime('resolved_at', { mode: 'date', fsp: 3 }),
     createdAt: datetime('created_at', { mode: 'date', fsp: 3 }).notNull(),
     updatedAt: datetime('updated_at', { mode: 'date', fsp: 3 }).notNull(),
@@ -441,6 +474,10 @@ export const comments = mysqlTable(
     ),
     index('comments_parent_id_idx').on(table.parentId),
     index('comments_author_id_idx').on(table.authorId),
+    uniqueIndex('comments_document_id_external_id_idx').on(
+      table.documentId,
+      table.externalId,
+    ),
   ],
 )
 
@@ -596,6 +633,8 @@ export type TeamspaceMember = typeof teamspaceMembers.$inferSelect
 export type TeamspaceRole = TeamspaceMember['role']
 export type DocumentVersion = typeof documentVersions.$inferSelect
 export type Comment = typeof comments.$inferSelect
+export type CommentOrigin = Comment['origin']
+export type SlackThread = typeof slackThreads.$inferSelect
 export type NotionConnection = typeof notionConnections.$inferSelect
 
 const OAUTH_CLIENT_ID = 64

@@ -46,8 +46,11 @@ import {
   clearFormWebhook,
   disableFormLink,
   enableFormLink,
+  setFormChannel,
+  setFormThreadOptions,
   setFormWebhook,
 } from '@/lib/form-actions'
+import type { FormSlackLink } from '@/lib/form-webhooks'
 import { cn } from '@/shared/utils'
 
 import { FilterValueInput } from './filter-value-input'
@@ -59,9 +62,12 @@ type Props = Readonly<{
   config: FormConfig
   canEdit: boolean
   notifying: boolean
+  slackLink: FormSlackLink | null
+  slackBotReady: boolean
   onChange: (config: FormConfig) => void
   onTokenChange: (token: string | null) => void
   onNotifyingChange: (notifying: boolean) => void
+  onSlackLinkChange: (link: FormSlackLink | null) => void
   compact?: boolean
 }>
 
@@ -84,15 +90,19 @@ export function FormEditor({
   config,
   canEdit,
   notifying,
+  slackLink,
+  slackBotReady,
   onChange,
   onTokenChange,
   onNotifyingChange,
+  onSlackLinkChange,
   compact = false,
 }: Props) {
   const t = useTranslations('form')
   const tDatabase = useTranslations('database')
   const [busy, setBusy] = useState(false)
   const [webhook, setWebhook] = useState('')
+  const [channel, setChannel] = useState('')
 
   const byId = new Map(properties.map((property) => [property.id, property]))
   const used = new Set(config.questions.map((question) => question.propertyId))
@@ -169,6 +179,78 @@ export function FormEditor({
 
       setWebhook('')
       onNotifyingChange(url !== null)
+      onSlackLinkChange(
+        url === null
+          ? null
+          : {
+              channelId: null,
+              channelName: null,
+              pullThread: true,
+              pushComments: true,
+              url,
+              viewId: view.id,
+            },
+      )
+    } catch {
+      toast.error(tDatabase('saveFailed'))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function connectChannel(reference: string) {
+    setBusy(true)
+
+    try {
+      const result = await setFormChannel(view.id, reference)
+
+      if (!result.ok) {
+        toast.error(result.error)
+
+        return
+      }
+
+      setChannel('')
+      onNotifyingChange(true)
+      onSlackLinkChange({
+        channelId: reference,
+        channelName: reference.replace(/^#/, ''),
+        pullThread: true,
+        pushComments: true,
+        url: null,
+        viewId: view.id,
+      })
+    } catch {
+      toast.error(tDatabase('saveFailed'))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function changeThreadOption(
+    pullThread: boolean,
+    pushComments: boolean,
+  ) {
+    if (!slackLink) {
+      return
+    }
+
+    setBusy(true)
+
+    try {
+      const result = await setFormThreadOptions(
+        view.id,
+        pullThread,
+        pushComments,
+      )
+
+      if (!result.ok) {
+        toast.error(result.error)
+
+        return
+      }
+
+      onSlackLinkChange({ ...slackLink, pullThread, pushComments })
     } catch {
       toast.error(tDatabase('saveFailed'))
     } finally {
@@ -283,17 +365,74 @@ export function FormEditor({
         </label>
 
         {notifying ? (
-          <div className="flex flex-wrap items-center gap-3">
-            <span className="text-body-small text-content">
-              {t('slackConfigured')}
-            </span>
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="text-body-small text-content">
+                {slackLink?.channelName
+                  ? t('slackChannelConfigured', {
+                      channel: slackLink.channelName,
+                    })
+                  : t('slackConfigured')}
+              </span>
+              <Button
+                disabled={!canEdit || busy}
+                onClick={() => void changeWebhook(null)}
+                type="button"
+                variant="secondary"
+              >
+                {t('slackRemove')}
+              </Button>
+            </div>
+
+            {slackLink?.channelId ? (
+              <div className="flex flex-col gap-2">
+                <label className="flex items-center gap-2">
+                  <Switch
+                    checked={slackLink.pullThread}
+                    disabled={!canEdit || busy}
+                    onCheckedChange={(checked) =>
+                      void changeThreadOption(checked, slackLink.pushComments)
+                    }
+                  />
+                  <span className="text-body-small text-content-strong">
+                    {t('slackPullThread')}
+                  </span>
+                </label>
+                <label className="flex items-center gap-2">
+                  <Switch
+                    checked={slackLink.pushComments}
+                    disabled={!canEdit || busy}
+                    onCheckedChange={(checked) =>
+                      void changeThreadOption(slackLink.pullThread, checked)
+                    }
+                  />
+                  <span className="text-body-small text-content-strong">
+                    {t('slackPushComments')}
+                  </span>
+                </label>
+              </div>
+            ) : null}
+          </div>
+        ) : slackBotReady ? (
+          <div className="flex flex-wrap items-end gap-2">
+            <label className="flex flex-1 flex-col gap-1">
+              <span className="text-body-small text-content">
+                {t('slackChannel')}
+              </span>
+              <Input
+                disabled={!canEdit || busy}
+                onChange={(event) => setChannel(event.target.value)}
+                placeholder={t('slackChannelPlaceholder')}
+                value={channel}
+              />
+            </label>
             <Button
-              disabled={!canEdit || busy}
-              onClick={() => void changeWebhook(null)}
+              disabled={!canEdit || busy || channel.trim().length === 0}
+              onClick={() => void connectChannel(channel)}
               type="button"
               variant="secondary"
             >
-              {t('slackRemove')}
+              {t('slackSave')}
             </Button>
           </div>
         ) : (

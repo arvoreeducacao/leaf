@@ -2,7 +2,7 @@ import { type SQL, and, asc, count, eq, isNull } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
 
 import { db } from '@/db'
-import { comments, user } from '@/db/schema'
+import { type CommentOrigin, comments, user } from '@/db/schema'
 import { authorNameOf } from '@/lib/author-name'
 import { MAX_COMMENT_LENGTH } from '@/lib/comment-limits'
 
@@ -13,6 +13,7 @@ export type CommentReply = Readonly<{
   authorId: string | null
   authorName: string | null
   authorImage: string | null
+  origin: CommentOrigin
   body: string
   createdAt: number
   updatedAt: number
@@ -30,6 +31,7 @@ export type CommentRecord = Readonly<{
   documentId: string
   parentId: string | null
   authorId: string | null
+  externalId: string | null
   resolvedAt: number | null
 }>
 
@@ -57,6 +59,7 @@ export async function getComment(
       documentId: comments.documentId,
       parentId: comments.parentId,
       authorId: comments.authorId,
+      externalId: comments.externalId,
       resolvedAt: comments.resolvedAt,
     })
     .from(comments)
@@ -85,6 +88,9 @@ export async function listDocumentComments(
       authorName: user.name,
       authorEmail: user.email,
       authorImage: user.image,
+      origin: comments.origin,
+      externalAuthorName: comments.externalAuthorName,
+      externalAuthorImage: comments.externalAuthorImage,
       resolvedAt: comments.resolvedAt,
       createdAt: comments.createdAt,
       updatedAt: comments.updatedAt,
@@ -104,8 +110,9 @@ export async function listDocumentComments(
     threads.set(row.id, {
       id: row.id,
       authorId: row.authorId,
-      authorName: authorNameOf(row.authorName, row.authorEmail),
-      authorImage: row.authorImage,
+      authorName: row.externalAuthorName ?? authorNameOf(row.authorName, row.authorEmail),
+      authorImage: row.externalAuthorImage ?? row.authorImage,
+      origin: row.origin,
       body: row.body,
       createdAt: row.createdAt.getTime(),
       updatedAt: row.updatedAt.getTime(),
@@ -129,8 +136,9 @@ export async function listDocumentComments(
     thread.replies.push({
       id: row.id,
       authorId: row.authorId,
-      authorName: authorNameOf(row.authorName, row.authorEmail),
-      authorImage: row.authorImage,
+      authorName: row.externalAuthorName ?? authorNameOf(row.authorName, row.authorEmail),
+      authorImage: row.externalAuthorImage ?? row.authorImage,
+      origin: row.origin,
       body: row.body,
       createdAt: row.createdAt.getTime(),
       updatedAt: row.updatedAt.getTime(),
@@ -155,12 +163,21 @@ export async function countOpenComments(documentId: string): Promise<number> {
   return rows[0]?.total ?? 0
 }
 
+type ExternalAuthor = Readonly<{
+  id: string
+  name: string
+  image: string | null
+}>
+
 type CreateInput = Readonly<{
   documentId: string
-  authorId: string
+  authorId: string | null
   body: string
   blockId?: string | null
   parentId?: string | null
+  origin?: CommentOrigin
+  externalId?: string | null
+  externalAuthor?: ExternalAuthor | null
   now?: Date
 }>
 
@@ -188,6 +205,8 @@ export async function createComment(
   const now = input.now ?? new Date()
   const id = nanoid(12)
 
+  const external = input.externalAuthor ?? null
+
   await db.insert(comments).values({
     id,
     documentId: input.documentId,
@@ -195,6 +214,11 @@ export async function createComment(
     blockId,
     authorId: input.authorId,
     body,
+    origin: input.origin ?? 'leaf',
+    externalId: input.externalId ?? null,
+    externalAuthorId: external?.id ?? null,
+    externalAuthorName: external?.name ?? null,
+    externalAuthorImage: external?.image ?? null,
     resolvedAt: null,
     createdAt: now,
     updatedAt: now,
@@ -251,6 +275,63 @@ export async function setCommentResolved(
     .update(comments)
     .set({ resolvedAt: resolved ? now : null })
     .where(target)
+
+  return true
+}
+
+export async function getCommentByExternalId(
+  documentId: string,
+  externalId: string,
+): Promise<CommentRecord | null> {
+  const rows = await db
+    .select({
+      id: comments.id,
+      documentId: comments.documentId,
+      parentId: comments.parentId,
+      authorId: comments.authorId,
+      externalId: comments.externalId,
+      resolvedAt: comments.resolvedAt,
+    })
+    .from(comments)
+    .where(
+      and(
+        eq(comments.documentId, documentId),
+        eq(comments.externalId, externalId),
+      ),
+    )
+    .limit(1)
+
+  const row = rows[0]
+
+  if (!row) {
+    return null
+  }
+
+  return { ...row, resolvedAt: row.resolvedAt?.getTime() ?? null }
+}
+
+export async function updateCommentByExternalId(
+  documentId: string,
+  externalId: string,
+  body: string,
+  now: Date = new Date(),
+): Promise<boolean> {
+  const normalized = normalizeCommentBody(body)
+
+  if (normalized.length === 0) {
+    return false
+  }
+
+  const existing = await getCommentByExternalId(documentId, externalId)
+
+  if (!existing) {
+    return false
+  }
+
+  await db
+    .update(comments)
+    .set({ body: normalized, updatedAt: now })
+    .where(eq(comments.id, existing.id))
 
   return true
 }
