@@ -58,6 +58,30 @@ describe('documentIdsInContent', () => {
     expect(documentIdsInContent(content)).toEqual(['aaa', 'bbb'])
   })
 
+  it('collects links stored as an absolute url of the app itself', () => {
+    const content = JSON.stringify([
+      {
+        content: [
+          {
+            content: [],
+            href: 'https://leaf.example.com/doc/aaa',
+            type: 'link',
+          },
+          {
+            content: [],
+            href: 'https://evil.example.com/doc/bbb',
+            type: 'link',
+          },
+        ],
+        type: 'paragraph',
+      },
+    ])
+
+    expect(documentIdsInContent(content, 'https://leaf.example.com')).toEqual([
+      'aaa',
+    ])
+  })
+
   it('gives nothing for empty content', () => {
     expect(documentIdsInContent(null)).toEqual([])
     expect(documentIdsInContent('')).toEqual([])
