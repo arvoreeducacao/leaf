@@ -22,6 +22,7 @@ import {
   deleteDatabaseProperty,
   deleteDatabaseRow,
   deleteDatabaseView,
+  deleteSelectOption,
   publishDatabaseViewDraft,
   renameDatabaseProperty,
   renameDatabaseRow,
@@ -57,6 +58,7 @@ import { cn } from '@/shared/utils'
 import { BoardView } from './board-view'
 import { CalendarView } from './calendar-view'
 import { FormEditor } from './form-editor'
+import { FormToolbar } from './form-toolbar'
 import { GalleryView } from './gallery-view'
 import { ListView } from './list-view'
 import { TableView } from './table-view'
@@ -100,6 +102,7 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
     () =>
       Object.fromEntries(snapshot.slackLinks.map((link) => [link.viewId, link])),
   )
+  const [previewing, setPreviewing] = useState(false)
   const [activeViewId, setActiveViewId] = useState(
     snapshot.views.find((view) => view.id === requestedViewId)?.id ??
       snapshot.views[0]?.id ??
@@ -437,37 +440,57 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
         return null
       }
     },
-    addProperty(type) {
+    deleteOption(propertyId, optionId) {
+      setProperties((current) =>
+        current.map((item) =>
+          item.id === propertyId
+            ? {
+                ...item,
+                options: serializeOptions(
+                  parseOptions(item.options).filter(
+                    (option) => option.id !== optionId,
+                  ),
+                ),
+              }
+            : item,
+        ),
+      )
+
+      void guard(() => deleteSelectOption(propertyId, optionId))
+    },
+    async addProperty(type) {
       const name = t(`type_${type}`)
 
-      void (async () => {
-        try {
-          const result = await addDatabaseProperty(snapshot.id, type, name)
+      try {
+        const result = await addDatabaseProperty(snapshot.id, type, name)
 
-          if (!result.ok) {
-            toast.error(result.error)
+        if (!result.ok) {
+          toast.error(result.error)
 
-            return
-          }
-
-          setProperties((current) => [
-            ...current,
-            {
-              id: result.id,
-              databaseId: snapshot.id,
-              name,
-              type,
-              options: result.refresh?.options ?? null,
-              position: current.length,
-              createdAt: new Date(),
-            } satisfies DatabaseProperty,
-          ])
-
-          applyRefresh(result.id, result.refresh)
-        } catch {
-          fail()
+          return null
         }
-      })()
+
+        setProperties((current) => [
+          ...current,
+          {
+            id: result.id,
+            databaseId: snapshot.id,
+            name,
+            type,
+            options: result.refresh?.options ?? null,
+            position: current.length,
+            createdAt: new Date(),
+          } satisfies DatabaseProperty,
+        ])
+
+        applyRefresh(result.id, result.refresh)
+
+        return result.id
+      } catch {
+        fail()
+
+        return null
+      }
     },
     renameProperty(propertyId, name) {
       const trimmed = name.trim()
@@ -697,7 +720,34 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
   const gutter = compact ? '' : 'px-4 tablet:px-24'
 
   function changeForm(form: FormConfig) {
-    changeConfig({ ...config, form })
+    if (!activeView) {
+      return
+    }
+
+    const viewId = activeView.id
+    const next = { ...config, form }
+
+    setSaved((current) => ({ ...current, [viewId]: next }))
+    setDrafts((current) => {
+      const { [viewId]: _removed, ...rest } = current
+
+      return rest
+    })
+
+    const timers = saveTimers.current
+    const running = timers.get(viewId)
+
+    if (running) {
+      clearTimeout(running)
+    }
+
+    timers.set(
+      viewId,
+      setTimeout(() => {
+        timers.delete(viewId)
+        void guard(() => publishDatabaseViewDraft(viewId, next))
+      }, configSaveDelay),
+    )
   }
 
   function changeNotifying(viewId: string, notifying: boolean) {
@@ -749,6 +799,27 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
         compact={compact}
         config={config}
         databaseId={snapshot.id}
+        formActions={
+          activeView.type === 'form' ? (
+            <FormToolbar
+              canEdit={canEdit}
+              config={config.form ?? emptyFormConfig}
+              notifying={notifyingViewIds.has(activeView.id)}
+              onChange={changeForm}
+              onNotifyingChange={(notifying) =>
+                changeNotifying(activeView.id, notifying)
+              }
+              onPreviewingChange={setPreviewing}
+              onSlackLinkChange={(link) => changeSlackLink(activeView.id, link)}
+              onTokenChange={(token) => changeToken(activeView.id, token)}
+              previewing={previewing}
+              properties={properties}
+              slackBotReady={snapshot.slackBotReady}
+              slackLink={slackLinks[activeView.id] ?? null}
+              view={activeView}
+            />
+          ) : null
+        }
         filtersChanged={filtersChanged}
         onChangeLayout={changeLayout}
         onConfigChange={changeConfig}
@@ -799,16 +870,19 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
           canEdit={canEdit}
           compact={compact}
           config={config.form ?? emptyFormConfig}
-          notifying={notifyingViewIds.has(activeView.id)}
+          databaseIcon={snapshot.icon}
+          databaseTitle={snapshot.title}
+          onAddOption={async (propertyId, name) => {
+            await handlers.createOption(propertyId, name)
+          }}
           onChange={changeForm}
-          onNotifyingChange={(notifying) =>
-            changeNotifying(activeView.id, notifying)
-          }
-          onSlackLinkChange={(link) => changeSlackLink(activeView.id, link)}
+          hasOrganization={snapshot.people.length > 0}
+          onAddProperty={handlers.addProperty}
+          onChangePropertyType={handlers.changePropertyType}
+          onRemoveOption={handlers.deleteOption}
           onTokenChange={(token) => changeToken(activeView.id, token)}
+          previewing={previewing}
           properties={properties}
-          slackBotReady={snapshot.slackBotReady}
-          slackLink={slackLinks[activeView.id] ?? null}
           view={activeView}
         />
       ) : null}
@@ -893,9 +967,11 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
         </p>
       ) : null}
 
-      <p className={cn('pt-2 text-caption text-content-subtle', gutter)}>
-        {t('rowCount', { count: filtered.length })}
-      </p>
+      {activeView.type === 'form' ? null : (
+        <p className={cn('pt-2 text-caption text-content-subtle', gutter)}>
+          {t('rowCount', { count: filtered.length })}
+        </p>
+      )}
     </section>
   )
 }
