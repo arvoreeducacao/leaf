@@ -10,6 +10,7 @@ import {
   EyeIcon,
   FilterIcon,
   LayoutGridRearrangeIcon,
+  ListCheckIcon,
   ListReorderIcon,
   MapGridIcon,
   TrashIcon,
@@ -52,6 +53,7 @@ import { PropertyIcon } from './property-icon'
 const viewIcon: Record<DatabaseViewType, typeof MapGridIcon> = {
   table: MapGridIcon,
   board: LayoutGridRearrangeIcon,
+  form: ListCheckIcon,
 }
 
 type Props = Readonly<{
@@ -217,6 +219,10 @@ export function ViewToolbar({
                   <LayoutGridRearrangeIcon aria-hidden="true" />
                   {t('view_board')}
                 </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => onCreateView('form')}>
+                  <ListCheckIcon aria-hidden="true" />
+                  {t('view_form')}
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </li>
@@ -224,302 +230,313 @@ export function ViewToolbar({
       </ul>
 
       <div className="-mx-1 flex shrink-0 items-center gap-1 overflow-x-auto px-1">
-        {activeView?.type === 'board' ? (
-          <FieldSelect
-            label={t('groupBy')}
-            onChange={(value) =>
-              onConfigChange({
-                ...config,
-                groupByPropertyId: value.length > 0 ? value : null,
-              })
-            }
-            options={[
-              { value: '', label: t('noGroup') },
-              ...properties
-                .filter((property) => isGroupableType(property.type))
-                .map((property) => ({
-                  value: property.id,
-                  label: property.name,
-                })),
-            ]}
-            value={groupPropertyId ?? ''}
-          />
-        ) : null}
+        {activeView?.type === 'form' ? null : (
+          <>
+          {activeView?.type === 'board' ? (
+            <FieldSelect
+              label={t('groupBy')}
+              onChange={(value) =>
+                onConfigChange({
+                  ...config,
+                  groupByPropertyId: value.length > 0 ? value : null,
+                })
+              }
+              options={[
+                { value: '', label: t('noGroup') },
+                ...properties
+                  .filter((property) => isGroupableType(property.type))
+                  .map((property) => ({
+                    value: property.id,
+                    label: property.name,
+                  })),
+              ]}
+              value={groupPropertyId ?? ''}
+            />
+          ) : null}
 
-        <Popover>
-          <PopoverTrigger asChild>
-            <ButtonIcon
-              aria-label={t('filtersActive', { count: config.filters.length })}
-              size="medium"
-              variant={config.filters.length > 0 ? 'filter-active' : 'ghost'}
-            >
-              <FilterIcon aria-hidden="true" />
-            </ButtonIcon>
-          </PopoverTrigger>
-          <PopoverContent align="end" className="w-[22rem] p-3">
-            <ul className="flex flex-col gap-2">
-              {config.filters.map((filter, index) => {
-                const property = propertyOf(filter.propertyId)
-                const operators =
-                  filter.propertyId === TITLE_PROPERTY_ID
-                    ? operatorsFor('text')
-                    : property
-                      ? operatorsFor(property.type)
-                      : operatorsFor('text')
+          <Popover>
+            <PopoverTrigger asChild>
+              <ButtonIcon
+                aria-label={t('filtersActive', { count: config.filters.length })}
+                size="medium"
+                variant={config.filters.length > 0 ? 'filter-active' : 'ghost'}
+              >
+                <FilterIcon aria-hidden="true" />
+              </ButtonIcon>
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-[22rem] p-3">
+              <ul className="flex flex-col gap-2">
+                {config.filters.map((filter, index) => {
+                  const property = propertyOf(filter.propertyId)
+                  const operators =
+                    filter.propertyId === TITLE_PROPERTY_ID
+                      ? operatorsFor('text')
+                      : property
+                        ? operatorsFor(property.type)
+                        : operatorsFor('text')
 
-                return (
-                  <li
-                    className="flex flex-wrap items-center gap-1"
-                    key={`${filter.propertyId}-${index}`}
-                  >
-                    <FieldSelect
-                      className="flex-1"
-                      label={t('filters')}
-                      onChange={(value) => {
-                        const next = propertyOf(value)
-                        const allowed =
-                          value === TITLE_PROPERTY_ID
-                            ? operatorsFor('text')
-                            : next
-                              ? operatorsFor(next.type)
-                              : operatorsFor('text')
+                  return (
+                    <li
+                      className="flex flex-wrap items-center gap-1"
+                      key={`${filter.propertyId}-${index}`}
+                    >
+                      <FieldSelect
+                        className="flex-1"
+                        label={t('filters')}
+                        onChange={(value) => {
+                          const next = propertyOf(value)
+                          const allowed =
+                            value === TITLE_PROPERTY_ID
+                              ? operatorsFor('text')
+                              : next
+                                ? operatorsFor(next.type)
+                                : operatorsFor('text')
 
-                        updateFilter(index, {
-                          propertyId: value,
-                          operator: allowed[0],
-                          value: null,
-                        })
-                      }}
-                      options={sortTargets}
-                      value={filter.propertyId}
-                    />
-                    <FieldSelect
-                      className="flex-1"
-                      label={t('filters')}
-                      onChange={(value) =>
-                        updateFilter(index, {
-                          ...filter,
-                          operator: value as ViewFilter['operator'],
-                          value: operatorNeedsValue(
-                            value as ViewFilter['operator'],
-                          )
-                            ? filter.value
-                            : null,
-                        })
-                      }
-                      options={operators.map((operator) => ({
-                        value: operator,
-                        label: t(`operator_${operator}`),
-                      }))}
-                      value={filter.operator}
-                    />
-                    <div className="flex w-full min-w-0 basis-full items-center gap-1">
-                      <div className="min-w-0 flex-1">
-                        <FilterValueInput
-                          onChange={(value) =>
-                            updateFilter(index, { ...filter, value })
-                          }
-                          operator={filter.operator}
-                          people={people}
-                          property={property}
-                          value={filter.value}
-                        />
-                      </div>
-                      <ButtonIcon
-                        aria-label={t('removeFilter')}
-                        onClick={() =>
-                          onConfigChange({
-                            ...config,
-                            filters: config.filters.filter(
-                              (_, position) => position !== index,
-                            ),
+                          updateFilter(index, {
+                            propertyId: value,
+                            operator: allowed[0],
+                            value: null,
+                          })
+                        }}
+                        options={sortTargets}
+                        value={filter.propertyId}
+                      />
+                      <FieldSelect
+                        className="flex-1"
+                        label={t('filters')}
+                        onChange={(value) =>
+                          updateFilter(index, {
+                            ...filter,
+                            operator: value as ViewFilter['operator'],
+                            value: operatorNeedsValue(
+                              value as ViewFilter['operator'],
+                            )
+                              ? filter.value
+                              : null,
                           })
                         }
-                        size="medium"
-                        variant="ghost"
-                      >
-                        <CancelIcon aria-hidden="true" />
-                      </ButtonIcon>
-                    </div>
-                  </li>
-                )
-              })}
-            </ul>
-            {config.filters.length < MAX_FILTERS ? (
-              <Button
-                className="mt-2 h-9 w-full font-regular text-body-small tablet:h-8"
-                onClick={() =>
-                  onConfigChange({
-                    ...config,
-                    filters: [
-                      ...config.filters,
-                      {
-                        propertyId: properties[0]?.id ?? TITLE_PROPERTY_ID,
-                        operator: properties[0]
-                          ? operatorsFor(properties[0].type)[0]
-                          : 'contains',
-                        value: null,
-                      },
-                    ],
-                  })
-                }
-                size="sm"
-                variant="outline"
-              >
-                <AddIcon aria-hidden="true" />
-                {t('addFilter')}
-              </Button>
-            ) : null}
-          </PopoverContent>
-        </Popover>
-
-        <Popover>
-          <PopoverTrigger asChild>
-            <ButtonIcon
-              aria-label={t('sortsActive', { count: config.sorts.length })}
-              size="medium"
-              variant={config.sorts.length > 0 ? 'filter-active' : 'ghost'}
-            >
-              <ListReorderIcon aria-hidden="true" />
-            </ButtonIcon>
-          </PopoverTrigger>
-          <PopoverContent align="end" className="w-80 p-3">
-            <ul className="flex flex-col gap-2">
-              {config.sorts.map((sort, index) => (
-                <li
-                  className="flex items-center gap-1"
-                  key={`${sort.propertyId}-${index}`}
+                        options={operators.map((operator) => ({
+                          value: operator,
+                          label: t(`operator_${operator}`),
+                        }))}
+                        value={filter.operator}
+                      />
+                      <div className="flex w-full min-w-0 basis-full items-center gap-1">
+                        <div className="min-w-0 flex-1">
+                          <FilterValueInput
+                            onChange={(value) =>
+                              updateFilter(index, { ...filter, value })
+                            }
+                            operator={filter.operator}
+                            people={people}
+                            property={property}
+                            value={filter.value}
+                          />
+                        </div>
+                        <ButtonIcon
+                          aria-label={t('removeFilter')}
+                          onClick={() =>
+                            onConfigChange({
+                              ...config,
+                              filters: config.filters.filter(
+                                (_, position) => position !== index,
+                              ),
+                            })
+                          }
+                          size="medium"
+                          variant="ghost"
+                        >
+                          <CancelIcon aria-hidden="true" />
+                        </ButtonIcon>
+                      </div>
+                    </li>
+                  )
+                })}
+              </ul>
+              {config.filters.length < MAX_FILTERS ? (
+                <Button
+                  className="mt-2 h-9 w-full font-regular text-body-small tablet:h-8"
+                  onClick={() =>
+                    onConfigChange({
+                      ...config,
+                      filters: [
+                        ...config.filters,
+                        {
+                          propertyId: properties[0]?.id ?? TITLE_PROPERTY_ID,
+                          operator: properties[0]
+                            ? operatorsFor(properties[0].type)[0]
+                            : 'contains',
+                          value: null,
+                        },
+                      ],
+                    })
+                  }
+                  size="sm"
+                  variant="outline"
                 >
-                  <FieldSelect
-                    className="flex-1"
-                    label={t('sorts')}
-                    onChange={(value) =>
-                      onConfigChange({
-                        ...config,
-                        sorts: config.sorts.map((item, position) =>
-                          position === index
-                            ? { ...item, propertyId: value }
-                            : item,
-                        ),
-                      })
-                    }
-                    options={sortTargets}
-                    value={sort.propertyId}
-                  />
-                  <FieldSelect
-                    label={t('sorts')}
-                    onChange={(value) =>
-                      onConfigChange({
-                        ...config,
-                        sorts: config.sorts.map((item, position) =>
-                          position === index
-                            ? {
-                                ...item,
-                                direction: value as ViewSort['direction'],
-                              }
-                            : item,
-                        ),
-                      })
-                    }
-                    options={[
-                      { value: 'asc', label: t('ascending') },
-                      { value: 'desc', label: t('descending') },
-                    ]}
-                    value={sort.direction}
-                  />
-                  <ButtonIcon
-                    aria-label={t('removeSort')}
-                    onClick={() =>
-                      onConfigChange({
-                        ...config,
-                        sorts: config.sorts.filter(
-                          (_, position) => position !== index,
-                        ),
-                      })
-                    }
-                    size="medium"
-                    variant="ghost"
-                  >
-                    <CancelIcon aria-hidden="true" />
-                  </ButtonIcon>
-                </li>
-              ))}
-            </ul>
-            {config.sorts.length < MAX_SORTS ? (
-              <Button
-                className="mt-2 h-9 w-full font-regular text-body-small tablet:h-8"
-                onClick={() =>
-                  onConfigChange({
-                    ...config,
-                    sorts: [
-                      ...config.sorts,
-                      {
-                        propertyId: TITLE_PROPERTY_ID,
-                        direction: 'asc',
-                      },
-                    ],
-                  })
-                }
-                size="sm"
-                variant="outline"
-              >
-                <AddIcon aria-hidden="true" />
-                {t('addSort')}
-              </Button>
-            ) : null}
-          </PopoverContent>
-        </Popover>
+                  <AddIcon aria-hidden="true" />
+                  {t('addFilter')}
+                </Button>
+              ) : null}
+            </PopoverContent>
+          </Popover>
 
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <ButtonIcon
-              aria-label={t('properties')}
-              size="medium"
-              variant="ghost"
-            >
-              <EyeIcon aria-hidden="true" />
-            </ButtonIcon>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>{t('properties')}</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            {properties.map((property) => (
-              <DropdownMenuCheckboxItem
-                checked={!hidden.has(property.id)}
-                key={property.id}
-                onCheckedChange={(checked) =>
-                  onConfigChange({
-                    ...config,
-                    hiddenPropertyIds: checked
-                      ? config.hiddenPropertyIds.filter(
-                          (id) => id !== property.id,
-                        )
-                      : [...config.hiddenPropertyIds, property.id],
-                  })
-                }
-                onSelect={(event) => event.preventDefault()}
+          <Popover>
+            <PopoverTrigger asChild>
+              <ButtonIcon
+                aria-label={t('sortsActive', { count: config.sorts.length })}
+                size="medium"
+                variant={config.sorts.length > 0 ? 'filter-active' : 'ghost'}
               >
-                <PropertyIcon type={property.type} />
-                {property.name}
-              </DropdownMenuCheckboxItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
+                <ListReorderIcon aria-hidden="true" />
+              </ButtonIcon>
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-80 p-3">
+              <ul className="flex flex-col gap-2">
+                {config.sorts.map((sort, index) => (
+                  <li
+                    className="flex items-center gap-1"
+                    key={`${sort.propertyId}-${index}`}
+                  >
+                    <FieldSelect
+                      className="flex-1"
+                      label={t('sorts')}
+                      onChange={(value) =>
+                        onConfigChange({
+                          ...config,
+                          sorts: config.sorts.map((item, position) =>
+                            position === index
+                              ? { ...item, propertyId: value }
+                              : item,
+                          ),
+                        })
+                      }
+                      options={sortTargets}
+                      value={sort.propertyId}
+                    />
+                    <FieldSelect
+                      label={t('sorts')}
+                      onChange={(value) =>
+                        onConfigChange({
+                          ...config,
+                          sorts: config.sorts.map((item, position) =>
+                            position === index
+                              ? {
+                                  ...item,
+                                  direction: value as ViewSort['direction'],
+                                }
+                              : item,
+                          ),
+                        })
+                      }
+                      options={[
+                        { value: 'asc', label: t('ascending') },
+                        { value: 'desc', label: t('descending') },
+                      ]}
+                      value={sort.direction}
+                    />
+                    <ButtonIcon
+                      aria-label={t('removeSort')}
+                      onClick={() =>
+                        onConfigChange({
+                          ...config,
+                          sorts: config.sorts.filter(
+                            (_, position) => position !== index,
+                          ),
+                        })
+                      }
+                      size="medium"
+                      variant="ghost"
+                    >
+                      <CancelIcon aria-hidden="true" />
+                    </ButtonIcon>
+                  </li>
+                ))}
+              </ul>
+              {config.sorts.length < MAX_SORTS ? (
+                <Button
+                  className="mt-2 h-9 w-full font-regular text-body-small tablet:h-8"
+                  onClick={() =>
+                    onConfigChange({
+                      ...config,
+                      sorts: [
+                        ...config.sorts,
+                        {
+                          propertyId: TITLE_PROPERTY_ID,
+                          direction: 'asc',
+                        },
+                      ],
+                    })
+                  }
+                  size="sm"
+                  variant="outline"
+                >
+                  <AddIcon aria-hidden="true" />
+                  {t('addSort')}
+                </Button>
+              ) : null}
+            </PopoverContent>
+          </Popover>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <ButtonIcon
+                aria-label={t('properties')}
+                size="medium"
+                variant="ghost"
+              >
+                <EyeIcon aria-hidden="true" />
+              </ButtonIcon>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>{t('properties')}</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {properties.map((property) => (
+                <DropdownMenuCheckboxItem
+                  checked={!hidden.has(property.id)}
+                  key={property.id}
+                  onCheckedChange={(checked) =>
+                    onConfigChange({
+                      ...config,
+                      hiddenPropertyIds: checked
+                        ? config.hiddenPropertyIds.filter(
+                            (id) => id !== property.id,
+                          )
+                        : [...config.hiddenPropertyIds, property.id],
+                    })
+                  }
+                  onSelect={(event) => event.preventDefault()}
+                >
+                  <PropertyIcon type={property.type} />
+                  {property.name}
+                </DropdownMenuCheckboxItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          </>
+        )}
 
         {canEdit ? (
           <div className="ml-1 flex items-center">
-            <Button
-              className="h-9 rounded-r-none px-2 tablet:h-7"
-              onClick={onCreateRow}
-              size="sm"
-            >
-              {t('newRowShort')}
-            </Button>
+            {activeView?.type === 'form' ? null : (
+              <Button
+                className="h-9 rounded-r-none px-2 tablet:h-7"
+                onClick={onCreateRow}
+                size="sm"
+              >
+                {t('newRowShort')}
+              </Button>
+            )}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <ButtonIcon
                   aria-label={t('addView')}
-                  className="h-9 w-6 rounded-l-none border-l border-l-primary-600 tablet:h-7"
+                  className={cn(
+                    'h-9 tablet:h-7',
+                    activeView?.type === 'form'
+                      ? 'w-9 tablet:w-7'
+                      : 'w-6 rounded-l-none border-l border-l-primary-600',
+                  )}
                   size="medium"
                   variant="primary"
                 >
@@ -534,6 +551,10 @@ export function ViewToolbar({
                 <DropdownMenuItem onSelect={() => onCreateView('board')}>
                   <LayoutGridRearrangeIcon aria-hidden="true" />
                   {t('view_board')}
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => onCreateView('form')}>
+                  <ListCheckIcon aria-hidden="true" />
+                  {t('view_form')}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

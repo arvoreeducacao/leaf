@@ -23,6 +23,7 @@ import {
   setDatabaseRowValue,
   updateDatabaseView,
 } from '@/lib/database-actions'
+import { type FormConfig, emptyFormConfig } from '@/lib/database/forms'
 import { personOptions } from '@/lib/database/people'
 import { parseOptions, serializeOptions } from '@/lib/database/values'
 import {
@@ -38,6 +39,7 @@ import type { DatabaseSnapshot } from '@/lib/databases'
 import { cn } from '@/shared/utils'
 
 import { BoardView } from './board-view'
+import { FormEditor } from './form-editor'
 import { TableView } from './table-view'
 import type { DatabaseHandlers } from './types'
 import { ViewToolbar } from './view-toolbar'
@@ -315,7 +317,8 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
           databaseId: snapshot.id,
           name,
           type,
-          config: null,
+          config: result.config,
+          publicToken: null,
           position: views.length,
           createdAt: new Date(),
         }
@@ -323,7 +326,7 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
         setViews((current) => [...current, view])
         setConfigs((current) => ({
           ...current,
-          [view.id]: parseViewConfig(null),
+          [view.id]: parseViewConfig(result.config),
         }))
         setActiveViewId(view.id)
       } catch {
@@ -422,6 +425,18 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
 
   const gutter = compact ? '' : 'px-4 tablet:px-24'
 
+  function changeForm(form: FormConfig) {
+    changeConfig({ ...config, form })
+  }
+
+  function changeToken(viewId: string, token: string | null) {
+    setViews((current) =>
+      current.map((view) =>
+        view.id === viewId ? { ...view, publicToken: token } : view,
+      ),
+    )
+  }
+
   return (
     <section
       className={cn(
@@ -448,14 +463,24 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
         views={views}
       />
 
-      {rows.length === 0 ? (
+      {activeView.type !== 'form' && rows.length === 0 ? (
         <p className={cn('py-3 text-body-small text-content', gutter)}>
           {t('noRows')}{' '}
           <span className="text-content-subtle">{t('noRowsHint')}</span>
         </p>
       ) : null}
 
-      {activeView.type === 'board' ? (
+      {activeView.type === 'form' ? (
+        <FormEditor
+          canEdit={canEdit}
+          compact={compact}
+          config={config.form ?? emptyFormConfig}
+          onChange={changeForm}
+          onTokenChange={(token) => changeToken(activeView.id, token)}
+          properties={properties}
+          view={activeView}
+        />
+      ) : activeView.type === 'board' ? (
         <BoardView
           canEdit={canEdit}
           groupProperty={resolvedGroupProperty}
@@ -475,7 +500,9 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
         />
       )}
 
-      {filtered.length === 0 && rows.length > 0 ? (
+      {activeView.type !== 'form' &&
+      filtered.length === 0 &&
+      rows.length > 0 ? (
         <p className={cn('py-3 text-body-small text-content', gutter)}>
           {t('noResults')}
         </p>

@@ -104,6 +104,7 @@ describe('view configuration', () => {
       filters: [{ propertyId: 'points', operator: 'greaterThan', value: 2 }],
       sorts: [{ propertyId: TITLE_PROPERTY_ID, direction: 'asc' }],
       hiddenPropertyIds: ['due'],
+      form: null,
     }
 
     expect(parseViewConfig(serializeViewConfig(config))).toEqual(config)

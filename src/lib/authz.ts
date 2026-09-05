@@ -231,6 +231,8 @@ const inviteLimiter = createRateLimiter(60_000, 20)
 const commentLimiter = createRateLimiter(60_000, 30)
 const aiLimiter = createRateLimiter(60_000, 20)
 const unsplashLimiter = createRateLimiter(60_000, 30)
+const formSubmissionLimiter = createRateLimiter(60_000, 10)
+const formUploadLimiter = createRateLimiter(60_000, 20)
 
 export function registerPublicLookupAttempt(
   key: string,
@@ -285,6 +287,28 @@ export function registerUnsplashAttempt(
 
 export function resetUnsplashLimiter() {
   unsplashLimiter.reset()
+}
+
+export function registerFormSubmissionAttempt(
+  key: string,
+  now: number = Date.now(),
+): RateLimitDecision {
+  return formSubmissionLimiter.register(key, now)
+}
+
+export function resetFormSubmissionLimiter() {
+  formSubmissionLimiter.reset()
+}
+
+export function registerFormUploadAttempt(
+  key: string,
+  now: number = Date.now(),
+): RateLimitDecision {
+  return formUploadLimiter.register(key, now)
+}
+
+export function resetFormUploadLimiter() {
+  formUploadLimiter.reset()
 }
 
 export type PublicLookupResult =

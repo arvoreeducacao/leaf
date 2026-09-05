@@ -29,9 +29,11 @@ import {
   serializeOptions,
   serializeValues,
 } from '@/lib/database/values'
+import { seedFormConfig } from '@/lib/database/forms'
 import {
   MAX_VIEWS,
   type ViewConfig,
+  emptyViewConfig,
   parseViewConfig,
   serializeViewConfig,
   viewTypes,
@@ -615,7 +617,9 @@ export async function createDatabaseView(
   databaseId: string,
   type: DatabaseViewType,
   name: string,
-): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
+): Promise<
+  { ok: true; id: string; config: string } | { ok: false; error: string }
+> {
   if (!(await canEditDatabase(databaseId))) {
     return notAllowed()
   }
@@ -638,24 +642,30 @@ export async function createDatabaseView(
   const id = nanoid(12)
   const trimmed = name.trim().slice(0, MAX_PROPERTY_NAME)
 
+  const config = serializeViewConfig({
+    ...emptyViewConfig,
+    form:
+      type === 'form'
+        ? seedFormConfig(
+            await listDatabaseProperties(databaseId),
+            t('titleColumn'),
+          )
+        : null,
+  })
+
   await db.insert(databaseViews).values({
     id,
     databaseId,
     name: trimmed.length > 0 ? trimmed : t(`view_${type}`),
     type,
-    config: serializeViewConfig({
-      groupByPropertyId: null,
-      filters: [],
-      sorts: [],
-      hiddenPropertyIds: [],
-    }),
+    config,
     position: existing.length,
     createdAt: new Date(),
   })
 
   revalidatePath(`/doc/${databaseId}`)
 
-  return { ok: true, id }
+  return { ok: true, id, config }
 }
 
 export async function updateDatabaseView(
