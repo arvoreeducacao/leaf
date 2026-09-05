@@ -4,6 +4,8 @@ import { useTranslations } from 'next-intl'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 
+import { useSearchParams } from 'next/navigation'
+
 import type {
   DatabaseProperty,
   DatabasePropertyType,
@@ -81,7 +83,13 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
   const [properties, setProperties] = useState(snapshot.properties)
   const [views, setViews] = useState(snapshot.views)
   const [rows, setRows] = useState(snapshot.rows)
-  const [activeViewId, setActiveViewId] = useState(snapshot.views[0]?.id ?? '')
+  const params = useSearchParams()
+  const requestedViewId = params.get('v')
+  const [activeViewId, setActiveViewId] = useState(
+    snapshot.views.find((view) => view.id === requestedViewId)?.id ??
+      snapshot.views[0]?.id ??
+      '',
+  )
   const [saved, setSaved] = useState<Record<string, ViewConfig>>(() =>
     Object.fromEntries(
       snapshot.views.map((view) => [view.id, parseViewConfig(view.config)]),
@@ -233,6 +241,64 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
     })
 
     persistDraft(viewId, null)
+  }
+
+  function changeLayout(type: DatabaseViewType) {
+    if (!activeView || activeView.type === type) {
+      return
+    }
+
+    const viewId = activeView.id
+
+    setViews((current) =>
+      current.map((view) => (view.id === viewId ? { ...view, type } : view)),
+    )
+
+    void guard(() => updateDatabaseView(viewId, { type }))
+  }
+
+  function publishAsNewView() {
+    if (!activeView || draftConfig === undefined) {
+      return
+    }
+
+    const source = activeView
+    const published = draftConfig
+
+    void (async () => {
+      try {
+        const result = await createDatabaseView(
+          snapshot.id,
+          source.type,
+          t('copyOfView', { name: source.name }),
+        )
+
+        if (!result.ok) {
+          toast.error(result.error)
+
+          return
+        }
+
+        await updateDatabaseView(result.id, { config: published })
+
+        const view: DatabaseView = {
+          id: result.id,
+          databaseId: snapshot.id,
+          name: t('copyOfView', { name: source.name }),
+          type: source.type,
+          config: serializeViewConfig(published),
+          position: views.length,
+          createdAt: new Date(),
+        }
+
+        setViews((current) => [...current, view])
+        setSaved((current) => ({ ...current, [view.id]: published }))
+        setActiveViewId(view.id)
+        resetView()
+      } catch {
+        fail()
+      }
+    })()
   }
 
   function publishView() {
@@ -611,22 +677,20 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
       )}
     >
       <ViewToolbar
-        activeViewId={activeView.id}
+        activeView={activeView}
         canEdit={canEdit}
         compact={compact}
         config={config}
+        databaseId={snapshot.id}
+        filtersChanged={filtersChanged}
+        onChangeLayout={changeLayout}
         onConfigChange={changeConfig}
         onCreateRow={() => handlers.createRow()}
         onCreateView={createView}
         onDeleteView={deleteView}
         onRenameView={renameView}
-        filtersChanged={filtersChanged}
         onSearchChange={setSearch}
         onSelectView={setActiveViewId}
-        groupPropertyId={
-          activeView.type === 'board' ? (resolvedGroupProperty?.id ?? null) : null
-        }
-        people={snapshot.people}
         properties={properties}
         search={search}
         sortsChanged={sortsChanged}
@@ -641,6 +705,7 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
         hasDraft={hasDraft}
         onConfigChange={changeConfig}
         onPublish={publishView}
+        onPublishAsNewView={publishAsNewView}
         onReset={resetView}
         people={snapshot.people}
         properties={properties}
@@ -671,6 +736,7 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
           people={snapshot.people}
           properties={shown}
           rows={filtered}
+          wrap={config.wrapCells}
         />
       )}
 

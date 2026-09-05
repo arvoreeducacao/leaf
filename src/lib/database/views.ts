@@ -72,6 +72,13 @@ export function isMultiValueType(type: DatabasePropertyType): boolean {
   return type === 'multiSelect' || type === 'person'
 }
 
+export function filterValueFor(
+  type: DatabasePropertyType,
+  value: PropertyValue,
+): PropertyValue {
+  return isMultiValueType(type) && typeof value === 'string' ? [value] : value
+}
+
 export function isGroupableType(type: DatabasePropertyType): boolean {
   return type === 'select' || type === 'status' || type === 'person'
 }
@@ -92,6 +99,7 @@ export type ViewConfig = Readonly<{
   filters: ReadonlyArray<ViewFilter>
   sorts: ReadonlyArray<ViewSort>
   hiddenPropertyIds: ReadonlyArray<string>
+  wrapCells: boolean
 }>
 
 export const emptyViewConfig: ViewConfig = {
@@ -99,6 +107,7 @@ export const emptyViewConfig: ViewConfig = {
   filters: [],
   sorts: [],
   hiddenPropertyIds: [],
+  wrapCells: true,
 }
 
 export type DatabaseRow = Readonly<{
@@ -182,6 +191,7 @@ export function parseViewConfig(raw: string | null): ViewConfig {
     filters,
     sorts,
     hiddenPropertyIds: asStringArray(source.hiddenPropertyIds),
+    wrapCells: source.wrapCells !== false,
   }
 }
 
@@ -191,6 +201,7 @@ export function serializeViewConfig(config: ViewConfig): string {
     filters: config.filters.slice(0, MAX_FILTERS),
     sorts: config.sorts.slice(0, MAX_SORTS),
     hiddenPropertyIds: config.hiddenPropertyIds,
+    wrapCells: config.wrapCells,
   })
 }
 

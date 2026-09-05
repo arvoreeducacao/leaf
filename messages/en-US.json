@@ -417,7 +417,20 @@
       "doing": "In progress",
       "done": "Done"
     },
-    "openRowShort": "Open"
+    "openRowShort": "Open",
+    "viewSettings": "Settings",
+    "layout": "Layout",
+    "propertyVisibility": "Property visibility",
+    "wrapCells": "Wrap all columns",
+    "copyViewLink": "Copy link to view",
+    "viewLinkCopied": "View link copied",
+    "viewLinkCopyFailed": "Could not copy the link",
+    "none": "None",
+    "saveViewOptions": "More save options",
+    "saveAsNewView": "Save as new view",
+    "copyOfView": "Copy of {name}",
+    "sortAction": "Sort",
+    "newRowOptions": "More add options"
   },
   "versions": {
     "menuItem": "Version history",

@@ -417,7 +417,20 @@
       "doing": "Fazendo",
       "done": "Feito"
     },
-    "openRowShort": "Abrir"
+    "openRowShort": "Abrir",
+    "viewSettings": "Configurações",
+    "layout": "Layout",
+    "propertyVisibility": "Visibilidade da propriedade",
+    "wrapCells": "Quebra de linha em todas as colunas",
+    "copyViewLink": "Copiar link para a visualização",
+    "viewLinkCopied": "Link da visualização copiado",
+    "viewLinkCopyFailed": "Não foi possível copiar o link",
+    "none": "Nenhum",
+    "saveViewOptions": "Mais opções para salvar",
+    "saveAsNewView": "Salvar como nova visualização",
+    "copyOfView": "Cópia de {name}",
+    "sortAction": "Ordenar",
+    "newRowOptions": "Mais opções de adição"
   },
   "versions": {
     "menuItem": "Histórico de versões",
