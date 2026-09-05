@@ -15,15 +15,15 @@ describe('parseAllowedDomains', () => {
   })
 
   it('normalizes whitespace, case and the at sign', () => {
-    expect(parseAllowedDomains(' @Arvore.COM.BR , other.com ')).toEqual([
-      'arvore.com.br',
+    expect(parseAllowedDomains(' @Example.COM , other.com ')).toEqual([
+      'example.com',
       'other.com',
     ])
   })
 
   it('drops repeated domains', () => {
-    expect(parseAllowedDomains('arvore.com.br,ARVORE.com.br')).toEqual([
-      'arvore.com.br',
+    expect(parseAllowedDomains('example.com,EXAMPLE.com')).toEqual([
+      'example.com',
     ])
   })
 })
@@ -38,18 +38,18 @@ describe('emailDomainPolicy', () => {
   })
 
   it('exposes the primary domain when active', () => {
-    expect(emailDomainPolicy('arvore.com.br,arvore.dev')).toEqual({
+    expect(emailDomainPolicy('example.com,example.dev')).toEqual({
       active: true,
-      domains: ['arvore.com.br', 'arvore.dev'],
-      primaryDomain: 'arvore.com.br',
+      domains: ['example.com', 'example.dev'],
+      primaryDomain: 'example.com',
     })
   })
 
   it('reads the environment variable at call time', () => {
     const previous = process.env.LEAF_ALLOWED_EMAIL_DOMAINS
 
-    process.env.LEAF_ALLOWED_EMAIL_DOMAINS = 'arvore.com.br'
-    expect(emailDomainPolicy().primaryDomain).toBe('arvore.com.br')
+    process.env.LEAF_ALLOWED_EMAIL_DOMAINS = 'example.com'
+    expect(emailDomainPolicy().primaryDomain).toBe('example.com')
 
     delete process.env.LEAF_ALLOWED_EMAIL_DOMAINS
     expect(emailDomainPolicy().active).toBe(false)
@@ -61,8 +61,8 @@ describe('emailDomainPolicy', () => {
 })
 
 describe('isEmailDomainAllowed', () => {
-  const single = ['arvore.com.br']
-  const multi = ['arvore.com.br', 'arvore.dev']
+  const single = ['example.com']
+  const multi = ['example.com', 'example.dev']
 
   it('allows everything when no domain is configured', () => {
     expect(isEmailDomainAllowed('anyone@gmail.com', [])).toBe(true)
@@ -70,7 +70,7 @@ describe('isEmailDomainAllowed', () => {
   })
 
   it('accepts an email from the allowed domain', () => {
-    expect(isEmailDomainAllowed('person@arvore.com.br', single)).toBe(true)
+    expect(isEmailDomainAllowed('person@example.com', single)).toBe(true)
   })
 
   it('rejects an email outside the domain', () => {
@@ -81,33 +81,33 @@ describe('isEmailDomainAllowed', () => {
   })
 
   it('ignores case and whitespace', () => {
-    expect(isEmailDomainAllowed('  Person@ARVORE.com.BR  ', single)).toBe(true)
+    expect(isEmailDomainAllowed('  Person@EXAMPLE.com  ', single)).toBe(true)
   })
 
   it('accepts any domain from the list', () => {
-    expect(isEmailDomainAllowed('person@arvore.dev', multi)).toBe(true)
-    expect(isEmailDomainAllowed('person@arvore.com.br', multi)).toBe(true)
-    expect(isEmailDomainAllowed('person@arvore.com', multi)).toBe(false)
+    expect(isEmailDomainAllowed('person@example.dev', multi)).toBe(true)
+    expect(isEmailDomainAllowed('person@example.com', multi)).toBe(true)
+    expect(isEmailDomainAllowed('person@other.com', multi)).toBe(false)
   })
 
   it('does not accept a subdomain of the allowed domain', () => {
-    expect(isEmailDomainAllowed('person@mail.arvore.com.br', single)).toBe(
+    expect(isEmailDomainAllowed('person@mail.example.com', single)).toBe(
       false,
     )
   })
 
   it('is not fooled by an extra at sign', () => {
-    expect(isEmailDomainAllowed('person@arvore.com.br@gmail.com', single)).toBe(
+    expect(isEmailDomainAllowed('person@example.com@gmail.com', single)).toBe(
       false,
     )
-    expect(isEmailDomainAllowed('person@gmail.com@arvore.com.br', single)).toBe(
+    expect(isEmailDomainAllowed('person@gmail.com@example.com', single)).toBe(
       true,
     )
   })
 
   it('rejects malformed input', () => {
     expect(isEmailDomainAllowed('noatsign', single)).toBe(false)
-    expect(isEmailDomainAllowed('@arvore.com.br', single)).toBe(false)
+    expect(isEmailDomainAllowed('@example.com', single)).toBe(false)
     expect(isEmailDomainAllowed('person@', single)).toBe(false)
     expect(isEmailDomainAllowed(undefined, single)).toBe(false)
     expect(isEmailDomainAllowed(null, single)).toBe(false)

@@ -28,7 +28,7 @@ describe('blocksToPlainText', () => {
           { type: 'text', text: 'Read the ' },
           {
             type: 'link',
-            href: 'https://arvore.com.br',
+            href: 'https://example.com',
             content: [{ type: 'text', text: 'guide' }],
           },
         ],

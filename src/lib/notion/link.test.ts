@@ -14,7 +14,7 @@ describe('Notion link', () => {
 
   it('takes the id from the end of the path, title included', () => {
     expect(
-      notionIdFromLink(`https://www.notion.so/arvore/Technology-${compact}`),
+      notionIdFromLink(`https://www.notion.so/acme/Technology-${compact}`),
     ).toBe(dashed)
     expect(notionIdFromLink(`https://app.notion.com/p/${compact}?pvs=204`)).toBe(
       dashed,
@@ -22,7 +22,7 @@ describe('Notion link', () => {
   })
 
   it('uses the peeked page when the path has no id', () => {
-    expect(notionIdFromLink(`https://www.notion.so/arvore?p=${compact}`)).toBe(
+    expect(notionIdFromLink(`https://www.notion.so/acme?p=${compact}`)).toBe(
       dashed,
     )
   })
@@ -37,13 +37,13 @@ describe('Notion link', () => {
 
   it('rejects a link that is not from Notion', () => {
     expect(notionIdFromLink(`https://example.com/${compact}`)).toBeNull()
-    expect(notionIdFromLink('https://www.notion.so/arvore')).toBeNull()
+    expect(notionIdFromLink('https://www.notion.so/acme')).toBeNull()
     expect(notionIdFromLink('none of that')).toBeNull()
     expect(notionIdFromLink('')).toBeNull()
   })
 
   it('accepts a published Notion site', () => {
-    expect(notionIdFromLink(`https://arvore.notion.site/Doc-${compact}`)).toBe(
+    expect(notionIdFromLink(`https://acme.notion.site/Doc-${compact}`)).toBe(
       dashed,
     )
   })

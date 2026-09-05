@@ -19,14 +19,20 @@ export function requestOrigin(requestHeaders: Headers): string | null {
 }
 
 export function buildSsoSignOutUrl(
-  issuer: string,
+  logoutUrl: string,
   origin: string | null,
 ): string {
-  const signOut = `${issuer.replace(/\/+$/, '')}/auth/logout`
-
   if (!origin) {
-    return signOut
+    return logoutUrl
   }
 
-  return `${signOut}?redirect=${encodeURIComponent(`${origin}/login`)}`
+  try {
+    const url = new URL(logoutUrl)
+
+    url.searchParams.set('redirect', `${origin}/login`)
+
+    return url.toString()
+  } catch {
+    return logoutUrl
+  }
 }

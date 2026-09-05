@@ -1,6 +1,6 @@
 # 🍃 Leaf
 
-Editor de documentos colaborativo da Árvore, no espírito do Notion: blocos, hierarquia de páginas, organizações e colaboração em tempo real — com migração completa de exports do Notion.
+Editor de documentos colaborativo no espírito do Notion: blocos, hierarquia de páginas, organizações e colaboração em tempo real — com migração completa de exports do Notion.
 
 ## Funcionalidades
 
@@ -28,7 +28,7 @@ Editor de documentos colaborativo da Árvore, no espírito do Notion: blocos, hi
 | Editor | BlockNote 0.54 sobre ProseMirror/Yjs |
 | Estilo | Tailwind CSS v4 + design system Bonsai (tokens semânticos, Averta, ícones próprios) |
 | Banco | Drizzle ORM · MySQL 8 / Aurora MySQL (driver `mysql2`, `DATABASE_URL`) |
-| Auth | better-auth (email e senha; SSO da Árvore opcional via OAuth2/OIDC, restrição por domínio de email) |
+| Auth | better-auth (email e senha, entrar com o Google, chave de acesso; SSO opcional via OAuth2/OIDC, restrição por domínio de email) |
 | Arquivos | API S3 (`@aws-sdk/client-s3`) — emulador s3rver em dev |
 | Realtime | Servidor WebSocket próprio (`scripts/dev-realtime.mjs`) falando o protocolo y-websocket |
 | Offline | `y-indexeddb` for the document, a dedicated IndexedDB for the outbox, module service worker in `public/sw.js` |
@@ -44,7 +44,6 @@ pnpm dev
 
 `pnpm dev` sobe três processos juntos: o Next em `http://localhost:3000`, o emulador S3 na `4568` e o servidor de colaboração na `1234`. As migrações de `drizzle/mysql` rodam no boot do app. Crie uma conta em `/signup` (sem verificação de email em dev) e pronto.
 
-O ambiente de desenvolvimento da Árvore usa o database `leaf_dev` no cluster Aurora MySQL (`arvore-cluster`), com o mesmo usuário `leaf` da produção.
 
 ## Testes
 
@@ -55,7 +54,7 @@ pnpm test:e2e    # Playwright, em sandbox própria (não interfere no dev server
 
 Os testes precisam de MySQL de verdade — não há mais SQLite em memória. Cada worker do vitest usa o seu próprio database `<LEAF_TEST_DATABASE_URL>_<VITEST_POOL_ID>` (`leaf_test_1` … `leaf_test_6`, com `maxWorkers: 6`), truncado entre suítes; o schema é aplicado pelas migrações no primeiro uso.
 
-A suíte E2E sobe quatro ambientes isolados: o app padrão na porta 3100 (banco `leaf_e2e`), um com realtime ligado na 3200 / ws 1235 (banco `leaf_e2e_realtime`), um com `LEAF_ALLOWED_EMAIL_DOMAINS=arvore.com.br` na 3300 (projeto `restricted`) e um com o SSO da Árvore ligado em credenciais de mentira na 3400 (projeto `sso`). Os dois primeiros derrubam as tabelas do respectivo banco e aplicam as migrações antes de subir o servidor; os outros dois reaproveitam o `leaf_e2e` já preparado (o usuário `leaf` só tem grant nos bancos existentes) e por isso não preparam nada. O `DATABASE_URL` é injetado no processo filho, então o `.env.local` do dev nunca é usado pela sandbox.
+A suíte E2E sobe quatro ambientes isolados: o app padrão na porta 3100 (banco `leaf_e2e`), um com realtime ligado na 3200 / ws 1235 (banco `leaf_e2e_realtime`), um com `LEAF_ALLOWED_EMAIL_DOMAINS=example.com` na 3300 (projeto `restricted`) e um com o SSO ligado em credenciais de mentira na 3400 (projeto `sso`). Os dois primeiros derrubam as tabelas do respectivo banco e aplicam as migrações antes de subir o servidor; os outros dois reaproveitam o `leaf_e2e` já preparado (o usuário `leaf` só tem grant nos bancos existentes) e por isso não preparam nada. O `DATABASE_URL` é injetado no processo filho, então o `.env.local` do dev nunca é usado pela sandbox.
 
 A E2E roda com um worker só (`E2E_WORKERS` permite mudar). Com o banco a ~150 ms de distância, cada caso leva perto de 20 s e a suíte inteira passa de 15 minutos — para rodar em pedaços, faça o build uma vez (`LEAF_DIST_DIR=.next-e2e pnpm exec next build`) e depois `pnpm exec playwright test --project=<projeto> <specs>`.
 
@@ -123,15 +122,18 @@ O app fala S3 e SQL por configuração — publicar é trocar env:
 |---|---|
 | `DATABASE_URL` | `mysql://usuario:senha@host:3306/leaf` — obrigatória; o app não sobe sem ela |
 | `DATABASE_POOL_SIZE` | tamanho do pool do `mysql2` (padrão `10`) |
-| `S3_ENDPOINT` / `S3_BUCKET` / `S3_ACCESS_KEY_ID` / `S3_SECRET_ACCESS_KEY` | storage de imagens (bucket provisionado: `arvore-leaf-uploads`) |
+| `S3_ENDPOINT` / `S3_BUCKET` / `S3_ACCESS_KEY_ID` / `S3_SECRET_ACCESS_KEY` | storage de imagens |
 | `LEAF_REALTIME` / `LEAF_REALTIME_URL` (`wss://`) / `LEAF_REALTIME_SECRET` | colaboração em tempo real (o ws roda como processo próprio) |
 | `BETTER_AUTH_URL` / `BETTER_AUTH_SECRET` | auth |
-| `LEAF_ALLOWED_EMAIL_DOMAINS` | lista separada por vírgula (ex. `arvore.com.br`). Vazia ou ausente = sem restrição (dev e testes). Setada = só esses domínios criam conta, entram e recebem convite |
-| `ARVORE_SSO_CLIENT_ID` / `ARVORE_SSO_CLIENT_SECRET` / `ARVORE_SSO_ISSUER` | habilitam o botão "Entrar com a conta Árvore"; sem o client id, o provider não é registrado e a tela continua sendo o formulário de email e senha. O issuer padrão é `https://auth.arvore.com.br/api-arvore` |
-| `NOTION_CLIENT_ID` / `NOTION_CLIENT_SECRET` / `NOTION_REDIRECT_URI` | habilitam o import por link do Notion; sem elas o caminho fica desligado e o diálogo diz isso. Em produção o redirect é `https://leaf.arvore.com.br/api/notion/callback` |
+| `LEAF_ALLOWED_EMAIL_DOMAINS` | lista separada por vírgula (ex. `example.com`). Vazia ou ausente = sem restrição (dev e testes). Setada = só esses domínios criam conta, entram e recebem convite |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | ligam o botão de entrar com o Google; sem as duas, o botão não aparece |
+| `LEAF_SSO_CLIENT_ID` / `LEAF_SSO_CLIENT_SECRET` / `LEAF_SSO_ISSUER` | ligam o SSO da empresa por OAuth2/OIDC. Sem client id ou sem issuer o provider não é registrado e a tela continua sendo o formulário de email e senha; com eles, o cadastro por senha sai da tela |
+| `LEAF_SSO_PROVIDER_ID` / `LEAF_SSO_PROVIDER_NAME` | identificador do provider (padrão `sso`, gravado na coluna `provider_id` da tabela `account` — mudar depois desliga quem já entrou) e o nome que aparece no botão |
+| `LEAF_SSO_AUTHORIZATION_URL` / `LEAF_SSO_TOKEN_URL` / `LEAF_SSO_LOGOUT_URL` | endpoints do provider. Os dois primeiros têm padrão `{issuer}/oauth2/authorize` e `{issuer}/oauth2/token`; sem o de logout, o link de trocar de conta não aparece |
+| `NOTION_CLIENT_ID` / `NOTION_CLIENT_SECRET` / `NOTION_REDIRECT_URI` | habilitam o import por link do Notion; sem elas o caminho fica desligado e o diálogo diz isso. Em produção o redirect é `https://<seu-host>/api/notion/callback` |
 | `NOTION_API_VERSION` | versão da API do Notion no cabeçalho `Notion-Version` (padrão `2022-06-28`) |
 | `LEAF_EMBEDDING_MODEL` / `LEAF_EMBEDDING_DIMENSIONS` / `LEAF_EMBEDDING_BASE_URL` | busca semântica (opcionais; padrão `text-embedding-3-small` em 512 dimensões, na API da OpenAI). Quem liga a busca semântica é a `OPENAI_API_KEY`; a carga inicial dos trechos é o `node scripts/backfill-index.mjs` |
-| `GITHUB_TOKEN` / `LEAF_GITHUB_ORG` / `LEAF_GITHUB_REPOS` | ligam a base de pull requests do GitHub. Sem o token ou com a lista de repos vazia a base fica desligada e a rota responde 412. `LEAF_GITHUB_ORG` tem padrão `arvoreeducacao` e serve para qualificar nome curto (`leaf` vira `arvoreeducacao/leaf`); a lista aceita as duas formas, separadas por vírgula |
+| `GITHUB_TOKEN` / `LEAF_GITHUB_ORG` / `LEAF_GITHUB_REPOS` | ligam a base de pull requests do GitHub. Sem o token ou com a lista de repos vazia a base fica desligada e a rota responde 412. `LEAF_GITHUB_ORG` serve para qualificar nome curto (`leaf` vira `<org>/leaf`); a lista aceita as duas formas, separadas por vírgula |
 | `LEAF_GITHUB_SYNC_SECRET` / `LEAF_GITHUB_SYNC_OWNER` | deixam o CronJob disparar a sincronização sem sessão: o segredo (mínimo de 16 caracteres) vai no `Authorization: Bearer` e o email diz de quem é a conta dona da base. Faltando qualquer um dos dois, só sessão de pessoa dispara a rota |
 | `UNSPLASH_ACCESS_KEY` | liga a aba Unsplash do seletor de capa; sem ela, a aba explica que a busca não está configurada. A chave fica no servidor: o navegador fala com `/api/unsplash`, que exige sessão e limita 30 buscas por minuto por pessoa. Apps novos no Unsplash começam em modo demo (50 chamadas/hora) — produção precisa pedir o upgrade no painel deles |
 | `LEAF_MCP_ENABLED` | liga o servidor MCP remoto e o authorization server OAuth 2.1 embutido (`/api/mcp`, `/api/auth/oauth2/*`, `/.well-known/*`). Ausente = ligado fora de produção e **desligado em produção**; desligado, tudo isso responde 404 e a tela de aplicativos conectados some |
@@ -142,7 +144,7 @@ no servidor em quatro pontos — hook `before` do better-auth em `/sign-up/email
 `/sign-in/email`, `databaseHooks.user.create.before` (cobre qualquer caminho de
 criação de conta, inclusive OAuth) e `databaseHooks.session.create.before` (cobre
 qualquer caminho de login). Os convites de documento e de organização usam a mesma
-lista. Em produção (`leaf.arvore.com.br`) a variável deve valer `arvore.com.br`.
+lista.
 
 **Importar do Notion por link**: o Leaf é uma *public connection* do Notion, com
 OAuth por pessoa — cada uma conecta a própria conta e importa só o que já enxerga
@@ -178,18 +180,18 @@ roda de 15 em 15 minutos, batendo no serviço interno `LEAF_INTERNAL_SERVICE`.
 O manifesto não entra no pipeline de deploy (que só faz `kubectl set image`); é um
 `kubectl apply -f` de uma vez só.
 
-**Login pelo SSO da Árvore**: o Leaf é um client OAuth2/OIDC do IdP da casa
-(`client_id` `leaf`, escopos `openid profile email`, redirect
-`https://leaf.arvore.com.br/api/auth/callback/arvore` e o equivalente em
+**Login por SSO**: com as `LEAF_SSO_*` preenchidas, o Leaf vira um client
+OAuth2/OIDC do provedor da empresa (escopos `openid profile email`, redirect
+`https://<seu-host>/api/auth/callback/<provider id>` e o equivalente em
 `http://localhost:3000`). O provider é registrado pelo plugin `genericOAuth` do
 better-auth com os endpoints explícitos `GET {issuer}/oauth2/authorize` e
-`POST {issuer}/oauth2/token` — o IdP não publica documento de discovery, o
+`POST {issuer}/oauth2/token` — provedor sem documento de discovery é o caso previsto, o
 `token` autentica o client por `client_secret_post` em corpo
 `x-www-form-urlencoded` e responde `access_token` + `id_token` sem
 `refresh_token` nem endpoint `userinfo`. A identidade sai das claims do
 `id_token` (`sub` vira o id externo da conta, `email` vira o email; como o IdP
 não manda `name`, o nome nasce da parte local do email). Quem escolhe o método
-de autenticação (Google incluído) é a tela do próprio IdP, não o Leaf.
+de autenticação é a tela do próprio provedor, não o Leaf.
 
 ## MCP
 
@@ -244,15 +246,15 @@ instalação):
   HTTP → URL acima → Connect. Para testar localmente use
   `BETTER_AUTH_URL=http://localhost:3000` e o `pnpm dev`.
 
-O modo antigo do pacote `@arvoretech/leaf-mcp` (stdio falando direto com o
-MySQL) fica só para desenvolvimento contra um banco de dev; em produção o
-caminho é este endpoint.
-
-**Banco**: o database `leaf` está provisionado no cluster Aurora MySQL da Árvore (`arvore-cluster`, MySQL 8.0.42), com usuário dedicado no Secrets Manager (`prd/leaf/database`). As migrações de `drizzle/mysql` rodam no boot do app; o `next build` **não** toca no banco. As sete migrações antigas de SQLite ficaram arquivadas em `drizzle/sqlite-legacy/` e não são mais executadas.
+**Banco**: qualquer MySQL 8 serve, com usuário dedicado. As migrações de `drizzle/mysql` rodam no boot do app; o `next build` **não** toca no banco. As sete migrações antigas de SQLite ficaram arquivadas em `drizzle/sqlite-legacy/` e não são mais executadas.
 
 ## Qualidade
 
-Construído em 12 ondas com fechamento validado, mais o port para MySQL, a onda de autenticação restrita e a do login pelo SSO da Árvore: **274 testes unitários**, **52 cenários E2E** (desktop, mobile, colaboração em dois navegadores, domínio restrito e SSO), build de produção verde e design review do Bonsai com bloqueantes zerados nos dois temas.
+Construído em 12 ondas com fechamento validado, mais o port para MySQL, a onda de autenticação restrita e a do login por SSO: **274 testes unitários**, **52 cenários E2E** (desktop, mobile, colaboração em dois navegadores, domínio restrito e SSO), build de produção verde e design review do Bonsai com bloqueantes zerados nos dois temas.
+
+## Licença
+
+MIT — veja [LICENSE](LICENSE).
 
 ---
 

@@ -33,17 +33,23 @@ async function submitUntilLeaves(page: Page, buttonName: string) {
   throw new Error(`Did not leave the auth screen after clicking ${buttonName}`)
 }
 
+export async function continueWithEmail(page: Page, email: string) {
+  await page.getByLabel('Email').fill(email)
+  await page.getByRole('button', { name: 'Continuar' }).click()
+  await expect(page.getByLabel('Senha')).toBeVisible()
+}
+
 export async function signUp(page: Page, email: string, name = 'Test Person') {
   await page.goto('/signup')
+  await continueWithEmail(page, email)
   await page.getByLabel('Nome (opcional)').fill(name)
-  await page.getByLabel('Email').fill(email)
   await page.getByLabel('Senha').fill(password)
   await submitUntilLeaves(page, 'Criar conta')
 }
 
 export async function signIn(page: Page, email: string) {
   await page.goto('/login')
-  await page.getByLabel('Email').fill(email)
+  await continueWithEmail(page, email)
   await page.getByLabel('Senha').fill(password)
   await submitUntilLeaves(page, 'Entrar')
 }

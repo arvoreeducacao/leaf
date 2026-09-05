@@ -3,13 +3,7 @@ import { getTranslations } from 'next-intl/server'
 import { redirect } from 'next/navigation'
 
 import { AuthForm } from '@/components/auth/auth-form'
-import { SsoSignIn } from '@/components/auth/sso-sign-in'
-import {
-  arvoreSsoProviderId,
-  authAccessConfig,
-  getSession,
-  ssoSignOutUrl,
-} from '@/lib/auth'
+import { authAccessConfig, getSession, ssoSignOutUrl } from '@/lib/auth'
 
 type Props = Readonly<{
   searchParams: Promise<Record<string, string | Array<string> | undefined>>
@@ -28,20 +22,18 @@ export default async function LoginPage({ searchParams }: Props) {
     redirect('/')
   }
 
-  const { restrictedDomain, ssoEnabled } = authAccessConfig()
+  const { googleEnabled, restrictedDomain, sso } = authAccessConfig()
+  const { error } = await searchParams
 
-  if (ssoEnabled) {
-    const { error } = await searchParams
-
-    return (
-      <SsoSignIn
-        errorCode={typeof error === 'string' ? error : null}
-        providerId={arvoreSsoProviderId}
-        restrictedDomain={restrictedDomain}
-        signOutUrl={await ssoSignOutUrl()}
-      />
-    )
-  }
-
-  return <AuthForm mode="login" restrictedDomain={restrictedDomain} />
+  return (
+    <AuthForm
+      errorCode={typeof error === 'string' ? error : null}
+      googleEnabled={googleEnabled}
+      mode="login"
+      passwordEnabled={sso === null}
+      restrictedDomain={restrictedDomain}
+      sso={sso}
+      ssoSignOutUrl={await ssoSignOutUrl()}
+    />
+  )
 }

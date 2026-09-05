@@ -35,7 +35,7 @@ vi.mock('next/headers', () => ({
   }),
 }))
 
-const activeSession = { user: { id: 'user-owner', email: 'owner@arvore.com.br' } }
+const activeSession = { user: { id: 'user-owner', email: 'owner@example.com' } }
 
 vi.mock('@/lib/auth', () => ({
   getSession: async () => activeSession,
@@ -61,7 +61,7 @@ import {
 import { moveDocument } from '@/lib/document-actions'
 import { setOrganizationAccess } from '@/lib/share-actions'
 
-const orgId = 'org-arvore'
+const orgId = 'org-acme'
 const otherOrgId = 'org-outra'
 const openTeamspace = 'ts-aberto'
 const closedTeamspace = 'ts-fechado'
@@ -109,7 +109,7 @@ beforeEach(async () => {
   })
 
   await db.insert(organizations).values([
-    { id: orgId, name: 'Árvore School', createdAt: now },
+    { id: orgId, name: 'Acme School', createdAt: now },
     { id: otherOrgId, name: 'Other school', createdAt: now },
   ])
 

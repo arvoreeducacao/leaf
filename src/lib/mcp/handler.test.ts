@@ -15,7 +15,7 @@ import { handleMcpRequest, resetMcpLimiter } from '@/lib/mcp/handler'
 import { resetMcpKeyCache } from '@/lib/mcp/token'
 
 const kid = 'jwk-handler'
-const person = { id: 'handler-user', email: 'pessoa@arvore.com.br' }
+const person = { id: 'handler-user', email: 'pessoa@example.com' }
 
 let privateKey: CryptoKey
 

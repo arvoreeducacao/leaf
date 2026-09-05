@@ -71,7 +71,7 @@ describe('convertLegacyLinkBlocks', () => {
 
   it('leaves alone a link nothing can frame', () => {
     const result = convertLegacyLinkBlocks([
-      linkParagraph('b4', 'https://arvore.com.br/relatorio'),
+      linkParagraph('b4', 'https://example.com/relatorio'),
     ], isEmbeddableUrl)
 
     expect(result.converted).toEqual([])

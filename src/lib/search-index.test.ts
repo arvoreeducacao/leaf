@@ -33,12 +33,12 @@ import {
   searchAccessibleDocuments,
 } from '@/lib/search-index'
 
-const owner = { id: 'user-owner', email: 'owner@arvore.com.br' }
-const guest = { id: 'user-guest', email: 'guest@arvore.com.br' }
-const member = { id: 'user-member', email: 'member@arvore.com.br' }
-const stranger = { id: 'user-stranger', email: 'outside@arvore.com.br' }
+const owner = { id: 'user-owner', email: 'owner@example.com' }
+const guest = { id: 'user-guest', email: 'guest@example.com' }
+const member = { id: 'user-member', email: 'member@example.com' }
+const stranger = { id: 'user-stranger', email: 'outside@example.com' }
 
-const org = 'org-arvore'
+const org = 'org-acme'
 
 function viewerOf(person: { id: string; email: string }) {
   return { userId: person.id, email: person.email }
@@ -66,7 +66,7 @@ async function seed() {
 
   await db
     .insert(organizations)
-    .values({ id: org, name: 'Árvore School', createdAt: now })
+    .values({ id: org, name: 'Acme School', createdAt: now })
 
   await db.insert(organizationMembers).values([
     { id: 'm-owner', orgId: org, userId: owner.id, role: 'owner', createdAt: now },

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 
-vi.stubGlobal('self', { location: { origin: 'https://leaf.arvore.com.br' } })
+vi.stubGlobal('self', { location: { origin: 'https://leaf.example.com' } })
 
 const { assetsCache, dataCache, isCacheable, isCurrentCache, pagesCache, routeFor } =
   await import('../../../public/sw.js')
@@ -9,7 +9,7 @@ function get(
   path: string,
   init: Readonly<{ mode?: string; method?: string; rsc?: boolean }> = {},
 ) {
-  const url = new URL(path, 'https://leaf.arvore.com.br')
+  const url = new URL(path, 'https://leaf.example.com')
   const request = {
     method: init.method ?? 'GET',
     mode: init.mode ?? 'cors',
