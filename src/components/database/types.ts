@@ -17,6 +17,7 @@ export type DatabaseHandlers = Readonly<{
   addProperty: (type: DatabasePropertyType) => void
   renameProperty: (propertyId: string, name: string) => void
   changePropertyType: (propertyId: string, type: DatabasePropertyType) => void
+  changeUniqueIdPrefix: (propertyId: string, prefix: string) => void
   hideProperty: (propertyId: string) => void
   deleteProperty: (propertyId: string) => void
 }>

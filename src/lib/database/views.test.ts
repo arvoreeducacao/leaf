@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { personOptions } from './people'
+import { serializeUniqueIdConfig } from './unique-id'
 import { serializeOptions } from './values'
 import {
   TITLE_PROPERTY_ID,
@@ -385,5 +386,73 @@ describe('is me filter', () => {
   it('offers is me as a person operator and not a select one', () => {
     expect(operatorsFor('person')).toContain('isMe')
     expect(operatorsFor('select')).not.toContain('isMe')
+  })
+})
+
+
+const ticket = {
+  id: 'ticket',
+  type: 'uniqueId' as const,
+  options: serializeUniqueIdConfig({ prefix: 'PROP', next: 12 }),
+}
+
+const tickets = [
+  row('a', 'Alfa', { ticket: 9 }),
+  row('b', 'Beta', { ticket: 10 }),
+  row('c', 'Gama', { ticket: 11 }),
+]
+
+describe('the id column', () => {
+  it('orders by the number and not by the text of it', () => {
+    expect(
+      applySorts(
+        [tickets[2], tickets[0], tickets[1]],
+        [{ propertyId: 'ticket', direction: 'asc' }],
+        [ticket],
+      ).map((item) => item.id),
+    ).toEqual(['a', 'b', 'c'])
+  })
+
+  it('accepts the number typed with or without the prefix', () => {
+    const typed = applyFilters(
+      tickets,
+      [{ propertyId: 'ticket', operator: 'is', value: 'PROP-10' }],
+      [ticket],
+    )
+
+    expect(typed.map((item) => item.id)).toEqual(['b'])
+
+    const bare = applyFilters(
+      tickets,
+      [{ propertyId: 'ticket', operator: 'is', value: '10' }],
+      [ticket],
+    )
+
+    expect(bare.map((item) => item.id)).toEqual(['b'])
+  })
+
+  it('compares greater than as a number, so 9 does not beat 10', () => {
+    expect(
+      applyFilters(
+        tickets,
+        [{ propertyId: 'ticket', operator: 'greaterThan', value: '9' }],
+        [ticket],
+      ).map((item) => item.id),
+    ).toEqual(['b', 'c'])
+  })
+
+  it('searches inside the text the person actually sees', () => {
+    expect(
+      applyFilters(
+        tickets,
+        [{ propertyId: 'ticket', operator: 'contains', value: 'prop-1' }],
+        [ticket],
+      ).map((item) => item.id),
+    ).toEqual(['b', 'c'])
+  })
+
+  it('is never offered as something to group a board by', () => {
+    expect(operatorsFor('uniqueId')).toContain('is')
+    expect(operatorsFor('uniqueId')).not.toContain('isEmpty')
   })
 })

@@ -68,6 +68,9 @@ export function TableView({
                     <div className="group/head flex h-9 w-50 min-w-0 items-center px-2 font-regular text-content-subtle">
                       <PropertyHeader
                         canEdit={canEdit}
+                        onChangePrefix={(prefix) =>
+                          handlers.changeUniqueIdPrefix(property.id, prefix)
+                        }
                         onChangeType={(type) =>
                           handlers.changePropertyType(property.id, type)
                         }

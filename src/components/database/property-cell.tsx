@@ -7,6 +7,10 @@ import { CheckboxActiveIcon, CheckboxIcon } from '@/components/icons'
 import type { DatabaseProperty } from '@/db/schema'
 import { type Person, personOptions } from '@/lib/database/people'
 import {
+  formatUniqueId,
+  parseUniqueIdConfig,
+} from '@/lib/database/unique-id'
+import {
   type PropertyValue,
   type SelectOption,
   formatNumber,
@@ -100,6 +104,22 @@ export function PropertyCell({
               : 'option'
         }
       />
+    )
+  }
+
+  if (property.type === 'uniqueId') {
+    const text = formatUniqueId(value, parseUniqueIdConfig(property.options).prefix)
+
+    return (
+      <span
+        aria-label={label}
+        className={cn(
+          'flex min-w-0 items-center text-body-small text-content tabular-nums',
+          compact ? 'h-9 px-2 tablet:h-8' : 'min-h-9 px-2 py-1',
+        )}
+      >
+        <span className="truncate">{text}</span>
+      </span>
     )
   }
 
