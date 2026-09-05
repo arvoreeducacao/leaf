@@ -21,6 +21,7 @@ import type {
 import {
   MAX_FILTERS,
   MAX_SORTS,
+  type DatabaseRow,
   type ViewConfig,
   operatorsFor,
 } from '@/lib/database/views'
@@ -35,6 +36,7 @@ import {
 } from './icons'
 import { createOrder, layoutIcon } from './layouts'
 import { PropertyPicker } from './property-picker'
+import { TemplateMenu } from './template-menu'
 import { ViewSearch } from './view-search'
 import { ViewSettings } from './view-settings'
 
@@ -66,6 +68,10 @@ type Props = Readonly<{
   onDeleteView: (id: string) => void
   onConfigChange: (config: ViewConfig) => void
   onCreateRow: () => void
+  onUseTemplate: (templateId: string) => void
+  databaseTitle: string
+  templates: ReadonlyArray<DatabaseRow>
+  defaultTemplateId: string | null
   onSearchChange: (value: string) => void
   search: string
   filtersChanged: boolean
@@ -87,6 +93,10 @@ export function ViewToolbar({
   onDeleteView,
   onConfigChange,
   onCreateRow,
+  onUseTemplate,
+  databaseTitle,
+  templates,
+  defaultTemplateId,
   onSearchChange,
   search,
   filtersChanged,
@@ -334,7 +344,7 @@ export function ViewToolbar({
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <ButtonIcon
-                  aria-label={t('newRowOptions')}
+                  aria-label={isForm ? t('newRowOptions') : t('templatesMenu')}
                   className={cn(
                     'h-full p-0',
                     isForm
@@ -347,23 +357,33 @@ export function ViewToolbar({
                   <ChevronDownIcon aria-hidden="true" />
                 </ButtonIcon>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuLabel>{t('addView')}</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                {createOrder.map((type) => {
-                  const Icon = layoutIcon[type]
+              {isForm ? (
+                <DropdownMenuContent align="end">
+                  <DropdownMenuLabel>{t('addView')}</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {createOrder.map((type) => {
+                    const Icon = layoutIcon[type]
 
-                  return (
-                    <DropdownMenuItem
-                      key={type}
-                      onSelect={() => onCreateView(type)}
-                    >
-                      <Icon aria-hidden="true" className="size-5" />
-                      {t(`view_${type}`)}
-                    </DropdownMenuItem>
-                  )
-                })}
-              </DropdownMenuContent>
+                    return (
+                      <DropdownMenuItem
+                        key={type}
+                        onSelect={() => onCreateView(type)}
+                      >
+                        <Icon aria-hidden="true" className="size-5" />
+                        {t(`view_${type}`)}
+                      </DropdownMenuItem>
+                    )
+                  })}
+                </DropdownMenuContent>
+              ) : (
+                <TemplateMenu
+                  databaseId={databaseId}
+                  databaseTitle={databaseTitle}
+                  defaultTemplateId={defaultTemplateId}
+                  onUseTemplate={onUseTemplate}
+                  templates={templates}
+                />
+              )}
             </DropdownMenu>
           </div>
         ) : null}

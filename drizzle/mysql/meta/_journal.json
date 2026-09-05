@@ -162,6 +162,13 @@
       "when": 1788638444697,
       "tag": "0022_slack_thread_comments",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "5",
+      "when": 1788638504697,
+      "tag": "0023_database_templates",
+      "breakpoints": true
     }
   ]
 }

@@ -8,7 +8,7 @@ import { cn } from '@/shared/utils'
 
 type Props = Readonly<{
   icon: string | null | undefined
-  kind?: 'page' | 'database' | 'row'
+  kind?: 'page' | 'database' | 'row' | 'template'
   className?: string
 }>
 

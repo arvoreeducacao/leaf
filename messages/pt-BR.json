@@ -459,7 +459,22 @@
     "previousMonth": "Mês anterior",
     "nextMonth": "Próximo mês",
     "newRowOn": "Nova página em {date}",
-    "rowsWithoutDate": "{count, plural, =1 {1 linha sem data} other {# linhas sem data}}"
+    "rowsWithoutDate": "{count, plural, =1 {1 linha sem data} other {# linhas sem data}}",
+    "templates": "Modelos para {title}",
+    "templatesMenu": "Modelos",
+    "templatesEmpty": "Crie um modelo de página reutilizável para esta base de dados.",
+    "newTemplate": "Novo modelo",
+    "templateUntitled": "Modelo sem título",
+    "templateCopy": "{title} (cópia)",
+    "templateDefault": "Padrão",
+    "setDefaultTemplate": "Definir como padrão",
+    "unsetDefaultTemplate": "Remover como padrão",
+    "editTemplate": "Editar",
+    "duplicateTemplate": "Duplicar",
+    "deleteTemplate": "Excluir",
+    "templateMenu": "Ações do modelo {title}",
+    "templateDeleted": "Modelo movido para a lixeira",
+    "editingTemplate": "Você está editando um modelo em"
   },
   "versions": {
     "menuItem": "Histórico de versões",

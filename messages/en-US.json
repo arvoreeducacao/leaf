@@ -459,7 +459,22 @@
     "previousMonth": "Previous month",
     "nextMonth": "Next month",
     "newRowOn": "New page on {date}",
-    "rowsWithoutDate": "{count, plural, =1 {1 row without a date} other {# rows without a date}}"
+    "rowsWithoutDate": "{count, plural, =1 {1 row without a date} other {# rows without a date}}",
+    "templates": "Templates for {title}",
+    "templatesMenu": "Templates",
+    "templatesEmpty": "Create a reusable page template for this database.",
+    "newTemplate": "New template",
+    "templateUntitled": "Untitled template",
+    "templateCopy": "{title} (copy)",
+    "templateDefault": "Default",
+    "setDefaultTemplate": "Set as default",
+    "unsetDefaultTemplate": "Remove as default",
+    "editTemplate": "Edit",
+    "duplicateTemplate": "Duplicate",
+    "deleteTemplate": "Delete",
+    "templateMenu": "Template actions for {title}",
+    "templateDeleted": "Template moved to trash",
+    "editingTemplate": "You are editing a template in"
   },
   "versions": {
     "menuItem": "Version history",

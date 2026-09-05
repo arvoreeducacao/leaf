@@ -460,6 +460,7 @@ export async function searchSemanticDocuments(
     join documents d on d.id = c.document_id
     where (c.document_id, c.chunk_index) in (${sql.join(pairs, sql`, `)})
       and d.deleted_at is null
+      and d.kind <> 'template'
       and ${accessCondition(viewer)}
   `)
 

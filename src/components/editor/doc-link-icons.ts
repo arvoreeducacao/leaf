@@ -3,7 +3,7 @@ import { readDocumentIcon } from '@/lib/document-icon'
 export type LinkedDocumentIcon = Readonly<{
   id: string
   icon: string | null
-  kind: 'page' | 'database' | 'row'
+  kind: 'page' | 'database' | 'row' | 'template'
 }>
 
 const idPattern = /^[A-Za-z0-9_-]{1,64}$/

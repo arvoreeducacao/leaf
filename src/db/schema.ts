@@ -240,7 +240,7 @@ export const documents = mysqlTable(
       { onDelete: 'set null' },
     ),
     orgAccess: mysqlEnum('org_access', ['viewer', 'commenter', 'editor']),
-    kind: mysqlEnum('kind', ['page', 'database', 'row'])
+    kind: mysqlEnum('kind', ['page', 'database', 'row', 'template'])
       .notNull()
       .default('page'),
     title: varchar('title', { length: 500 }).notNull().default('Sem título'),
@@ -250,6 +250,11 @@ export const documents = mysqlTable(
     coverCredit: varchar('cover_credit', { length: 1024 }),
     content: longtext('content'),
     properties: longtext('properties'),
+    defaultTemplateId: varchar('default_template_id', {
+      length: APP_ID,
+    }).references((): AnyMySqlColumn => documents.id, {
+      onDelete: 'set null',
+    }),
     publicToken: varchar('public_token', { length: 64 }).unique(),
     createdAt: datetime('created_at', { mode: 'date', fsp: 3 })
       .notNull()

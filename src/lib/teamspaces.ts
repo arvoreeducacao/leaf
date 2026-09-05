@@ -1,4 +1,13 @@
-import { and, asc, desc, eq, inArray, isNull, ne } from 'drizzle-orm'
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  inArray,
+  isNull,
+  ne,
+  notInArray,
+} from 'drizzle-orm'
 
 import { db } from '@/db'
 import {
@@ -14,6 +23,7 @@ import type {
   TeamspaceAccess,
   TeamspaceRole,
 } from '@/db/schema'
+import { UNLISTED_DOCUMENT_KINDS } from '@/lib/document-kinds'
 import type { DocumentNode, DocumentSummary } from '@/lib/documents'
 
 export type TeamspaceSummary = Readonly<{
@@ -145,7 +155,7 @@ export async function listTeamspaceDocuments(
       and(
         eq(documents.teamspaceId, teamspaceId),
         isNull(documents.deletedAt),
-        ne(documents.kind, 'row'),
+        notInArray(documents.kind, [...UNLISTED_DOCUMENT_KINDS]),
       ),
     )
     .orderBy(desc(documents.updatedAt))
