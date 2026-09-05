@@ -25,7 +25,7 @@ function recordingFetch(payload: Record<string, unknown>) {
 }
 
 describe('encodeArguments', () => {
-  it('escreve o corpo no formato que o Slack aceita', () => {
+  it('writes the body in the shape Slack accepts', () => {
     const body = encodeArguments({
       channel: 'C01',
       text: 'olá & tchau',
@@ -38,7 +38,7 @@ describe('encodeArguments', () => {
     expect(body.get('unfurl_links')).toBe('false')
   })
 
-  it('deixa de fora o que não foi informado', () => {
+  it('leaves out what was not given', () => {
     const body = encodeArguments({ channel: 'C01', thread_ts: undefined })
 
     expect(body.has('thread_ts')).toBe(false)
@@ -46,7 +46,7 @@ describe('encodeArguments', () => {
 })
 
 describe('createSlackClient', () => {
-  it('pergunta pelo canal em form-encoded, não em json', async () => {
+  it('asks about the channel form-encoded, not as json', async () => {
     const { calls, fetcher } = recordingFetch({
       channel: { id: 'C01', name: 'feedbacks' },
       ok: true,
@@ -63,7 +63,7 @@ describe('createSlackClient', () => {
     expect(calls[0].body).toBe('channel=C01')
   })
 
-  it('manda a mensagem com autor e thread', async () => {
+  it('posts the message with an author and a thread', async () => {
     const { calls, fetcher } = recordingFetch({
       channel: 'C01',
       ok: true,
@@ -90,7 +90,7 @@ describe('createSlackClient', () => {
     expect(body.get('icon_url')).toBe('https://leaf.test/rosto.png')
   })
 
-  it('devolve nulo quando o Slack recusa', async () => {
+  it('returns null when Slack refuses', async () => {
     const { fetcher } = recordingFetch({ error: 'invalid_arguments', ok: false })
 
     const channel = await createSlackClient('xoxb-teste', {
@@ -100,7 +100,7 @@ describe('createSlackClient', () => {
     expect(channel).toBeNull()
   })
 
-  it('lê o nome e o rosto de quem falou', async () => {
+  it('reads the name and the face of whoever spoke', async () => {
     const { fetcher } = recordingFetch({
       ok: true,
       user: {
