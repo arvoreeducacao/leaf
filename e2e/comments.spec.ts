@@ -375,6 +375,67 @@ test.describe('comments', () => {
     ).toContainText('Orphan comment')
   })
 
+  test('the page comment lives at the foot of the document', async ({
+    page,
+  }) => {
+    await signUp(page, uniqueEmail('footer'), 'Author')
+    await createDocument(page, 'Document with a footer')
+
+    await typeInEditor(page, 'text of the page')
+    await waitForSaved(page)
+
+    const footer = page.getByTestId('document-comments')
+
+    await expect(footer).toBeVisible()
+    await expect(footer.getByRole('heading')).toHaveText('Comentários')
+
+    await footer
+      .getByTestId('document-comment-input')
+      .fill('Does this go to everyone?')
+    await footer.getByTestId('submit-document-comment').click()
+
+    await expect(page.getByText('Comentário adicionado').first()).toBeVisible()
+    await expect(footer.getByTestId('document-comment-thread')).toHaveCount(1)
+    await expect(footer).toContainText('Does this go to everyone?')
+    await expect(footer).toContainText('Author')
+    await expect(page.getByTestId('comments-button')).toContainText('1')
+
+    await selectLastWord(page, 'page'.length)
+    await commentFromToolbar(page, 'And this one stays on the passage')
+    await page.keyboard.press('Escape')
+    await expect(page.getByTestId('comments-panel')).toHaveCount(0)
+
+    await page.reload()
+    await waitForEditorReady(page)
+
+    await expect(footer.getByTestId('document-comment-thread')).toHaveCount(1)
+    await expect(footer).not.toContainText('And this one stays on the passage')
+    await expect(page.getByTestId('inline-comment-marker')).toHaveCount(1)
+  })
+
+  test('resolving from the foot of the document closes the conversation', async ({
+    page,
+  }) => {
+    await signUp(page, uniqueEmail('footer-resolve'), 'Author')
+    await createDocument(page, 'Document to close')
+
+    await typeInEditor(page, 'text to close')
+    await waitForSaved(page)
+
+    const footer = page.getByTestId('document-comments')
+
+    await footer.getByTestId('document-comment-input').fill('Can we close it?')
+    await footer.getByTestId('submit-document-comment').click()
+
+    await expect(footer.getByTestId('document-comment-thread')).toHaveCount(1)
+
+    await footer.getByRole('button', { name: 'Resolver' }).click()
+
+    await expect(page.getByText('Comentário resolvido').first()).toBeVisible()
+    await expect(footer.getByTestId('document-comment-thread')).toHaveCount(0)
+    await expect(footer.getByTestId('document-comment-input')).toBeVisible()
+  })
+
   test('the public page does not show comments', async ({ browser }) => {
     const ownerContext = await browser.newContext()
     const anonContext = await browser.newContext()

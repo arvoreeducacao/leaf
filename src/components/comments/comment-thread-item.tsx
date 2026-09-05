@@ -1,6 +1,7 @@
 'use client'
 
 import { useTranslations } from 'next-intl'
+import type { ReactNode } from 'react'
 import { useId, useState } from 'react'
 
 import {
@@ -21,6 +22,35 @@ import { MAX_COMMENT_LENGTH } from '@/lib/comment-limits'
 import type { CommentReply, CommentThread } from '@/lib/comments'
 import { cn } from '@/shared/utils'
 
+export type CommentSurface = 'panel' | 'document'
+
+function IconAction({
+  label,
+  icon,
+  disabled,
+  onClick,
+}: Readonly<{
+  label: string
+  icon: ReactNode
+  disabled: boolean
+  onClick: () => void
+}>) {
+  return (
+    <Button
+      aria-label={label}
+      className="size-6 rounded-medium p-1 text-content-muted"
+      disabled={disabled}
+      onClick={onClick}
+      size="icon"
+      title={label}
+      type="button"
+      variant="ghost"
+    >
+      {icon}
+    </Button>
+  )
+}
+
 type Props = Readonly<{
   thread: CommentThread
   viewerId: string
@@ -28,6 +58,7 @@ type Props = Readonly<{
   canResolveAny: boolean
   anchorMissing: boolean
   pending: boolean
+  surface?: CommentSurface
   formatWhen: (at: number) => string
   formatExact: (at: number) => string
   onGoToBlock: (blockId: string) => void
@@ -44,6 +75,7 @@ function Meta({
   unknownAuthor,
   editedLabel,
   slackLabel,
+  surface,
 }: Readonly<{
   comment: CommentReply
   formatWhen: (at: number) => string
@@ -51,19 +83,31 @@ function Meta({
   unknownAuthor: string
   editedLabel: string
   slackLabel: string
+  surface: CommentSurface
 }>) {
   const fromSlack = comment.origin === 'slack'
 
   return (
-    <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+    <div
+      className={cn(
+        'flex flex-wrap items-center gap-x-2 gap-y-1',
+        surface === 'document' && 'min-h-6 flex-nowrap gap-x-1.5',
+      )}
+    >
       {comment.authorId || fromSlack ? (
         <UserAvatar
+          className={surface === 'document' ? 'mr-0.5 size-6' : undefined}
           image={comment.authorImage}
           name={comment.authorName ?? unknownAuthor}
           userId={comment.authorId ?? comment.id}
         />
       ) : null}
-      <span className="font-bold text-body-small text-content-strong">
+      <span
+        className={cn(
+          'text-body-small text-content-strong',
+          surface === 'document' ? 'min-w-0 truncate font-medium' : 'font-bold',
+        )}
+      >
         {comment.authorName ?? unknownAuthor}
       </span>
       {fromSlack ? (
@@ -73,13 +117,28 @@ function Meta({
         </Badge>
       ) : null}
       <span
-        className="text-body-small text-content"
+        className={cn(
+          'whitespace-nowrap',
+          surface === 'document'
+            ? 'text-caption text-content-muted'
+            : 'text-body-small text-content',
+        )}
+        suppressHydrationWarning
         title={formatExact(comment.createdAt)}
       >
         {formatWhen(comment.createdAt)}
       </span>
       {comment.updatedAt > comment.createdAt ? (
-        <span className="text-body-small text-content">{editedLabel}</span>
+        <span
+          className={cn(
+            'whitespace-nowrap',
+            surface === 'document'
+              ? 'text-caption text-content-muted'
+              : 'text-body-small text-content',
+          )}
+        >
+          {editedLabel}
+        </span>
       ) : null}
     </div>
   )
@@ -92,6 +151,7 @@ export function CommentThreadItem({
   canResolveAny,
   anchorMissing,
   pending,
+  surface = 'panel',
   formatWhen,
   formatExact,
   onGoToBlock,
@@ -111,6 +171,7 @@ export function CommentThreadItem({
   const [editBody, setEditBody] = useState('')
   const [confirmingDelete, setConfirmingDelete] = useState<string | null>(null)
 
+  const inDocument = surface === 'document'
   const resolved = thread.resolvedAt !== null
   const isThreadAuthor = thread.authorId !== null && thread.authorId === viewerId
   const canResolve = canResolveAny || isThreadAuthor
@@ -185,49 +246,64 @@ export function CommentThreadItem({
     )
   }
 
-  function renderActions(comment: CommentReply, isRoot: boolean) {
+  function renderDeleteConfirm(comment: CommentReply, isRoot: boolean) {
+    return (
+      <div className="flex flex-col gap-2 rounded-large bg-surface-subtle p-3">
+        <p className="text-body-small text-content-strong">
+          {t('deleteConfirm')}
+        </p>
+        {isRoot && thread.replies.length > 0 ? (
+          <p className="text-body-small text-content">{t('deleteHint')}</p>
+        ) : null}
+        <div className="flex flex-col gap-2 tablet:flex-row tablet:justify-end">
+          <Button
+            className="w-full tablet:w-auto"
+            disabled={pending}
+            onClick={() => setConfirmingDelete(null)}
+            type="button"
+            variant="secondary"
+          >
+            {tCommon('cancel')}
+          </Button>
+          <Button
+            className="w-full tablet:w-auto"
+            disabled={pending}
+            onClick={() => void onDelete(comment.id)}
+            type="button"
+            variant="destructive"
+          >
+            {t('delete')}
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
+  function actionsOf(comment: CommentReply, isRoot: boolean) {
     const isAuthor = comment.authorId !== null && comment.authorId === viewerId
 
+    return {
+      canDelete: isAuthor,
+      canEditBody: isAuthor,
+      canReply: isRoot && canComment && !resolved,
+      canToggleResolved: isRoot && canResolve,
+    }
+  }
+
+  function renderActions(comment: CommentReply, isRoot: boolean) {
     if (editingId === comment.id) {
       return null
     }
 
     if (confirmingDelete === comment.id) {
-      return (
-        <div className="flex flex-col gap-2 rounded-large bg-surface-subtle p-3">
-          <p className="text-body-small text-content-strong">
-            {t('deleteConfirm')}
-          </p>
-          {isRoot && thread.replies.length > 0 ? (
-            <p className="text-body-small text-content">{t('deleteHint')}</p>
-          ) : null}
-          <div className="flex flex-col gap-2 tablet:flex-row tablet:justify-end">
-            <Button
-              className="w-full tablet:w-auto"
-              disabled={pending}
-              onClick={() => setConfirmingDelete(null)}
-              type="button"
-              variant="secondary"
-            >
-              {tCommon('cancel')}
-            </Button>
-            <Button
-              className="w-full tablet:w-auto"
-              disabled={pending}
-              onClick={() => void onDelete(comment.id)}
-              type="button"
-              variant="destructive"
-            >
-              {t('delete')}
-            </Button>
-          </div>
-        </div>
-      )
+      return renderDeleteConfirm(comment, isRoot)
     }
+
+    const allowed = actionsOf(comment, isRoot)
 
     return (
       <div className="flex flex-wrap items-center gap-1">
-        {isRoot && canComment && !resolved ? (
+        {allowed.canReply ? (
           <Button
             className="h-auto min-h-11 px-2 py-1 tablet:min-h-0"
             disabled={pending}
@@ -241,7 +317,7 @@ export function CommentThreadItem({
           </Button>
         ) : null}
 
-        {isAuthor ? (
+        {allowed.canEditBody ? (
           <Button
             className="h-auto min-h-11 px-2 py-1 tablet:min-h-0"
             disabled={pending}
@@ -255,7 +331,7 @@ export function CommentThreadItem({
           </Button>
         ) : null}
 
-        {isAuthor ? (
+        {allowed.canDelete ? (
           <Button
             className="h-auto min-h-11 px-2 py-1 tablet:min-h-0"
             disabled={pending}
@@ -269,7 +345,7 @@ export function CommentThreadItem({
           </Button>
         ) : null}
 
-        {isRoot && canResolve ? (
+        {allowed.canToggleResolved ? (
           <Button
             className="h-auto min-h-11 px-2 py-1 tablet:min-h-0"
             disabled={pending}
@@ -287,6 +363,149 @@ export function CommentThreadItem({
           </Button>
         ) : null}
       </div>
+    )
+  }
+
+  function renderHoverActions(comment: CommentReply, isRoot: boolean) {
+    if (editingId === comment.id || confirmingDelete === comment.id) {
+      return null
+    }
+
+    const allowed = actionsOf(comment, isRoot)
+
+    if (
+      !(
+        allowed.canReply ||
+        allowed.canEditBody ||
+        allowed.canDelete ||
+        allowed.canToggleResolved
+      )
+    ) {
+      return null
+    }
+
+    return (
+      <div className="ml-auto flex shrink-0 items-center gap-1 opacity-100 transition-opacity tablet:opacity-0 tablet:group-focus-within/comment:opacity-100 tablet:group-hover/comment:opacity-100">
+        {allowed.canReply ? (
+          <IconAction
+            disabled={pending}
+            icon={<ReplyIcon aria-hidden="true" />}
+            label={t('reply')}
+            onClick={() => setReplying(true)}
+          />
+        ) : null}
+        {allowed.canEditBody ? (
+          <IconAction
+            disabled={pending}
+            icon={<EditIcon aria-hidden="true" />}
+            label={t('edit')}
+            onClick={() => startEdit(comment)}
+          />
+        ) : null}
+        {allowed.canDelete ? (
+          <IconAction
+            disabled={pending}
+            icon={<TrashIcon aria-hidden="true" />}
+            label={t('delete')}
+            onClick={() => setConfirmingDelete(comment.id)}
+          />
+        ) : null}
+        {allowed.canToggleResolved ? (
+          <IconAction
+            disabled={pending}
+            icon={
+              resolved ? (
+                <RotateIcon aria-hidden="true" />
+              ) : (
+                <CheckIcon aria-hidden="true" />
+              )
+            }
+            label={resolved ? t('reopen') : t('resolve')}
+            onClick={() => void onResolve(thread.id, !resolved)}
+          />
+        ) : null}
+      </div>
+    )
+  }
+
+  function renderReplyForm(compact: boolean) {
+    return (
+      <div className={cn('flex flex-col gap-2', compact && 'pl-8')}>
+        <label className="sr-only" htmlFor={replyFieldId}>
+          {t('replyLabel', { name: thread.authorName ?? t('unknownAuthor') })}
+        </label>
+        <Textarea
+          autoFocus
+          className="max-w-full"
+          disabled={pending}
+          id={replyFieldId}
+          maxLength={MAX_COMMENT_LENGTH}
+          onChange={(event) => setReplyBody(event.target.value)}
+          placeholder={t('replyPlaceholder')}
+          value={replyBody}
+        />
+        <div className="flex flex-col gap-2 tablet:flex-row tablet:justify-end">
+          <Button
+            className="w-full tablet:w-auto"
+            disabled={pending}
+            onClick={() => {
+              setReplying(false)
+              setReplyBody('')
+            }}
+            type="button"
+            variant="secondary"
+          >
+            {tCommon('cancel')}
+          </Button>
+          <Button
+            className="w-full tablet:w-auto"
+            disabled={pending || replyBody.trim().length === 0}
+            onClick={() => void submitReply()}
+            type="button"
+          >
+            {t('sendReply')}
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
+  function renderDocumentEntry(comment: CommentReply, isRoot: boolean) {
+    return (
+      <div className="group/comment flex flex-col" key={comment.id}>
+        <div className="flex items-center gap-1.5">
+          <Meta
+            comment={comment}
+            editedLabel={t('edited')}
+            formatExact={formatExact}
+            formatWhen={formatWhen}
+            slackLabel={t('fromSlack')}
+            surface="document"
+            unknownAuthor={t('unknownAuthor')}
+          />
+          {renderHoverActions(comment, isRoot)}
+        </div>
+        <div className="pt-1 pl-8">
+          {confirmingDelete === comment.id
+            ? renderDeleteConfirm(comment, isRoot)
+            : renderBody(comment)}
+        </div>
+      </div>
+    )
+  }
+
+  if (inDocument) {
+    return (
+      <li
+        className="flex flex-col gap-2"
+        data-resolved={resolved ? 'true' : 'false'}
+        data-testid="document-comment-thread"
+        data-thread-id={thread.id}
+      >
+        {renderDocumentEntry(thread, true)}
+        {thread.replies.map((reply) => renderDocumentEntry(reply, false))}
+        {replying ? renderReplyForm(true) : null}
+      </li>
     )
   }
 
@@ -343,6 +562,7 @@ export function CommentThreadItem({
           formatExact={formatExact}
           formatWhen={formatWhen}
           slackLabel={t('fromSlack')}
+          surface="panel"
           unknownAuthor={t('unknownAuthor')}
         />
         {renderBody(thread)}
@@ -359,6 +579,7 @@ export function CommentThreadItem({
                 formatExact={formatExact}
                 formatWhen={formatWhen}
                 slackLabel={t('fromSlack')}
+                surface="panel"
                 unknownAuthor={t('unknownAuthor')}
               />
               {renderBody(reply)}
@@ -368,47 +589,7 @@ export function CommentThreadItem({
         </ul>
       ) : null}
 
-      {replying ? (
-        <div className="flex flex-col gap-2">
-          <label className="sr-only" htmlFor={replyFieldId}>
-            {t('replyLabel', {
-              name: thread.authorName ?? t('unknownAuthor'),
-            })}
-          </label>
-          <Textarea
-            autoFocus
-            className="max-w-full"
-            disabled={pending}
-            id={replyFieldId}
-            maxLength={MAX_COMMENT_LENGTH}
-            onChange={(event) => setReplyBody(event.target.value)}
-            placeholder={t('replyPlaceholder')}
-            value={replyBody}
-          />
-          <div className="flex flex-col gap-2 tablet:flex-row tablet:justify-end">
-            <Button
-              className="w-full tablet:w-auto"
-              disabled={pending}
-              onClick={() => {
-                setReplying(false)
-                setReplyBody('')
-              }}
-              type="button"
-              variant="secondary"
-            >
-              {tCommon('cancel')}
-            </Button>
-            <Button
-              className="w-full tablet:w-auto"
-              disabled={pending || replyBody.trim().length === 0}
-              onClick={() => void submitReply()}
-              type="button"
-            >
-              {t('sendReply')}
-            </Button>
-          </div>
-        </div>
-      ) : null}
+      {replying ? renderReplyForm(false) : null}
     </li>
   )
 }

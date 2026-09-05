@@ -544,7 +544,13 @@
     "anchorPending": "Commenting on the selected passage",
     "markerLabel": "{count, plural, one {# comment on this passage} other {# comments on this passage}}",
     "inlineTitle": "Comments on this passage",
-    "fromSlack": "from Slack"
+    "fromSlack": "from Slack",
+    "documentSectionLabel": "Document comments",
+    "documentPlaceholder": "Add a comment...",
+    "openInSlack": "Open in Slack",
+    "goesToSlackThread": "Your reply also goes to the channel thread.",
+    "sendComment": "Send comment",
+    "documentNewLabel": "Comment on the document"
   },
   "move": {
     "title": "Move to another page",

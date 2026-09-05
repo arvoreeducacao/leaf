@@ -12,26 +12,17 @@ import {
   getDocumentAccess,
   registerCommentAttempt,
 } from '@/lib/authz'
+import { readCommentsState } from '@/lib/comments-access'
+import type { CommentsState } from '@/lib/comments-state'
 import {
-  countOpenComments,
   createComment,
   deleteComment,
   getComment,
-  listDocumentComments,
   normalizeCommentBody,
   setCommentResolved,
   updateCommentBody,
 } from '@/lib/comments'
-import type { CommentThread } from '@/lib/comments'
 import { pushCommentToThread, reactOnComment } from '@/lib/slack/sync'
-
-export type CommentsState = Readonly<{
-  threads: ReadonlyArray<CommentThread>
-  viewerId: string
-  canComment: boolean
-  canResolveAny: boolean
-  openCount: number
-}>
 
 export type CommentsResult =
   | { ok: true; state: CommentsState }
@@ -48,13 +39,7 @@ async function readState(
 ): Promise<CommentsResult> {
   return {
     ok: true,
-    state: {
-      threads: await listDocumentComments(documentId),
-      viewerId,
-      canComment: canComment(access),
-      canResolveAny: canEdit(access),
-      openCount: await countOpenComments(documentId),
-    },
+    state: await readCommentsState(documentId, access, viewerId),
   }
 }
 
