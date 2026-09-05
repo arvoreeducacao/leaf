@@ -304,6 +304,19 @@ export const databaseViews = mysqlTable(
   ],
 )
 
+export const formWebhooks = mysqlTable('form_webhooks', {
+  viewId: varchar('view_id', { length: APP_ID })
+    .primaryKey()
+    .references(() => databaseViews.id, { onDelete: 'cascade' }),
+  url: varchar('url', { length: 500 }).notNull(),
+  createdAt: datetime('created_at', { mode: 'date', fsp: 3 })
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP(3)`),
+  updatedAt: datetime('updated_at', { mode: 'date', fsp: 3 })
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP(3)`),
+})
+
 export const documentRealtimeState = mysqlTable(
   'document_realtime_state',
   {
@@ -508,6 +521,7 @@ export type DocumentKind = Document['kind']
 export type DatabaseProperty = typeof databaseProperties.$inferSelect
 export type DatabasePropertyType = DatabaseProperty['type']
 export type DatabaseView = typeof databaseViews.$inferSelect
+export type FormWebhook = typeof formWebhooks.$inferSelect
 export type DatabaseViewType = DatabaseView['type']
 export type DocumentShare = typeof documentShares.$inferSelect
 export type ShareRole = DocumentShare['role']

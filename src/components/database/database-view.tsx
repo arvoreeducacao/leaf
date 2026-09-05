@@ -77,6 +77,9 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
   const [properties, setProperties] = useState(snapshot.properties)
   const [views, setViews] = useState(snapshot.views)
   const [rows, setRows] = useState(snapshot.rows)
+  const [notifyingViewIds, setNotifyingViewIds] = useState(
+    () => new Set(snapshot.notifyingViewIds),
+  )
   const [activeViewId, setActiveViewId] = useState(snapshot.views[0]?.id ?? '')
   const [configs, setConfigs] = useState<Record<string, ViewConfig>>(() =>
     Object.fromEntries(
@@ -503,6 +506,20 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
     changeConfig({ ...config, form })
   }
 
+  function changeNotifying(viewId: string, notifying: boolean) {
+    setNotifyingViewIds((current) => {
+      const next = new Set(current)
+
+      if (notifying) {
+        next.add(viewId)
+      } else {
+        next.delete(viewId)
+      }
+
+      return next
+    })
+  }
+
   function changeToken(viewId: string, token: string | null) {
     setViews((current) =>
       current.map((view) =>
@@ -549,7 +566,11 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
           canEdit={canEdit}
           compact={compact}
           config={config.form ?? emptyFormConfig}
+          notifying={notifyingViewIds.has(activeView.id)}
           onChange={changeForm}
+          onNotifyingChange={(notifying) =>
+            changeNotifying(activeView.id, notifying)
+          }
           onTokenChange={(token) => changeToken(activeView.id, token)}
           properties={properties}
           view={activeView}

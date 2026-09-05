@@ -138,6 +138,11 @@ describe('parseFormConfig', () => {
     expect(parseFormConfig({ accepting: false })?.accepting).toBe(false)
   })
 
+  it('reads a missing notify flag as on, so a form never goes quiet by accident', () => {
+    expect(parseFormConfig({})?.notify).toBe(true)
+    expect(parseFormConfig({ notify: false })?.notify).toBe(false)
+  })
+
   it('refuses anything that is not an object', () => {
     expect(parseFormConfig(null)).toBeNull()
     expect(parseFormConfig([])).toBeNull()

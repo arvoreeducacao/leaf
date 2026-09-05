@@ -8,15 +8,29 @@ import { headers } from 'next/headers'
 
 import { db } from '@/db'
 import { databaseViews, documents } from '@/db/schema'
-import { MAX_DATABASE_ROWS } from '@/lib/databases'
 import { getSession } from '@/lib/auth'
-import { canEdit, getDocumentAccess, registerFormSubmissionAttempt } from '@/lib/authz'
+import {
+  canEdit,
+  getDocumentAccess,
+  registerFormSubmissionAttempt,
+} from '@/lib/authz'
+import { isSlackWebhook, slackMessageFor } from '@/lib/database/form-message'
 import { buildSubmission } from '@/lib/database/forms'
 import { serializeValues } from '@/lib/database/values'
+import { MAX_DATABASE_ROWS } from '@/lib/databases'
+import {
+  getFormWebhook,
+  removeFormWebhook,
+  saveFormWebhook,
+} from '@/lib/form-webhooks'
 import { getFormByToken } from '@/lib/forms'
 import { indexDocument } from '@/lib/search-index'
 
 const FORM_TOKEN_LENGTH = 24
+
+const SLACK_TIMEOUT_MS = 5_000
+
+export type FormActionResult = { ok: true } | { ok: false; error: string }
 
 export type FormLinkResult =
   | { ok: true; token: string | null }
@@ -91,6 +105,68 @@ export async function disableFormLink(viewId: string): Promise<FormLinkResult> {
   revalidatePath(`/doc/${view.databaseId}`)
 
   return { ok: true, token: null }
+}
+
+export async function setFormWebhook(
+  viewId: string,
+  url: string,
+): Promise<FormActionResult> {
+  const view = await editableFormView(viewId)
+
+  if (!view) {
+    return notAllowed()
+  }
+
+  const trimmed = url.trim()
+
+  if (!isSlackWebhook(trimmed)) {
+    return {
+      ok: false,
+      error: (await getTranslations('form'))('webhookInvalid'),
+    }
+  }
+
+  await saveFormWebhook(viewId, trimmed)
+  revalidatePath(`/doc/${view.databaseId}`)
+
+  return { ok: true }
+}
+
+export async function clearFormWebhook(
+  viewId: string,
+): Promise<FormActionResult> {
+  const view = await editableFormView(viewId)
+
+  if (!view) {
+    return notAllowed()
+  }
+
+  await removeFormWebhook(viewId)
+  revalidatePath(`/doc/${view.databaseId}`)
+
+  return { ok: true }
+}
+
+async function announceOnSlack(
+  viewId: string,
+  text: string,
+): Promise<void> {
+  const url = await getFormWebhook(viewId)
+
+  if (!url || !isSlackWebhook(url)) {
+    return
+  }
+
+  try {
+    await fetch(url, {
+      body: JSON.stringify({ text }),
+      headers: { 'content-type': 'application/json' },
+      method: 'POST',
+      signal: AbortSignal.timeout(SLACK_TIMEOUT_MS),
+    })
+  } catch {
+    return
+  }
 }
 
 export async function submitForm(
@@ -168,6 +244,20 @@ export async function submitForm(
     .where(eq(documents.id, record.database.id))
 
   await indexDocument(id)
+
+  if (record.config.notify) {
+    await announceOnSlack(
+      record.view.id,
+      slackMessageFor(
+        record.config,
+        record.properties,
+        built.submission.title,
+        built.submission.values,
+        (await getTranslations('database'))('titleColumn'),
+      ),
+    )
+  }
+
   revalidatePath(`/doc/${record.database.id}`)
 
   return { ok: true }

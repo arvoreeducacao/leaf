@@ -11,6 +11,7 @@ import {
   CancelIcon,
   LightningIcon,
   PaperclipIcon,
+  SendOutIcon,
   ShareIcon,
   TrashIcon,
 } from '@/components/icons'
@@ -41,7 +42,12 @@ import {
   isQuestionableType,
 } from '@/lib/database/forms'
 import type { PropertyValue } from '@/lib/database/values'
-import { disableFormLink, enableFormLink } from '@/lib/form-actions'
+import {
+  clearFormWebhook,
+  disableFormLink,
+  enableFormLink,
+  setFormWebhook,
+} from '@/lib/form-actions'
 import { cn } from '@/shared/utils'
 
 import { FilterValueInput } from './filter-value-input'
@@ -52,8 +58,10 @@ type Props = Readonly<{
   properties: ReadonlyArray<DatabaseProperty>
   config: FormConfig
   canEdit: boolean
+  notifying: boolean
   onChange: (config: FormConfig) => void
   onTokenChange: (token: string | null) => void
+  onNotifyingChange: (notifying: boolean) => void
   compact?: boolean
 }>
 
@@ -75,13 +83,16 @@ export function FormEditor({
   properties,
   config,
   canEdit,
+  notifying,
   onChange,
   onTokenChange,
+  onNotifyingChange,
   compact = false,
 }: Props) {
   const t = useTranslations('form')
   const tDatabase = useTranslations('database')
   const [busy, setBusy] = useState(false)
+  const [webhook, setWebhook] = useState('')
 
   const byId = new Map(properties.map((property) => [property.id, property]))
   const used = new Set(config.questions.map((question) => question.propertyId))
@@ -134,6 +145,30 @@ export function FormEditor({
       }
 
       onTokenChange(result.token)
+    } catch {
+      toast.error(tDatabase('saveFailed'))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function changeWebhook(url: string | null) {
+    setBusy(true)
+
+    try {
+      const result =
+        url === null
+          ? await clearFormWebhook(view.id)
+          : await setFormWebhook(view.id, url)
+
+      if (!result.ok) {
+        toast.error(result.error)
+
+        return
+      }
+
+      setWebhook('')
+      onNotifyingChange(url !== null)
     } catch {
       toast.error(tDatabase('saveFailed'))
     } finally {
@@ -223,6 +258,68 @@ export function FormEditor({
             {t('acceptingResponses')}
           </span>
         </label>
+      </section>
+
+      <section className="flex flex-col gap-3">
+        <div className="flex flex-col gap-1">
+          <h3 className="flex items-center gap-1 font-medium text-caption text-content-subtle">
+            <SendOutIcon aria-hidden="true" className="size-4" />
+            {t('slackSection')}
+          </h3>
+          <p className="text-body-small text-content">{t('slackHint')}</p>
+        </div>
+
+        <label className="flex items-center gap-2">
+          <Switch
+            checked={config.notify}
+            disabled={!canEdit}
+            onCheckedChange={(checked) =>
+              onChange({ ...config, notify: checked })
+            }
+          />
+          <span className="text-body-small text-content-strong">
+            {t('slackEnabled')}
+          </span>
+        </label>
+
+        {notifying ? (
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="text-body-small text-content">
+              {t('slackConfigured')}
+            </span>
+            <Button
+              disabled={!canEdit || busy}
+              onClick={() => void changeWebhook(null)}
+              type="button"
+              variant="secondary"
+            >
+              {t('slackRemove')}
+            </Button>
+          </div>
+        ) : (
+          <div className="flex flex-wrap items-end gap-2">
+            <label className="flex flex-1 flex-col gap-1">
+              <span className="text-body-small text-content">
+                {t('slackWebhook')}
+              </span>
+              <Input
+                disabled={!canEdit || busy}
+                onChange={(event) => setWebhook(event.target.value)}
+                placeholder="https://hooks.slack.com/services/..."
+                type="url"
+                value={webhook}
+              />
+            </label>
+            <Button
+              disabled={!canEdit || busy || webhook.trim().length === 0}
+              onClick={() => void changeWebhook(webhook)}
+              type="button"
+              variant="secondary"
+            >
+              {t('slackSave')}
+            </Button>
+          </div>
+        )}
       </section>
 
       <section className="flex flex-col gap-3">

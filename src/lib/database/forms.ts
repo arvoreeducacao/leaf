@@ -47,6 +47,7 @@ export type FormConfig = Readonly<{
   submitLabel: string
   successMessage: string
   accepting: boolean
+  notify: boolean
   questions: ReadonlyArray<FormQuestion>
   automations: ReadonlyArray<FormAutomation>
 }>
@@ -57,6 +58,7 @@ export const emptyFormConfig: FormConfig = {
   submitLabel: '',
   successMessage: '',
   accepting: true,
+  notify: true,
   questions: [],
   automations: [],
 }
@@ -185,6 +187,7 @@ export function parseFormConfig(raw: unknown): FormConfig | null {
     submitLabel: trimTo(source.submitLabel, MAX_FORM_LABEL),
     successMessage: trimTo(source.successMessage, MAX_FORM_TEXT),
     accepting: source.accepting !== false,
+    notify: source.notify !== false,
     questions,
     automations,
   }
@@ -197,6 +200,7 @@ export function serializeFormConfig(config: FormConfig) {
     submitLabel: config.submitLabel.slice(0, MAX_FORM_LABEL),
     successMessage: config.successMessage.slice(0, MAX_FORM_TEXT),
     accepting: config.accepting,
+    notify: config.notify,
     questions: uniqueByProperty(config.questions, MAX_FORM_QUESTIONS),
     automations: config.automations.slice(0, MAX_FORM_AUTOMATIONS),
   }
