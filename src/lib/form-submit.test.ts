@@ -121,14 +121,19 @@ async function seed(viewConfig: string, withWebhook = true) {
   }
 }
 
+type PostedBlock = { type: string; elements?: Array<{ url: string }> }
+
 function captureFetch(behaviour: 'ok' | 'throws' = 'ok') {
-  const calls: Array<{ url: string; text: string }> = []
+  const calls: Array<{ url: string; text: string; blocks: Array<PostedBlock> }> =
+    []
 
   vi.stubGlobal('fetch', async (url: string, init: RequestInit) => {
-    calls.push({
-      url: String(url),
-      text: JSON.parse(String(init.body)).text as string,
-    })
+    const body = JSON.parse(String(init.body)) as {
+      text: string
+      blocks: Array<PostedBlock>
+    }
+
+    calls.push({ url: String(url), text: body.text, blocks: body.blocks })
 
     if (behaviour === 'throws') {
       throw new Error('slack fora do ar')
@@ -158,6 +163,22 @@ describe('a resposta do formulário no Slack', () => {
     expect(calls[0].url).toBe(WEBHOOK)
     expect(calls[0].text).toContain('*Floresta não abre*')
     expect(calls[0].text).toContain('*Gravidade*\nAlta')
+  })
+
+  it('fecha a mensagem com o botão que abre a linha criada', async () => {
+    await seed(config())
+
+    const calls = captureFetch()
+
+    expect((await submitForm(TOKEN, answers)).ok).toBe(true)
+
+    const last = calls[0].blocks.at(-1)
+    const rows = await db.query.documents.findMany({
+      where: (fields, { eq }) => eq(fields.parentId, 'base'),
+    })
+
+    expect(last?.type).toBe('actions')
+    expect(last?.elements?.[0].url).toContain(`/doc/${rows[0].id}`)
   })
 
   it('fica quieta quando o aviso está desligado', async () => {

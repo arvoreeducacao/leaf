@@ -6,6 +6,7 @@ import {
   MAX_SLACK_ANSWER,
   isSlackWebhook,
   slackMessageFor,
+  slackPayloadFor,
 } from './form-message'
 import { TITLE_QUESTION_ID, parseFormConfig } from './forms'
 import { serializeOptions } from './values'
@@ -127,5 +128,69 @@ describe('slackMessageFor', () => {
     const text = slackMessageFor(config, properties, '   ', values, 'Sem título')
 
     expect(text.startsWith('*Sem título*')).toBe(true)
+  })
+})
+
+describe('slackPayloadFor', () => {
+  const values = {
+    who: 'Carol Uehara',
+    severity: ['high'],
+    desc: 'Os ícones se sobrepõem ao texto',
+    files: '',
+    empty: [],
+  }
+
+  const payload = () =>
+    slackPayloadFor(
+      config,
+      properties,
+      'Ícones de acessibilidade',
+      values,
+      'Nome',
+      'https://leaf.arvore.com.br/doc/abc123',
+      'Abrir no Leaf',
+    )
+
+  it('põe um bloco por pergunta respondida, com o título na frente', () => {
+    const blocks = payload().blocks as Array<{
+      type: string
+      text?: { text: string }
+    }>
+
+    expect(blocks[0].text?.text).toBe('*Ícones de acessibilidade*')
+    expect(blocks.filter((block) => block.type === 'section')).toHaveLength(4)
+  })
+
+  it('fecha com o botão que abre a linha no Leaf', () => {
+    const blocks = payload().blocks as Array<{
+      type: string
+      elements?: Array<{ type: string; url: string; text: { text: string } }>
+    }>
+    const last = blocks[blocks.length - 1]
+
+    expect(last.type).toBe('actions')
+    expect(last.elements?.[0].url).toBe('https://leaf.arvore.com.br/doc/abc123')
+    expect(last.elements?.[0].text.text).toBe('Abrir no Leaf')
+  })
+
+  it('deixa o botão de fora quando não há endereço da linha', () => {
+    const blocks = slackPayloadFor(
+      config,
+      properties,
+      'x',
+      values,
+      'Nome',
+      null,
+      'Abrir no Leaf',
+    ).blocks as Array<{ type: string }>
+
+    expect(blocks.every((block) => block.type === 'section')).toBe(true)
+  })
+
+  it('mantém o texto puro, para quem recebe a notificação sem blocos', () => {
+    const { text } = payload()
+
+    expect(text).toContain('*Ícones de acessibilidade*')
+    expect(text).toContain('*Gravidade*')
   })
 })

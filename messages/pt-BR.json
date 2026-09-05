@@ -599,6 +599,7 @@
     "slackSave": "Salvar",
     "slackConfigured": "Canal configurado. O endereço fica guardado no servidor e não aparece aqui.",
     "slackRemove": "Trocar de canal",
+    "openInLeaf": "Abrir no Leaf",
     "webhookInvalid": "Endereço inválido. Use o webhook de entrada do Slack, que começa com https://hooks.slack.com/services/",
     "presentationSection": "Apresentação",
     "headline": "Título do formulário",
