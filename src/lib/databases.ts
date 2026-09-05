@@ -224,6 +224,19 @@ function remapConfig(
       propertyId: remap(sort.propertyId),
     })),
     hiddenPropertyIds: config.hiddenPropertyIds.map(remap),
+    form: config.form
+      ? {
+          ...config.form,
+          questions: config.form.questions.map((question) => ({
+            ...question,
+            propertyId: remap(question.propertyId),
+          })),
+          automations: config.form.automations.map((automation) => ({
+            ...automation,
+            propertyId: remap(automation.propertyId),
+          })),
+        }
+      : null,
   })
 }
 

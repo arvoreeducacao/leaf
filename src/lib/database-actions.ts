@@ -162,10 +162,8 @@ export async function createDatabase(
       name: t('defaultTableView'),
       type: 'table',
       config: serializeViewConfig({
+        ...emptyViewConfig,
         groupByPropertyId: statusId,
-        filters: [],
-        sorts: [],
-        hiddenPropertyIds: [],
       }),
       position: 0,
       createdAt: now,

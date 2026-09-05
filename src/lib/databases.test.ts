@@ -44,6 +44,7 @@ const viewConfig = serializeViewConfig({
   filters: [{ propertyId: 'prop-points', operator: 'greaterThan', value: 1 }],
   sorts: [{ propertyId: 'title', direction: 'asc' }],
   hiddenPropertyIds: ['prop-points'],
+  form: null,
 })
 
 beforeEach(async () => {

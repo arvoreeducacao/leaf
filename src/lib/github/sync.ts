@@ -19,7 +19,7 @@ import {
   serializeOptions,
   serializeValues,
 } from '@/lib/database/values'
-import { serializeViewConfig } from '@/lib/database/views'
+import { emptyViewConfig, serializeViewConfig } from '@/lib/database/views'
 import type { GithubClient, GithubPullRequest } from '@/lib/github/api'
 import { pullState } from '@/lib/github/api'
 import type { GithubSyncMessages } from '@/lib/github/messages'
@@ -320,10 +320,7 @@ export async function* syncGithub(
     await db.insert(databaseViews).values([
       {
         config: serializeViewConfig({
-          filters: [],
-          groupByPropertyId: null,
-          hiddenPropertyIds: [],
-          sorts: [],
+          ...emptyViewConfig,
         }),
         createdAt: now,
         databaseId,
@@ -334,10 +331,8 @@ export async function* syncGithub(
       },
       {
         config: serializeViewConfig({
-          filters: [],
+          ...emptyViewConfig,
           groupByPropertyId: statePropertyId,
-          hiddenPropertyIds: [],
-          sorts: [],
         }),
         createdAt: now,
         databaseId,
