@@ -63,6 +63,7 @@ const formConfig = serializeViewConfig({
         description: '',
         required: true,
         attachment: false,
+        long: false,
       },
     ],
     automations: [
