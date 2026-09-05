@@ -1,4 +1,25 @@
-export const cacheVersion = 'leaf-offline-v1'
+export const fallbackBuildId = 'development'
+
+export function buildIdFrom(href) {
+  if (!href) {
+    return fallbackBuildId
+  }
+
+  try {
+    return new URL(href).searchParams.get('v') || fallbackBuildId
+  } catch {
+    return fallbackBuildId
+  }
+}
+
+export function cacheVersionFor(buildId) {
+  return `leaf-offline-${buildId}`
+}
+
+export const buildId = buildIdFrom(
+  typeof self === 'undefined' ? undefined : self.location?.href,
+)
+export const cacheVersion = cacheVersionFor(buildId)
 export const assetsCache = `${cacheVersion}-assets`
 export const pagesCache = `${cacheVersion}-pages`
 export const dataCache = `${cacheVersion}-data`

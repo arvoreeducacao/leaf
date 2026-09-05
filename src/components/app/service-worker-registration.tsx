@@ -3,6 +3,8 @@
 import { usePathname } from 'next/navigation'
 import { useEffect, useRef } from 'react'
 
+import { buildId } from '@/shared/build-id'
+
 const warmablePath = /^\/(doc\/[\w-]+|org)?$/
 
 export function ServiceWorkerRegistration() {
@@ -16,7 +18,10 @@ export function ServiceWorkerRegistration() {
 
     const register = () => {
       void navigator.serviceWorker
-        .register('/sw.js', { scope: '/', type: 'module' })
+        .register(`/sw.js?v=${encodeURIComponent(buildId)}`, {
+          scope: '/',
+          type: 'module',
+        })
         .catch(() => undefined)
     }
 
