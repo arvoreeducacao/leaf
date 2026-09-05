@@ -3,22 +3,10 @@
 import { useTranslations } from 'next-intl'
 import { useState } from 'react'
 
-import {
-  AddIcon,
-  CaretDownIcon,
-  EyeIcon,
-  FilterIcon,
-  LayoutGridRearrangeIcon,
-  ListCheckIcon,
-  ListReorderIcon,
-  MapGridIcon,
-  TrashIcon,
-} from '@/components/icons'
 import { Button } from '@/components/ui/button'
 import { ButtonIcon } from '@/components/ui/button-icon'
 import {
   DropdownMenu,
-  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
@@ -30,45 +18,50 @@ import type {
   DatabaseView,
   DatabaseViewType,
 } from '@/db/schema'
-import type { Person } from '@/lib/database/people'
 import {
   MAX_FILTERS,
   MAX_SORTS,
   type ViewConfig,
-  isGroupableType,
   operatorsFor,
 } from '@/lib/database/views'
 import { cn } from '@/shared/utils'
 
-import { FieldSelect } from './field-select'
-import { PropertyIcon } from './property-icon'
+import {
+  ChevronDownIcon,
+  FilterIcon,
+  PlusIcon,
+  SettingsIcon,
+  SortIcon,
+} from './icons'
+import { createOrder, layoutIcon } from './layouts'
 import { PropertyPicker } from './property-picker'
 import { ViewSearch } from './view-search'
+import { ViewSettings } from './view-settings'
 
-function UnsavedDot() {
+export function UnsavedDot({ className }: Readonly<{ className?: string }>) {
   return (
     <span
       aria-hidden="true"
-      className="absolute top-0.5 right-0.5 size-1.5 rounded-circular bg-warn"
+      className={cn(
+        'pointer-events-none absolute size-[9px] rounded-circular border border-surface-app bg-attention',
+        className,
+      )}
     />
   )
 }
 
-const viewIcon: Record<DatabaseViewType, typeof MapGridIcon> = {
-  table: MapGridIcon,
-  board: LayoutGridRearrangeIcon,
-  form: ListCheckIcon,
-}
+const controlButton = 'relative size-9 rounded-large p-1.5 tablet:size-7'
 
 type Props = Readonly<{
   views: ReadonlyArray<DatabaseView>
-  activeViewId: string
+  activeView: DatabaseView
   config: ViewConfig
   properties: ReadonlyArray<DatabaseProperty>
-  groupPropertyId: string | null
+  databaseId: string
   canEdit: boolean
   onSelectView: (id: string) => void
   onCreateView: (type: DatabaseViewType) => void
+  onChangeLayout: (type: DatabaseViewType) => void
   onRenameView: (id: string, name: string) => void
   onDeleteView: (id: string) => void
   onConfigChange: (config: ViewConfig) => void
@@ -77,19 +70,19 @@ type Props = Readonly<{
   search: string
   filtersChanged: boolean
   sortsChanged: boolean
-  people: ReadonlyArray<Person>
   compact?: boolean
 }>
 
 export function ViewToolbar({
   views,
-  activeViewId,
+  activeView,
   config,
   properties,
-  groupPropertyId,
+  databaseId,
   canEdit,
   onSelectView,
   onCreateView,
+  onChangeLayout,
   onRenameView,
   onDeleteView,
   onConfigChange,
@@ -98,15 +91,11 @@ export function ViewToolbar({
   search,
   filtersChanged,
   sortsChanged,
-  people,
   compact = false,
 }: Props) {
   const t = useTranslations('database')
   const [renaming, setRenaming] = useState<string | null>(null)
-  const activeView = views.find((view) => view.id === activeViewId)
-  const isForm = activeView?.type === 'form'
-
-  const hidden = new Set(config.hiddenPropertyIds)
+  const isForm = activeView.type === 'form'
 
   function propertyOf(propertyId: string) {
     return properties.find((property) => property.id === propertyId) ?? null
@@ -149,8 +138,8 @@ export function ViewToolbar({
     >
       <ul className="-mx-1 flex min-w-0 flex-1 items-center gap-1 overflow-x-auto px-1">
         {views.map((view) => {
-          const Icon = viewIcon[view.type]
-          const active = view.id === activeViewId
+          const Icon = layoutIcon[view.type]
+          const active = view.id === activeView.id
 
           if (renaming === view.id) {
             return (
@@ -158,7 +147,7 @@ export function ViewToolbar({
                 <input
                   aria-label={t('viewNameLabel')}
                   autoFocus
-                  className="h-9 tablet:h-7 w-40 rounded-medium border border-line-contrast bg-surface-card px-2 text-body-small text-content-strong outline-none focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-1"
+                  className="h-9 w-40 rounded-large border border-line-contrast bg-surface-card px-2 text-body-small text-content-strong outline-none tablet:h-8 focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-1"
                   defaultValue={view.name}
                   onBlur={(event) => {
                     onRenameView(view.id, event.target.value)
@@ -182,7 +171,7 @@ export function ViewToolbar({
             <button
               aria-current={active ? 'true' : undefined}
               className={cn(
-                'flex h-9 cursor-pointer items-center gap-1.5 rounded-large px-2 font-medium text-body-small transition-colors tablet:h-7 focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-1',
+                'flex h-9 cursor-pointer items-center gap-1.5 rounded-pill px-3 font-medium text-body-small transition-colors tablet:h-8 focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-1',
                 active
                   ? 'bg-surface-hover text-content-strong'
                   : 'text-content hover:bg-surface-hover hover:text-content-strong',
@@ -190,7 +179,7 @@ export function ViewToolbar({
               onClick={active ? undefined : () => onSelectView(view.id)}
               type="button"
             >
-              <Icon aria-hidden="true" className="size-4 shrink-0" />
+              <Icon aria-hidden="true" className="size-5 shrink-0" />
               <span className="max-w-40 truncate">{view.name}</span>
             </button>
           )
@@ -209,7 +198,6 @@ export function ViewToolbar({
                         onSelect={() => onDeleteView(view.id)}
                         variant="destructive"
                       >
-                        <TrashIcon aria-hidden="true" />
                         {t('deleteView')}
                       </DropdownMenuItem>
                     ) : null}
@@ -228,147 +216,115 @@ export function ViewToolbar({
               <DropdownMenuTrigger asChild>
                 <ButtonIcon
                   aria-label={t('addView')}
+                  className={controlButton}
                   size="medium"
                   variant="ghost"
                 >
-                  <AddIcon aria-hidden="true" />
+                  <PlusIcon aria-hidden="true" />
                 </ButtonIcon>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start">
-                <DropdownMenuItem onSelect={() => onCreateView('table')}>
-                  <MapGridIcon aria-hidden="true" />
-                  {t('view_table')}
-                </DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => onCreateView('board')}>
-                  <LayoutGridRearrangeIcon aria-hidden="true" />
-                  {t('view_board')}
-                </DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => onCreateView('form')}>
-                  <ListCheckIcon aria-hidden="true" />
-                  {t('view_form')}
-                </DropdownMenuItem>
+                {createOrder.map((type) => {
+                  const Icon = layoutIcon[type]
+
+                  return (
+                    <DropdownMenuItem
+                      key={type}
+                      onSelect={() => onCreateView(type)}
+                    >
+                      <Icon aria-hidden="true" className="size-5" />
+                      {t(`view_${type}`)}
+                    </DropdownMenuItem>
+                  )
+                })}
               </DropdownMenuContent>
             </DropdownMenu>
           </li>
         ) : null}
       </ul>
 
-      <div className="-mx-1 flex shrink-0 items-center gap-1 overflow-x-auto px-1">
+      <div className="-mx-1 flex shrink-0 items-center overflow-x-auto px-1">
         {isForm ? null : (
           <>
-          {activeView?.type === 'board' ? (
-            <FieldSelect
-              label={t('groupBy')}
-              onChange={(value) =>
-                onConfigChange({
-                  ...config,
-                  groupByPropertyId: value.length > 0 ? value : null,
-                })
-              }
-              options={[
-                { value: '', label: t('noGroup') },
-                ...properties
-                  .filter((property) => isGroupableType(property.type))
-                  .map((property) => ({
-                    value: property.id,
-                    label: property.name,
-                  })),
-              ]}
-              value={groupPropertyId ?? ''}
+        <PropertyPicker
+          disabled={config.filters.length >= MAX_FILTERS}
+          onPick={addFilter}
+          placeholder={t('searchProperty')}
+          properties={properties}
+          titleLabel={t('titleColumn')}
+        >
+          <ButtonIcon
+            aria-label={t('filtersActive', { count: config.filters.length })}
+            className={controlButton}
+            size="medium"
+            variant="ghost"
+          >
+            <FilterIcon
+              aria-hidden="true"
+              className={config.filters.length > 0 ? 'text-brand' : undefined}
             />
-          ) : null}
+            {filtersChanged ? (
+              <UnsavedDot className="top-[3px] right-[2px]" />
+            ) : null}
+          </ButtonIcon>
+        </PropertyPicker>
 
-          <PropertyPicker
-            disabled={config.filters.length >= MAX_FILTERS}
-            onPick={addFilter}
-            placeholder={t('searchProperty')}
-            properties={properties}
-            titleLabel={t('titleColumn')}
+        <PropertyPicker
+          disabled={config.sorts.length >= MAX_SORTS}
+          onPick={addSort}
+          placeholder={t('sortByProperty')}
+          properties={properties}
+          titleLabel={t('titleColumn')}
+        >
+          <ButtonIcon
+            aria-label={t('sortsActive', { count: config.sorts.length })}
+            className={controlButton}
+            size="medium"
+            variant="ghost"
           >
-            <ButtonIcon
-              aria-label={t('filtersActive', { count: config.filters.length })}
-              className="relative"
-              size="medium"
-              variant="ghost"
-            >
-              <FilterIcon
-                aria-hidden="true"
-                className={config.filters.length > 0 ? 'text-brand' : undefined}
-              />
-              {filtersChanged ? <UnsavedDot /> : null}
-            </ButtonIcon>
-          </PropertyPicker>
+            <SortIcon
+              aria-hidden="true"
+              className={config.sorts.length > 0 ? 'text-brand' : undefined}
+            />
+            {sortsChanged ? (
+              <UnsavedDot className="top-[3px] right-[2px]" />
+            ) : null}
+          </ButtonIcon>
+        </PropertyPicker>
 
-          <PropertyPicker
-            disabled={config.sorts.length >= MAX_SORTS}
-            onPick={addSort}
-            placeholder={t('sortByProperty')}
-            properties={properties}
-            titleLabel={t('titleColumn')}
+        <ViewSearch
+          onChange={onSearchChange}
+          placeholder={t('searchRows')}
+          value={search}
+        />
+
+        <ViewSettings
+          canEdit={canEdit}
+          config={config}
+          databaseId={databaseId}
+          onChangeLayout={onChangeLayout}
+          onConfigChange={onConfigChange}
+          onRenameView={onRenameView}
+          properties={properties}
+          view={activeView}
+        >
+          <ButtonIcon
+            aria-label={t('viewSettings')}
+            className={controlButton}
+            size="medium"
+            variant="ghost"
           >
-            <ButtonIcon
-              aria-label={t('sortsActive', { count: config.sorts.length })}
-              className="relative"
-              size="medium"
-              variant="ghost"
-            >
-              <ListReorderIcon
-                aria-hidden="true"
-                className={config.sorts.length > 0 ? 'text-brand' : undefined}
-              />
-              {sortsChanged ? <UnsavedDot /> : null}
-            </ButtonIcon>
-          </PropertyPicker>
-
-          <ViewSearch
-            onChange={onSearchChange}
-            placeholder={t('searchRows')}
-            value={search}
-          />
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <ButtonIcon
-                aria-label={t('properties')}
-                size="medium"
-                variant="ghost"
-              >
-                <EyeIcon aria-hidden="true" />
-              </ButtonIcon>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>{t('properties')}</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              {properties.map((property) => (
-                <DropdownMenuCheckboxItem
-                  checked={!hidden.has(property.id)}
-                  key={property.id}
-                  onCheckedChange={(checked) =>
-                    onConfigChange({
-                      ...config,
-                      hiddenPropertyIds: checked
-                        ? config.hiddenPropertyIds.filter(
-                            (id) => id !== property.id,
-                          )
-                        : [...config.hiddenPropertyIds, property.id],
-                    })
-                  }
-                  onSelect={(event) => event.preventDefault()}
-                >
-                  <PropertyIcon type={property.type} />
-                  {property.name}
-                </DropdownMenuCheckboxItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+            <SettingsIcon aria-hidden="true" />
+          </ButtonIcon>
+        </ViewSettings>
           </>
         )}
 
         {canEdit ? (
-          <div className="ml-1 flex items-center">
+          <div className="ml-1.5 flex h-9 items-center tablet:h-7">
             {isForm ? null : (
               <Button
-                className="h-9 rounded-r-none px-2 tablet:h-7"
+                className="h-full rounded-r-none px-2 font-regular"
                 onClick={onCreateRow}
                 size="sm"
               >
@@ -378,32 +334,35 @@ export function ViewToolbar({
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <ButtonIcon
-                  aria-label={t('addView')}
+                  aria-label={t('newRowOptions')}
                   className={cn(
-                    'h-9 tablet:h-7',
+                    'h-full p-0',
                     isForm
-                      ? 'w-9 tablet:w-7'
-                      : 'w-6 rounded-l-none border-l border-l-primary-600',
+                      ? 'w-9 rounded-large tablet:w-7'
+                      : '!w-6 rounded-l-none border-l border-l-primary-600',
                   )}
                   size="medium"
                   variant="primary"
                 >
-                  <CaretDownIcon aria-hidden="true" />
+                  <ChevronDownIcon aria-hidden="true" />
                 </ButtonIcon>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onSelect={() => onCreateView('table')}>
-                  <MapGridIcon aria-hidden="true" />
-                  {t('view_table')}
-                </DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => onCreateView('board')}>
-                  <LayoutGridRearrangeIcon aria-hidden="true" />
-                  {t('view_board')}
-                </DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => onCreateView('form')}>
-                  <ListCheckIcon aria-hidden="true" />
-                  {t('view_form')}
-                </DropdownMenuItem>
+                <DropdownMenuLabel>{t('addView')}</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {createOrder.map((type) => {
+                  const Icon = layoutIcon[type]
+
+                  return (
+                    <DropdownMenuItem
+                      key={type}
+                      onSelect={() => onCreateView(type)}
+                    >
+                      <Icon aria-hidden="true" className="size-5" />
+                      {t(`view_${type}`)}
+                    </DropdownMenuItem>
+                  )
+                })}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>

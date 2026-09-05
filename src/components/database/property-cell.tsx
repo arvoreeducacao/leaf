@@ -28,6 +28,7 @@ type Props = Readonly<{
   rowTitle: string
   readOnly: boolean
   compact?: boolean
+  wrap?: boolean
   people?: ReadonlyArray<Person>
   onCommit: (value: PropertyValue) => void
   onCreateOption: (name: string) => Promise<SelectOption | null>
@@ -51,6 +52,7 @@ export function PropertyCell({
   rowTitle,
   readOnly,
   compact = false,
+  wrap = false,
   people = [],
   onCommit,
   onCreateOption,
@@ -63,9 +65,13 @@ export function PropertyCell({
       ? personOptions(people)
       : parseOptions(property.options)
 
+  const compactFrame = wrap
+    ? 'min-h-9 px-2 py-1.5 tablet:min-h-8'
+    : 'h-9 px-2 tablet:h-8'
+
   const inputClass = cn(
     'w-full min-w-0 rounded-medium bg-transparent text-body-small text-content-strong outline-none transition-colors placeholder:text-content-subtle focus-visible:outline-2 focus-visible:outline-focus focus-visible:-outline-offset-2 disabled:text-content',
-    compact ? 'h-9 px-2 tablet:h-8' : 'min-h-9 border border-line px-2 py-1',
+    compact ? compactFrame : 'min-h-9 border border-line px-2 py-1',
   )
 
   if (
@@ -88,6 +94,7 @@ export function PropertyCell({
       <SelectEditor
         compact={compact}
         creatable={property.type !== 'person'}
+        wrap={wrap}
         emptyHint={property.type === 'person' ? t('noPeople') : undefined}
         label={label}
         multiple={multiple}
@@ -115,7 +122,7 @@ export function PropertyCell({
         aria-label={label}
         className={cn(
           'flex min-w-0 items-center text-body-small text-content tabular-nums',
-          compact ? 'h-9 px-2 tablet:h-8' : 'min-h-9 px-2 py-1',
+          compact ? compactFrame : 'min-h-9 px-2 py-1',
         )}
       >
         <span className="truncate">{text}</span>
@@ -128,7 +135,10 @@ export function PropertyCell({
 
     return (
       <span
-        className={cn('flex items-center', compact ? 'h-9 px-2 tablet:h-8' : 'min-h-9')}
+        className={cn(
+          'flex items-center',
+          compact ? compactFrame : 'min-h-9',
+        )}
       >
         <button
           aria-checked={checked}
@@ -171,6 +181,7 @@ export function PropertyCell({
       property={property}
       readOnly={readOnly}
       value={value}
+      wrap={wrap && property.type !== 'number'}
     />
   )
 }
@@ -182,6 +193,7 @@ function TextualCell({
   locale,
   readOnly,
   className,
+  wrap,
   onCommit,
 }: Readonly<{
   property: DatabaseProperty
@@ -190,10 +202,23 @@ function TextualCell({
   locale: string
   readOnly: boolean
   className: string
+  wrap: boolean
   onCommit: (value: PropertyValue) => void
 }>) {
   const [draft, setDraft] = useState(() => textFor(property, value, locale))
   const external = useRef(value)
+  const area = useRef<HTMLTextAreaElement>(null)
+
+  useEffect(() => {
+    const element = area.current
+
+    if (!element) {
+      return
+    }
+
+    element.style.height = 'auto'
+    element.style.height = `${element.scrollHeight}px`
+  }, [draft])
 
   useEffect(() => {
     if (external.current === value) {
@@ -220,7 +245,10 @@ function TextualCell({
 
     if (safe === null) {
       return (
-        <span aria-label={label} className={cn(className, 'block truncate')}>
+        <span
+          aria-label={label}
+          className={cn(className, 'block', wrap ? 'break-words' : 'truncate')}
+        >
           {draft}
         </span>
       )
@@ -228,13 +256,43 @@ function TextualCell({
 
     return (
       <a
-        className={cn(className, 'block truncate text-link underline')}
+        className={cn(
+          className,
+          'block text-link underline',
+          wrap ? 'break-words' : 'truncate',
+        )}
         href={safe}
         rel="noreferrer noopener"
         target="_blank"
       >
         {safe}
       </a>
+    )
+  }
+
+  if (wrap) {
+    return (
+      <textarea
+        aria-label={label}
+        className={cn(className, 'resize-none overflow-hidden break-words')}
+        disabled={readOnly}
+        onBlur={commit}
+        onChange={(event) => setDraft(event.target.value)}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter') {
+            event.preventDefault()
+            event.currentTarget.blur()
+          }
+
+          if (event.key === 'Escape') {
+            setDraft(textFor(property, value, locale))
+            event.currentTarget.blur()
+          }
+        }}
+        ref={area}
+        rows={1}
+        value={draft}
+      />
     )
   }
 

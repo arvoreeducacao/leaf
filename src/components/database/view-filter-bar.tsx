@@ -2,15 +2,13 @@
 
 import { useLocale, useTranslations } from 'next-intl'
 
-import {
-  AddIcon,
-  ArrowDownIcon,
-  ArrowUpIcon,
-  CancelIcon,
-  CaretDownIcon,
-} from '@/components/icons'
-import { Button } from '@/components/ui/button'
 import { ButtonIcon } from '@/components/ui/button-icon'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import {
   Popover,
   PopoverContent,
@@ -26,6 +24,7 @@ import {
   type ViewConfig,
   type ViewFilter,
   type ViewSort,
+  filterValueFor,
   operatorNeedsValue,
   operatorsFor,
 } from '@/lib/database/views'
@@ -33,8 +32,16 @@ import { cn } from '@/shared/utils'
 
 import { FieldSelect } from './field-select'
 import { FilterValueInput } from './filter-value-input'
+import {
+  ChevronDownIcon,
+  CloseIcon,
+  PlusIcon,
+  SortAscIcon,
+  SortDescIcon,
+} from './icons'
 import { PropertyIcon } from './property-icon'
 import { PropertyPicker } from './property-picker'
+import { UnsavedDot } from './view-toolbar'
 
 type Props = Readonly<{
   config: ViewConfig
@@ -47,23 +54,15 @@ type Props = Readonly<{
   onConfigChange: (config: ViewConfig) => void
   onReset: () => void
   onPublish: () => void
+  onPublishAsNewView: () => void
   compact?: boolean
 }>
 
 const chipBase =
-  'relative flex h-9 max-w-full cursor-pointer items-center gap-1.5 rounded-medium px-1.5 text-body-small transition-colors tablet:h-7 focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-1'
+  'relative flex h-9 max-w-full cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-pill px-2 text-body-small transition-colors tablet:h-6 focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-1'
 
 function capitalize(value: string): string {
   return value.charAt(0).toLocaleUpperCase() + value.slice(1)
-}
-
-function UnsavedDot() {
-  return (
-    <span
-      aria-hidden="true"
-      className="-top-0.5 -right-0.5 absolute size-1.5 rounded-circular bg-warn"
-    />
-  )
 }
 
 export function ViewFilterBar({
@@ -77,6 +76,7 @@ export function ViewFilterBar({
   onConfigChange,
   onReset,
   onPublish,
+  onPublishAsNewView,
   compact = false,
 }: Props) {
   const t = useTranslations('database')
@@ -107,7 +107,7 @@ export function ViewFilterBar({
 
     const text = property
       ? valueToText(
-          filter.value,
+          filterValueFor(property.type, filter.value),
           property.type,
           optionsFor(property, people),
           locale,
@@ -176,7 +176,7 @@ export function ViewFilterBar({
   return (
     <div
       className={cn(
-        'flex flex-wrap items-center gap-1 py-1',
+        'flex flex-wrap items-center gap-1.5 py-1',
         compact ? '' : 'px-4 tablet:px-24',
       )}
     >
@@ -184,28 +184,24 @@ export function ViewFilterBar({
         <Popover key={`sort-${sort.propertyId}-${index}`}>
           <PopoverTrigger asChild>
             <button
-              className={cn(
-                chipBase,
-                'bg-brand-surface text-content-strong hover:bg-brand-surface-strong',
-              )}
+              className={cn(chipBase, 'bg-brand-surface text-brand')}
               type="button"
             >
               {sort.direction === 'asc' ? (
-                <ArrowUpIcon aria-hidden="true" className="size-3.5 shrink-0" />
+                <SortAscIcon aria-hidden="true" className="size-3.5 shrink-0" />
               ) : (
-                <ArrowDownIcon
-                  aria-hidden="true"
-                  className="size-3.5 shrink-0"
-                />
+                <SortDescIcon aria-hidden="true" className="size-3.5 shrink-0" />
               )}
-              <span className="max-w-52 truncate">
+              <span className="max-w-45 truncate">
                 {nameOf(sort.propertyId)}
               </span>
-              <CaretDownIcon
+              <ChevronDownIcon
                 aria-hidden="true"
-                className="size-3 shrink-0 text-content-subtle"
+                className="size-3.5 shrink-0"
               />
-              {sortsChanged ? <UnsavedDot /> : null}
+              {sortsChanged ? (
+                <UnsavedDot className="-top-0.5 -right-0.5" />
+              ) : null}
             </button>
           </PopoverTrigger>
           <PopoverContent
@@ -241,7 +237,7 @@ export function ViewFilterBar({
               size="medium"
               variant="ghost"
             >
-              <CancelIcon aria-hidden="true" />
+              <CloseIcon aria-hidden="true" />
             </ButtonIcon>
           </PopoverContent>
         </Popover>
@@ -266,21 +262,23 @@ export function ViewFilterBar({
                 className={cn(
                   chipBase,
                   settled
-                    ? 'bg-brand-surface text-content-strong hover:bg-brand-surface-strong'
-                    : 'text-content hover:bg-surface-hover',
+                    ? 'bg-brand-surface text-brand'
+                    : 'text-content-subtle hover:bg-surface-hover',
                 )}
                 type="button"
               >
                 <PropertyIcon
-                  className="size-3.5 shrink-0 text-content-subtle"
+                  className="size-5 shrink-0"
                   type={property?.type ?? 'text'}
                 />
-                <span className="max-w-64 truncate">{describe(filter)}</span>
-                <CaretDownIcon
+                <span className="max-w-45 truncate">{describe(filter)}</span>
+                <ChevronDownIcon
                   aria-hidden="true"
-                  className="size-3 shrink-0 text-content-subtle"
+                  className="size-3.5 shrink-0"
                 />
-                {filtersChanged ? <UnsavedDot /> : null}
+                {filtersChanged ? (
+                  <UnsavedDot className="-top-0.5 -right-0.5" />
+                ) : null}
               </button>
             </PopoverTrigger>
             <PopoverContent align="start" className="w-[22rem] p-2">
@@ -330,7 +328,7 @@ export function ViewFilterBar({
                   size="medium"
                   variant="ghost"
                 >
-                  <CancelIcon aria-hidden="true" />
+                  <CloseIcon aria-hidden="true" />
                 </ButtonIcon>
               </div>
               <div className="mt-2">
@@ -355,33 +353,52 @@ export function ViewFilterBar({
         titleLabel={t('titleColumn')}
       >
         <button
-          className={cn(chipBase, 'text-content-subtle hover:bg-surface-hover')}
+          className={cn(
+            chipBase,
+            'rounded-xlarge pr-2.5 pl-1.5 text-content-tertiary hover:bg-surface-hover',
+          )}
           type="button"
         >
-          <AddIcon aria-hidden="true" className="size-3.5 shrink-0" />
+          <PlusIcon aria-hidden="true" className="size-3.5 shrink-0" />
           {t('addFilterShort')}
         </button>
       </PropertyPicker>
 
       {hasDraft ? (
-        <div className="ml-auto flex items-center gap-1">
-          <Button
-            className="h-9 font-regular text-content-subtle tablet:h-7 hover:text-content-strong"
+        <div className="ml-auto flex items-center gap-1.5">
+          <button
+            className="flex h-9 cursor-pointer items-center rounded-large px-2 text-body-small text-content-subtle transition-colors tablet:h-7 hover:bg-surface-hover hover:text-content-strong focus-visible:outline-2 focus-visible:outline-focus"
             onClick={onReset}
-            size="sm"
-            variant="ghost"
+            type="button"
           >
             {t('resetView')}
-          </Button>
+          </button>
           {canEdit ? (
-            <Button
-              className="h-9 border-transparent bg-warn-surface text-warn tablet:h-7 hover:bg-warn-surface-strong"
-              onClick={onPublish}
-              size="sm"
-              variant="secondary"
-            >
-              {t('saveViewForEveryone')}
-            </Button>
+            <div className="flex h-9 items-center tablet:h-7">
+              <button
+                className="flex h-full cursor-pointer items-center rounded-l-large bg-attention-surface px-2 text-attention text-body-small transition-colors hover:bg-attention-surface-strong focus-visible:outline-2 focus-visible:outline-focus"
+                onClick={onPublish}
+                type="button"
+              >
+                {t('saveViewForEveryone')}
+              </button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    aria-label={t('saveViewOptions')}
+                    className="flex h-full w-6 cursor-pointer items-center justify-center rounded-r-large border-attention-surface-strong border-l bg-attention-surface text-attention transition-colors hover:bg-attention-surface-strong focus-visible:outline-2 focus-visible:outline-focus"
+                    type="button"
+                  >
+                    <ChevronDownIcon aria-hidden="true" className="size-3.5" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onSelect={onPublishAsNewView}>
+                    {t('saveAsNewView')}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           ) : null}
         </div>
       ) : null}
