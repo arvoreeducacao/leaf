@@ -8,15 +8,15 @@ import {
 } from './people'
 
 const roster: Array<Person> = [
-  { id: 'u1', name: 'Rafael Andrade', email: 'rafael.andrade@arvore.com.br' },
-  { id: 'u2', name: 'Ricardo raposo', email: 'ricardo.raposo@arvore.com.br' },
-  { id: 'u3', name: 'João Barros', email: 'joao.barros@arvore.com.br' },
-  { id: 'u4', name: 'Joao Leal', email: 'joao@arvore.com.br' },
-  { id: 'u5', name: 'Jotta', email: 'joao.cunha@arvore.com.br' },
-  { id: 'u6', name: 'Mateus', email: 'mateus.coutinho@arvore.com.br' },
-  { id: 'u7', name: 'Carlos Mees', email: 'carlos@arvore.com.br' },
-  { id: 'u8', name: 'Vitor Mendes', email: 'vitor.mendes@arvore.com.br' },
-  { id: 'u9', name: 'Vitor Piovezan', email: 'vitor.piovezan@arvore.com.br' },
+  { id: 'u1', name: 'Rafael Andrade', email: 'rafael.andrade@example.com' },
+  { id: 'u2', name: 'Ricardo raposo', email: 'ricardo.raposo@example.com' },
+  { id: 'u3', name: 'João Barros', email: 'joao.barros@example.com' },
+  { id: 'u4', name: 'Joao Leal', email: 'joao@example.com' },
+  { id: 'u5', name: 'Jotta', email: 'joao.cunha@example.com' },
+  { id: 'u6', name: 'Mateus', email: 'mateus.coutinho@example.com' },
+  { id: 'u7', name: 'Carlos Mees', email: 'carlos@example.com' },
+  { id: 'u8', name: 'Vitor Mendes', email: 'vitor.mendes@example.com' },
+  { id: 'u9', name: 'Vitor Piovezan', email: 'vitor.piovezan@example.com' },
 ]
 
 describe('matchPerson', () => {
@@ -49,7 +49,7 @@ describe('matchPerson', () => {
   })
 
   it('matches by the whole email', () => {
-    expect(matchPerson('vitor.mendes@arvore.com.br', roster)).toEqual({
+    expect(matchPerson('vitor.mendes@example.com', roster)).toEqual({
       kind: 'matched',
       personId: 'u8',
     })

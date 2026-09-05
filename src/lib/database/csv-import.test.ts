@@ -20,7 +20,7 @@ describe('csv column type inference', () => {
 
   it('reads a link', () => {
     expect(
-      inferColumnType(['https://arvore.com.br', 'http://leaf.arvore.com.br']),
+      inferColumnType(['https://example.com', 'http://leaf.example.com']),
     ).toBe('url')
   })
 
@@ -150,9 +150,9 @@ describe('turning the csv database into a database', () => {
 
 describe('person column coming from Notion', () => {
   const people = [
-    { id: 'u1', name: 'Rafael Andrade', email: 'rafael.andrade@arvore.com.br' },
-    { id: 'u2', name: 'Ricardo raposo', email: 'ricardo.raposo@arvore.com.br' },
-    { id: 'u3', name: 'Mateus', email: 'mateus.coutinho@arvore.com.br' },
+    { id: 'u1', name: 'Rafael Andrade', email: 'rafael.andrade@example.com' },
+    { id: 'u2', name: 'Ricardo raposo', email: 'ricardo.raposo@example.com' },
+    { id: 'u3', name: 'Mateus', email: 'mateus.coutinho@example.com' },
   ]
 
   const table = [

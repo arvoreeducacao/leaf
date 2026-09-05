@@ -1,5 +1,6 @@
 import { expo } from '@better-auth/expo'
 import { oauthProvider } from '@better-auth/oauth-provider'
+import { passkey } from '@better-auth/passkey'
 import { betterAuth } from 'better-auth'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
 import { APIError, createAuthMiddleware } from 'better-auth/api'
@@ -25,6 +26,7 @@ import {
 } from '@/lib/mcp-config'
 import { validateDynamicClientRegistration } from '@/lib/mcp/client-registration'
 import { mobileTrustedOrigins } from '@/lib/mobile-auth'
+import { googleConfig, ssoConfig } from '@/lib/sso-config'
 import { buildSsoSignOutUrl, requestOrigin } from '@/lib/sso-sign-out'
 
 const guardedPaths = new Set(['/sign-up/email', '/sign-in/email'])
@@ -84,45 +86,24 @@ function guardClientRegistration(body: unknown) {
   return decision.body
 }
 
-export const arvoreSsoProviderId = 'arvore'
-
-const defaultSsoIssuer = 'https://auth.arvore.com.br/api-arvore'
-
-export function arvoreSsoCredentials() {
-  const clientId = process.env.ARVORE_SSO_CLIENT_ID?.trim()
-
-  if (!clientId) {
-    return null
-  }
-
-  const clientSecret = process.env.ARVORE_SSO_CLIENT_SECRET?.trim()
-  const issuer = (process.env.ARVORE_SSO_ISSUER?.trim() || defaultSsoIssuer)
-    .replace(/\/+$/, '')
-
-  return {
-    clientId,
-    clientSecret: clientSecret || undefined,
-    issuer,
-  }
-}
-
 export function authAccessConfig() {
   const { active, primaryDomain } = emailDomainPolicy()
 
   return {
+    googleEnabled: google !== null,
     restrictedDomain: active ? primaryDomain : null,
-    ssoEnabled: arvoreSsoCredentials() !== null,
+    sso: sso
+      ? { providerId: sso.providerId, providerName: sso.providerName }
+      : null,
   }
 }
 
 export async function ssoSignOutUrl() {
-  const credentials = arvoreSsoCredentials()
-
-  if (!credentials) {
+  if (!sso?.logoutUrl) {
     return null
   }
 
-  return buildSsoSignOutUrl(credentials.issuer, requestOrigin(await headers()))
+  return buildSsoSignOutUrl(sso.logoutUrl, requestOrigin(await headers()))
 }
 
 function ssoUserName(profile: { email?: string | null; name?: unknown }) {
@@ -130,30 +111,46 @@ function ssoUserName(profile: { email?: string | null; name?: unknown }) {
     return profile.name.trim()
   }
 
-  return profile.email?.split('@')[0] ?? arvoreSsoProviderId
+  return profile.email?.split('@')[0] ?? 'user'
 }
 
-const sso = arvoreSsoCredentials()
+const sso = ssoConfig()
+
+const google = googleConfig()
 
 const ssoPlugin = sso
   ? genericOAuth({
       config: [
         {
           accountIssuer: sso.issuer,
-          authorizationUrl: `${sso.issuer}/oauth2/authorize`,
+          authorizationUrl: sso.authorizationUrl,
           clientId: sso.clientId,
           clientSecret: sso.clientSecret,
           mapProfileToUser: (profile) => ({
             emailVerified: true,
             name: ssoUserName(profile),
           }),
-          providerId: arvoreSsoProviderId,
+          providerId: sso.providerId,
           scopes: ['openid', 'profile', 'email'],
-          tokenUrl: `${sso.issuer}/oauth2/token`,
+          tokenUrl: sso.tokenUrl,
         },
       ],
     })
   : null
+
+function passkeyRelyingParty() {
+  const issuer = authIssuer()
+
+  try {
+    return {
+      origin: issuer,
+      rpID: new URL(issuer).hostname,
+      rpName: 'Leaf',
+    }
+  } catch {
+    return { rpName: 'Leaf' }
+  }
+}
 
 function mcpAuthorizationServerPlugins() {
   if (!isMcpEnabled()) {
@@ -205,6 +202,7 @@ export const auth = betterAuth({
       session: schema.session,
       account: schema.account,
       verification: schema.verification,
+      passkey: schema.passkey,
       jwks: schema.jwks,
       oauthClient: schema.oauthClients,
       oauthResource: schema.oauthResources,
@@ -220,11 +218,15 @@ export const auth = betterAuth({
     minPasswordLength: 8,
     disableSignUp: sso !== null,
   },
+  socialProviders: google ? { google } : {},
   account: {
     accountLinking: {
       enabled: true,
-      requireLocalEmailVerified: sso !== null,
-      trustedProviders: [arvoreSsoProviderId],
+      requireLocalEmailVerified: true,
+      trustedProviders: [
+        ...(sso ? [sso.providerId] : []),
+        ...(google ? ['google'] : []),
+      ],
     },
   },
   hooks: {
@@ -262,6 +264,7 @@ export const auth = betterAuth({
   },
   plugins: [
     ...(ssoPlugin ? [ssoPlugin] : []),
+    passkey(passkeyRelyingParty()),
     ...mcpAuthorizationServerPlugins(),
     expo(),
     oneTimeToken({ storeToken: 'hashed' }),

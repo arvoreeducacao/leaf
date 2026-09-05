@@ -1,6 +1,7 @@
 import type { ConfigContext, ExpoConfig } from 'expo/config'
 
-export const leafProductionHost = 'leaf.arvore.com.br'
+export const leafProductionHost =
+  process.env.EXPO_PUBLIC_LEAF_HOST?.trim() || 'leaf.arvore.com.br'
 export const leafAppScheme = 'app.leaf'
 
 const leafUrl = process.env.EXPO_PUBLIC_LEAF_URL?.trim() || `https://${leafProductionHost}`
@@ -54,6 +55,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ],
   extra: {
     leafUrl,
+    appBoundDomain: pointsToProduction ? leafProductionHost : null,
+    ssoProviderId: process.env.EXPO_PUBLIC_LEAF_SSO_PROVIDER_ID?.trim() || 'sso',
   },
-  owner: 'arvoreeducacao',
+  owner: process.env.EXPO_OWNER?.trim() || 'arvoreeducacao',
 })

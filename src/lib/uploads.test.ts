@@ -71,7 +71,7 @@ describe('sanitizeSvg', () => {
     '<rect x="0" y="0" width="40" height="20" fill="#CD694A"/>',
     '<text x="4" y="14">estante</text>',
     '<use href="#seta"/>',
-    '<a href="https://leaf.arvore.com.br/doc/1"><text>o documento</text></a>',
+    '<a href="https://leaf.example.com/doc/1"><text>o documento</text></a>',
     '</svg>',
   ].join('')
 
@@ -82,7 +82,7 @@ describe('sanitizeSvg', () => {
     expect(safe).toContain('#CD694A')
     expect(safe).toContain('estante')
     expect(safe).toContain('href="#seta"')
-    expect(safe).toContain('https://leaf.arvore.com.br/doc/1')
+    expect(safe).toContain('https://leaf.example.com/doc/1')
   })
 
   it('takes out the script, the handler and the javascript link', () => {

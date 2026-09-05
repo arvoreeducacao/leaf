@@ -21,8 +21,8 @@ import {
   updateCommentBody,
 } from '@/lib/comments'
 
-const author = { id: 'user-author', email: 'author@arvore.com.br' }
-const guest = { id: 'user-guest', email: 'guest@arvore.com.br' }
+const author = { id: 'user-author', email: 'author@example.com' }
+const guest = { id: 'user-guest', email: 'guest@example.com' }
 
 async function seedComment(
   body: string,

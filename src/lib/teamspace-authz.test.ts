@@ -31,12 +31,12 @@ import {
   listVisibleTeamspaces,
 } from '@/lib/teamspaces'
 
-const owner = { id: 'ts-owner', email: 'owner@arvore.com.br' }
-const teamMember = { id: 'ts-member', email: 'team@arvore.com.br' }
-const orgOnly = { id: 'ts-org-only', email: 'mate@arvore.com.br' }
+const owner = { id: 'ts-owner', email: 'owner@example.com' }
+const teamMember = { id: 'ts-member', email: 'team@example.com' }
+const orgOnly = { id: 'ts-org-only', email: 'mate@example.com' }
 const outsider = { id: 'ts-outsider', email: 'outside@otherschool.com.br' }
 
-const mainOrg = 'org-arvore'
+const mainOrg = 'org-acme'
 const otherOrg = 'org-other'
 
 const openTeamspace = 'ts-open'
@@ -94,7 +94,7 @@ beforeEach(async () => {
   )
 
   await db.insert(organizations).values([
-    { id: mainOrg, name: 'Árvore School', createdAt: now },
+    { id: mainOrg, name: 'Acme School', createdAt: now },
     { id: otherOrg, name: 'Other School', createdAt: now },
   ])
 
@@ -360,14 +360,14 @@ describe('multiple organizations', () => {
       {
         id: 'invite-1',
         orgId: mainOrg,
-        email: 'newcomer@arvore.com.br',
+        email: 'newcomer@example.com',
         role: 'member',
         createdAt: new Date(),
       },
       {
         id: 'invite-2',
         orgId: otherOrg,
-        email: 'newcomer@arvore.com.br',
+        email: 'newcomer@example.com',
         role: 'admin',
         createdAt: new Date(),
       },
@@ -378,7 +378,7 @@ describe('multiple organizations', () => {
     await db.insert(user).values({
       id: 'ts-newcomer',
       name: 'newcomer',
-      email: 'newcomer@arvore.com.br',
+      email: 'newcomer@example.com',
       emailVerified: false,
       createdAt: now,
       updatedAt: now,
@@ -386,7 +386,7 @@ describe('multiple organizations', () => {
 
     const memberships = await acceptPendingInvites(
       'ts-newcomer',
-      'newcomer@arvore.com.br',
+      'newcomer@example.com',
     )
 
     expect(memberships.map((item) => item.orgId).sort()).toEqual(

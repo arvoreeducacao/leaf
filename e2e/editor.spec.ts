@@ -68,10 +68,10 @@ test.describe('editor', () => {
     const urlField = page.locator('.bn-form-popover input').first()
 
     await expect(urlField).toBeVisible()
-    await urlField.fill('https://arvore.com.br')
+    await urlField.fill('https://example.com')
     await urlField.press('Enter')
 
-    await expect(body.locator('a[href="https://arvore.com.br"]')).toHaveCount(1)
+    await expect(body.locator('a[href="https://example.com"]')).toHaveCount(1)
   })
 
   test('word and character counters follow the text', async ({
@@ -142,7 +142,7 @@ test.describe('editor', () => {
         '<ul><li>Guided reading<ul><li>Chapter one</li></ul></li></ul>',
         '<ul><li>[ ] Send the invite</li></ul>',
         '<table><tr><th>Name</th><th>Group</th></tr><tr><td>Ana</td><td>A</td></tr></table>',
-        '<p><img src="https://arvore.com.br/image.png" alt="external"></p>',
+        '<p><img src="https://example.com/image.png" alt="external"></p>',
       ].join('')
 
       const target = document.querySelector(
@@ -169,7 +169,7 @@ test.describe('editor', () => {
     )
     await expect(body.locator('table')).toHaveCount(1)
     await expect(
-      body.locator('img[src="https://arvore.com.br/image.png"]'),
+      body.locator('img[src="https://example.com/image.png"]'),
     ).toHaveCount(1)
   })
 

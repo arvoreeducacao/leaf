@@ -26,6 +26,7 @@ import type { DocumentSummary } from '@/lib/documents'
 export type Membership = Readonly<{
   orgId: string
   orgName: string
+  orgIcon: string | null
   role: OrganizationRole
   memberId: string
 }>
@@ -50,6 +51,7 @@ export type PendingInvite = Readonly<{
 export type InviteLinkOrganization = Readonly<{
   id: string
   name: string
+  icon: string | null
   memberCount: number
 }>
 
@@ -84,6 +86,7 @@ export async function getOrganizationByInviteToken(
   return {
     id: organization.id,
     name: organization.name,
+    icon: organization.icon,
     memberCount: members[0]?.total ?? 0,
   }
 }
@@ -125,6 +128,7 @@ export async function listMemberships(
     .select({
       orgId: organizations.id,
       orgName: organizations.name,
+      orgIcon: organizations.icon,
       role: organizationMembers.role,
       memberId: organizationMembers.id,
     })

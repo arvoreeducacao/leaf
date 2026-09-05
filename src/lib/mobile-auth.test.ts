@@ -33,14 +33,14 @@ describe('mobileTrustedOrigins', () => {
 describe('mobileEntryToken', () => {
   it('reads the token from the query string', () => {
     expect(
-      mobileEntryToken('https://leaf.arvore.com.br/api/mobile/enter?token=abc123'),
+      mobileEntryToken('https://leaf.example.com/api/mobile/enter?token=abc123'),
     ).toBe('abc123')
   })
 
   it('rejects a missing or blank token', () => {
-    expect(mobileEntryToken('https://leaf.arvore.com.br/api/mobile/enter')).toBeNull()
+    expect(mobileEntryToken('https://leaf.example.com/api/mobile/enter')).toBeNull()
     expect(
-      mobileEntryToken('https://leaf.arvore.com.br/api/mobile/enter?token=%20'),
+      mobileEntryToken('https://leaf.example.com/api/mobile/enter?token=%20'),
     ).toBeNull()
   })
 })

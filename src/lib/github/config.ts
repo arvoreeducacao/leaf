@@ -1,5 +1,3 @@
-export const DEFAULT_GITHUB_ORG = 'arvoreeducacao'
-
 export const MAX_GITHUB_REPOS = 40
 
 const repoPattern = /^[A-Za-z0-9._-]+$/
@@ -57,7 +55,7 @@ export function githubConfig(): GithubConfig | null {
     return null
   }
 
-  const org = trimmed('LEAF_GITHUB_ORG') || DEFAULT_GITHUB_ORG
+  const org = trimmed('LEAF_GITHUB_ORG')
   const repos = parseRepoList(trimmed('LEAF_GITHUB_REPOS'), org)
 
   if (repos.length === 0) {

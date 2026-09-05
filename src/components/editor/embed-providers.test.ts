@@ -86,7 +86,7 @@ describe('resolveEmbedSource', () => {
 
   it('answers the question the editor asks before pasting', () => {
     expect(isEmbeddableUrl('https://www.loom.com/share/abc123def456')).toBe(true)
-    expect(isEmbeddableUrl('https://arvore.com.br')).toBe(false)
+    expect(isEmbeddableUrl('https://example.com')).toBe(false)
   })
 })
 

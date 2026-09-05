@@ -14,7 +14,7 @@ import {
   getDocumentAccess,
   registerFormSubmissionAttempt,
 } from '@/lib/authz'
-import { isSlackWebhook, slackMessageFor } from '@/lib/database/form-message'
+import { isSlackWebhook, slackPayloadFor } from '@/lib/database/form-message'
 import { buildSubmission } from '@/lib/database/forms'
 import { serializeValues } from '@/lib/database/values'
 import { MAX_DATABASE_ROWS } from '@/lib/databases'
@@ -24,6 +24,7 @@ import {
   saveFormWebhook,
 } from '@/lib/form-webhooks'
 import { getFormByToken } from '@/lib/forms'
+import { authIssuer as appBaseUrl } from '@/lib/mcp-config'
 import { indexDocument } from '@/lib/search-index'
 
 const FORM_TOKEN_LENGTH = 24
@@ -149,7 +150,7 @@ export async function clearFormWebhook(
 
 async function announceOnSlack(
   viewId: string,
-  text: string,
+  payload: Readonly<{ text: string; blocks: ReadonlyArray<unknown> }>,
 ): Promise<void> {
   const url = await getFormWebhook(viewId)
 
@@ -159,7 +160,7 @@ async function announceOnSlack(
 
   try {
     await fetch(url, {
-      body: JSON.stringify({ text }),
+      body: JSON.stringify(payload),
       headers: { 'content-type': 'application/json' },
       method: 'POST',
       signal: AbortSignal.timeout(SLACK_TIMEOUT_MS),
@@ -248,12 +249,14 @@ export async function submitForm(
   if (record.config.notify) {
     await announceOnSlack(
       record.view.id,
-      slackMessageFor(
+      slackPayloadFor(
         record.config,
         record.properties,
         built.submission.title,
         built.submission.values,
         (await getTranslations('database'))('titleColumn'),
+        `${appBaseUrl()}/doc/${id}`,
+        t('openInLeaf'),
       ),
     )
   }

@@ -80,7 +80,7 @@ async function seed(viewConfig: string, withWebhook = true) {
   await db.insert(user).values({
     id: 'user-owner',
     name: 'Owner',
-    email: 'owner@arvore.com.br',
+    email: 'owner@example.com',
     emailVerified: false,
     createdAt: now,
     updatedAt: now,
@@ -121,14 +121,19 @@ async function seed(viewConfig: string, withWebhook = true) {
   }
 }
 
+type PostedBlock = { type: string; elements?: Array<{ url: string }> }
+
 function captureFetch(behaviour: 'ok' | 'throws' = 'ok') {
-  const calls: Array<{ url: string; text: string }> = []
+  const calls: Array<{ url: string; text: string; blocks: Array<PostedBlock> }> =
+    []
 
   vi.stubGlobal('fetch', async (url: string, init: RequestInit) => {
-    calls.push({
-      url: String(url),
-      text: JSON.parse(String(init.body)).text as string,
-    })
+    const body = JSON.parse(String(init.body)) as {
+      text: string
+      blocks: Array<PostedBlock>
+    }
+
+    calls.push({ url: String(url), text: body.text, blocks: body.blocks })
 
     if (behaviour === 'throws') {
       throw new Error('slack fora do ar')
@@ -142,12 +147,12 @@ function captureFetch(behaviour: 'ok' | 'throws' = 'ok') {
 
 const answers = { title: 'Floresta não abre', 'prop-severity': 'high' }
 
-describe('a resposta do formulário no Slack', () => {
+describe('the form response on Slack', () => {
   beforeEach(() => {
     vi.unstubAllGlobals()
   })
 
-  it('manda uma mensagem para o canal configurado', async () => {
+  it('posts a message to the configured channel', async () => {
     await seed(config())
 
     const calls = captureFetch()
@@ -160,7 +165,23 @@ describe('a resposta do formulário no Slack', () => {
     expect(calls[0].text).toContain('*Gravidade*\nAlta')
   })
 
-  it('fica quieta quando o aviso está desligado', async () => {
+  it('closes the message with the button that opens the row it just created', async () => {
+    await seed(config())
+
+    const calls = captureFetch()
+
+    expect((await submitForm(TOKEN, answers)).ok).toBe(true)
+
+    const last = calls[0].blocks.at(-1)
+    const rows = await db.query.documents.findMany({
+      where: (fields, { eq }) => eq(fields.parentId, 'base'),
+    })
+
+    expect(last?.type).toBe('actions')
+    expect(last?.elements?.[0].url).toContain(`/doc/${rows[0].id}`)
+  })
+
+  it('stays quiet when the notice is turned off', async () => {
     await seed(config({ notify: false }))
 
     const calls = captureFetch()
@@ -169,7 +190,7 @@ describe('a resposta do formulário no Slack', () => {
     expect(calls).toHaveLength(0)
   })
 
-  it('fica quieta quando nenhum canal foi configurado', async () => {
+  it('stays quiet when no channel was configured', async () => {
     await seed(config(), false)
 
     const calls = captureFetch()
@@ -178,7 +199,7 @@ describe('a resposta do formulário no Slack', () => {
     expect(calls).toHaveLength(0)
   })
 
-  it('grava a resposta mesmo quando o Slack não responde', async () => {
+  it('saves the response even when Slack does not answer', async () => {
     await seed(config())
     captureFetch('throws')
 
@@ -191,7 +212,7 @@ describe('a resposta do formulário no Slack', () => {
     expect(rows.map((row) => row.title)).toEqual(['Floresta não abre'])
   })
 
-  it('não manda nada quando o formulário parou de receber respostas', async () => {
+  it('posts nothing when the form stopped accepting responses', async () => {
     await seed(config({ accepting: false }))
 
     const calls = captureFetch()

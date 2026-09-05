@@ -219,14 +219,14 @@ test.describe('organizations', () => {
 
     await page.goto('/org')
     await page
-      .getByRole('button', { name: 'Excluir', exact: true })
+      .getByRole('button', { name: 'Excluir teamspace', exact: true })
       .first()
       .click()
     await expect(
       page.getByText('O 1 documento deste teamspace volta para a organização.'),
     ).toBeVisible()
     await page
-      .getByRole('button', { name: 'Excluir', exact: true })
+      .getByRole('button', { name: 'Excluir teamspace', exact: true })
       .last()
       .click()
     await expect(page.getByText('Teamspace excluído')).toBeVisible()
@@ -296,5 +296,47 @@ test.describe('organizations', () => {
 
     await ownerContext.close()
     await memberContext.close()
+  })
+
+  test('the organization logo shows in the switcher and on the invite link', async ({
+    page,
+  }) => {
+    await signUp(page, uniqueEmail('logo'), 'Logo Owner')
+    await createOrganization(page, 'Logo School')
+
+    const switcher = page.getByTestId('org-switcher')
+    const logoButton = page.getByTestId('org-icon-button')
+    const picker = page.getByRole('dialog', { name: 'Logo da organização' })
+
+    await expect(logoButton).toHaveAttribute('aria-label', 'Adicionar logo')
+
+    await logoButton.click()
+    await expect(picker).toBeVisible()
+    await picker.locator('[data-emoji="🌳"]').click()
+
+    await expect(picker).toBeHidden()
+    await expect(logoButton).toContainText('🌳')
+    await expect(switcher).toContainText('🌳')
+
+    await page.reload()
+    await expect(switcher).toContainText('🌳')
+    await expect(logoButton).toHaveAttribute('aria-label', 'Trocar o logo')
+
+    await page.getByRole('switch', { name: 'Link de convite' }).click()
+    await expect(page.getByText('Link de convite ativado')).toBeVisible()
+
+    const inviteUrl = await page.getByTestId('org-invite-link').inputValue()
+
+    await page.goto(inviteUrl)
+    await expect(page.getByTestId('join-organization')).toBeVisible()
+    await expect(page.getByText('🌳').first()).toBeVisible()
+
+    await page.goto('/org')
+    await logoButton.click()
+    await picker.getByRole('button', { name: 'Remover' }).click()
+
+    await expect(page.getByText('Logo removido')).toBeVisible()
+    await expect(logoButton).toContainText('L')
+    await expect(switcher).not.toContainText('🌳')
   })
 })

@@ -41,8 +41,8 @@ const publicClient = {
   token_endpoint_auth_method: 'none',
 }
 
-describe('registro dinâmico via better-auth', () => {
-  it('registra client público sem devolver client_secret e ligado ao resource do MCP', async () => {
+describe('dynamic registration through better-auth', () => {
+  it('registers a public client without returning a client_secret, bound to the MCP resource', async () => {
     const response = await register(publicClient)
     const body = (await response.json()) as Record<string, unknown>
 
@@ -53,7 +53,7 @@ describe('registro dinâmico via better-auth', () => {
     expect(body.scope).toBe('leaf:read leaf:write offline_access')
   })
 
-  it('recusa redirect http fora do loopback', async () => {
+  it('refuses an http redirect outside the loopback', async () => {
     const response = await register({
       ...publicClient,
       redirect_uris: ['http://exemplo.com/callback'],
@@ -75,7 +75,7 @@ describe('registro dinâmico via better-auth', () => {
     expect(body.error).toBe('invalid_client_metadata')
   })
 
-  it('publica o documento do authorization server com PKCE S256 e registro dinâmico', async () => {
+  it('publishes the authorization server document with PKCE S256 and dynamic registration', async () => {
     const response = await handler(
       new Request(`${authIssuer()}/.well-known/oauth-authorization-server`),
     )

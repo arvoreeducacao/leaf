@@ -57,7 +57,7 @@ const messages = buildNotionImportMessages(
   enUS.document.untitled,
 )
 
-const owner = { id: 'user-owner', email: 'owner@arvore.com.br' }
+const owner = { id: 'user-owner', email: 'owner@example.com' }
 
 async function runImport(
   data: Uint8Array,
@@ -145,11 +145,11 @@ describe('import of the Notion export', () => {
   it('writes the organization access across the whole imported tree', async () => {
     await db
       .insert(organizations)
-      .values({ id: 'org-arvore', name: 'Árvore School', createdAt: new Date() })
+      .values({ id: 'org-acme', name: 'Acme School', createdAt: new Date() })
 
     const { error } = await runImport(buildNotionFixtureZip(), {
       orgAccess: 'editor',
-      orgId: 'org-arvore',
+      orgId: 'org-acme',
     })
 
     expect(error).toBeNull()
@@ -164,7 +164,7 @@ describe('import of the Notion export', () => {
 
     expect(rows.length).toBeGreaterThan(1)
     expect(rows.every((row) => row.orgAccess === 'editor')).toBe(true)
-    expect(rows.every((row) => row.orgId === 'org-arvore')).toBe(true)
+    expect(rows.every((row) => row.orgId === 'org-acme')).toBe(true)
   })
 
   it('with no destination chosen the imported tree stays private', async () => {

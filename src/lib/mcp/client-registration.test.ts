@@ -9,8 +9,8 @@ const base = {
   token_endpoint_auth_method: 'none',
 }
 
-describe('registro dinâmico de clients', () => {
-  it('aceita client público com redirect https e força application_type web', () => {
+describe('dynamic client registration', () => {
+  it('accepts a public client with an https redirect and forces application_type web', () => {
     const decision = validateDynamicClientRegistration(base)
 
     expect(decision.ok).toBe(true)
@@ -21,7 +21,7 @@ describe('registro dinâmico de clients', () => {
     }
   })
 
-  it('aceita loopback http para clientes de linha de comando como native', () => {
+  it('accepts http loopback for command line clients as native', () => {
     const decision = validateDynamicClientRegistration({
       ...base,
       redirect_uris: ['http://localhost:6274/oauth/callback', 'http://127.0.0.1:8123/cb'],
@@ -34,7 +34,7 @@ describe('registro dinâmico de clients', () => {
     }
   })
 
-  it('recusa redirect http fora do loopback', () => {
+  it('refuses an http redirect outside the loopback', () => {
     const decision = validateDynamicClientRegistration({
       ...base,
       redirect_uris: ['http://exemplo.com/callback'],
@@ -43,7 +43,7 @@ describe('registro dinâmico de clients', () => {
     expect(decision).toMatchObject({ ok: false, error: 'invalid_redirect_uri' })
   })
 
-  it('recusa esquema customizado e mistura de https com loopback', () => {
+  it('refuses a custom scheme and mixing https with loopback', () => {
     expect(
       validateDynamicClientRegistration({
         ...base,
@@ -59,7 +59,7 @@ describe('registro dinâmico de clients', () => {
     ).toMatchObject({ ok: false, error: 'invalid_redirect_uri' })
   })
 
-  it('recusa client confidencial ou com client_secret', () => {
+  it('refuses a confidential client or one carrying a client_secret', () => {
     expect(
       validateDynamicClientRegistration({
         ...base,
@@ -72,7 +72,7 @@ describe('registro dinâmico de clients', () => {
     ).toMatchObject({ ok: false, error: 'invalid_client_metadata' })
   })
 
-  it('assume client público quando o método de autenticação é omitido', () => {
+  it('assumes a public client when the authentication method is omitted', () => {
     const { token_endpoint_auth_method: _omitted, ...withoutMethod } = base
     const decision = validateDynamicClientRegistration(withoutMethod)
 
@@ -83,7 +83,7 @@ describe('registro dinâmico de clients', () => {
     }
   })
 
-  it('recusa grants fora de authorization_code e refresh_token', () => {
+  it('refuses grants other than authorization_code and refresh_token', () => {
     expect(
       validateDynamicClientRegistration({
         ...base,
