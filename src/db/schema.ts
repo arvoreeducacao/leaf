@@ -100,6 +100,7 @@ export const verification = mysqlTable('verification', {
 export const organizations = mysqlTable('organizations', {
   id: varchar('id', { length: APP_ID }).primaryKey(),
   name: varchar('name', { length: 255 }).notNull(),
+  icon: varchar('icon', { length: 1024 }),
   inviteToken: varchar('invite_token', { length: 64 }).unique(),
   createdAt: datetime('created_at', { mode: 'date', fsp: 3 })
     .notNull()

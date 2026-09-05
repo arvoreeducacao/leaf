@@ -7,7 +7,7 @@ import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 
 import { LeafMark } from '@/components/app/leaf-mark'
-import { TeamIcon } from '@/components/icons'
+import { OrganizationMark } from '@/components/org/organization-mark'
 import { Button } from '@/components/ui/button'
 import { pendingJoinFlag } from '@/lib/join-link'
 import {
@@ -38,6 +38,7 @@ type InviteProps = Readonly<{
   token: string
   orgId: string
   orgName: string
+  orgIcon: string | null
   memberCount: number
   alreadyMember: boolean
 }>
@@ -46,6 +47,7 @@ export function JoinOrganizationCard({
   token,
   orgId,
   orgName,
+  orgIcon,
   memberCount,
   alreadyMember,
 }: InviteProps) {
@@ -79,10 +81,7 @@ export function JoinOrganizationCard({
     <JoinShell>
       <div className="flex flex-col gap-4 rounded-large border border-line bg-surface-card p-6">
         <div className="flex items-center gap-3">
-          <TeamIcon
-            aria-hidden="true"
-            className="size-8 shrink-0 text-brand"
-          />
+          <OrganizationMark icon={orgIcon} name={orgName} size="medium" />
           <div className="flex min-w-0 flex-col">
             <h1 className="font-bold text-content-strong text-heading-medium">
               {t('heading', { org: orgName })}
