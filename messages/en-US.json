@@ -599,6 +599,7 @@
     "slackSave": "Save",
     "slackConfigured": "Channel set. The address is kept on the server and never shown here.",
     "slackRemove": "Change channel",
+    "openInLeaf": "Open in Leaf",
     "webhookInvalid": "Invalid address. Use the Slack incoming webhook, which starts with https://hooks.slack.com/services/",
     "presentationSection": "Presentation",
     "headline": "Form title",
