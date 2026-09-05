@@ -234,7 +234,7 @@ function NavContent({
 
       <nav
         aria-label={t('documents')}
-        className="mt-4 flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto overscroll-contain px-2 pb-2"
+        className="relative mt-4 flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto overscroll-contain px-2 pb-2"
       >
         {customizing ? (
           <CustomizeSidebar
