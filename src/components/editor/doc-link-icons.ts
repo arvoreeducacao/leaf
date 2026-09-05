@@ -70,3 +70,18 @@ export function documentLinkIconRules(
 
   return rules.length > 0 ? `${rules}${iconResets}` : ''
 }
+
+const rowBox = 'display:block;padding:0.2em 0.3em;margin:0 -0.3em;'
+
+export function documentLinkRowRules(
+  blockIds: ReadonlyArray<string>,
+): string {
+  return blockIds
+    .filter((blockId) => idPattern.test(blockId))
+    .map((blockId) => {
+      const line = `.leaf-editor .bn-block-outer[data-id="${blockId}"]>.bn-block>.bn-block-content>.bn-inline-content`
+
+      return `${line}{flex:1;}${line}>a{${rowBox}}`
+    })
+    .join('')
+}
