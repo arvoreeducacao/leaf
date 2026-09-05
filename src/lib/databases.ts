@@ -125,7 +125,7 @@ export async function listDatabaseRows(
     .orderBy(asc(documents.createdAt), asc(documents.id))
     .limit(MAX_DATABASE_ROWS)
 
-  return rows.map((document) => toDatabaseRow(document))
+  return rows.map(toDatabaseRow)
 }
 
 export async function listRowPreviews(
@@ -180,7 +180,7 @@ export async function listDatabaseTemplates(
     )
     .orderBy(asc(documents.createdAt), asc(documents.id))
 
-  return rows.map((document) => toDatabaseRow(document))
+  return rows.map(toDatabaseRow)
 }
 
 export async function listDatabasePeople(
