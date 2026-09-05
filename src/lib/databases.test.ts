@@ -358,13 +358,10 @@ describe('duplicating a database', () => {
   })
 })
 
-
 describe('the view each person is looking at', () => {
   const mine = serializeViewConfig({
-    groupByPropertyId: null,
+    ...emptyViewConfig,
     filters: [{ propertyId: 'prop-status', operator: 'is', value: 'todo' }],
-    sorts: [],
-    hiddenPropertyIds: [],
   })
 
   beforeEach(async () => {
