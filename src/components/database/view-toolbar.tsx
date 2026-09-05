@@ -26,7 +26,6 @@ import {
 } from '@/components/ui/dropdown-menu'
 import type {
   DatabaseProperty,
-  DatabasePropertyType,
   DatabaseView,
   DatabaseViewType,
 } from '@/db/schema'
@@ -34,7 +33,6 @@ import type { Person } from '@/lib/database/people'
 import {
   MAX_FILTERS,
   MAX_SORTS,
-  TITLE_PROPERTY_ID,
   type ViewConfig,
   isGroupableType,
   operatorsFor,
@@ -43,7 +41,17 @@ import { cn } from '@/shared/utils'
 
 import { FieldSelect } from './field-select'
 import { PropertyIcon } from './property-icon'
+import { PropertyPicker } from './property-picker'
 import { ViewSearch } from './view-search'
+
+function UnsavedDot() {
+  return (
+    <span
+      aria-hidden="true"
+      className="absolute top-0.5 right-0.5 size-1.5 rounded-circular bg-warn"
+    />
+  )
+}
 
 const viewIcon: Record<DatabaseViewType, typeof MapGridIcon> = {
   table: MapGridIcon,
@@ -65,6 +73,8 @@ type Props = Readonly<{
   onCreateRow: () => void
   onSearchChange: (value: string) => void
   search: string
+  filtersChanged: boolean
+  sortsChanged: boolean
   people: ReadonlyArray<Person>
   compact?: boolean
 }>
@@ -84,6 +94,8 @@ export function ViewToolbar({
   onCreateRow,
   onSearchChange,
   search,
+  filtersChanged,
+  sortsChanged,
   people,
   compact = false,
 }: Props) {
@@ -91,22 +103,10 @@ export function ViewToolbar({
   const [renaming, setRenaming] = useState<string | null>(null)
   const activeView = views.find((view) => view.id === activeViewId)
 
-  const columnTargets = [
-    { value: TITLE_PROPERTY_ID, label: t('titleColumn') },
-    ...properties.map((property) => ({
-      value: property.id,
-      label: property.name,
-    })),
-  ]
-
   const hidden = new Set(config.hiddenPropertyIds)
 
   function propertyOf(propertyId: string) {
     return properties.find((property) => property.id === propertyId) ?? null
-  }
-
-  function typeOf(propertyId: string): DatabasePropertyType {
-    return propertyOf(propertyId)?.type ?? 'text'
   }
 
   function addFilter(propertyId: string) {
@@ -269,66 +269,53 @@ export function ViewToolbar({
           />
         ) : null}
 
+        <PropertyPicker
+          disabled={config.filters.length >= MAX_FILTERS}
+          onPick={addFilter}
+          placeholder={t('searchProperty')}
+          properties={properties}
+          titleLabel={t('titleColumn')}
+        >
+          <ButtonIcon
+            aria-label={t('filtersActive', { count: config.filters.length })}
+            className="relative"
+            size="medium"
+            variant="ghost"
+          >
+            <FilterIcon
+              aria-hidden="true"
+              className={config.filters.length > 0 ? 'text-brand' : undefined}
+            />
+            {filtersChanged ? <UnsavedDot /> : null}
+          </ButtonIcon>
+        </PropertyPicker>
+
+        <PropertyPicker
+          disabled={config.sorts.length >= MAX_SORTS}
+          onPick={addSort}
+          placeholder={t('sortByProperty')}
+          properties={properties}
+          titleLabel={t('titleColumn')}
+        >
+          <ButtonIcon
+            aria-label={t('sortsActive', { count: config.sorts.length })}
+            className="relative"
+            size="medium"
+            variant="ghost"
+          >
+            <ListReorderIcon
+              aria-hidden="true"
+              className={config.sorts.length > 0 ? 'text-brand' : undefined}
+            />
+            {sortsChanged ? <UnsavedDot /> : null}
+          </ButtonIcon>
+        </PropertyPicker>
+
         <ViewSearch
-          clearLabel={t('clearSearch')}
           onChange={onSearchChange}
           placeholder={t('searchRows')}
           value={search}
         />
-
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <ButtonIcon
-              aria-label={t('filtersActive', { count: config.filters.length })}
-              size="medium"
-              variant={config.filters.length > 0 ? 'filter-active' : 'ghost'}
-            >
-              <FilterIcon aria-hidden="true" />
-            </ButtonIcon>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>{t('addFilter')}</DropdownMenuLabel>
-            {columnTargets.map((target) => (
-              <DropdownMenuItem
-                disabled={config.filters.length >= MAX_FILTERS}
-                key={target.value}
-                onSelect={() => addFilter(target.value)}
-              >
-                {target.value === TITLE_PROPERTY_ID ? null : (
-                  <PropertyIcon type={typeOf(target.value)} />
-                )}
-                {target.label}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <ButtonIcon
-              aria-label={t('sortsActive', { count: config.sorts.length })}
-              size="medium"
-              variant={config.sorts.length > 0 ? 'filter-active' : 'ghost'}
-            >
-              <ListReorderIcon aria-hidden="true" />
-            </ButtonIcon>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>{t('addSort')}</DropdownMenuLabel>
-            {columnTargets.map((target) => (
-              <DropdownMenuItem
-                disabled={config.sorts.length >= MAX_SORTS}
-                key={target.value}
-                onSelect={() => addSort(target.value)}
-              >
-                {target.value === TITLE_PROPERTY_ID ? null : (
-                  <PropertyIcon type={typeOf(target.value)} />
-                )}
-                {target.label}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

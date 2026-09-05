@@ -7,16 +7,10 @@ import {
   ArrowDownIcon,
   ArrowUpIcon,
   CancelIcon,
+  CaretDownIcon,
 } from '@/components/icons'
 import { Button } from '@/components/ui/button'
 import { ButtonIcon } from '@/components/ui/button-icon'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import {
   Popover,
   PopoverContent,
@@ -28,7 +22,6 @@ import { parseUniqueIdConfig } from '@/lib/database/unique-id'
 import { valueToText } from '@/lib/database/values'
 import {
   MAX_FILTERS,
-  MAX_SORTS,
   TITLE_PROPERTY_ID,
   type ViewConfig,
   type ViewFilter,
@@ -41,6 +34,7 @@ import { cn } from '@/shared/utils'
 import { FieldSelect } from './field-select'
 import { FilterValueInput } from './filter-value-input'
 import { PropertyIcon } from './property-icon'
+import { PropertyPicker } from './property-picker'
 
 type Props = Readonly<{
   config: ViewConfig
@@ -48,14 +42,29 @@ type Props = Readonly<{
   people: ReadonlyArray<Person>
   canEdit: boolean
   hasDraft: boolean
+  filtersChanged: boolean
+  sortsChanged: boolean
   onConfigChange: (config: ViewConfig) => void
   onReset: () => void
   onPublish: () => void
   compact?: boolean
 }>
 
-const chipClass =
-  'flex h-9 cursor-pointer items-center gap-1.5 rounded-large border border-line-strong bg-surface-card px-2 font-medium text-body-small text-content-strong transition-colors tablet:h-7 hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-1'
+const chipBase =
+  'relative flex h-9 max-w-full cursor-pointer items-center gap-1.5 rounded-medium px-1.5 text-body-small transition-colors tablet:h-7 focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-1'
+
+function capitalize(value: string): string {
+  return value.charAt(0).toLocaleUpperCase() + value.slice(1)
+}
+
+function UnsavedDot() {
+  return (
+    <span
+      aria-hidden="true"
+      className="-top-0.5 -right-0.5 absolute size-1.5 rounded-circular bg-warn"
+    />
+  )
+}
 
 export function ViewFilterBar({
   config,
@@ -63,6 +72,8 @@ export function ViewFilterBar({
   people,
   canEdit,
   hasDraft,
+  filtersChanged,
+  sortsChanged,
   onConfigChange,
   onReset,
   onPublish,
@@ -71,11 +82,7 @@ export function ViewFilterBar({
   const t = useTranslations('database')
   const locale = useLocale()
 
-  if (
-    config.filters.length === 0 &&
-    config.sorts.length === 0 &&
-    !hasDraft
-  ) {
+  if (config.filters.length === 0 && config.sorts.length === 0 && !hasDraft) {
     return null
   }
 
@@ -92,7 +99,7 @@ export function ViewFilterBar({
   function describe(filter: ViewFilter): string {
     const property = propertyOf(filter.propertyId)
     const name = nameOf(filter.propertyId)
-    const operator = t(`operator_${filter.operator}`)
+    const operator = capitalize(t(`operator_${filter.operator}`))
 
     if (!operatorNeedsValue(filter.operator)) {
       return `${name}: ${operator}`
@@ -110,9 +117,7 @@ export function ViewFilterBar({
         ? filter.value
         : ''
 
-    return text.trim().length === 0
-      ? name
-      : `${name}: ${operator} ${text}`
+    return text.trim().length === 0 ? name : `${name}: ${operator} ${text}`
   }
 
   function updateFilter(index: number, next: ViewFilter) {
@@ -178,7 +183,13 @@ export function ViewFilterBar({
       {config.sorts.map((sort, index) => (
         <Popover key={`sort-${sort.propertyId}-${index}`}>
           <PopoverTrigger asChild>
-            <button className={chipClass} type="button">
+            <button
+              className={cn(
+                chipBase,
+                'bg-brand-surface text-content-strong hover:bg-brand-surface-strong',
+              )}
+              type="button"
+            >
               {sort.direction === 'asc' ? (
                 <ArrowUpIcon aria-hidden="true" className="size-3.5 shrink-0" />
               ) : (
@@ -187,16 +198,26 @@ export function ViewFilterBar({
                   className="size-3.5 shrink-0"
                 />
               )}
-              <span className="max-w-48 truncate">
+              <span className="max-w-52 truncate">
                 {nameOf(sort.propertyId)}
               </span>
+              <CaretDownIcon
+                aria-hidden="true"
+                className="size-3 shrink-0 text-content-subtle"
+              />
+              {sortsChanged ? <UnsavedDot /> : null}
             </button>
           </PopoverTrigger>
-          <PopoverContent align="start" className="flex w-72 items-center gap-1 p-2">
+          <PopoverContent
+            align="start"
+            className="flex w-72 items-center gap-1 p-2"
+          >
             <FieldSelect
               className="flex-1"
               label={t('sorts')}
-              onChange={(value) => updateSort(index, { ...sort, propertyId: value })}
+              onChange={(value) =>
+                updateSort(index, { ...sort, propertyId: value })
+              }
               options={filterTargets}
               value={sort.propertyId}
             />
@@ -234,18 +255,32 @@ export function ViewFilterBar({
             : property
               ? operatorsFor(property.type)
               : operatorsFor('text')
+        const settled =
+          !operatorNeedsValue(filter.operator) ||
+          describe(filter) !== nameOf(filter.propertyId)
 
         return (
           <Popover key={`filter-${filter.propertyId}-${index}`}>
             <PopoverTrigger asChild>
-              <button className={chipClass} type="button">
-                {property ? (
-                  <PropertyIcon
-                    className="size-3.5 shrink-0 text-content-subtle"
-                    type={property.type}
-                  />
-                ) : null}
+              <button
+                className={cn(
+                  chipBase,
+                  settled
+                    ? 'bg-brand-surface text-content-strong hover:bg-brand-surface-strong'
+                    : 'text-content hover:bg-surface-hover',
+                )}
+                type="button"
+              >
+                <PropertyIcon
+                  className="size-3.5 shrink-0 text-content-subtle"
+                  type={property?.type ?? 'text'}
+                />
                 <span className="max-w-64 truncate">{describe(filter)}</span>
+                <CaretDownIcon
+                  aria-hidden="true"
+                  className="size-3 shrink-0 text-content-subtle"
+                />
+                {filtersChanged ? <UnsavedDot /> : null}
               </button>
             </PopoverTrigger>
             <PopoverContent align="start" className="w-[22rem] p-2">
@@ -312,46 +347,26 @@ export function ViewFilterBar({
         )
       })}
 
-      {config.filters.length < MAX_FILTERS ? (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              className="h-9 font-regular text-content tablet:h-7"
-              size="sm"
-              variant="ghost"
-            >
-              <AddIcon aria-hidden="true" />
-              {t('addFilter')}
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start">
-            <DropdownMenuLabel>{t('filters')}</DropdownMenuLabel>
-            <DropdownMenuItem onSelect={() => addFilter(TITLE_PROPERTY_ID)}>
-              {t('titleColumn')}
-            </DropdownMenuItem>
-            {properties.map((property) => (
-              <DropdownMenuItem
-                key={property.id}
-                onSelect={() => addFilter(property.id)}
-              >
-                <PropertyIcon type={property.type} />
-                {property.name}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      ) : null}
-
-      {config.sorts.length >= MAX_SORTS ? (
-        <span className="text-caption text-content-subtle">
-          {t('sortsFull')}
-        </span>
-      ) : null}
+      <PropertyPicker
+        disabled={config.filters.length >= MAX_FILTERS}
+        onPick={addFilter}
+        placeholder={t('searchProperty')}
+        properties={properties}
+        titleLabel={t('titleColumn')}
+      >
+        <button
+          className={cn(chipBase, 'text-content-subtle hover:bg-surface-hover')}
+          type="button"
+        >
+          <AddIcon aria-hidden="true" className="size-3.5 shrink-0" />
+          {t('addFilterShort')}
+        </button>
+      </PropertyPicker>
 
       {hasDraft ? (
         <div className="ml-auto flex items-center gap-1">
           <Button
-            className="h-9 font-regular text-content tablet:h-7"
+            className="h-9 font-regular text-content-subtle tablet:h-7 hover:text-content-strong"
             onClick={onReset}
             size="sm"
             variant="ghost"
@@ -359,7 +374,12 @@ export function ViewFilterBar({
             {t('resetView')}
           </Button>
           {canEdit ? (
-            <Button className="h-9 tablet:h-7" onClick={onPublish} size="sm">
+            <Button
+              className="h-9 border-transparent bg-warn-surface text-warn tablet:h-7 hover:bg-warn-surface-strong"
+              onClick={onPublish}
+              size="sm"
+              variant="secondary"
+            >
               {t('saveViewForEveryone')}
             </Button>
           ) : null}

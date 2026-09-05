@@ -142,6 +142,13 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
     draftConfig !== undefined &&
     serializeViewConfig(draftConfig) !== serializeViewConfig(savedConfig)
 
+  const filtersChanged =
+    hasDraft &&
+    JSON.stringify(config.filters) !== JSON.stringify(savedConfig.filters)
+
+  const sortsChanged =
+    hasDraft && JSON.stringify(config.sorts) !== JSON.stringify(savedConfig.sorts)
+
   function persistDraft(viewId: string, next: ViewConfig | null) {
     if (!snapshot.viewerId) {
       return
@@ -613,6 +620,7 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
         onCreateView={createView}
         onDeleteView={deleteView}
         onRenameView={renameView}
+        filtersChanged={filtersChanged}
         onSearchChange={setSearch}
         onSelectView={setActiveViewId}
         groupPropertyId={
@@ -621,6 +629,7 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
         people={snapshot.people}
         properties={properties}
         search={search}
+        sortsChanged={sortsChanged}
         views={views}
       />
 
@@ -628,12 +637,14 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
         canEdit={canEdit}
         compact={compact}
         config={config}
+        filtersChanged={filtersChanged}
         hasDraft={hasDraft}
         onConfigChange={changeConfig}
         onPublish={publishView}
         onReset={resetView}
         people={snapshot.people}
         properties={properties}
+        sortsChanged={sortsChanged}
       />
 
       {rows.length === 0 ? (
