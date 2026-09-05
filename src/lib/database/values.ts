@@ -39,6 +39,7 @@ export type SelectOption = Readonly<{
   name: string
   color: OptionColor
   group?: StatusGroup
+  image?: string | null
 }>
 
 export type PropertyValue =

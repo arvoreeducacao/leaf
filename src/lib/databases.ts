@@ -199,6 +199,7 @@ export async function listDatabasePeople(
     id: member.userId,
     name: member.name,
     email: insider ? member.email : '',
+    image: member.image,
   }))
 }
 

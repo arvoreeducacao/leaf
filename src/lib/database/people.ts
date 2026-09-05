@@ -6,6 +6,7 @@ export type Person = Readonly<{
   id: string
   name: string
   email: string
+  image?: string | null
 }>
 
 export const MAX_PEOPLE_VALUES = 20
@@ -17,6 +18,7 @@ export function personOptions(
     id: person.id,
     name: person.name,
     color: colorForIndex(index),
+    image: person.image ?? null,
   }))
 }
 
