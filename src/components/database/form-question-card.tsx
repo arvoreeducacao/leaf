@@ -210,7 +210,7 @@ function AnswerPreview({
   }
 
   if (type === 'select' || type === 'multiSelect' || type === 'status') {
-    const options = parseOptions(property?.options)
+    const options = parseOptions(property?.options ?? null)
     const multiple = type === 'multiSelect'
 
     return (
