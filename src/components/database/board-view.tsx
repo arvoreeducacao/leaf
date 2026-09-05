@@ -1,19 +1,17 @@
 'use client'
 
-import { useLocale, useTranslations } from 'next-intl'
+import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { useState } from 'react'
 
 import { AddIcon } from '@/components/icons'
 import type { DatabaseProperty } from '@/db/schema'
-import { type Person, optionsFor } from '@/lib/database/people'
-import { parseUniqueIdConfig } from '@/lib/database/unique-id'
-import { valueOf, valueToText } from '@/lib/database/values'
+import type { Person } from '@/lib/database/people'
 import type { BoardGroup, DatabaseRow } from '@/lib/database/views'
 import { isMultiValueType } from '@/lib/database/views'
 import { cn } from '@/shared/utils'
 
-import { PropertyIcon } from './property-icon'
+import { CardProperties } from './card-properties'
 import { RowContextMenu, RowMenu } from './row-menu'
 import type { RowMoveTarget } from './row-menu'
 import { OptionChip, PersonChip } from './select-editor'
@@ -37,7 +35,6 @@ export function BoardView({
   people,
 }: Props) {
   const t = useTranslations('database')
-  const locale = useLocale()
   const [dragging, setDragging] = useState<{
     rowId: string
     fromGroupId: string | null
@@ -154,7 +151,6 @@ export function BoardView({
                     <BoardCard
                       canEdit={canEdit}
                       handlers={handlers}
-                      locale={locale}
                       moveTargets={moveTargets}
                       onDragEnd={() => {
                         setDragging(null)
@@ -203,7 +199,6 @@ function BoardCard({
   moveTargets,
   canEdit,
   sortable,
-  locale,
   handlers,
   people,
   onMove,
@@ -215,7 +210,6 @@ function BoardCard({
   moveTargets: ReadonlyArray<RowMoveTarget> | undefined
   canEdit: boolean
   sortable: boolean
-  locale: string
   handlers: DatabaseHandlers
   people: ReadonlyArray<Person>
   onMove: (groupId: string | null) => void
@@ -261,52 +255,7 @@ function BoardCard({
           />
         </div>
 
-        <dl className="flex flex-col gap-1">
-          {properties.map((property) => {
-            const options = optionsFor(property, people)
-            const value = valueOf(row.values, property, options)
-            const text = valueToText(
-              value,
-              property.type,
-              options,
-              locale,
-              parseUniqueIdConfig(property.options).prefix,
-            )
-
-            if (text.length === 0) {
-              return null
-            }
-
-            return (
-              <div className="flex items-center gap-2" key={property.id}>
-                <dt className="flex shrink-0 items-center gap-1 text-caption text-content-subtle">
-                  <PropertyIcon className="size-3.5" type={property.type} />
-                  <span className="sr-only">{property.name}</span>
-                </dt>
-                <dd className="min-w-0 flex-1 truncate text-caption text-content">
-                  {property.type === 'select' ||
-                  property.type === 'multiSelect' ||
-                  property.type === 'status' ||
-                  property.type === 'person'
-                    ? (Array.isArray(value) ? value : [value]).map((id) => {
-                        const option = options.find((item) => item.id === id)
-
-                        if (!option) {
-                          return null
-                        }
-
-                        return property.type === 'person' ? (
-                          <PersonChip key={option.id} option={option} />
-                        ) : (
-                          <OptionChip key={option.id} option={option} />
-                        )
-                      })
-                    : text}
-                </dd>
-              </div>
-            )
-          })}
-        </dl>
+        <CardProperties people={people} properties={properties} row={row} />
 
       </article>
     </RowContextMenu>

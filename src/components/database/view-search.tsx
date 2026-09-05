@@ -2,8 +2,9 @@
 
 import { useEffect, useRef, useState } from 'react'
 
-import { SearchIcon } from '@/components/icons'
 import { ButtonIcon } from '@/components/ui/button-icon'
+
+import { CloseIcon, SearchIcon } from './icons'
 
 type Props = Readonly<{
   value: string
@@ -21,10 +22,16 @@ export function ViewSearch({ value, placeholder, onChange }: Props) {
     }
   }, [open])
 
+  function close() {
+    onChange('')
+    setOpen(false)
+  }
+
   if (!open && value.length === 0) {
     return (
       <ButtonIcon
         aria-label={placeholder}
+        className="relative size-9 rounded-large p-1.5 tablet:size-7"
         onClick={() => setOpen(true)}
         size="medium"
         variant="ghost"
@@ -35,14 +42,14 @@ export function ViewSearch({ value, placeholder, onChange }: Props) {
   }
 
   return (
-    <span className="flex h-9 items-center gap-1.5 pl-1.5 tablet:h-7">
+    <span className="flex h-9 items-center gap-1.5 rounded-large px-1.5 tablet:h-7">
       <SearchIcon
         aria-hidden="true"
         className="size-4 shrink-0 text-content-subtle"
       />
       <input
         aria-label={placeholder}
-        className="h-full w-40 min-w-0 bg-transparent text-body-small text-content-strong outline-none placeholder:text-content-subtle"
+        className="h-full w-40 min-w-0 bg-transparent text-body-small text-content-strong outline-none placeholder:text-content-tertiary"
         onBlur={() => {
           if (value.length === 0) {
             setOpen(false)
@@ -51,8 +58,7 @@ export function ViewSearch({ value, placeholder, onChange }: Props) {
         onChange={(event) => onChange(event.target.value)}
         onKeyDown={(event) => {
           if (event.key === 'Escape') {
-            onChange('')
-            setOpen(false)
+            close()
           }
         }}
         placeholder={placeholder}
@@ -60,6 +66,15 @@ export function ViewSearch({ value, placeholder, onChange }: Props) {
         type="text"
         value={value}
       />
+      <ButtonIcon
+        aria-label={placeholder}
+        className="size-5 rounded-medium p-0.5 [&_svg]:size-3.5"
+        onClick={close}
+        size="small"
+        variant="ghost"
+      >
+        <CloseIcon aria-hidden="true" />
+      </ButtonIcon>
     </span>
   )
 }

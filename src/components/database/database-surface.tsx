@@ -1,4 +1,5 @@
 import { getTranslations } from 'next-intl/server'
+import { Suspense } from 'react'
 
 import { getSession } from '@/lib/auth'
 import { loadDatabase } from '@/lib/databases'
@@ -29,5 +30,9 @@ export async function DatabaseSurface({
     )
   }
 
-  return <DatabaseView canEdit={canEdit} compact={compact} snapshot={snapshot} />
+  return (
+    <Suspense>
+      <DatabaseView canEdit={canEdit} compact={compact} snapshot={snapshot} />
+    </Suspense>
+  )
 }

@@ -4,6 +4,8 @@ import { useTranslations } from 'next-intl'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 
+import { useSearchParams } from 'next/navigation'
+
 import type {
   DatabaseProperty,
   DatabasePropertyType,
@@ -36,6 +38,7 @@ import {
   serializeUniqueIdConfig,
 } from '@/lib/database/unique-id'
 import { parseOptions, serializeOptions } from '@/lib/database/values'
+import { calendarPropertiesOf } from '@/lib/database/calendar'
 import {
   type ViewConfig,
   applyFilters,
@@ -51,8 +54,12 @@ import type { DatabaseSnapshot } from '@/lib/databases'
 import { cn } from '@/shared/utils'
 
 import { BoardView } from './board-view'
+import { CalendarView } from './calendar-view'
 import { FormEditor } from './form-editor'
+import { GalleryView } from './gallery-view'
+import { ListView } from './list-view'
 import { TableView } from './table-view'
+import { TimelineView } from './timeline-view'
 import type { DatabaseHandlers } from './types'
 import { ViewFilterBar } from './view-filter-bar'
 import { ViewToolbar } from './view-toolbar'
@@ -83,10 +90,16 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
   const [properties, setProperties] = useState(snapshot.properties)
   const [views, setViews] = useState(snapshot.views)
   const [rows, setRows] = useState(snapshot.rows)
+  const params = useSearchParams()
+  const requestedViewId = params.get('v')
   const [notifyingViewIds, setNotifyingViewIds] = useState(
     () => new Set(snapshot.notifyingViewIds),
   )
-  const [activeViewId, setActiveViewId] = useState(snapshot.views[0]?.id ?? '')
+  const [activeViewId, setActiveViewId] = useState(
+    snapshot.views.find((view) => view.id === requestedViewId)?.id ??
+      snapshot.views[0]?.id ??
+      '',
+  )
   const [saved, setSaved] = useState<Record<string, ViewConfig>>(() =>
     Object.fromEntries(
       snapshot.views.map((view) => [view.id, parseViewConfig(view.config)]),
@@ -238,6 +251,65 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
     })
 
     persistDraft(viewId, null)
+  }
+
+  function changeLayout(type: DatabaseViewType) {
+    if (!activeView || activeView.type === type) {
+      return
+    }
+
+    const viewId = activeView.id
+
+    setViews((current) =>
+      current.map((view) => (view.id === viewId ? { ...view, type } : view)),
+    )
+
+    void guard(() => updateDatabaseView(viewId, { type }))
+  }
+
+  function publishAsNewView() {
+    if (!activeView || draftConfig === undefined) {
+      return
+    }
+
+    const source = activeView
+    const published = draftConfig
+
+    void (async () => {
+      try {
+        const result = await createDatabaseView(
+          snapshot.id,
+          source.type,
+          t('copyOfView', { name: source.name }),
+        )
+
+        if (!result.ok) {
+          toast.error(result.error)
+
+          return
+        }
+
+        await updateDatabaseView(result.id, { config: published })
+
+        const view: DatabaseView = {
+          id: result.id,
+          databaseId: snapshot.id,
+          name: t('copyOfView', { name: source.name }),
+          type: source.type,
+          config: serializeViewConfig(published),
+          publicToken: null,
+          position: views.length,
+          createdAt: new Date(),
+        }
+
+        setViews((current) => [...current, view])
+        setSaved((current) => ({ ...current, [view.id]: published }))
+        setActiveViewId(view.id)
+        resetView()
+      } catch {
+        fail()
+      }
+    })()
   }
 
   function publishView() {
@@ -590,6 +662,11 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
     ? (properties.find((item) => item.id === groupProperty.id) ?? null)
     : null
 
+  const schedule = useMemo(
+    () => calendarPropertiesOf(properties, config),
+    [config, properties],
+  )
+
   const groups = useMemo(
     () =>
       groupRows(
@@ -643,22 +720,20 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
       )}
     >
       <ViewToolbar
-        activeViewId={activeView.id}
+        activeView={activeView}
         canEdit={canEdit}
         compact={compact}
         config={config}
+        databaseId={snapshot.id}
+        filtersChanged={filtersChanged}
+        onChangeLayout={changeLayout}
         onConfigChange={changeConfig}
         onCreateRow={() => handlers.createRow()}
         onCreateView={createView}
         onDeleteView={deleteView}
         onRenameView={renameView}
-        filtersChanged={filtersChanged}
         onSearchChange={setSearch}
         onSelectView={setActiveViewId}
-        groupPropertyId={
-          activeView.type === 'board' ? (resolvedGroupProperty?.id ?? null) : null
-        }
-        people={snapshot.people}
         properties={properties}
         search={search}
         sortsChanged={sortsChanged}
@@ -674,6 +749,7 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
           hasDraft={hasDraft}
           onConfigChange={changeConfig}
           onPublish={publishView}
+          onPublishAsNewView={publishAsNewView}
           onReset={resetView}
           people={snapshot.people}
           properties={properties}
@@ -702,7 +778,9 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
           properties={properties}
           view={activeView}
         />
-      ) : activeView.type === 'board' ? (
+      ) : null}
+
+      {activeView.type === 'board' ? (
         <BoardView
           canEdit={canEdit}
           groupProperty={resolvedGroupProperty}
@@ -711,7 +789,56 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
           people={snapshot.people}
           properties={shown}
         />
-      ) : (
+      ) : null}
+
+      {activeView.type === 'gallery' ? (
+        <GalleryView
+          canEdit={canEdit}
+          compact={compact}
+          handlers={handlers}
+          people={snapshot.people}
+          properties={shown}
+          rows={filtered}
+          showPageIcon={config.showPageIcon}
+        />
+      ) : null}
+
+      {activeView.type === 'list' ? (
+        <ListView
+          canEdit={canEdit}
+          compact={compact}
+          handlers={handlers}
+          people={snapshot.people}
+          properties={shown}
+          rows={filtered}
+          showPageIcon={config.showPageIcon}
+        />
+      ) : null}
+
+      {activeView.type === 'calendar' ? (
+        <CalendarView
+          canEdit={canEdit}
+          compact={compact}
+          dateProperty={schedule.start}
+          handlers={handlers}
+          rows={filtered}
+          showPageIcon={config.showPageIcon}
+        />
+      ) : null}
+
+      {activeView.type === 'timeline' ? (
+        <TimelineView
+          canEdit={canEdit}
+          compact={compact}
+          endProperty={schedule.end}
+          handlers={handlers}
+          rows={filtered}
+          showPageIcon={config.showPageIcon}
+          startProperty={schedule.start}
+        />
+      ) : null}
+
+      {activeView.type === 'table' ? (
         <TableView
           canEdit={canEdit}
           compact={compact}
@@ -719,8 +846,11 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
           people={snapshot.people}
           properties={shown}
           rows={filtered}
+          showPageIcon={config.showPageIcon}
+          verticalLines={config.showVerticalLines}
+          wrap={config.wrapCells}
         />
-      )}
+      ) : null}
 
       {activeView.type !== 'form' &&
       filtered.length === 0 &&
