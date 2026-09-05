@@ -41,6 +41,7 @@ import {
 import { parseOptions, serializeOptions } from '@/lib/database/values'
 import { calendarPropertiesOf } from '@/lib/database/calendar'
 import {
+  DEFAULT_VIEW_ID,
   type ViewConfig,
   applyFilters,
   applySearch,
@@ -176,7 +177,7 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
     hasDraft && JSON.stringify(config.sorts) !== JSON.stringify(savedConfig.sorts)
 
   function persistDraft(viewId: string, next: ViewConfig | null) {
-    if (!snapshot.viewerId) {
+    if (!snapshot.viewerId || viewId === DEFAULT_VIEW_ID) {
       return
     }
 
@@ -272,7 +273,9 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
       current.map((view) => (view.id === viewId ? { ...view, type } : view)),
     )
 
-    void guard(() => updateDatabaseView(viewId, { type }))
+    if (viewId !== DEFAULT_VIEW_ID) {
+      void guard(() => updateDatabaseView(viewId, { type }))
+    }
   }
 
   function publishAsNewView() {
@@ -343,7 +346,9 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
       timers.delete(viewId)
     }
 
-    void guard(() => publishDatabaseViewDraft(viewId, published))
+    if (viewId !== DEFAULT_VIEW_ID) {
+      void guard(() => publishDatabaseViewDraft(viewId, published))
+    }
   }
 
   const handlers: DatabaseHandlers = {
@@ -619,7 +624,9 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
       ),
     )
 
-    void guard(() => updateDatabaseView(viewId, { name: trimmed }))
+    if (viewId !== DEFAULT_VIEW_ID) {
+      void guard(() => updateDatabaseView(viewId, { name: trimmed }))
+    }
   }
 
   function deleteView(viewId: string) {

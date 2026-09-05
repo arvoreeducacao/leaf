@@ -1,5 +1,6 @@
 import { and, asc, eq, inArray, isNull } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
+import { getTranslations } from 'next-intl/server'
 
 import { db } from '@/db'
 import {
@@ -14,6 +15,7 @@ import type { Person } from '@/lib/database/people'
 import type { DatabaseRow } from '@/lib/database/views'
 import {
   TITLE_PROPERTY_ID,
+  defaultTableView,
   parseViewConfig,
   serializeViewConfig,
 } from '@/lib/database/views'
@@ -204,6 +206,12 @@ export async function listDatabasePeople(
   }))
 }
 
+async function fallbackView(databaseId: string): Promise<DatabaseView> {
+  const t = await getTranslations('database')
+
+  return defaultTableView(databaseId, t('defaultTableView'))
+}
+
 export async function loadDatabase(
   databaseId: string,
   viewerId: string | null = null,
@@ -214,7 +222,8 @@ export async function loadDatabase(
     return null
   }
 
-  const views = await listDatabaseViews(databaseId)
+  const stored = await listDatabaseViews(databaseId)
+  const views = stored.length > 0 ? stored : [await fallbackView(databaseId)]
   const showsCards = views.some((view) => view.type === 'gallery')
 
   const [properties, rows, templates, people, slackLinks, previews] =
@@ -234,7 +243,7 @@ export async function loadDatabase(
     properties,
     views,
     drafts: await listViewDrafts(
-      views.map((view) => view.id),
+      stored.map((view) => view.id),
       viewerId,
     ),
     rows: rows.map((row) => ({
