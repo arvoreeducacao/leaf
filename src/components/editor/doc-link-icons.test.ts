@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   cssQuoted,
   documentLinkIconRules,
+  documentLinkRowRules,
 } from '@/components/editor/doc-link-icons'
 
 describe('cssQuoted', () => {
@@ -83,5 +84,25 @@ describe('documentLinkIconRules', () => {
         { id: '"] , body {display:none} a[x="', icon: '🕐', kind: 'page' },
       ]),
     ).toBe('')
+  })
+})
+
+describe('documentLinkRowRules', () => {
+  it('gives the line to the link so the whole row answers the mouse', () => {
+    const css = documentLinkRowRules(['b1'])
+
+    expect(css).toContain(
+      '.bn-block-outer[data-id="b1"]>.bn-block>.bn-block-content>.bn-inline-content{flex:1;}',
+    )
+    expect(css).toContain('.bn-inline-content>a{display:block;')
+  })
+
+  it('writes one rule per block, and nothing without a block', () => {
+    expect(documentLinkRowRules([])).toBe('')
+    expect(documentLinkRowRules(['b1', 'b2'])).toContain('data-id="b2"')
+  })
+
+  it('refuses a block id that would break out of the selector', () => {
+    expect(documentLinkRowRules(['"] , body {display:none} a[x="'])).toBe('')
   })
 })
