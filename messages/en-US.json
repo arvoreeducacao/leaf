@@ -474,7 +474,13 @@
     "deleteTemplate": "Delete",
     "templateMenu": "Template actions for {title}",
     "templateDeleted": "Template moved to trash",
-    "editingTemplate": "You are editing a template in"
+    "editingTemplate": "You are editing a template in",
+    "filterValuePlaceholder": "Type a value...",
+    "searchOption": "Search option...",
+    "clearFilterValue": "Clear selection",
+    "removeFilterValue": "Remove value",
+    "moreFilterActions": "More actions",
+    "noOptions": "No options"
   },
   "versions": {
     "menuItem": "Version history",

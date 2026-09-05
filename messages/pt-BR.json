@@ -474,7 +474,13 @@
     "deleteTemplate": "Excluir",
     "templateMenu": "Ações do modelo {title}",
     "templateDeleted": "Modelo movido para a lixeira",
-    "editingTemplate": "Você está editando um modelo em"
+    "editingTemplate": "Você está editando um modelo em",
+    "filterValuePlaceholder": "Digite um valor...",
+    "searchOption": "Buscar opção...",
+    "clearFilterValue": "Limpar seleção",
+    "removeFilterValue": "Remover valor",
+    "moreFilterActions": "Mais ações",
+    "noOptions": "Nenhuma opção"
   },
   "versions": {
     "menuItem": "Histórico de versões",

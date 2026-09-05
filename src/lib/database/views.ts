@@ -88,6 +88,25 @@ export function isMultiValueType(type: DatabasePropertyType): boolean {
   return type === 'multiSelect' || type === 'person'
 }
 
+export function isOptionFilterType(type: DatabasePropertyType): boolean {
+  return (
+    type === 'select' ||
+    type === 'multiSelect' ||
+    type === 'status' ||
+    type === 'person'
+  )
+}
+
+export function filterOptionIds(
+  value: PropertyValue,
+): ReadonlyArray<string> {
+  if (Array.isArray(value)) {
+    return value.filter((item): item is string => typeof item === 'string')
+  }
+
+  return typeof value === 'string' && value.length > 0 ? [value] : []
+}
+
 export function filterValueFor(
   type: DatabasePropertyType,
   value: PropertyValue,
@@ -413,11 +432,14 @@ function matchesFilter(
   }
 
   if (property.type === 'select' || property.type === 'status') {
+    const targets = filterOptionIds(filter.value)
+    const current = typeof value === 'string' ? value : ''
+
     if (filter.operator === 'isNot') {
-      return value !== filter.value
+      return !targets.includes(current)
     }
 
-    return value === filter.value
+    return targets.includes(current)
   }
 
   if (property.type === 'multiSelect' || property.type === 'person') {
@@ -427,13 +449,13 @@ function matchesFilter(
       return viewerId !== null && selected.includes(viewerId)
     }
 
-    const target = typeof filter.value === 'string' ? filter.value : ''
+    const targets = filterOptionIds(filter.value)
 
     if (filter.operator === 'notContains') {
-      return !selected.includes(target)
+      return targets.every((target) => !selected.includes(target))
     }
 
-    return selected.includes(target)
+    return targets.some((target) => selected.includes(target))
   }
 
   const haystack = valueToText(value, property.type, options).toLowerCase()

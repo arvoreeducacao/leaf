@@ -24,7 +24,9 @@ import {
   type ViewConfig,
   type ViewFilter,
   type ViewSort,
+  filterOptionIds,
   filterValueFor,
+  isOptionFilterType,
   operatorNeedsValue,
   operatorsFor,
 } from '@/lib/database/views'
@@ -35,9 +37,11 @@ import { FilterValueInput } from './filter-value-input'
 import {
   ChevronDownIcon,
   CloseIcon,
+  EllipsisIcon,
   PlusIcon,
   SortAscIcon,
   SortDescIcon,
+  TrashIcon,
 } from './icons'
 import { PropertyIcon } from './property-icon'
 import { PropertyPicker } from './property-picker'
@@ -96,6 +100,15 @@ export function ViewFilterBar({
       : (propertyOf(propertyId)?.name ?? t('titleColumn'))
   }
 
+  function namesOf(property: DatabaseProperty, value: ViewFilter['value']) {
+    const options = optionsFor(property, people)
+
+    return filterOptionIds(value)
+      .map((id) => options.find((option) => option.id === id)?.name ?? '')
+      .filter((name) => name.length > 0)
+      .join(', ')
+  }
+
   function describe(filter: ViewFilter): string {
     const property = propertyOf(filter.propertyId)
     const name = nameOf(filter.propertyId)
@@ -106,13 +119,15 @@ export function ViewFilterBar({
     }
 
     const text = property
-      ? valueToText(
-          filterValueFor(property.type, filter.value),
-          property.type,
-          optionsFor(property, people),
-          locale,
-          parseUniqueIdConfig(property.options).prefix,
-        )
+      ? isOptionFilterType(property.type)
+        ? namesOf(property, filter.value)
+        : valueToText(
+            filterValueFor(property.type, filter.value),
+            property.type,
+            optionsFor(property, people),
+            locale,
+            parseUniqueIdConfig(property.options).prefix,
+          )
       : typeof filter.value === 'string'
         ? filter.value
         : ''
@@ -281,12 +296,19 @@ export function ViewFilterBar({
                 ) : null}
               </button>
             </PopoverTrigger>
-            <PopoverContent align="start" className="w-[22rem] p-2">
-              <div className="flex items-center gap-1">
-                <FieldSelect
-                  className="flex-1"
-                  label={t('filters')}
-                  onChange={(value) => {
+            <PopoverContent
+              align="start"
+              className={cn(
+                'overflow-hidden p-0',
+                property && isOptionFilterType(property.type)
+                  ? 'w-65'
+                  : 'w-55',
+              )}
+              onOpenAutoFocus={(event) => event.preventDefault()}
+            >
+              <div className="flex items-start px-3 pt-2 pb-0.5 text-caption text-content-tertiary">
+                <PropertyPicker
+                  onPick={(value) => {
                     const next = propertyOf(value)
                     const allowed =
                       value === TITLE_PROPERTY_ID
@@ -301,45 +323,75 @@ export function ViewFilterBar({
                       value: null,
                     })
                   }}
-                  options={filterTargets}
-                  value={filter.propertyId}
-                />
-                <FieldSelect
-                  className="flex-1"
-                  label={t('filters')}
-                  onChange={(value) =>
-                    updateFilter(index, {
-                      ...filter,
-                      operator: value as ViewFilter['operator'],
-                      value: operatorNeedsValue(value as ViewFilter['operator'])
-                        ? filter.value
-                        : null,
-                    })
-                  }
-                  options={operators.map((operator) => ({
-                    value: operator,
-                    label: t(`operator_${operator}`),
-                  }))}
-                  value={filter.operator}
-                />
-                <ButtonIcon
-                  aria-label={t('removeFilter')}
-                  onClick={() => removeFilter(index)}
-                  size="medium"
-                  variant="ghost"
+                  placeholder={t('searchProperty')}
+                  properties={properties}
+                  titleLabel={t('titleColumn')}
                 >
-                  <CloseIcon aria-hidden="true" />
-                </ButtonIcon>
+                  <button
+                    className="min-w-0 cursor-pointer truncate rounded-medium px-0.5 transition-colors hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-focus"
+                    type="button"
+                  >
+                    {nameOf(filter.propertyId)}
+                  </button>
+                </PropertyPicker>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      className="mr-1 ml-0.5 flex shrink-0 cursor-pointer items-center gap-1 rounded-medium px-0.5 font-medium text-content transition-colors hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-focus"
+                      type="button"
+                    >
+                      {t(`operator_${filter.operator}`)}
+                      <ChevronDownIcon
+                        aria-hidden="true"
+                        className="size-3 shrink-0"
+                      />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-48">
+                    {operators.map((operator) => (
+                      <DropdownMenuItem
+                        key={operator}
+                        onSelect={() =>
+                          updateFilter(index, {
+                            ...filter,
+                            operator,
+                            value: operatorNeedsValue(operator)
+                              ? filter.value
+                              : null,
+                          })
+                        }
+                      >
+                        {capitalize(t(`operator_${operator}`))}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <span className="flex-1" />
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      aria-label={t('moreFilterActions')}
+                      className="flex size-5 shrink-0 cursor-pointer items-center justify-center rounded-medium text-content-subtle transition-colors hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-focus"
+                      type="button"
+                    >
+                      <EllipsisIcon aria-hidden="true" className="size-4" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onSelect={() => removeFilter(index)}>
+                      <TrashIcon aria-hidden="true" className="size-4" />
+                      {t('removeFilter')}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
-              <div className="mt-2">
-                <FilterValueInput
-                  onChange={(value) => updateFilter(index, { ...filter, value })}
-                  operator={filter.operator}
-                  people={people}
-                  property={property}
-                  value={filter.value}
-                />
-              </div>
+              <FilterValueInput
+                onChange={(value) => updateFilter(index, { ...filter, value })}
+                operator={filter.operator}
+                people={people}
+                property={property}
+                value={filter.value}
+              />
             </PopoverContent>
           </Popover>
         )
