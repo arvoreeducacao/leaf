@@ -1,3 +1,4 @@
+import { eq } from 'drizzle-orm'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('@/db', async () => {
@@ -413,5 +414,66 @@ describe('the view each person is looking at', () => {
     const snapshot = await loadDatabase('base', null)
 
     expect(snapshot?.drafts).toEqual({})
+  })
+})
+
+describe('the image of a gallery card', () => {
+  const photo = '/api/uploads/u/CRuoPm3ydFqFUkF8.bin'
+
+  const pageWithPhoto = JSON.stringify([
+    {
+      type: 'columnList',
+      children: [
+        {
+          type: 'column',
+          children: [{ type: 'image', props: { url: photo } }],
+        },
+      ],
+    },
+  ])
+
+  async function addGalleryView() {
+    await db.insert(databaseViews).values({
+      id: 'view-gallery',
+      databaseId: 'base',
+      name: 'Gallery',
+      type: 'gallery',
+      config: serializeViewConfig(emptyViewConfig),
+      position: 2,
+      createdAt: now,
+    })
+  }
+
+  function previewOf(snapshot: Awaited<ReturnType<typeof loadDatabase>>, id: string) {
+    return snapshot?.rows.find((row) => row.id === id)?.preview ?? null
+  }
+
+  it('falls back to the first image inside the page when there is no cover', async () => {
+    await addGalleryView()
+    await db
+      .update(documents)
+      .set({ content: pageWithPhoto })
+      .where(eq(documents.id, 'linha-1'))
+
+    expect(previewOf(await loadDatabase('base'), 'linha-1')).toBe(photo)
+  })
+
+  it('leaves the page image aside when the row already has a cover', async () => {
+    await addGalleryView()
+    await db
+      .update(documents)
+      .set({ content: pageWithPhoto, cover: 'gradient:yellow' })
+      .where(eq(documents.id, 'linha-1'))
+
+    expect(previewOf(await loadDatabase('base'), 'linha-1')).toBeNull()
+  })
+
+  it('does not go looking for images when no view shows cards', async () => {
+    await db
+      .update(documents)
+      .set({ content: pageWithPhoto })
+      .where(eq(documents.id, 'linha-1'))
+
+    expect(previewOf(await loadDatabase('base'), 'linha-1')).toBeNull()
   })
 })

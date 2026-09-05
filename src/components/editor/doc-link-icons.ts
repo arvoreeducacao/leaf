@@ -53,8 +53,12 @@ function ruleFor(target: LinkedDocumentIcon): string {
   return `${selector}::before{content:"";${maskFrame}-webkit-mask-image:url(${cssQuoted(glyphUrl(target.kind))});mask-image:url(${cssQuoted(glyphUrl(target.kind))});}`
 }
 
-const embedReset =
-  '.leaf-editor .leaf-database-block a[href]::before{content:none;}'
+export const docLinkPreviewClass = 'leaf-doc-link-preview'
+
+const iconResets = [
+  '.leaf-editor .leaf-database-block a[href]::before{content:none;}',
+  `.leaf-editor a.${docLinkPreviewClass}::before{content:none;}`,
+].join('')
 
 export function documentLinkIconRules(
   targets: ReadonlyArray<LinkedDocumentIcon>,
@@ -64,5 +68,5 @@ export function documentLinkIconRules(
     .map(ruleFor)
     .join('')
 
-  return rules.length > 0 ? `${rules}${embedReset}` : ''
+  return rules.length > 0 ? `${rules}${iconResets}` : ''
 }

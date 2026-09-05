@@ -713,7 +713,9 @@
     "saveOffline": "Salvo neste aparelho",
     "blockTurnInto": "Transformar em",
     "blockDuplicate": "Duplicar bloco",
-    "blockRemove": "Excluir bloco"
+    "blockRemove": "Excluir bloco",
+    "linkPreviewEmpty": "Página vazia",
+    "linkPreviewMissing": "Não foi possível abrir esta página"
   },
   "blocknote": {
     "placeholder": "Digite / para comandos",
