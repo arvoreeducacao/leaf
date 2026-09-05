@@ -55,6 +55,18 @@ function asRecord(value: unknown): Record<string, unknown> | null {
     : null
 }
 
+function encodeValue(value: unknown): string {
+  if (typeof value === 'string') {
+    return value
+  }
+
+  if (typeof value === 'number' || typeof value === 'boolean') {
+    return String(value)
+  }
+
+  return JSON.stringify(value)
+}
+
 export function encodeArguments(
   payload: Record<string, unknown>,
 ): URLSearchParams {
@@ -65,7 +77,7 @@ export function encodeArguments(
       continue
     }
 
-    body.set(key, typeof value === 'string' ? value : String(value))
+    body.set(key, encodeValue(value))
   }
 
   return body
