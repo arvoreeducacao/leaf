@@ -7,6 +7,7 @@ import { ActiveTrail } from '@/components/app/active-trail'
 import { DocumentBreadcrumb } from '@/components/app/document-breadcrumb'
 import { DocumentCover } from '@/components/app/document-cover'
 import { DocumentHeader } from '@/components/app/document-header'
+import { DocumentComments } from '@/components/comments/document-comments'
 import { DatabaseSurface } from '@/components/database/database-surface'
 import { RowPropertiesSurface } from '@/components/database/row-properties-surface'
 import { DocumentEditor } from '@/components/editor/document-editor'
@@ -14,7 +15,8 @@ import { isAiEnabled } from '@/lib/ai-config'
 import { authorNameOf } from '@/lib/author-name'
 import { getSession } from '@/lib/auth'
 import { canComment, canEdit, getDocumentAccess } from '@/lib/authz'
-import { countOpenComments } from '@/lib/comments'
+import { readCommentsState } from '@/lib/comments-access'
+import { relativeTimeAnchor } from '@/lib/comments-state'
 import { parseCoverCredit } from '@/lib/document-cover'
 import { documentIdsInContent } from '@/lib/document-links'
 import {
@@ -24,6 +26,7 @@ import {
 } from '@/lib/documents'
 import { authIssuer as appBaseUrl } from '@/lib/mcp-config'
 import { isRealtimeEnabled, realtimePort } from '@/lib/realtime-config'
+import { getDocumentSlackChannel } from '@/lib/slack/document-channel'
 import { getTeamspace } from '@/lib/teamspaces'
 import { isUnsplashEnabled } from '@/lib/unsplash'
 import { cn } from '@/shared/utils'
@@ -60,14 +63,18 @@ export default async function DocumentPage({ params }: Props) {
     notFound()
   }
 
-  const [crumbs, openComments, teamspace, linkedDocuments] = await Promise.all([
-    listAncestors(document.id),
-    countOpenComments(document.id),
-    document.teamspaceId ? getTeamspace(document.teamspaceId) : null,
-    listDocumentLinkTargets(
-      documentIdsInContent(document.content, appBaseUrl()),
-    ),
-  ])
+  const [crumbs, comments, slack, teamspace, linkedDocuments] =
+    await Promise.all([
+      listAncestors(document.id),
+      readCommentsState(document.id, access, session.user.id),
+      getDocumentSlackChannel(document.id),
+      document.teamspaceId ? getTeamspace(document.teamspaceId) : null,
+      listDocumentLinkTargets(
+        documentIdsInContent(document.content, appBaseUrl()),
+      ),
+    ])
+
+  const openComments = comments.openCount
 
   const scope: ActiveTrailScope = document.teamspaceId
     ? { id: document.teamspaceId, kind: 'teamspace' }
@@ -171,6 +178,19 @@ export default async function DocumentPage({ params }: Props) {
                     }
                   : null
               }
+            />
+            <DocumentComments
+              documentId={document.id}
+              initialState={comments}
+              renderedAt={relativeTimeAnchor()}
+              slack={slack}
+              viewer={{
+                id: session.user.id,
+                image: session.user.image ?? null,
+                name:
+                  authorNameOf(session.user.name, session.user.email) ??
+                  session.user.email,
+              }}
             />
           </>
         )}

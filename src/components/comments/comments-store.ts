@@ -4,7 +4,7 @@ import { useSyncExternalStore } from 'react'
 import { toast } from 'sonner'
 
 import { loadComments } from '@/lib/comment-actions'
-import type { CommentsState } from '@/lib/comment-actions'
+import type { CommentsState } from '@/lib/comments-state'
 
 type StoredComments = Readonly<{ documentId: string; state: CommentsState }>
 

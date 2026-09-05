@@ -544,7 +544,13 @@
     "anchorPending": "Comentando no trecho selecionado",
     "markerLabel": "{count, plural, one {# comentário neste trecho} other {# comentários neste trecho}}",
     "inlineTitle": "Comentários deste trecho",
-    "fromSlack": "do Slack"
+    "fromSlack": "do Slack",
+    "documentSectionLabel": "Comentários do documento",
+    "documentPlaceholder": "Adicionar um comentário...",
+    "openInSlack": "Abrir no Slack",
+    "goesToSlackThread": "A resposta também vai para a thread do canal.",
+    "sendComment": "Enviar comentário",
+    "documentNewLabel": "Comentar no documento"
   },
   "move": {
     "title": "Mover para outra página",
