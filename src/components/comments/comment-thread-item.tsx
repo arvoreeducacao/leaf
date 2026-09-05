@@ -8,6 +8,7 @@ import {
   EditIcon,
   ReplyIcon,
   RotateIcon,
+  SlackIcon,
   TargetIcon,
   TrashIcon,
   WarningIcon,
@@ -42,25 +43,35 @@ function Meta({
   formatExact,
   unknownAuthor,
   editedLabel,
+  slackLabel,
 }: Readonly<{
   comment: CommentReply
   formatWhen: (at: number) => string
   formatExact: (at: number) => string
   unknownAuthor: string
   editedLabel: string
+  slackLabel: string
 }>) {
+  const fromSlack = comment.origin === 'slack'
+
   return (
     <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-      {comment.authorId ? (
+      {comment.authorId || fromSlack ? (
         <UserAvatar
           image={comment.authorImage}
           name={comment.authorName ?? unknownAuthor}
-          userId={comment.authorId}
+          userId={comment.authorId ?? comment.id}
         />
       ) : null}
       <span className="font-bold text-body-small text-content-strong">
         {comment.authorName ?? unknownAuthor}
       </span>
+      {fromSlack ? (
+        <Badge variant="info">
+          <SlackIcon aria-hidden="true" />
+          {slackLabel}
+        </Badge>
+      ) : null}
       <span
         className="text-body-small text-content"
         title={formatExact(comment.createdAt)}
@@ -331,6 +342,7 @@ export function CommentThreadItem({
           editedLabel={t('edited')}
           formatExact={formatExact}
           formatWhen={formatWhen}
+          slackLabel={t('fromSlack')}
           unknownAuthor={t('unknownAuthor')}
         />
         {renderBody(thread)}
@@ -346,6 +358,7 @@ export function CommentThreadItem({
                 editedLabel={t('edited')}
                 formatExact={formatExact}
                 formatWhen={formatWhen}
+                slackLabel={t('fromSlack')}
                 unknownAuthor={t('unknownAuthor')}
               />
               {renderBody(reply)}

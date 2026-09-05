@@ -17,8 +17,9 @@ import {
   serializeViewConfig,
 } from '@/lib/database/views'
 import { parseValues, serializeValues } from '@/lib/database/values'
-import { listFormWebhookViewIds } from '@/lib/form-webhooks'
+import { type FormSlackLink, listFormSlackLinks } from '@/lib/form-webhooks'
 import { listOrganizationPeople } from '@/lib/organizations'
+import { isSlackBotConfigured } from '@/lib/slack/config'
 
 export const MAX_DATABASE_ROWS = 5_000
 
@@ -34,6 +35,8 @@ export type DatabaseSnapshot = Readonly<{
   people: Array<Person>
   viewerId: string | null
   notifyingViewIds: Array<string>
+  slackLinks: Array<FormSlackLink>
+  slackBotReady: boolean
 }>
 
 function toIso(value: Date | string): string {
@@ -177,14 +180,14 @@ export async function loadDatabase(
     return null
   }
 
-  const [properties, views, rows, templates, people, notifyingViewIds] =
+  const [properties, views, rows, templates, people, slackLinks] =
     await Promise.all([
       listDatabaseProperties(databaseId),
       listDatabaseViews(databaseId),
       listDatabaseRows(databaseId),
       listDatabaseTemplates(databaseId),
       listDatabasePeople(document.orgId, viewerId),
-      listFormWebhookViewIds(databaseId),
+      listFormSlackLinks(databaseId),
     ])
 
   return {
@@ -201,7 +204,9 @@ export async function loadDatabase(
     defaultTemplateId: document.defaultTemplateId,
     people,
     viewerId,
-    notifyingViewIds,
+    notifyingViewIds: slackLinks.map((link) => link.viewId),
+    slackLinks,
+    slackBotReady: isSlackBotConfigured(),
   }
 }
 

@@ -1,4 +1,5 @@
 import type { DatabaseProperty } from '@/db/schema'
+import { escapeSlackText } from '@/lib/slack/text'
 
 import {
   type FormConfig,
@@ -23,9 +24,11 @@ type PropertyLike = Pick<DatabaseProperty, 'id' | 'name' | 'type' | 'options'>
 function clamp(text: string): string {
   const trimmed = text.trim()
 
-  return trimmed.length > MAX_SLACK_ANSWER
-    ? `${trimmed.slice(0, MAX_SLACK_ANSWER)}…`
-    : trimmed
+  return escapeSlackText(
+    trimmed.length > MAX_SLACK_ANSWER
+      ? `${trimmed.slice(0, MAX_SLACK_ANSWER)}…`
+      : trimmed,
+  )
 }
 
 function answerOf(
@@ -57,7 +60,9 @@ function sections(
 ): Array<string> {
   const questions = resolveQuestions(config, properties, titleName)
   const byId = new Map(properties.map((property) => [property.id, property]))
-  const heading = title.trim().length > 0 ? title.trim() : titleName
+  const heading = escapeSlackText(
+    title.trim().length > 0 ? title.trim() : titleName,
+  )
   const parts = [`*${heading}*`]
 
   for (const question of questions) {
@@ -68,7 +73,7 @@ function sections(
     const answer = answerOf(question, values, byId.get(question.propertyId))
 
     if (answer.length > 0) {
-      parts.push(`*${question.name}*\n${answer}`)
+      parts.push(`*${escapeSlackText(question.name)}*\n${answer}`)
     }
   }
 
