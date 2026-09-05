@@ -4,7 +4,7 @@ import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 
-import { ArrowExpandIcon, DatabaseIcon } from '@/components/icons'
+import { DatabaseIcon, ExpandIcon } from '@/components/icons'
 import { Skeleton } from '@/components/ui/skeleton'
 import type { DatabaseSnapshot } from '@/lib/databases'
 
@@ -101,7 +101,7 @@ export default function DatabaseEmbed({ databaseId }: Props) {
           className="flex size-8 shrink-0 items-center justify-center rounded-large text-content transition-colors hover:bg-surface-hover hover:text-content-strong focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-2"
           href={`/doc/${databaseId}`}
         >
-          <ArrowExpandIcon aria-hidden="true" className="size-4" />
+          <ExpandIcon aria-hidden="true" className="size-4" />
         </Link>
       </div>
       <DatabaseView canEdit={state.canEdit} compact snapshot={state.snapshot} />
