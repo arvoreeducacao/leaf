@@ -48,6 +48,7 @@ import {
   visibleProperties,
 } from '@/lib/database/views'
 import type { DatabaseSnapshot } from '@/lib/databases'
+import type { FormSlackLink } from '@/lib/form-webhooks'
 import { cn } from '@/shared/utils'
 
 import { BoardView } from './board-view'
@@ -85,6 +86,10 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
   const [rows, setRows] = useState(snapshot.rows)
   const [notifyingViewIds, setNotifyingViewIds] = useState(
     () => new Set(snapshot.notifyingViewIds),
+  )
+  const [slackLinks, setSlackLinks] = useState<Record<string, FormSlackLink>>(
+    () =>
+      Object.fromEntries(snapshot.slackLinks.map((link) => [link.viewId, link])),
   )
   const [activeViewId, setActiveViewId] = useState(snapshot.views[0]?.id ?? '')
   const [saved, setSaved] = useState<Record<string, ViewConfig>>(() =>
@@ -627,6 +632,20 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
     })
   }
 
+  function changeSlackLink(viewId: string, link: FormSlackLink | null) {
+    setSlackLinks((current) => {
+      const next = { ...current }
+
+      if (link) {
+        next[viewId] = link
+      } else {
+        delete next[viewId]
+      }
+
+      return next
+    })
+  }
+
   function changeToken(viewId: string, token: string | null) {
     setViews((current) =>
       current.map((view) =>
@@ -698,8 +717,11 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
           onNotifyingChange={(notifying) =>
             changeNotifying(activeView.id, notifying)
           }
+          onSlackLinkChange={(link) => changeSlackLink(activeView.id, link)}
           onTokenChange={(token) => changeToken(activeView.id, token)}
           properties={properties}
+          slackBotReady={snapshot.slackBotReady}
+          slackLink={slackLinks[activeView.id] ?? null}
           view={activeView}
         />
       ) : activeView.type === 'board' ? (

@@ -70,6 +70,19 @@ describe('slackMessageFor', () => {
     empty: [],
   }
 
+  it('escapes what would break the message in Slack', () => {
+    const text = slackMessageFor(
+      config,
+      properties,
+      'a < b & c',
+      { ...values, desc: 'olhe <https://exemplo.test|aqui> & veja' },
+      'Nome',
+    )
+
+    expect(text).toContain('*a &lt; b &amp; c*')
+    expect(text).toContain('olhe &lt;https://exemplo.test|aqui&gt; &amp; veja')
+  })
+
   it('opens with the row title and names every answered question', () => {
     const text = slackMessageFor(
       config,

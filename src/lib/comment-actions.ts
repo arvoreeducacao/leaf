@@ -4,6 +4,7 @@ import { getTranslations } from 'next-intl/server'
 import { redirect } from 'next/navigation'
 
 import { getSession } from '@/lib/auth'
+import { authorNameOf } from '@/lib/author-name'
 import type { AccessLevel } from '@/lib/authz'
 import {
   canComment,
@@ -22,6 +23,7 @@ import {
   updateCommentBody,
 } from '@/lib/comments'
 import type { CommentThread } from '@/lib/comments'
+import { pushCommentToThread, reactOnComment } from '@/lib/slack/sync'
 
 export type CommentsState = Readonly<{
   threads: ReadonlyArray<CommentThread>
@@ -124,6 +126,13 @@ export async function addComment(
     return { ok: false, error: await message('commentNotFound') }
   }
 
+  await pushCommentToThread({
+    authorImage: guard.session.user.image ?? null,
+    authorName: authorNameOf(guard.session.user.name, guard.session.user.email),
+    body: normalizeCommentBody(body),
+    documentId,
+  })
+
   return readState(documentId, guard.access, guard.session.user.id)
 }
 
@@ -204,6 +213,14 @@ export async function resolveComment(
   }
 
   await setCommentResolved(commentId, resolved)
+
+  if (comment.externalId) {
+    await reactOnComment({
+      documentId,
+      externalId: comment.externalId,
+      resolved,
+    })
+  }
 
   return readState(documentId, guard.access, guard.session.user.id)
 }

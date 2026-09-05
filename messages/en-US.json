@@ -487,7 +487,8 @@
     "blockGone": "This comment's passage is no longer in the document.",
     "anchorPending": "Commenting on the selected passage",
     "markerLabel": "{count, plural, one {# comment on this passage} other {# comments on this passage}}",
-    "inlineTitle": "Comments on this passage"
+    "inlineTitle": "Comments on this passage",
+    "fromSlack": "from Slack"
   },
   "move": {
     "title": "Move to another page",
@@ -630,7 +631,16 @@
     "automation_presetValue": "Fixed value in",
     "automationLine_submittedAt": "{property} gets the submission date",
     "automationLine_submittedBy": "{property} gets whoever submitted",
-    "automationLine_presetValue": "{property} starts as"
+    "automationLine_presetValue": "{property} starts as",
+    "slackChannel": "Slack channel",
+    "slackChannelPlaceholder": "Paste the channel link or its ID (C01AB2CD3)",
+    "slackChannelConfigured": "Posting to #{channel}",
+    "slackPullThread": "Bring thread replies into the comments",
+    "slackPushComments": "Send comments from here to the thread",
+    "channelInvalid": "That channel was not recognised. Paste the channel link or its ID.",
+    "channelUnreachable": "Leaf cannot see that channel. Invite the app to it and try again.",
+    "slackOpenRow": "Open the response in Leaf",
+    "slackReplyHint": "Replying in this thread comments on the response."
   },
   "editor": {
     "readOnly": "Read-only",

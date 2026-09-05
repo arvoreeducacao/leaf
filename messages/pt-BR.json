@@ -487,7 +487,8 @@
     "blockGone": "O trecho deste comentário não está mais no documento.",
     "anchorPending": "Comentando no trecho selecionado",
     "markerLabel": "{count, plural, one {# comentário neste trecho} other {# comentários neste trecho}}",
-    "inlineTitle": "Comentários deste trecho"
+    "inlineTitle": "Comentários deste trecho",
+    "fromSlack": "do Slack"
   },
   "move": {
     "title": "Mover para outra página",
@@ -630,7 +631,16 @@
     "automation_presetValue": "Valor fixo em",
     "automationLine_submittedAt": "{property} recebe a data do envio",
     "automationLine_submittedBy": "{property} recebe quem enviou",
-    "automationLine_presetValue": "{property} começa com"
+    "automationLine_presetValue": "{property} começa com",
+    "slackChannel": "Canal do Slack",
+    "slackChannelPlaceholder": "Cole o link do canal ou o ID (C01AB2CD3)",
+    "slackChannelConfigured": "Enviando para #{channel}",
+    "slackPullThread": "Trazer as respostas da thread para os comentários",
+    "slackPushComments": "Mandar os comentários daqui para a thread",
+    "channelInvalid": "Não reconheci esse canal. Cole o link do canal ou o ID.",
+    "channelUnreachable": "O Leaf não consegue ver esse canal. Convide o app para ele e tente de novo.",
+    "slackOpenRow": "Abrir a resposta no Leaf",
+    "slackReplyHint": "Respondendo nesta thread você comenta na resposta."
   },
   "editor": {
     "readOnly": "Somente leitura",

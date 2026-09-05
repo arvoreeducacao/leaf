@@ -19,16 +19,17 @@ import { buildSubmission } from '@/lib/database/forms'
 import { serializeValues } from '@/lib/database/values'
 import { MAX_DATABASE_ROWS } from '@/lib/databases'
 import {
-  getFormWebhook,
   removeFormWebhook,
-  saveFormWebhook,
+  saveFormChannel,
+  saveFormWebhookUrl,
+  setFormThreadSync,
 } from '@/lib/form-webhooks'
 import { getFormByToken } from '@/lib/forms'
 import { indexDocument } from '@/lib/search-index'
+import { parseChannelRef, slackBotToken } from '@/lib/slack/config'
+import { announceSubmission, botClient } from '@/lib/slack/sync'
 
 const FORM_TOKEN_LENGTH = 24
-
-const SLACK_TIMEOUT_MS = 5_000
 
 export type FormActionResult = { ok: true } | { ok: false; error: string }
 
@@ -126,7 +127,54 @@ export async function setFormWebhook(
     }
   }
 
-  await saveFormWebhook(viewId, trimmed)
+  await saveFormWebhookUrl(viewId, trimmed)
+  revalidatePath(`/doc/${view.databaseId}`)
+
+  return { ok: true }
+}
+
+export async function setFormChannel(
+  viewId: string,
+  reference: string,
+): Promise<FormActionResult> {
+  const view = await editableFormView(viewId)
+
+  if (!view) {
+    return notAllowed()
+  }
+
+  const t = await getTranslations('form')
+  const channelId = parseChannelRef(reference)
+
+  if (!channelId || slackBotToken() === null) {
+    return { ok: false, error: t('channelInvalid') }
+  }
+
+  const client = botClient()
+  const channel = client ? await client.channelInfo(channelId) : null
+
+  if (!channel) {
+    return { ok: false, error: t('channelUnreachable') }
+  }
+
+  await saveFormChannel(viewId, channel.id, channel.name)
+  revalidatePath(`/doc/${view.databaseId}`)
+
+  return { ok: true }
+}
+
+export async function setFormThreadOptions(
+  viewId: string,
+  pullThread: boolean,
+  pushComments: boolean,
+): Promise<FormActionResult> {
+  const view = await editableFormView(viewId)
+
+  if (!view) {
+    return notAllowed()
+  }
+
+  await setFormThreadSync(viewId, pullThread, pushComments)
   revalidatePath(`/doc/${view.databaseId}`)
 
   return { ok: true }
@@ -145,28 +193,6 @@ export async function clearFormWebhook(
   revalidatePath(`/doc/${view.databaseId}`)
 
   return { ok: true }
-}
-
-async function announceOnSlack(
-  viewId: string,
-  text: string,
-): Promise<void> {
-  const url = await getFormWebhook(viewId)
-
-  if (!url || !isSlackWebhook(url)) {
-    return
-  }
-
-  try {
-    await fetch(url, {
-      body: JSON.stringify({ text }),
-      headers: { 'content-type': 'application/json' },
-      method: 'POST',
-      signal: AbortSignal.timeout(SLACK_TIMEOUT_MS),
-    })
-  } catch {
-    return
-  }
 }
 
 export async function submitForm(
@@ -246,16 +272,19 @@ export async function submitForm(
   await indexDocument(id)
 
   if (record.config.notify) {
-    await announceOnSlack(
-      record.view.id,
-      slackMessageFor(
+    await announceSubmission({
+      documentId: id,
+      openLabel: t('slackOpenRow'),
+      replyHint: t('slackReplyHint'),
+      text: slackMessageFor(
         record.config,
         record.properties,
         built.submission.title,
         built.submission.values,
         (await getTranslations('database'))('titleColumn'),
       ),
-    )
+      viewId: record.view.id,
+    })
   }
 
   revalidatePath(`/doc/${record.database.id}`)
