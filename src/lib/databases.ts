@@ -43,13 +43,20 @@ function toIso(value: Date | string): string {
 export function toDatabaseRow(
   document: Pick<
     Document,
-    'id' | 'title' | 'icon' | 'properties' | 'createdAt' | 'updatedAt'
+    | 'id'
+    | 'title'
+    | 'icon'
+    | 'cover'
+    | 'properties'
+    | 'createdAt'
+    | 'updatedAt'
   >,
 ): DatabaseRow {
   return {
     id: document.id,
     title: document.title,
     icon: document.icon,
+    cover: document.cover,
     values: parseValues(document.properties),
     createdAt: toIso(document.createdAt),
     updatedAt: toIso(document.updatedAt),
@@ -96,6 +103,7 @@ export async function listDatabaseRows(
       id: documents.id,
       title: documents.title,
       icon: documents.icon,
+      cover: documents.cover,
       properties: documents.properties,
       createdAt: documents.createdAt,
       updatedAt: documents.updatedAt,
@@ -122,6 +130,7 @@ export async function listDatabaseTemplates(
       id: documents.id,
       title: documents.title,
       icon: documents.icon,
+      cover: documents.cover,
       properties: documents.properties,
       createdAt: documents.createdAt,
       updatedAt: documents.updatedAt,
@@ -300,8 +309,15 @@ function remapConfig(
   }
 
   return serializeViewConfig({
+    ...config,
     groupByPropertyId: config.groupByPropertyId
       ? remap(config.groupByPropertyId)
+      : null,
+    datePropertyId: config.datePropertyId
+      ? remap(config.datePropertyId)
+      : null,
+    endDatePropertyId: config.endDatePropertyId
+      ? remap(config.endDatePropertyId)
       : null,
     filters: config.filters.map((filter) => ({
       ...filter,
@@ -384,6 +400,7 @@ export async function copyDatabaseInto(
       kind: documents.kind,
       title: documents.title,
       icon: documents.icon,
+      cover: documents.cover,
       content: documents.content,
       properties: documents.properties,
     })
@@ -432,6 +449,7 @@ export async function copyDatabaseInto(
       kind: row.kind,
       title: row.title,
       icon: row.icon,
+      cover: row.cover,
       content: row.content,
       properties: serializeValues(
         remapped as Parameters<typeof serializeValues>[0],

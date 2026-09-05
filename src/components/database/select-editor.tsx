@@ -19,7 +19,7 @@ import {
 } from '@/lib/database/values'
 import { cn } from '@/shared/utils'
 
-import { optionChipClass } from './option-colors'
+import { optionChipClass, optionDotClass } from './option-colors'
 
 export type EditorVariant = 'option' | 'person' | 'status'
 
@@ -56,6 +56,47 @@ export function PersonChip({
         </AvatarFallback>
       </Avatar>
       <span className="truncate text-content-strong">{option.name}</span>
+      {onRemove ? (
+        <button
+          aria-label={removeLabel}
+          className="-mr-1 flex size-4 shrink-0 cursor-pointer items-center justify-center rounded-circular transition-colors hover:bg-alpha-200 focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-1"
+          onClick={(event) => {
+            event.stopPropagation()
+            onRemove()
+          }}
+          type="button"
+        >
+          <CancelIcon aria-hidden="true" className="size-3" />
+        </button>
+      ) : null}
+    </span>
+  )
+}
+
+export function StatusChip({
+  option,
+  onRemove,
+  removeLabel,
+}: Readonly<{
+  option: SelectOption
+  onRemove?: () => void
+  removeLabel?: string
+}>) {
+  return (
+    <span
+      className={cn(
+        'inline-flex h-5 max-w-full shrink-0 items-center gap-1.5 rounded-medium px-1.5 font-regular text-body-small leading-5',
+        optionChipClass[option.color],
+      )}
+    >
+      <span
+        aria-hidden="true"
+        className={cn(
+          'size-1.5 shrink-0 rounded-circular',
+          optionDotClass[option.color],
+        )}
+      />
+      <span className="truncate">{option.name}</span>
       {onRemove ? (
         <button
           aria-label={removeLabel}
@@ -114,6 +155,7 @@ type Props = Readonly<{
   multiple: boolean
   readOnly: boolean
   compact?: boolean
+  wrap?: boolean
   variant?: EditorVariant
   creatable?: boolean
   emptyHint?: string
@@ -128,6 +170,7 @@ export function SelectEditor({
   multiple,
   readOnly,
   compact = false,
+  wrap = false,
   variant = 'option',
   creatable = true,
   emptyHint,
@@ -165,7 +208,12 @@ export function SelectEditor({
     (option) => option.name.toLowerCase() === trimmed.toLowerCase(),
   )
 
-  const Chip = variant === 'person' ? PersonChip : OptionChip
+  const Chip =
+    variant === 'person'
+      ? PersonChip
+      : variant === 'status'
+        ? StatusChip
+        : OptionChip
   const canCreate = creatable && trimmed.length > 0 && !exact
 
   function toggle(id: string) {
@@ -200,11 +248,15 @@ export function SelectEditor({
     toggle(option.id)
   }
 
+  const compactFrame = wrap
+    ? 'min-h-9 px-2 py-1.5 tablet:min-h-8'
+    : 'h-9 px-2 tablet:h-8'
+
   const summary = (
     <span
       className={cn(
         'flex min-w-0 flex-1 items-center gap-1',
-        compact ? 'overflow-hidden' : 'flex-wrap',
+        compact && !wrap ? 'overflow-hidden' : 'flex-wrap',
       )}
     >
       {chosen.length > 0 ? (
@@ -219,7 +271,9 @@ export function SelectEditor({
 
   if (readOnly) {
     return (
-      <span className={cn('flex min-w-0 items-center', compact && 'h-9 px-2 tablet:h-8')}>
+      <span
+        className={cn('flex min-w-0 items-center', compact && compactFrame)}
+      >
         {summary}
       </span>
     )
@@ -232,7 +286,7 @@ export function SelectEditor({
           aria-label={label}
           className={cn(
             'flex w-full min-w-0 cursor-pointer items-center rounded-medium text-left text-body-small transition-colors hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-focus focus-visible:-outline-offset-2',
-            compact ? 'h-9 px-2 tablet:h-8' : 'min-h-9 border border-line px-2 py-1',
+            compact ? compactFrame : 'min-h-9 border border-line px-2 py-1',
           )}
           type="button"
         >
@@ -340,7 +394,12 @@ function OptionRow({
   variant: EditorVariant
   onToggle: () => void
 }>) {
-  const Chip = variant === 'person' ? PersonChip : OptionChip
+  const Chip =
+    variant === 'person'
+      ? PersonChip
+      : variant === 'status'
+        ? StatusChip
+        : OptionChip
 
   return (
     <button

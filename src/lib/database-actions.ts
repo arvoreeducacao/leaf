@@ -572,6 +572,7 @@ export async function createDatabaseRow(
     kind: 'row',
     title: rowTitle,
     icon: template?.icon ?? null,
+    cover: template?.cover ?? null,
     content: template?.content ?? null,
     properties: serializeValues(values),
     createdAt: now,
@@ -592,6 +593,7 @@ export async function createDatabaseRow(
       id,
       title: rowTitle,
       icon: template?.icon ?? null,
+      cover: template?.cover ?? null,
       properties: serializeValues(values),
       createdAt: now,
       updatedAt: now,
@@ -910,7 +912,11 @@ export async function createDatabaseView(
 
 export async function updateDatabaseView(
   viewId: string,
-  changes: Readonly<{ name?: string; config?: ViewConfig }>,
+  changes: Readonly<{
+    name?: string
+    type?: DatabaseViewType
+    config?: ViewConfig
+  }>,
 ): Promise<DatabaseActionResult> {
   const view = await databaseIdOfView(viewId)
 
@@ -918,7 +924,15 @@ export async function updateDatabaseView(
     return notAllowed()
   }
 
-  const next: { name?: string; config?: string } = {}
+  const next: { name?: string; type?: DatabaseViewType; config?: string } = {}
+
+  if (changes.type !== undefined) {
+    if (!viewTypes.includes(changes.type)) {
+      return notAllowed()
+    }
+
+    next.type = changes.type
+  }
 
   if (changes.name !== undefined) {
     const trimmed = changes.name.trim().slice(0, MAX_PROPERTY_NAME)

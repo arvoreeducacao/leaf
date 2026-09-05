@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import { personOptions } from './people'
 import { serializeUniqueIdConfig } from './unique-id'
-import { serializeOptions } from './values'
+import { serializeOptions, valueToText } from './values'
 import {
   TITLE_PROPERTY_ID,
   type DatabaseRow,
@@ -12,6 +12,7 @@ import {
   applySorts,
   boardPropertyOf,
   emptyViewConfig,
+  filterValueFor,
   groupRows,
   operatorsFor,
   parseViewConfig,
@@ -60,6 +61,7 @@ function row(
     id,
     title,
     icon: null,
+    cover: null,
     values,
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
@@ -106,6 +108,11 @@ describe('view configuration', () => {
       filters: [{ propertyId: 'points', operator: 'greaterThan', value: 2 }],
       sorts: [{ propertyId: TITLE_PROPERTY_ID, direction: 'asc' }],
       hiddenPropertyIds: ['due'],
+      wrapCells: true,
+      datePropertyId: null,
+      endDatePropertyId: null,
+      showVerticalLines: true,
+      showPageIcon: true,
       form: null,
     }
 
@@ -533,5 +540,69 @@ describe('a filter that is still being set up', () => {
         properties,
       ).map((item) => item.id),
     ).toEqual(['a'])
+  })
+})
+
+describe('wrapping cells', () => {
+  it('wraps by default, the way a new view arrives', () => {
+    expect(parseViewConfig(null).wrapCells).toBe(true)
+    expect(parseViewConfig('{"filters":[]}').wrapCells).toBe(true)
+  })
+
+  it('keeps the choice of not wrapping across a round trip', () => {
+    const config: ViewConfig = { ...emptyViewConfig, wrapCells: false }
+
+    expect(parseViewConfig(serializeViewConfig(config)).wrapCells).toBe(false)
+  })
+})
+
+describe('the label of a filter on a multi value column', () => {
+  const cycles = {
+    id: 'cycles',
+    type: 'multiSelect' as const,
+    options: serializeOptions([
+      { id: 'c1', name: '2026-05', color: 'purple' },
+      { id: 'c2', name: '2026-06', color: 'blue' },
+    ]),
+  }
+
+  const options = [
+    { id: 'c1', name: '2026-05', color: 'purple' as const },
+    { id: 'c2', name: '2026-06', color: 'blue' as const },
+  ]
+
+  it('reads the single option the filter editor writes', () => {
+    expect(
+      valueToText(filterValueFor(cycles.type, 'c1'), cycles.type, options),
+    ).toBe('2026-05')
+  })
+
+  it('still reads a list of options', () => {
+    expect(
+      valueToText(
+        filterValueFor(cycles.type, ['c1', 'c2']),
+        cycles.type,
+        options,
+      ),
+    ).toBe('2026-05, 2026-06')
+  })
+
+  it('leaves a column that holds one value alone', () => {
+    expect(filterValueFor('select', 'c1')).toBe('c1')
+  })
+
+  it('filters by that same single option', () => {
+    const list = [
+      row('x', 'X', { cycles: ['c1'] }),
+      row('y', 'Y', { cycles: ['c2'] }),
+    ]
+
+    expect(
+      applyFilters(
+        list,
+        [{ propertyId: 'cycles', operator: 'contains', value: 'c1' }],
+        [cycles],
+      ).map((item) => item.id),
+    ).toEqual(['x'])
   })
 })
