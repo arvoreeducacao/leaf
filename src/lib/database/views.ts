@@ -1,6 +1,7 @@
 import type {
   DatabaseProperty,
   DatabasePropertyType,
+  DatabaseView,
   DatabaseViewType,
 } from '@/db/schema'
 
@@ -22,6 +23,8 @@ import {
 } from './values'
 
 export const TITLE_PROPERTY_ID = 'title'
+
+export const DEFAULT_VIEW_ID = 'default'
 
 export const viewTypes: ReadonlyArray<DatabaseViewType> = [
   'table',
@@ -131,6 +134,22 @@ export const emptyViewConfig: ViewConfig = {
   showVerticalLines: true,
   showPageIcon: true,
   form: null,
+}
+
+export function defaultTableView(
+  databaseId: string,
+  name: string,
+): DatabaseView {
+  return {
+    id: DEFAULT_VIEW_ID,
+    databaseId,
+    name,
+    type: 'table',
+    config: serializeViewConfig(emptyViewConfig),
+    publicToken: null,
+    position: 0,
+    createdAt: new Date(0),
+  }
 }
 
 export type DatabaseRow = Readonly<{

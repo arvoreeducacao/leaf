@@ -7,6 +7,11 @@ vi.mock('@/db', async () => {
   return createTestDb()
 })
 
+vi.mock('next-intl/server', () => ({
+  getTranslations: async () => (key: string) =>
+    key === 'defaultTableView' ? 'Table' : key,
+}))
+
 import { db } from '@/db'
 import {
   databaseProperties,
@@ -21,6 +26,7 @@ import { getDocumentAccess } from '@/lib/authz'
 import { serializeOptions, serializeValues } from '@/lib/database/values'
 import { emptyFormConfig } from '@/lib/database/forms'
 import {
+  DEFAULT_VIEW_ID,
   emptyViewConfig,
   parseViewConfig,
   serializeViewConfig,
@@ -475,5 +481,81 @@ describe('the image of a gallery card', () => {
       .where(eq(documents.id, 'linha-1'))
 
     expect(previewOf(await loadDatabase('base'), 'linha-1')).toBeNull()
+  })
+})
+
+describe('a database without a saved view', () => {
+  beforeEach(async () => {
+    await db.insert(documents).values([
+      {
+        id: 'imported',
+        ownerId: owner.id,
+        kind: 'database',
+        title: 'Repositories',
+        createdAt: now,
+        updatedAt: now,
+      },
+      {
+        id: 'imported-row-1',
+        ownerId: owner.id,
+        parentId: 'imported',
+        kind: 'row',
+        title: 'Gama',
+        createdAt: at(1),
+        updatedAt: at(1),
+      },
+      {
+        id: 'imported-row-2',
+        ownerId: owner.id,
+        parentId: 'imported',
+        kind: 'row',
+        title: 'Delta',
+        createdAt: at(2),
+        updatedAt: at(2),
+      },
+    ])
+  })
+
+  it('falls back to a single table view', async () => {
+    const snapshot = await loadDatabase('imported')
+
+    expect(snapshot?.views).toHaveLength(1)
+    expect(snapshot?.views[0].id).toBe(DEFAULT_VIEW_ID)
+    expect(snapshot?.views[0].type).toBe('table')
+    expect(snapshot?.views[0].databaseId).toBe('imported')
+  })
+
+  it('lists the rows under the fallback view', async () => {
+    const snapshot = await loadDatabase('imported')
+
+    expect(snapshot?.rows.map((row) => row.title)).toEqual(['Gama', 'Delta'])
+  })
+
+  it('gives the fallback view an empty config', async () => {
+    const snapshot = await loadDatabase('imported')
+
+    expect(parseViewConfig(snapshot?.views[0].config ?? null)).toEqual(
+      emptyViewConfig,
+    )
+  })
+
+  it('does not write the fallback view to the database', async () => {
+    await loadDatabase('imported')
+
+    const stored = await db
+      .select()
+      .from(databaseViews)
+      .where(eq(databaseViews.databaseId, 'imported'))
+
+    expect(stored).toHaveLength(0)
+  })
+
+  it('keeps the saved views of a database that has them', async () => {
+    const snapshot = await loadDatabase('base')
+
+    expect(snapshot?.views.map((view) => view.id)).toEqual([
+      'view-1',
+      'view-form',
+    ])
   })
 })
