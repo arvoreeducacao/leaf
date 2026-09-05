@@ -6,6 +6,11 @@ import type {
 
 import { parseUniqueIdConfig, toUniqueIdNumber } from './unique-id'
 import {
+  type FormConfig,
+  parseFormConfig,
+  serializeFormConfig,
+} from './forms'
+import {
   type PropertyValue,
   type PropertyValues,
   type SelectOption,
@@ -18,7 +23,11 @@ import {
 
 export const TITLE_PROPERTY_ID = 'title'
 
-export const viewTypes: ReadonlyArray<DatabaseViewType> = ['table', 'board']
+export const viewTypes: ReadonlyArray<DatabaseViewType> = [
+  'table',
+  'board',
+  'form',
+]
 
 export const MAX_FILTERS = 10
 export const MAX_SORTS = 5
@@ -92,6 +101,7 @@ export type ViewConfig = Readonly<{
   filters: ReadonlyArray<ViewFilter>
   sorts: ReadonlyArray<ViewSort>
   hiddenPropertyIds: ReadonlyArray<string>
+  form: FormConfig | null
 }>
 
 export const emptyViewConfig: ViewConfig = {
@@ -99,6 +109,7 @@ export const emptyViewConfig: ViewConfig = {
   filters: [],
   sorts: [],
   hiddenPropertyIds: [],
+  form: null,
 }
 
 export type DatabaseRow = Readonly<{
@@ -182,6 +193,7 @@ export function parseViewConfig(raw: string | null): ViewConfig {
     filters,
     sorts,
     hiddenPropertyIds: asStringArray(source.hiddenPropertyIds),
+    form: parseFormConfig(source.form),
   }
 }
 
@@ -191,6 +203,7 @@ export function serializeViewConfig(config: ViewConfig): string {
     filters: config.filters.slice(0, MAX_FILTERS),
     sorts: config.sorts.slice(0, MAX_SORTS),
     hiddenPropertyIds: config.hiddenPropertyIds,
+    form: config.form ? serializeFormConfig(config.form) : null,
   })
 }
 

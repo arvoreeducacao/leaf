@@ -20,7 +20,7 @@ import {
   serializeValues,
 } from '@/lib/database/values'
 import type { SelectOption } from '@/lib/database/values'
-import { serializeViewConfig } from '@/lib/database/views'
+import { emptyViewConfig, serializeViewConfig } from '@/lib/database/views'
 import { MAX_DATABASE_ROWS } from '@/lib/databases'
 import { markdownToBlocks } from '@/lib/markdown/convert'
 import { sanitizeBlocks } from '@/lib/markdown/sanitize'
@@ -601,10 +601,7 @@ export async function* importNotionPlan(
     }> = [
       {
         config: serializeViewConfig({
-          filters: [],
-          groupByPropertyId: null,
-          hiddenPropertyIds: [],
-          sorts: [],
+          ...emptyViewConfig,
         }),
         id: nanoid(12),
         name: messages.csvView,
@@ -620,10 +617,8 @@ export async function* importNotionPlan(
     if (statusIndex >= 0) {
       views.push({
         config: serializeViewConfig({
-          filters: [],
+          ...emptyViewConfig,
           groupByPropertyId: propertyIds[statusIndex],
-          hiddenPropertyIds: [],
-          sorts: [],
         }),
         id: nanoid(12),
         name: messages.boardView,
@@ -721,12 +716,7 @@ export async function* importNotionPlan(
       databaseId,
       name: messages.csvView,
       type: 'table',
-      config: serializeViewConfig({
-        groupByPropertyId: null,
-        filters: [],
-        sorts: [],
-        hiddenPropertyIds: [],
-      }),
+      config: serializeViewConfig(emptyViewConfig),
       position: 0,
       createdAt: stamp,
     })

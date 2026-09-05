@@ -22,7 +22,7 @@ import {
   serializeValues,
 } from '@/lib/database/values'
 import type { SelectOption } from '@/lib/database/values'
-import { serializeViewConfig } from '@/lib/database/views'
+import { emptyViewConfig, serializeViewConfig } from '@/lib/database/views'
 import { notionIconValue } from '@/lib/document-icon'
 import { sanitizeBlocks } from '@/lib/markdown/sanitize'
 import type {
@@ -511,10 +511,7 @@ export async function* syncNotion(
       }> = [
         {
           config: serializeViewConfig({
-            filters: [],
-            groupByPropertyId: null,
-            hiddenPropertyIds: [],
-            sorts: [],
+            ...emptyViewConfig,
           }),
           id: nanoid(12),
           name: messages.csvView,
@@ -529,10 +526,8 @@ export async function* syncNotion(
       if (statusIndex >= 0) {
         views.push({
           config: serializeViewConfig({
-            filters: [],
+            ...emptyViewConfig,
             groupByPropertyId: values[statusIndex].id,
-            hiddenPropertyIds: [],
-            sorts: [],
           }),
           id: nanoid(12),
           name: messages.boardView,
