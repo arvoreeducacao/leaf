@@ -37,6 +37,7 @@ import {
   serializeUniqueIdConfig,
 } from '@/lib/database/unique-id'
 import { parseOptions, serializeOptions } from '@/lib/database/values'
+import { calendarPropertiesOf } from '@/lib/database/calendar'
 import {
   type ViewConfig,
   applyFilters,
@@ -52,7 +53,11 @@ import type { DatabaseSnapshot } from '@/lib/databases'
 import { cn } from '@/shared/utils'
 
 import { BoardView } from './board-view'
+import { CalendarView } from './calendar-view'
+import { GalleryView } from './gallery-view'
+import { ListView } from './list-view'
 import { TableView } from './table-view'
+import { TimelineView } from './timeline-view'
 import type { DatabaseHandlers } from './types'
 import { ViewFilterBar } from './view-filter-bar'
 import { ViewToolbar } from './view-toolbar'
@@ -650,6 +655,11 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
     ? (properties.find((item) => item.id === groupProperty.id) ?? null)
     : null
 
+  const schedule = useMemo(
+    () => calendarPropertiesOf(properties, config),
+    [config, properties],
+  )
+
   const groups = useMemo(
     () =>
       groupRows(
@@ -728,7 +738,56 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
           people={snapshot.people}
           properties={shown}
         />
-      ) : (
+      ) : null}
+
+      {activeView.type === 'gallery' ? (
+        <GalleryView
+          canEdit={canEdit}
+          compact={compact}
+          handlers={handlers}
+          people={snapshot.people}
+          properties={shown}
+          rows={filtered}
+          showPageIcon={config.showPageIcon}
+        />
+      ) : null}
+
+      {activeView.type === 'list' ? (
+        <ListView
+          canEdit={canEdit}
+          compact={compact}
+          handlers={handlers}
+          people={snapshot.people}
+          properties={shown}
+          rows={filtered}
+          showPageIcon={config.showPageIcon}
+        />
+      ) : null}
+
+      {activeView.type === 'calendar' ? (
+        <CalendarView
+          canEdit={canEdit}
+          compact={compact}
+          dateProperty={schedule.start}
+          handlers={handlers}
+          rows={filtered}
+          showPageIcon={config.showPageIcon}
+        />
+      ) : null}
+
+      {activeView.type === 'timeline' ? (
+        <TimelineView
+          canEdit={canEdit}
+          compact={compact}
+          endProperty={schedule.end}
+          handlers={handlers}
+          rows={filtered}
+          showPageIcon={config.showPageIcon}
+          startProperty={schedule.start}
+        />
+      ) : null}
+
+      {activeView.type === 'table' ? (
         <TableView
           canEdit={canEdit}
           compact={compact}
@@ -736,9 +795,11 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
           people={snapshot.people}
           properties={shown}
           rows={filtered}
+          showPageIcon={config.showPageIcon}
+          verticalLines={config.showVerticalLines}
           wrap={config.wrapCells}
         />
-      )}
+      ) : null}
 
       {filtered.length === 0 && rows.length > 0 ? (
         <p className={cn('py-3 text-body-small text-content', gutter)}>

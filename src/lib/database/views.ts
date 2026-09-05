@@ -18,7 +18,14 @@ import {
 
 export const TITLE_PROPERTY_ID = 'title'
 
-export const viewTypes: ReadonlyArray<DatabaseViewType> = ['table', 'board']
+export const viewTypes: ReadonlyArray<DatabaseViewType> = [
+  'table',
+  'board',
+  'gallery',
+  'list',
+  'calendar',
+  'timeline',
+]
 
 export const MAX_FILTERS = 10
 export const MAX_SORTS = 5
@@ -96,24 +103,33 @@ export type ViewSort = Readonly<{
 
 export type ViewConfig = Readonly<{
   groupByPropertyId: string | null
+  datePropertyId: string | null
+  endDatePropertyId: string | null
   filters: ReadonlyArray<ViewFilter>
   sorts: ReadonlyArray<ViewSort>
   hiddenPropertyIds: ReadonlyArray<string>
   wrapCells: boolean
+  showVerticalLines: boolean
+  showPageIcon: boolean
 }>
 
 export const emptyViewConfig: ViewConfig = {
   groupByPropertyId: null,
+  datePropertyId: null,
+  endDatePropertyId: null,
   filters: [],
   sorts: [],
   hiddenPropertyIds: [],
   wrapCells: true,
+  showVerticalLines: true,
+  showPageIcon: true,
 }
 
 export type DatabaseRow = Readonly<{
   id: string
   title: string
   icon: string | null
+  cover: string | null
   values: PropertyValues
   createdAt: string
   updatedAt: string
@@ -188,10 +204,18 @@ export function parseViewConfig(raw: string | null): ViewConfig {
       typeof source.groupByPropertyId === 'string'
         ? source.groupByPropertyId
         : null,
+    datePropertyId:
+      typeof source.datePropertyId === 'string' ? source.datePropertyId : null,
+    endDatePropertyId:
+      typeof source.endDatePropertyId === 'string'
+        ? source.endDatePropertyId
+        : null,
     filters,
     sorts,
     hiddenPropertyIds: asStringArray(source.hiddenPropertyIds),
     wrapCells: source.wrapCells !== false,
+    showVerticalLines: source.showVerticalLines !== false,
+    showPageIcon: source.showPageIcon !== false,
   }
 }
 
@@ -200,8 +224,12 @@ export function serializeViewConfig(config: ViewConfig): string {
     groupByPropertyId: config.groupByPropertyId,
     filters: config.filters.slice(0, MAX_FILTERS),
     sorts: config.sorts.slice(0, MAX_SORTS),
+    datePropertyId: config.datePropertyId,
+    endDatePropertyId: config.endDatePropertyId,
     hiddenPropertyIds: config.hiddenPropertyIds,
     wrapCells: config.wrapCells,
+    showVerticalLines: config.showVerticalLines,
+    showPageIcon: config.showPageIcon,
   })
 }
 

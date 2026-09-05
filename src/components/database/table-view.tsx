@@ -25,12 +25,14 @@ type Props = Readonly<{
   properties: ReadonlyArray<DatabaseProperty>
   canEdit: boolean
   wrap: boolean
+  verticalLines: boolean
+  showPageIcon: boolean
   handlers: DatabaseHandlers
   people: ReadonlyArray<Person>
   compact?: boolean
 }>
 
-const cellFrame = 'border-line-divider border-r border-b p-0'
+const cellFrame = 'border-line-divider border-b p-0'
 
 function RowTitle({
   rowId,
@@ -100,13 +102,20 @@ export function TableView({
   properties,
   canEdit,
   wrap,
+  verticalLines,
+  showPageIcon,
   handlers,
   people,
   compact = false,
 }: Props) {
   const t = useTranslations('database')
   const gutter = compact ? '' : 'pl-4 tablet:pl-24'
-  const bodyCell = cn(cellFrame, wrap ? 'align-top' : 'align-middle')
+  const columnLine = verticalLines ? 'border-line-divider border-r' : ''
+  const bodyCell = cn(
+    cellFrame,
+    columnLine,
+    wrap ? 'align-top' : 'align-middle',
+  )
   const bodyFrame = wrap ? 'min-h-9 items-start py-1.5' : 'h-9 items-center'
 
   return (
@@ -117,7 +126,7 @@ export function TableView({
             <thead>
               <tr>
                 <th
-                  className={cn(cellFrame, 'w-70 border-t-0 border-l-0')}
+                  className={cn(cellFrame, columnLine, 'w-70 border-t-0')}
                   scope="col"
                 >
                   <div className="flex h-9 w-70 min-w-0 items-center gap-1.5 px-2 font-regular text-content-subtle">
@@ -130,7 +139,7 @@ export function TableView({
                 </th>
                 {properties.map((property) => (
                   <th
-                    className={cn(cellFrame, 'w-50')}
+                    className={cn(cellFrame, columnLine, 'w-50')}
                     key={property.id}
                     scope="col"
                   >
@@ -182,22 +191,24 @@ export function TableView({
                     <th
                       className={cn(
                         bodyCell,
-                        'relative border-l-0 text-left font-regular transition-colors group-hover/row:bg-surface-hover',
+                        'relative text-left font-regular transition-colors group-hover/row:bg-surface-hover',
                       )}
                       scope="row"
                     >
                       <div className={cn('flex gap-1 px-2', bodyFrame)}>
-                        <Link
-                          aria-hidden="true"
-                          className="flex size-6 shrink-0 cursor-pointer items-center justify-center rounded-medium transition-colors hover:bg-surface-hover"
-                          href={`/doc/${row.id}`}
-                          tabIndex={-1}
-                        >
-                          <DocumentIcon
-                            className="size-4 text-content-subtle"
-                            icon={row.icon}
-                          />
-                        </Link>
+                        {showPageIcon ? (
+                          <Link
+                            aria-hidden="true"
+                            className="flex size-6 shrink-0 cursor-pointer items-center justify-center rounded-medium transition-colors hover:bg-surface-hover"
+                            href={`/doc/${row.id}`}
+                            tabIndex={-1}
+                          >
+                            <DocumentIcon
+                              className="size-4 text-content-subtle"
+                              icon={row.icon}
+                            />
+                          </Link>
+                        ) : null}
                         {canEdit ? (
                           <RowTitle
                             label={t('rowTitleLabel')}

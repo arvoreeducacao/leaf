@@ -61,6 +61,7 @@ function row(
     id,
     title,
     icon: null,
+    cover: null,
     values,
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
@@ -108,6 +109,10 @@ describe('view configuration', () => {
       sorts: [{ propertyId: TITLE_PROPERTY_ID, direction: 'asc' }],
       hiddenPropertyIds: ['due'],
       wrapCells: true,
+      datePropertyId: null,
+      endDatePropertyId: null,
+      showVerticalLines: true,
+      showPageIcon: true,
     }
 
     expect(parseViewConfig(serializeViewConfig(config))).toEqual(config)

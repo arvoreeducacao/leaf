@@ -577,6 +577,7 @@ export async function createDatabaseRow(
       id,
       title: untitledRow(title),
       icon: null,
+      cover: null,
       properties: serializeValues(values),
       createdAt: now,
       updatedAt: now,

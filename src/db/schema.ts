@@ -286,7 +286,16 @@ export const databaseViews = mysqlTable(
       .notNull()
       .references(() => documents.id, { onDelete: 'cascade' }),
     name: varchar('name', { length: 120 }).notNull(),
-    type: mysqlEnum('type', ['table', 'board']).notNull().default('table'),
+    type: mysqlEnum('type', [
+      'table',
+      'board',
+      'gallery',
+      'list',
+      'calendar',
+      'timeline',
+    ])
+      .notNull()
+      .default('table'),
     config: longtext('config'),
     position: int('position').notNull().default(0),
     createdAt: datetime('created_at', { mode: 'date', fsp: 3 })

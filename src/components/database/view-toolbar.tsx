@@ -9,6 +9,8 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import type {
@@ -25,14 +27,13 @@ import {
 import { cn } from '@/shared/utils'
 
 import {
-  BoardLayoutIcon,
   ChevronDownIcon,
   FilterIcon,
   PlusIcon,
   SettingsIcon,
   SortIcon,
-  TableLayoutIcon,
 } from './icons'
+import { layoutIcon, layoutOrder } from './layouts'
 import { PropertyPicker } from './property-picker'
 import { ViewSearch } from './view-search'
 import { ViewSettings } from './view-settings'
@@ -47,11 +48,6 @@ export function UnsavedDot({ className }: Readonly<{ className?: string }>) {
       )}
     />
   )
-}
-
-const viewIcon: Record<DatabaseViewType, typeof TableLayoutIcon> = {
-  table: TableLayoutIcon,
-  board: BoardLayoutIcon,
 }
 
 const controlButton = 'relative size-9 rounded-large p-1.5 tablet:size-7'
@@ -141,7 +137,7 @@ export function ViewToolbar({
     >
       <ul className="-mx-1 flex min-w-0 flex-1 items-center gap-1 overflow-x-auto px-1">
         {views.map((view) => {
-          const Icon = viewIcon[view.type]
+          const Icon = layoutIcon[view.type]
           const active = view.id === activeView.id
 
           if (renaming === view.id) {
@@ -227,14 +223,19 @@ export function ViewToolbar({
                 </ButtonIcon>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start">
-                <DropdownMenuItem onSelect={() => onCreateView('table')}>
-                  <TableLayoutIcon aria-hidden="true" className="size-5" />
-                  {t('view_table')}
-                </DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => onCreateView('board')}>
-                  <BoardLayoutIcon aria-hidden="true" className="size-5" />
-                  {t('view_board')}
-                </DropdownMenuItem>
+                {layoutOrder.map((type) => {
+                  const Icon = layoutIcon[type]
+
+                  return (
+                    <DropdownMenuItem
+                      key={type}
+                      onSelect={() => onCreateView(type)}
+                    >
+                      <Icon aria-hidden="true" className="size-5" />
+                      {t(`view_${type}`)}
+                    </DropdownMenuItem>
+                  )
+                })}
               </DropdownMenuContent>
             </DropdownMenu>
           </li>
@@ -335,14 +336,21 @@ export function ViewToolbar({
                 </ButtonIcon>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onSelect={() => onCreateView('table')}>
-                  <TableLayoutIcon aria-hidden="true" className="size-5" />
-                  {t('view_table')}
-                </DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => onCreateView('board')}>
-                  <BoardLayoutIcon aria-hidden="true" className="size-5" />
-                  {t('view_board')}
-                </DropdownMenuItem>
+                <DropdownMenuLabel>{t('addView')}</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {layoutOrder.map((type) => {
+                  const Icon = layoutIcon[type]
+
+                  return (
+                    <DropdownMenuItem
+                      key={type}
+                      onSelect={() => onCreateView(type)}
+                    >
+                      <Icon aria-hidden="true" className="size-5" />
+                      {t(`view_${type}`)}
+                    </DropdownMenuItem>
+                  )
+                })}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>

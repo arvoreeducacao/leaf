@@ -31,21 +31,16 @@ import {
 } from '@/lib/database/views'
 
 import {
-  BoardLayoutIcon,
+  DateTypeIcon,
   EyeIcon,
   FilterMenuIcon,
   GroupIcon,
   LinkMenuIcon,
   SortMenuIcon,
-  TableLayoutIcon,
   WrapIcon,
 } from './icons'
+import { layoutIcon, layoutOrder, scheduleLayouts } from './layouts'
 import { PropertyIcon } from './property-icon'
-
-const layoutIcon: Record<DatabaseViewType, typeof TableLayoutIcon> = {
-  table: TableLayoutIcon,
-  board: BoardLayoutIcon,
-}
 
 const switchRow =
   'flex h-9 items-center gap-2 rounded-medium px-2 text-body-small text-content-strong tablet:h-8'
@@ -75,6 +70,9 @@ export function ViewSettings({
 }: Props) {
   const t = useTranslations('database')
 
+  const dateProperties = properties.filter(
+    (property) => property.type === 'date',
+  )
   const hidden = new Set(config.hiddenPropertyIds)
   const visibleCount = properties.filter(
     (property) => !hidden.has(property.id),
@@ -178,15 +176,40 @@ export function ViewSettings({
             <span className="text-content-subtle">{t(`view_${view.type}`)}</span>
           </DropdownMenuSubTrigger>
           <DropdownMenuSubContent className="w-72">
-            <DropdownMenuItem onSelect={() => onChangeLayout('table')}>
-              <TableLayoutIcon aria-hidden="true" className="size-5" />
-              {t('view_table')}
-            </DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => onChangeLayout('board')}>
-              <BoardLayoutIcon aria-hidden="true" className="size-5" />
-              {t('view_board')}
-            </DropdownMenuItem>
+            {layoutOrder.map((type) => {
+              const Icon = layoutIcon[type]
+
+              return (
+                <DropdownMenuItem
+                  key={type}
+                  onSelect={() => onChangeLayout(type)}
+                >
+                  <Icon aria-hidden="true" className="size-5" />
+                  {t(`view_${type}`)}
+                </DropdownMenuItem>
+              )
+            })}
             <DropdownMenuSeparator />
+            <div className={switchRow}>
+              <span className="flex-1">{t('showVerticalLines')}</span>
+              <Switch
+                aria-label={t('showVerticalLines')}
+                checked={config.showVerticalLines}
+                onCheckedChange={(checked) =>
+                  onConfigChange({ ...config, showVerticalLines: checked })
+                }
+              />
+            </div>
+            <div className={switchRow}>
+              <span className="flex-1">{t('showPageIcon')}</span>
+              <Switch
+                aria-label={t('showPageIcon')}
+                checked={config.showPageIcon}
+                onCheckedChange={(checked) =>
+                  onConfigChange({ ...config, showPageIcon: checked })
+                }
+              />
+            </div>
             <div className={switchRow}>
               <WrapIcon
                 aria-hidden="true"
@@ -293,6 +316,67 @@ export function ViewSettings({
             ))}
           </DropdownMenuSubContent>
         </DropdownMenuSub>
+
+        {scheduleLayouts.includes(view.type) ? (
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger>
+              <DateTypeIcon aria-hidden="true" className="size-5" />
+              <span className="flex-1">{t('dateProperty')}</span>
+              <span className="max-w-32 truncate text-content-subtle">
+                {config.datePropertyId
+                  ? nameOf(config.datePropertyId)
+                  : (dateProperties[0]?.name ?? t('none'))}
+              </span>
+            </DropdownMenuSubTrigger>
+            <DropdownMenuSubContent className="w-64">
+              {dateProperties.map((property) => (
+                <DropdownMenuItem
+                  key={property.id}
+                  onSelect={() =>
+                    onConfigChange({ ...config, datePropertyId: property.id })
+                  }
+                >
+                  <PropertyIcon type={property.type} />
+                  <span className="min-w-0 truncate">{property.name}</span>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
+        ) : null}
+
+        {view.type === 'timeline' ? (
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger>
+              <DateTypeIcon aria-hidden="true" className="size-5" />
+              <span className="flex-1">{t('endDateProperty')}</span>
+              <span className="max-w-32 truncate text-content-subtle">
+                {config.endDatePropertyId
+                  ? nameOf(config.endDatePropertyId)
+                  : t('none')}
+              </span>
+            </DropdownMenuSubTrigger>
+            <DropdownMenuSubContent className="w-64">
+              <DropdownMenuItem
+                onSelect={() =>
+                  onConfigChange({ ...config, endDatePropertyId: null })
+                }
+              >
+                {t('none')}
+              </DropdownMenuItem>
+              {dateProperties.map((property) => (
+                <DropdownMenuItem
+                  key={property.id}
+                  onSelect={() =>
+                    onConfigChange({ ...config, endDatePropertyId: property.id })
+                  }
+                >
+                  <PropertyIcon type={property.type} />
+                  <span className="min-w-0 truncate">{property.name}</span>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
+        ) : null}
 
         {view.type === 'board' ? (
           <DropdownMenuSub>
