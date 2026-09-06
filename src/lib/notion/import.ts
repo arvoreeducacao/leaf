@@ -49,12 +49,19 @@ const maxWarnings = 40
 
 const insertChunkSize = 100
 
+export type AlreadyImportedDocument = Readonly<{
+  documentId: string
+  title: string
+}>
+
 export type ImportSummary = Readonly<{
   pages: number
   assets: number
   warnings: Array<string>
   rootId: string | null
   rootTitle: string | null
+  alreadyImported?: ReadonlyArray<AlreadyImportedDocument>
+  alreadyImportedCount?: number
 }>
 
 export type ImportEvent =

@@ -2,6 +2,7 @@ import { getTranslations } from 'next-intl/server'
 import { revalidatePath } from 'next/cache'
 import { NextResponse } from 'next/server'
 
+import { getActiveMembership } from '@/lib/active-org'
 import { getSession } from '@/lib/auth'
 import { getDocumentAccess } from '@/lib/authz'
 import { getDocument } from '@/lib/documents'
@@ -12,6 +13,10 @@ import {
   serializeImportDestination,
 } from '@/lib/import-destination'
 import { createNotionClient } from '@/lib/notion/api'
+import {
+  listAlreadyImportedByOthers,
+  summarizeNotionImports,
+} from '@/lib/notion/already-imported'
 import { getNotionConnection } from '@/lib/notion/connection'
 import { assetKeyFor } from '@/lib/notion/paths'
 import { notionIdFromLink } from '@/lib/notion/link'
@@ -21,6 +26,7 @@ import {
   importStreamHeaders,
 } from '@/lib/notion/stream'
 import { syncNotion } from '@/lib/notion/sync'
+import { canManageOrganization } from '@/lib/organizations'
 import { storage } from '@/lib/storage'
 
 export const runtime = 'nodejs'
@@ -29,6 +35,7 @@ export const maxDuration = 3600
 
 export async function POST(request: Request) {
   const t = await getTranslations('archiveImport')
+  const tErrors = await getTranslations('errors')
   const messages = buildNotionImportMessages(
     t,
     (await getTranslations('document'))('untitled'),
@@ -63,22 +70,45 @@ export async function POST(request: Request) {
       : null
 
   if (parentId && (await getDocumentAccess(parentId, session)) !== 'owner') {
-    return NextResponse.json(
-      { error: (await getTranslations('errors'))('notAllowed') },
-      { status: 403 },
-    )
+    return NextResponse.json({ error: tErrors('notAllowed') }, { status: 403 })
   }
 
   const parent = parentId ? await getDocument(parentId) : null
   const destination =
     parseImportDestination(body.destination) ?? destinationOfParent(parent)
+  const membership = await getActiveMembership(session.user.id)
+  const sharedDestination = destination.kind !== 'private'
+
+  if (
+    wholeWorkspace &&
+    sharedDestination &&
+    !canManageOrganization(membership?.role ?? null)
+  ) {
+    return NextResponse.json({ error: tErrors('notAllowed') }, { status: 403 })
+  }
+
+  if (wholeWorkspace && sharedDestination && membership) {
+    const footprint = await summarizeNotionImports(
+      session.user.id,
+      membership.orgId,
+    )
+
+    if (footprint.byOthers && body.acknowledgeDuplicates !== true) {
+      return NextResponse.json(
+        {
+          error: t('alreadyImportedByOthers', {
+            count: footprint.byOthers.documents,
+          }),
+        },
+        { status: 409 },
+      )
+    }
+  }
+
   const placement = await resolveImportPlacement(destination, session.user.id)
 
   if (!placement) {
-    return NextResponse.json(
-      { error: (await getTranslations('errors'))('notAllowed') },
-      { status: 403 },
-    )
+    return NextResponse.json({ error: tErrors('notAllowed') }, { status: 403 })
   }
 
   const staysUnderParent =
@@ -93,6 +123,14 @@ export async function POST(request: Request) {
     teamspaceId: placement.teamspaceId,
   }
 
+  const alreadyImported =
+    body.skipAlreadyImported === true
+      ? await listAlreadyImportedByOthers(
+          session.user.id,
+          membership?.orgId ?? null,
+        )
+      : undefined
+
   const client = createNotionClient(connection.accessToken, {
     signal: request.signal,
   })
@@ -105,6 +143,7 @@ export async function POST(request: Request) {
       messages,
       request.signal,
       {
+        alreadyImported,
         comments: body.comments === true,
         force: body.force === true,
         storeAsset: async (bytes, contentType, fileName) => {
@@ -124,4 +163,3 @@ export async function POST(request: Request) {
 
   return new Response(stream, { headers: importStreamHeaders })
 }
-

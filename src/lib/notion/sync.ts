@@ -36,7 +36,11 @@ import { plainText } from '@/lib/notion/api'
 import type { BlockNode, ImportedBlock } from '@/lib/notion/convert'
 import { convertNodes } from '@/lib/notion/convert'
 import { databaseTitle, pageTitle } from '@/lib/notion/crawl'
-import type { ImportEvent, ImportOwner } from '@/lib/notion/import'
+import type {
+  AlreadyImportedDocument,
+  ImportEvent,
+  ImportOwner,
+} from '@/lib/notion/import'
 import { MAX_ASSET_BYTES, MAX_ASSET_LABEL, MAX_CRAWL_PAGES } from '@/lib/notion/limits'
 import type { NotionImportMessages } from '@/lib/notion/messages'
 import { contentTypeOf } from '@/lib/notion/plan'
@@ -47,9 +51,12 @@ const placeholderPrefix = 'notion://'
 
 const maxWarnings = 40
 
+const alreadyImportedSampleSize = 10
+
 export type SyncOptions = Readonly<{
   comments?: boolean
   force?: boolean
+  alreadyImported?: ReadonlyMap<string, AlreadyImportedDocument>
   storeAsset: (
     bytes: Uint8Array,
     contentType: string,
@@ -882,6 +889,8 @@ export async function* syncNotion(
   let processed = 0
   let written = 0
   let skipped = 0
+  let alreadyImportedCount = 0
+  const alreadyImportedSample: Array<AlreadyImportedDocument> = []
   let uploaded = 0
   let truncated = false
   let rootDocId: string | null = null
@@ -924,6 +933,18 @@ export async function* syncNotion(
 
     seen.add(idKey)
     processed += 1
+
+    const importedElsewhere = options?.alreadyImported?.get(idKey)
+
+    if (importedElsewhere) {
+      alreadyImportedCount += 1
+
+      if (alreadyImportedSample.length < alreadyImportedSampleSize) {
+        alreadyImportedSample.push(importedElsewhere)
+      }
+
+      continue
+    }
 
     try {
       if (item.kind === 'database') {
@@ -1509,6 +1530,8 @@ export async function* syncNotion(
 
   yield {
     summary: {
+      alreadyImported: alreadyImportedSample,
+      alreadyImportedCount,
       assets: uploaded,
       pages: written,
       rootId: rootDocId,
