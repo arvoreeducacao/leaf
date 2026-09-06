@@ -43,7 +43,9 @@ function answerOf(
   }
 
   if (question.attachment) {
-    return attachmentLinks(String(raw).split('\n')).join('\n')
+    const list = Array.isArray(raw) ? raw : String(raw).split('\n')
+
+    return attachmentLinks(list).join('\n')
   }
 
   const options = property ? parseOptions(property.options) : []

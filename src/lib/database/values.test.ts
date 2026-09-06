@@ -6,7 +6,9 @@ import {
   linkHrefFor,
   colorForIndex,
   emptyValueFor,
+  fileNameOf,
   formatNumber,
+  isImageFileUrl,
   groupOf,
   isEmptyValue,
   normalizeValue,
@@ -198,5 +200,54 @@ describe('status', () => {
       'a',
       'f',
     ])
+  })
+})
+
+describe('files', () => {
+  it('keeps the stored addresses and drops what is not one', () => {
+    expect(
+      normalizeValue('files', [
+        '/api/uploads/u/one.png',
+        'https://example.com/two.pdf',
+        'javascript:alert(1)',
+        '/api/uploads/../secret',
+        '',
+      ]),
+    ).toEqual(['/api/uploads/u/one.png', 'https://example.com/two.pdf'])
+  })
+
+  it('accepts a single address as a list of one', () => {
+    expect(normalizeValue('files', '/api/uploads/u/one.png')).toEqual([
+      '/api/uploads/u/one.png',
+    ])
+  })
+
+  it('starts empty as a list', () => {
+    expect(emptyValueFor('files')).toEqual([])
+    expect(isEmptyValue(emptyValueFor('files'))).toBe(true)
+  })
+
+  it('reads the file name out of the address', () => {
+    expect(fileNameOf('/api/uploads/u/shot%20final.png')).toBe('shot final.png')
+    expect(fileNameOf('https://example.com/a/b/report.pdf?v=2')).toBe(
+      'report.pdf',
+    )
+  })
+
+  it('knows which addresses are pictures', () => {
+    expect(isImageFileUrl('/api/uploads/u/shot.PNG')).toBe(true)
+    expect(isImageFileUrl('https://example.com/a.webp?v=1')).toBe(true)
+    expect(isImageFileUrl('/api/uploads/u/report.pdf')).toBe(false)
+  })
+
+  it('shows the file names as text', () => {
+    expect(
+      valueToText(
+        ['/api/uploads/u/one.png', '/api/uploads/u/two.pdf'],
+        'files',
+        [],
+        'pt-BR',
+      ),
+    ).toBe('one.png, two.pdf')
   })
 })

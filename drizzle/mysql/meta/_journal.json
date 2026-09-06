@@ -169,6 +169,13 @@
       "when": 1788638504697,
       "tag": "0023_database_templates",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "5",
+      "when": 1788652940559,
+      "tag": "0024_database_files_property",
+      "breakpoints": true
     }
   ]
 }

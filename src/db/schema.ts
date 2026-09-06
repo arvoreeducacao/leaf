@@ -292,6 +292,7 @@ export const databaseProperties = mysqlTable(
       'person',
       'status',
       'uniqueId',
+      'files',
     ])
       .notNull()
       .default('text'),

@@ -23,6 +23,8 @@ import {
 } from '@/lib/database/values'
 import type { SelectOption } from '@/lib/database/values'
 import { emptyViewConfig, serializeViewConfig } from '@/lib/database/views'
+import { normalizeCover, notionCoverValue } from '@/lib/document-cover'
+import type { NotionCoverPayload } from '@/lib/document-cover'
 import { notionIconValue } from '@/lib/document-icon'
 import { sanitizeBlocks } from '@/lib/markdown/sanitize'
 import type {
@@ -130,6 +132,7 @@ export async function* syncNotion(
       lastEditedAt: notionDocuments.lastEditedAt,
       parentNotionId: notionDocuments.parentNotionId,
       icon: documents.icon,
+      cover: documents.cover,
     })
     .from(notionDocuments)
     .leftJoin(documents, eq(documents.id, notionDocuments.documentId))
@@ -137,6 +140,7 @@ export async function* syncNotion(
 
   const mappings = new Map<string, Mapping>()
   const storedIcon = new Map<string, string | null>()
+  const storedCover = new Map<string, string | null>()
   const childrenByParent = new Map<string, Array<string>>()
 
   for (const row of mappingRows) {
@@ -146,6 +150,7 @@ export async function* syncNotion(
       lastEditedAt: row.lastEditedAt,
     })
     storedIcon.set(normalizeNotionId(row.notionId), row.icon ?? null)
+    storedCover.set(normalizeNotionId(row.notionId), row.cover ?? null)
 
     if (row.parentNotionId) {
       const key = normalizeNotionId(row.parentNotionId)
@@ -170,6 +175,23 @@ export async function* syncNotion(
       .where(eq(documents.id, documentId))
 
     storedIcon.set(key, icon)
+  }
+
+  async function refreshCover(
+    key: string,
+    documentId: string,
+    cover: string | null,
+  ) {
+    if (cover === null || (storedCover.get(key) ?? null) === cover) {
+      return
+    }
+
+    await db
+      .update(documents)
+      .set({ cover })
+      .where(eq(documents.id, documentId))
+
+    storedCover.set(key, cover)
   }
 
   async function saveMapping(
@@ -651,18 +673,59 @@ export async function* syncNotion(
     'g',
   )
 
+  function resolveAssetUrl(value: string): string {
+    return value.replace(assetPlaceholderPattern, (_, encoded) => {
+      const sourceKey = decodeURIComponent(encoded)
+
+      return assetUrlBySource.get(sourceKey) ?? sourceKey
+    })
+  }
+
   function resolveAssetPlaceholdersInValues(
     values: Record<string, PropertyValue>,
   ) {
     for (const [key, value] of Object.entries(values)) {
       if (typeof value === 'string' && value.includes(placeholderPrefix)) {
-        values[key] = value.replace(assetPlaceholderPattern, (_, encoded) => {
-          const sourceKey = decodeURIComponent(encoded)
+        values[key] = resolveAssetUrl(value)
+        continue
+      }
 
-          return assetUrlBySource.get(sourceKey) ?? sourceKey
-        })
+      if (Array.isArray(value)) {
+        values[key] = value.map((item) =>
+          typeof item === 'string' && item.includes(placeholderPrefix)
+            ? resolveAssetUrl(item)
+            : item,
+        )
       }
     }
+  }
+
+  function resolveAssetPlaceholdersInBlocks(blocks: Array<ImportedBlock>) {
+    for (const block of blocks) {
+      const url = block.props?.url
+
+      if (typeof url === 'string' && url.includes(placeholderPrefix)) {
+        block.props = { ...block.props, url: resolveAssetUrl(url) }
+      }
+
+      if (Array.isArray(block.children)) {
+        resolveAssetPlaceholdersInBlocks(block.children)
+      }
+    }
+  }
+
+  async function resolvedCover(
+    cover: NotionCoverPayload | null | undefined,
+  ): Promise<string | null> {
+    const value = notionCoverValue(cover, registerAsset)
+
+    if (value === null) {
+      return null
+    }
+
+    await flushAssets()
+
+    return normalizeCover(resolveAssetUrl(value))
   }
 
   const touchedDocIds = new Set<string>()
@@ -674,7 +737,12 @@ export async function* syncNotion(
 
   const listed = new Map<
     string,
-    { icon: string | null; lastEdited: Date | null; title: string }
+    {
+      cover: NotionCoverPayload | null
+      icon: string | null
+      lastEdited: Date | null
+      title: string
+    }
   >()
 
   if (roots === 'workspace') {
@@ -705,6 +773,7 @@ export async function* syncNotion(
 
       if ((result.object ?? 'page') === 'page') {
         listed.set(normalizeNotionId(result.id), {
+          cover: result.cover ?? null,
           icon: notionIconValue(result.icon),
           lastEdited: stamp(result.last_edited_time),
           title: pageTitle(result, messages.untitled),
@@ -878,6 +947,11 @@ export async function* syncNotion(
         }
 
         touchedDocIds.add(documentId)
+        await refreshCover(
+          idKey,
+          documentId,
+          await resolvedCover(database.cover),
+        )
         await saveMapping(
           item.id,
           documentId,
@@ -924,6 +998,11 @@ export async function* syncNotion(
               rowKey,
               rowMapping.documentId,
               notionIconValue(row.icon),
+            )
+            await refreshCover(
+              rowKey,
+              rowMapping.documentId,
+              await resolvedCover(row.cover),
             )
             enqueueKnownChildren(row.id, rowMapping.documentId)
             continue
@@ -988,8 +1067,11 @@ export async function* syncNotion(
             }
           }
 
+          const rowCover = await resolvedCover(row.cover)
+
           await flushAssets()
           resolveAssetPlaceholdersInValues(values)
+          resolveAssetPlaceholdersInBlocks(source.blocks)
 
           await db
             .update(documents)
@@ -999,6 +1081,8 @@ export async function* syncNotion(
               kind: 'row',
             })
             .where(eq(documents.id, rowDoc.documentId))
+
+          await refreshCover(rowKey, rowDoc.documentId, rowCover)
 
           if (rowDoc.created && options?.comments) {
             await importComments(row.id, rowDoc.documentId)
@@ -1040,6 +1124,11 @@ export async function* syncNotion(
         skipped += 1
 
         await refreshIcon(idKey, known.documentId, alreadyListed.icon)
+        await refreshCover(
+          idKey,
+          known.documentId,
+          await resolvedCover(alreadyListed.cover),
+        )
 
         if (!rootDocId) {
           rootDocId = known.documentId
@@ -1074,6 +1163,11 @@ export async function* syncNotion(
         skipped += 1
 
         await refreshIcon(idKey, mapping.documentId, notionIconValue(page.icon))
+        await refreshCover(
+          idKey,
+          mapping.documentId,
+          await resolvedCover(page.cover),
+        )
 
         if (!rootDocId) {
           rootDocId = mapping.documentId
@@ -1129,12 +1223,17 @@ export async function* syncNotion(
 
       touchedDocIds.add(documentId)
 
+      const pageCover = await resolvedCover(page.cover)
+
       await flushAssets()
+      resolveAssetPlaceholdersInBlocks(source.blocks)
 
       await db
         .update(documents)
         .set({ content: JSON.stringify(source.blocks) })
         .where(eq(documents.id, documentId))
+
+      await refreshCover(idKey, documentId, pageCover)
 
       if (created && options?.comments) {
         await importComments(item.id, documentId)

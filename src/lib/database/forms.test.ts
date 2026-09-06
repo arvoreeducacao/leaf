@@ -42,6 +42,7 @@ const submittedAt = property({ id: 'sent-at', name: 'Horário do envio', type: '
 const participant = property({ id: 'who', name: 'Participante', type: 'person' })
 const description = property({ id: 'desc', name: 'Descrição', type: 'text' })
 const attachments = property({ id: 'files', name: 'Prints', type: 'text' })
+const gallery = property({ id: 'gallery', name: 'Prints & Anexos', type: 'files' })
 
 const severity = property({
   id: 'severity',
@@ -310,6 +311,44 @@ describe('buildSubmission', () => {
     expect(result.submission.values.files).toBe('/api/uploads/u/a.png')
     expect(result.submission.values.status).toBe('sent')
     expect(result.submission.values.who).toEqual(['user-1'])
+  })
+
+  it('keeps the answer of a file column as a list of addresses', () => {
+    const result = buildSubmission(
+      {
+        ...config,
+        questions: [
+          ...config.questions,
+          {
+            propertyId: 'gallery',
+            label: '',
+            description: '',
+            required: false,
+            attachment: false,
+            long: false,
+          },
+        ],
+      },
+      [...properties, gallery],
+      {
+        [TITLE_QUESTION_ID]: 'Floresta',
+        desc: 'Não abre',
+        gallery: ['/api/uploads/u/a.png', '/api/uploads/u/b.png'],
+      },
+      titleName,
+      context,
+    )
+
+    expect(result.ok).toBe(true)
+
+    if (!result.ok) {
+      return
+    }
+
+    expect(result.submission.values.gallery).toEqual([
+      '/api/uploads/u/a.png',
+      '/api/uploads/u/b.png',
+    ])
   })
 
   it('reports every unanswered required question', () => {

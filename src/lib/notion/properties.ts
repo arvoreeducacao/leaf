@@ -2,7 +2,11 @@ import type { DatabasePropertyType } from '@/db/schema'
 import type { NotionPropertyConfig } from '@/lib/notion/api'
 import { plainText } from '@/lib/notion/api'
 import type { OptionColor, SelectOption, StatusGroup } from '@/lib/database/values'
-import { MAX_PROPERTIES, MAX_TEXT_VALUE } from '@/lib/database/values'
+import {
+  MAX_FILES_PER_VALUE,
+  MAX_PROPERTIES,
+  MAX_TEXT_VALUE,
+} from '@/lib/database/values'
 
 const colorByNotion: Record<string, OptionColor> = {
   blue: 'blue',
@@ -29,7 +33,7 @@ const typeByNotion: Record<string, DatabasePropertyType> = {
   created_time: 'date',
   date: 'date',
   email: 'text',
-  files: 'text',
+  files: 'files',
   formula: 'text',
   last_edited_by: 'person',
   last_edited_time: 'date',
@@ -233,9 +237,12 @@ async function personLabels(
   return labels
 }
 
-function fileLinks(value: unknown, resolver: PropertyResolver): string {
+function fileLinks(
+  value: unknown,
+  resolver: PropertyResolver,
+): Array<string> {
   if (!Array.isArray(value)) {
-    return ''
+    return []
   }
 
   const links: Array<string> = []
@@ -266,7 +273,7 @@ function fileLinks(value: unknown, resolver: PropertyResolver): string {
     links.push(resolver.registerAsset(url, name) ?? url)
   }
 
-  return links.join('\n').slice(0, MAX_TEXT_VALUE)
+  return links.slice(0, MAX_FILES_PER_VALUE)
 }
 
 function formulaText(value: unknown): ImportedValue {
