@@ -171,21 +171,41 @@ export type NotionCoverPayload = Readonly<{
   file?: { url?: string } | null
 }>
 
+const expiringHosts = ['notionusercontent.com', 'amazonaws.com']
+
+export function isExpiringAssetUrl(value: string): boolean {
+  try {
+    const url = new URL(value)
+
+    if (url.searchParams.has('sig') || url.searchParams.has('X-Amz-Signature')) {
+      return true
+    }
+
+    return expiringHosts.some(
+      (host) => url.hostname === host || url.hostname.endsWith(`.${host}`),
+    )
+  } catch {
+    return false
+  }
+}
+
 export function notionCoverValue(
   cover: NotionCoverPayload | null | undefined,
   storedUrlFor: (url: string, fallbackName: string) => string | null,
 ): string | null {
-  const external = cover?.external?.url
-
-  if (typeof external === 'string' && isHttpsImageUrl(external)) {
-    return external
-  }
-
   const file = cover?.file?.url
 
   if (typeof file === 'string' && file.startsWith('https://')) {
     return storedUrlFor(file, 'cover')
   }
 
-  return null
+  const external = cover?.external?.url
+
+  if (typeof external !== 'string' || !isHttpsImageUrl(external)) {
+    return null
+  }
+
+  return isExpiringAssetUrl(external)
+    ? storedUrlFor(external, 'cover')
+    : external
 }

@@ -36,7 +36,7 @@ import {
   stripLeadingTitle,
 } from '@/lib/notion/markdown'
 import type { NotionLinkTarget } from '@/lib/notion/markdown'
-import { baseNameOf, extensionOf } from '@/lib/notion/paths'
+import { assetKeyFor, baseNameOf } from '@/lib/notion/paths'
 import { buildImportPlan, isImagePath } from '@/lib/notion/plan'
 import type { ImportedComment } from '@/lib/notion/crawl'
 import type { ImportedValue } from '@/lib/notion/properties'
@@ -75,12 +75,6 @@ export type ImportOwner = Readonly<{
   orgAccess?: OrgAccess | null
   parentId?: string | null
 }>
-
-export function assetKeyFor(path: string) {
-  const extension = extensionOf(path)
-
-  return `u/${nanoid(16)}${extension.length > 0 ? extension : '.bin'}`
-}
 
 export async function* importNotionZip(
   data: Uint8Array,

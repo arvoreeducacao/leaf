@@ -33,6 +33,14 @@ async function query<T extends RowDataPacket>(
   return rows
 }
 
+function isFileAddress(url: string): boolean {
+  if (url.startsWith(UPLOAD_PREFIX)) {
+    return !url.includes('..')
+  }
+
+  return url.startsWith('https://')
+}
+
 function storedUrlsOf(value: PropertyValue): Array<string> | null {
   const list =
     typeof value === 'string'
@@ -49,9 +57,7 @@ function storedUrlsOf(value: PropertyValue): Array<string> | null {
     return []
   }
 
-  return urls.every((url) => url.startsWith(UPLOAD_PREFIX) && !url.includes('..'))
-    ? urls.slice(0, MAX_FILES_PER_VALUE)
-    : null
+  return urls.every(isFileAddress) ? urls.slice(0, MAX_FILES_PER_VALUE) : null
 }
 
 async function loadCandidates(connection: Connection): Promise<Array<Candidate>> {
@@ -87,6 +93,7 @@ async function loadCandidates(connection: Connection): Promise<Array<Candidate>>
 
     const touched: Array<{ documentId: string; urls: Array<string> }> = []
     let clean = true
+    let stored = false
 
     for (const row of rows) {
       const values = parseValues(String(row.properties))
@@ -98,11 +105,12 @@ async function loadCandidates(connection: Connection): Promise<Array<Candidate>>
       }
 
       if (urls.length > 0) {
+        stored = stored || urls.some((url) => url.startsWith(UPLOAD_PREFIX))
         touched.push({ documentId: String(row.id), urls })
       }
     }
 
-    if (clean && touched.length > 0) {
+    if (clean && stored && touched.length > 0) {
       candidates.push({
         databaseId,
         databaseTitle: String(property.databaseTitle),
