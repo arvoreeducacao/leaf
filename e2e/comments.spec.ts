@@ -3,6 +3,7 @@ import { expect, test, type Page } from '@playwright/test'
 import {
   createDocument,
   editorBody,
+  expectNoHorizontalOverflow,
   signUp,
   typeInEditor,
   uniqueEmail,
@@ -375,30 +376,35 @@ test.describe('comments', () => {
     ).toContainText('Orphan comment')
   })
 
-  test('the page comment lives at the foot of the document', async ({
+  test('the page conversation opens above the body of the document', async ({
     page,
   }) => {
-    await signUp(page, uniqueEmail('footer'), 'Author')
-    await createDocument(page, 'Document with a footer')
+    await signUp(page, uniqueEmail('conversation'), 'Author')
+    await createDocument(page, 'Document with a conversation')
 
     await typeInEditor(page, 'text of the page')
     await waitForSaved(page)
 
-    const footer = page.getByTestId('document-comments')
+    await expect(page.getByTestId('document-comments')).toHaveCount(0)
 
-    await expect(footer).toBeVisible()
-    await expect(footer.getByRole('heading')).toHaveText('Comentários')
-
-    await footer
-      .getByTestId('document-comment-input')
-      .fill('Does this go to everyone?')
-    await footer.getByTestId('submit-document-comment').click()
-
+    await openPanel(page)
+    await page.getByLabel('Novo comentário').fill('Does this go to everyone?')
+    await page.getByTestId('submit-comment').click()
     await expect(page.getByText('Comentário adicionado').first()).toBeVisible()
-    await expect(footer.getByTestId('document-comment-thread')).toHaveCount(1)
-    await expect(footer).toContainText('Does this go to everyone?')
-    await expect(footer).toContainText('Author')
+    await page.keyboard.press('Escape')
+
+    const conversation = page.getByTestId('document-comments')
+
+    await expect(conversation).toBeVisible()
+    await expect(conversation.getByRole('heading')).toHaveText('Comentários')
+    await expect(conversation).toContainText('Does this go to everyone?')
+    await expect(conversation).toContainText('Author')
     await expect(page.getByTestId('comments-button')).toContainText('1')
+
+    const conversationBox = await conversation.boundingBox()
+    const editorBox = await editorBody(page).boundingBox()
+
+    expect(conversationBox?.y ?? 1_000).toBeLessThan(editorBox?.y ?? 0)
 
     await selectLastWord(page, 'page'.length)
     await commentFromToolbar(page, 'And this one stays on the passage')
@@ -408,32 +414,66 @@ test.describe('comments', () => {
     await page.reload()
     await waitForEditorReady(page)
 
-    await expect(footer.getByTestId('document-comment-thread')).toHaveCount(1)
-    await expect(footer).not.toContainText('And this one stays on the passage')
+    await expect(conversation.getByTestId('document-comment-thread')).toHaveCount(
+      1,
+    )
+    await expect(conversation).not.toContainText(
+      'And this one stays on the passage',
+    )
     await expect(page.getByTestId('inline-comment-marker')).toHaveCount(1)
   })
 
-  test('resolving from the foot of the document closes the conversation', async ({
+  test('resolving from the conversation closes it and clears the block', async ({
     page,
   }) => {
-    await signUp(page, uniqueEmail('footer-resolve'), 'Author')
+    await signUp(page, uniqueEmail('conversation-resolve'), 'Author')
     await createDocument(page, 'Document to close')
 
     await typeInEditor(page, 'text to close')
     await waitForSaved(page)
 
-    const footer = page.getByTestId('document-comments')
+    await openPanel(page)
+    await page.getByLabel('Novo comentário').fill('Can we close it?')
+    await page.getByTestId('submit-comment').click()
+    await expect(page.getByText('Comentário adicionado').first()).toBeVisible()
+    await page.keyboard.press('Escape')
 
-    await footer.getByTestId('document-comment-input').fill('Can we close it?')
-    await footer.getByTestId('submit-document-comment').click()
+    const conversation = page.getByTestId('document-comments')
 
-    await expect(footer.getByTestId('document-comment-thread')).toHaveCount(1)
+    await expect(conversation.getByTestId('document-comment-thread')).toHaveCount(
+      1,
+    )
 
-    await footer.getByRole('button', { name: 'Resolver' }).click()
+    await conversation.getByRole('button', { name: 'Resolver' }).click()
 
     await expect(page.getByText('Comentário resolvido').first()).toBeVisible()
-    await expect(footer.getByTestId('document-comment-thread')).toHaveCount(0)
-    await expect(footer.getByTestId('document-comment-input')).toBeVisible()
+    await expect(page.getByTestId('document-comments')).toHaveCount(0)
+  })
+
+  test('a reply written in the conversation lands in the thread', async ({
+    page,
+  }) => {
+    await signUp(page, uniqueEmail('conversation-reply'), 'Author')
+    await createDocument(page, 'Document answered above the body')
+
+    await typeInEditor(page, 'text to answer')
+    await waitForSaved(page)
+
+    await openPanel(page)
+    await page.getByLabel('Novo comentário').fill('Opening question')
+    await page.getByTestId('submit-comment').click()
+    await expect(page.getByText('Comentário adicionado').first()).toBeVisible()
+    await page.keyboard.press('Escape')
+
+    const conversation = page.getByTestId('document-comments')
+
+    await conversation
+      .getByTestId('document-comment-input')
+      .fill('Answer above the body')
+    await conversation.getByTestId('submit-document-comment').click()
+
+    await expect(conversation).toContainText('Answer above the body')
+    await expect(page.getByTestId('comments-button')).toContainText('2')
   })
 
   test('the public page does not show comments', async ({ browser }) => {
@@ -472,5 +512,182 @@ test.describe('comments', () => {
 
     await ownerContext.close()
     await anonContext.close()
+  })
+  test.describe('on a wide screen', () => {
+    test.use({ viewport: { width: 1600, height: 900 } })
+
+    test('the passage comment opens as a card beside the text', async ({
+      page,
+    }) => {
+      await signUp(page, uniqueEmail('lane'), 'Author')
+      await createDocument(page, 'Document with a lane')
+
+      await typeInEditor(page, 'first paragraph')
+      await page.keyboard.press('Enter')
+      await page.keyboard.type('second paragraph')
+      await waitForSaved(page)
+
+      await selectLastWord(page, 'second paragraph'.length)
+      await commentFromToolbar(page, 'This passage needs a source')
+      await page.keyboard.press('Escape')
+
+      await page.reload()
+      await waitForEditorReady(page)
+
+      const card = page.getByTestId('margin-comment-card')
+
+      await expect(card).toHaveCount(1)
+      await expect(card).toContainText('This passage needs a source')
+      await expect(page.getByTestId('inline-comment-marker')).toHaveCount(0)
+
+      const blockIds = await editorBody(page)
+        .locator('.bn-block-outer[data-id]')
+        .evaluateAll((elements) =>
+          elements.map((element) => element.getAttribute('data-id') ?? ''),
+        )
+
+      const blockBox = await editorBody(page)
+        .locator(`.bn-block-outer[data-id="${blockIds[1]}"]`)
+        .boundingBox()
+      const cardBox = await card.boundingBox()
+
+      expect(Math.abs((cardBox?.y ?? 0) - (blockBox?.y ?? 1_000))).toBeLessThan(
+        16,
+      )
+      expect(cardBox?.x ?? 0).toBeGreaterThan(
+        (blockBox?.x ?? 0) + (blockBox?.width ?? 0),
+      )
+
+      await expectNoHorizontalOverflow(page)
+
+      await card.click()
+      await expectNoHorizontalOverflow(page)
+    })
+
+    test('the commented passage is marked and opens its card', async ({
+      page,
+    }) => {
+      await signUp(page, uniqueEmail('anchor'), 'Author')
+      await createDocument(page, 'Document with a marked passage')
+
+      await typeInEditor(page, 'first paragraph')
+      await page.keyboard.press('Enter')
+      await page.keyboard.type('second paragraph')
+      await waitForSaved(page)
+
+      await selectLastWord(page, 'second paragraph'.length)
+      await commentFromToolbar(page, 'Where does this come from?')
+      await page.keyboard.press('Escape')
+
+      await page.reload()
+      await waitForEditorReady(page)
+
+      const blockIds = await editorBody(page)
+        .locator('.bn-block-outer[data-id]')
+        .evaluateAll((elements) =>
+          elements.map((element) => element.getAttribute('data-id') ?? ''),
+        )
+      const commented = editorBody(page).locator(
+        `.bn-block-outer[data-id="${blockIds[1]}"] .bn-inline-content`,
+      )
+      const plain = editorBody(page).locator(
+        `.bn-block-outer[data-id="${blockIds[0]}"] .bn-inline-content`,
+      )
+
+      const background = (locator: typeof commented) =>
+        locator.evaluate((element) => [
+          window.getComputedStyle(element).backgroundColor,
+          window.getComputedStyle(element).display,
+        ])
+
+      await expect.poll(() => background(commented)).not.toEqual([
+        'rgba(0, 0, 0, 0)',
+        'block',
+      ])
+      expect(await background(plain)).toEqual(['rgba(0, 0, 0, 0)', 'block'])
+
+      const card = page.getByTestId('margin-comment-card')
+
+      await expect(card).toHaveAttribute('data-active', 'false')
+
+      await commented.click()
+
+      await expect(card).toHaveAttribute('data-active', 'true')
+      await expect(card.getByTestId('margin-comment-input')).toBeVisible()
+    })
+
+    test('replying and resolving happen inside the card', async ({ page }) => {
+      await signUp(page, uniqueEmail('card-reply'), 'Author')
+      await createDocument(page, 'Document answered in the margin')
+
+      await typeInEditor(page, 'first paragraph')
+      await page.keyboard.press('Enter')
+      await page.keyboard.type('second paragraph')
+      await waitForSaved(page)
+
+      await selectLastWord(page, 'second paragraph'.length)
+      await commentFromToolbar(page, 'Opening question')
+      await page.keyboard.press('Escape')
+
+      await page.reload()
+      await waitForEditorReady(page)
+
+      const card = page.getByTestId('margin-comment-card')
+
+      await card.click()
+      await card.getByTestId('margin-comment-input').fill('Answer beside it')
+      await card.getByTestId('submit-margin-comment').click()
+
+      await expect(card).toContainText('Answer beside it')
+
+      await card.getByRole('button', { name: 'Resolver' }).click()
+
+      await expect(page.getByText('Comentário resolvido').first()).toBeVisible()
+      await expect(page.getByTestId('margin-comment-card')).toHaveCount(0)
+    })
+
+    test('the lane never pushes the page sideways', async ({ page }) => {
+      await signUp(page, uniqueEmail('no-overflow'), 'Author')
+      await createDocument(page, 'Document measured at every width')
+
+      await typeInEditor(page, 'first paragraph')
+      await page.keyboard.press('Enter')
+      await page.keyboard.type('second paragraph')
+      await waitForSaved(page)
+
+      await selectLastWord(page, 'second paragraph'.length)
+      await commentFromToolbar(page, 'Does the card fit?')
+      await page.keyboard.press('Escape')
+
+      for (const width of [1_600, 1_520, 1_484, 1_440, 1_280]) {
+        await page.setViewportSize({ width, height: 900 })
+        await page.waitForTimeout(200)
+        await expectNoHorizontalOverflow(page)
+      }
+    })
+
+    test('the commented passage is still editable', async ({ page }) => {
+      await signUp(page, uniqueEmail('still-editable'), 'Author')
+      await createDocument(page, 'Document edited after the comment')
+
+      await typeInEditor(page, 'first paragraph')
+      await page.keyboard.press('Enter')
+      await page.keyboard.type('second paragraph')
+      await waitForSaved(page)
+
+      await selectLastWord(page, 'second paragraph'.length)
+      await commentFromToolbar(page, 'Needs an ending')
+      await page.keyboard.press('Escape')
+
+      await expect(page.getByTestId('margin-comment-card')).toHaveCount(1)
+
+      await focusEditorEnd(page)
+      await page.keyboard.type(' with an ending')
+      await waitForSaved(page)
+
+      await expect(
+        page.getByText('second paragraph with an ending'),
+      ).toBeVisible()
+    })
   })
 })

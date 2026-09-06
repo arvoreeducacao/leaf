@@ -22,7 +22,10 @@ import { MAX_COMMENT_LENGTH } from '@/lib/comment-limits'
 import type { CommentReply, CommentThread } from '@/lib/comments'
 import { cn } from '@/shared/utils'
 
-export type CommentSurface = 'panel' | 'document'
+export type CommentSurface = 'panel' | 'document' | 'margin'
+
+const fadesOnHover =
+  'transition-opacity tablet:group-focus-within/comment:opacity-0 tablet:group-hover/comment:opacity-0'
 
 function IconAction({
   label,
@@ -91,12 +94,12 @@ function Meta({
     <div
       className={cn(
         'flex flex-wrap items-center gap-x-2 gap-y-1',
-        surface === 'document' && 'min-h-6 flex-nowrap gap-x-1.5',
+        surface !== 'panel' && 'min-h-6 min-w-0 flex-nowrap gap-x-1.5',
       )}
     >
       {comment.authorId || fromSlack ? (
         <UserAvatar
-          className={surface === 'document' ? 'mr-0.5 size-6' : undefined}
+          className={surface === 'panel' ? undefined : 'mr-0.5 size-6'}
           image={comment.authorImage}
           name={comment.authorName ?? unknownAuthor}
           userId={comment.authorId ?? comment.id}
@@ -105,7 +108,7 @@ function Meta({
       <span
         className={cn(
           'text-body-small text-content-strong',
-          surface === 'document' ? 'min-w-0 truncate font-medium' : 'font-bold',
+          surface === 'panel' ? 'font-bold' : 'min-w-0 truncate font-medium',
         )}
       >
         {comment.authorName ?? unknownAuthor}
@@ -119,9 +122,10 @@ function Meta({
       <span
         className={cn(
           'whitespace-nowrap',
-          surface === 'document'
-            ? 'text-caption text-content-muted'
-            : 'text-body-small text-content',
+          surface === 'panel'
+            ? 'text-body-small text-content'
+            : 'text-caption text-content-tertiary',
+          surface === 'margin' && fadesOnHover,
         )}
         suppressHydrationWarning
         title={formatExact(comment.createdAt)}
@@ -132,9 +136,10 @@ function Meta({
         <span
           className={cn(
             'whitespace-nowrap',
-            surface === 'document'
-              ? 'text-caption text-content-muted'
-              : 'text-body-small text-content',
+            surface === 'panel'
+              ? 'text-body-small text-content'
+              : 'text-caption text-content-tertiary',
+            surface === 'margin' && fadesOnHover,
           )}
         >
           {editedLabel}
@@ -171,7 +176,8 @@ export function CommentThreadItem({
   const [editBody, setEditBody] = useState('')
   const [confirmingDelete, setConfirmingDelete] = useState<string | null>(null)
 
-  const inDocument = surface === 'document'
+  const inMargin = surface === 'margin'
+  const inFlow = surface !== 'panel'
   const resolved = thread.resolvedAt !== null
   const isThreadAuthor = thread.authorId !== null && thread.authorId === viewerId
   const canResolve = canResolveAny || isThreadAuthor
@@ -285,7 +291,7 @@ export function CommentThreadItem({
     return {
       canDelete: isAuthor,
       canEditBody: isAuthor,
-      canReply: isRoot && canComment && !resolved,
+      canReply: isRoot && canComment && !resolved && !inMargin,
       canToggleResolved: isRoot && canResolve,
     }
   }
@@ -385,7 +391,12 @@ export function CommentThreadItem({
     }
 
     return (
-      <div className="ml-auto flex shrink-0 items-center gap-1 opacity-100 transition-opacity tablet:opacity-0 tablet:group-focus-within/comment:opacity-100 tablet:group-hover/comment:opacity-100">
+      <div
+        className={cn(
+          'ml-auto flex shrink-0 items-center gap-1 opacity-100 transition-opacity tablet:opacity-0 tablet:group-focus-within/comment:opacity-100 tablet:group-hover/comment:opacity-100',
+          inMargin && 'absolute top-0 right-0 rounded-medium bg-surface-card',
+        )}
+      >
         {allowed.canReply ? (
           <IconAction
             disabled={pending}
@@ -470,17 +481,25 @@ export function CommentThreadItem({
     )
   }
 
-  function renderDocumentEntry(comment: CommentReply, isRoot: boolean) {
+  function renderFlowEntry(comment: CommentReply, isRoot: boolean) {
     return (
-      <div className="group/comment flex flex-col" key={comment.id}>
-        <div className="flex items-center gap-1.5">
+      <div
+        className={cn('group/comment flex flex-col', inMargin && 'px-3 py-2')}
+        key={comment.id}
+      >
+        <div
+          className={cn(
+            'flex min-w-0 items-center gap-1.5',
+            inMargin && 'relative',
+          )}
+        >
           <Meta
             comment={comment}
             editedLabel={t('edited')}
             formatExact={formatExact}
             formatWhen={formatWhen}
             slackLabel={t('fromSlack')}
-            surface="document"
+            surface={surface}
             unknownAuthor={t('unknownAuthor')}
           />
           {renderHoverActions(comment, isRoot)}
@@ -494,16 +513,18 @@ export function CommentThreadItem({
     )
   }
 
-  if (inDocument) {
+  if (inFlow) {
     return (
       <li
-        className="flex flex-col gap-2"
+        className={cn('flex flex-col', !inMargin && 'gap-2')}
         data-resolved={resolved ? 'true' : 'false'}
-        data-testid="document-comment-thread"
+        data-testid={
+          inMargin ? 'margin-comment-thread' : 'document-comment-thread'
+        }
         data-thread-id={thread.id}
       >
-        {renderDocumentEntry(thread, true)}
-        {thread.replies.map((reply) => renderDocumentEntry(reply, false))}
+        {renderFlowEntry(thread, true)}
+        {thread.replies.map((reply) => renderFlowEntry(reply, false))}
         {replying ? renderReplyForm(true) : null}
       </li>
     )

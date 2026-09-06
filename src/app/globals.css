@@ -280,6 +280,8 @@
   --shadow-up-large: var(--elevation-high);
   --shadow-up-xlarge: var(--elevation-high);
 
+  --shadow-float: var(--elevation-float);
+
   --breakpoint-tablet: 768px;
   --breakpoint-desktop: 1024px;
   --breakpoint-desktop-xlarge: 1440px;
@@ -341,6 +343,13 @@
   --elevation-high:
     rgba(15, 15, 15, 0.05) 0px 0px 0px 1px, rgba(15, 15, 15, 0.1) 0px 5px 10px,
     rgba(15, 15, 15, 0.2) 0px 15px 40px;
+  --elevation-float:
+    rgba(25, 25, 25, 0.027) 0px 8px 12px, rgba(25, 25, 25, 0.027) 0px 2px 6px;
+
+  --comment-anchor: rgba(255, 203, 0, 0.12);
+  --comment-anchor-active: rgba(255, 203, 0, 0.24);
+  --comment-anchor-line: rgba(255, 203, 0, 0.35);
+  --comment-anchor-line-active: rgb(255, 203, 0);
 
   --brand: #2783de;
   --brand-strong: #1a73c7;
@@ -441,6 +450,13 @@
   --elevation-high:
     rgba(15, 15, 15, 0.1) 0px 0px 0px 1px, rgba(15, 15, 15, 0.2) 0px 5px 10px,
     rgba(15, 15, 15, 0.4) 0px 15px 40px;
+  --elevation-float:
+    rgba(15, 15, 15, 0.24) 0px 8px 12px, rgba(15, 15, 15, 0.24) 0px 2px 6px;
+
+  --comment-anchor: rgba(255, 203, 0, 0.14);
+  --comment-anchor-active: rgba(255, 203, 0, 0.26);
+  --comment-anchor-line: rgba(255, 203, 0, 0.4);
+  --comment-anchor-line-active: rgb(255, 203, 0);
 
   --brand: #529cca;
   --brand-strong: #6cb6e4;
