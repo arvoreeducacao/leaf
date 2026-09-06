@@ -5,6 +5,7 @@ import { useSyncExternalStore } from 'react'
 export const pendingImportFlag = 'leaf:palette-import-pending'
 
 const importEvent = 'leaf:palette-import'
+const notionImportEvent = 'leaf:notion-import'
 const openEvent = 'leaf:palette-open'
 
 let available = false
@@ -48,6 +49,18 @@ export function onDocumentImportRequest(handler: () => void) {
 
   return () => {
     window.removeEventListener(importEvent, handler)
+  }
+}
+
+export function requestNotionImport() {
+  window.dispatchEvent(new Event(notionImportEvent))
+}
+
+export function onNotionImportRequest(handler: () => void) {
+  window.addEventListener(notionImportEvent, handler)
+
+  return () => {
+    window.removeEventListener(notionImportEvent, handler)
   }
 }
 

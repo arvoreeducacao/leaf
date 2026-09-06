@@ -180,7 +180,8 @@
     "askSources": "Onde encontrei",
     "askEmpty": "Não achei nada sobre isso nos documentos que você pode ver.",
     "askError": "Não deu para responder agora.",
-    "askBack": "Voltar para a busca"
+    "askBack": "Voltar para a busca",
+    "actionNotionImport": "Importar do Notion"
   },
   "home": {
     "title": "Crie seu primeiro documento",
@@ -977,7 +978,8 @@
     "unresolvedPeople": "{count, plural, one {# nome da coluna de pessoa não bateu com ninguém da organização ({names}) e ficou sem responsável.} other {# nomes da coluna de pessoa não bateram com ninguém da organização ({names}) e ficaram sem responsável.}}",
     "boardView": "Quadro",
     "unsupportedBlocks": "Blocos sem equivalente foram pulados: {count} ({types}).",
-    "skippedUnchanged": "{count} páginas já estavam em dia e foram puladas."
+    "skippedUnchanged": "{count} páginas já estavam em dia e foram puladas.",
+    "alreadyImportedByOthers": "Este workspace já foi importado por outra conta ({count, plural, one {# página} other {# páginas}}). Confirme que quer duplicar antes de rodar."
   },
   "githubSync": {
     "databaseTitle": "Pull requests do GitHub",
@@ -1016,9 +1018,7 @@
     "invalidLink": "Esse link não parece ser de uma página do Notion.",
     "unreachable": "Não conseguimos abrir essa página. Confira se você deu acesso a ela na conexão com o Notion.",
     "withComments": "Trazer também os comentários abertos",
-    "withCommentsHint": "As threads não resolvidas entram presas à página, não ao trecho. Deixa a importação mais lenta.",
-    "workspaceOption": "Importar o workspace inteiro",
-    "workspaceOptionHint": "Tudo que a conexão do Notion enxerga, com a hierarquia preservada. Pode levar bastante tempo."
+    "withCommentsHint": "As threads não resolvidas entram presas à página, não ao trecho. Deixa a importação mais lenta."
   },
   "teamspace": {
     "sectionTitle": "Teamspaces",
@@ -1148,5 +1148,51 @@
     "confirmAction": "Revogar acesso",
     "confirmCancel": "Manter acesso",
     "errorNotFound": "Este aplicativo não está mais conectado."
+  },
+  "notionImport": {
+    "sidebarAction": "Importar do Notion",
+    "title": "Trazer suas páginas do Notion",
+    "description": "Você vai entrar no Notion e marcar as páginas que quer trazer. Elas ficam no seu Privado; compartilhe depois, se quiser.",
+    "benefitHierarchy": "Hierarquia, anexos e links entre as páginas vêm juntos",
+    "benefitDuplicates": "Página que já existe no acervo do time é avisada antes de virar cópia",
+    "checking": "Conferindo sua conexão com o Notion…",
+    "connect": "Entrar no Notion",
+    "connected": "Conectado ao Notion",
+    "connectedTo": "Conectado ao Notion ({workspace})",
+    "reconnect": "Rever páginas no Notion",
+    "failedConnect": "Não deu para conectar ao Notion. Tente de novo.",
+    "start": "Importar",
+    "zipHint": "Prefere subir um zip exportado?",
+    "zipAction": "Importar zip",
+    "unavailableTitle": "A importação do Notion ainda não está ligada neste Leaf",
+    "unavailable": "Quem administra a organização precisa cadastrar a integração do Notion. Até lá, dá para subir um zip exportado.",
+    "progressTitle": "Trazendo suas páginas do Notion",
+    "background": "Fechar e continuar em segundo plano",
+    "backgroundHint": "A importação continua. Avisamos quando terminar.",
+    "cancelImport": "Cancelar importação",
+    "doneToast": "{count, plural, one {# página importada} other {# páginas importadas}} pro seu Privado. Links do Notion viraram links do Leaf.",
+    "doneNothing": "Nenhuma página nova veio do Notion. Confira o que você marcou lá.",
+    "open": "Ver",
+    "alreadyImported": "{count, plural, one {# página já estava} other {# páginas já estavam}} no acervo do time",
+    "alreadyImportedHint": "Elas não foram copiadas. Abra a versão do time ou traga como cópia no seu Privado.",
+    "importAsCopies": "Trazer como cópia",
+    "untitledPage": "Página sem título"
+  },
+  "notionWorkspaceImport": {
+    "title": "Importar workspace do Notion",
+    "description": "Traz tudo que a sua conexão do Notion enxerga, com a hierarquia preservada, para a organização ou um teamspace. Só quem administra vê esta seção.",
+    "unavailable": "A integração do Notion não está configurada neste Leaf.",
+    "connect": "Conectar ao Notion",
+    "reconnect": "Reconectar ao Notion",
+    "connected": "Conectado ao Notion",
+    "connectedTo": "Conectado ao Notion ({workspace})",
+    "failedConnect": "Não deu para conectar ao Notion. Tente de novo.",
+    "withComments": "Trazer também os comentários abertos",
+    "withCommentsHint": "Deixa a importação mais lenta.",
+    "byMeHint": "Você já trouxe {count, plural, one {# página} other {# páginas}} deste workspace. Rodar de novo traz só o que mudou.",
+    "byOthersWarning": "Este workspace já foi importado por outra conta: {count, plural, one {# página} other {# páginas}}. Rodar de novo por esta conta duplica tudo o que já está no Leaf.",
+    "byOthersWarningDated": "Este workspace já foi importado por outra conta em {date}: {count, plural, one {# página} other {# páginas}}. Rodar de novo por esta conta duplica tudo o que já está no Leaf.",
+    "acknowledge": "Entendi, importar mesmo assim",
+    "start": "Importar tudo"
   }
 }

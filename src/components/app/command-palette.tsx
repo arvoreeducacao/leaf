@@ -19,6 +19,7 @@ import {
   onCommandPaletteOpen,
   pendingImportFlag,
   requestDocumentImport,
+  requestNotionImport,
   useImportAvailability,
 } from '@/components/app/palette-bridge'
 import {
@@ -30,6 +31,7 @@ import {
 import { PaletteAsk } from '@/components/app/palette-ask'
 import {
   AddIcon,
+  ArchiveDownloadIcon,
   ArchiveUploadIcon,
   MagicWandIcon,
   SearchIcon,
@@ -42,7 +44,7 @@ import type { SearchHit, WorkspaceSearchResult } from '@/lib/search-index'
 import { writeSessionFlag } from '@/shared/storage'
 import { cn } from '@/shared/utils'
 
-type ActionKind = 'new' | 'organization' | 'import' | 'ask'
+type ActionKind = 'new' | 'organization' | 'import' | 'notion' | 'ask'
 
 type PaletteItem = Readonly<{
   key: string
@@ -227,6 +229,14 @@ export function CommandPalette({ hasOrganization, aiEnabled }: Props) {
       icon: <ArchiveUploadIcon aria-hidden="true" className={paletteIcon} />,
     })
 
+    list.push({
+      key: 'action-notion-import',
+      label: t('actionNotionImport'),
+      hit: null,
+      action: 'notion',
+      icon: <ArchiveDownloadIcon aria-hidden="true" className={paletteIcon} />,
+    })
+
     const term = query.trim().toLowerCase()
 
     if (term.length === 0) {
@@ -302,6 +312,13 @@ export function CommandPalette({ hasOrganization, aiEnabled }: Props) {
       if (kind === 'organization') {
         setOpen(false)
         router.push('/org')
+
+        return
+      }
+
+      if (kind === 'notion') {
+        setOpen(false)
+        requestNotionImport()
 
         return
       }
