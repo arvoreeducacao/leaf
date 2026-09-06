@@ -37,6 +37,12 @@ function includesRows(argv: ReadonlyArray<string>): boolean {
   return argv.includes('--rows')
 }
 
+function onlyDocumentOf(argv: ReadonlyArray<string>): string | null {
+  const flag = argv.find((value) => value.startsWith('--document='))
+
+  return flag ? flag.split('=')[1] : null
+}
+
 async function query<T extends RowDataPacket>(
   connection: Connection,
   sql: string,
@@ -51,6 +57,7 @@ async function loadTargets(
   connection: Connection,
   withRows: boolean,
   limit: number | null,
+  onlyDocument: string | null,
 ): Promise<Array<Target>> {
   const kinds = withRows ? ['page', 'database', 'row'] : ['page', 'database']
   const rows = await query<RowDataPacket>(
@@ -65,8 +72,9 @@ async function loadTargets(
         and d.deleted_at is null
       where nd.kind in (?)
         and (d.cover is null or d.cover = '')
+        and (? is null or d.id = ?)
       order by nd.kind`,
-    [kinds],
+    [kinds, onlyDocument, onlyDocument],
   )
 
   const targets = rows.map((row) => ({
@@ -100,6 +108,7 @@ async function main() {
   const mode = modeOf(process.argv)
   const limit = limitOf(process.argv)
   const withRows = includesRows(process.argv)
+  const onlyDocument = onlyDocumentOf(process.argv)
   const url = process.env.DATABASE_URL
 
   if (!url) {
@@ -117,7 +126,7 @@ async function main() {
   }
 
   const client = createNotionClient(String(tokens[0].token))
-  const targets = await loadTargets(connection, withRows, limit)
+  const targets = await loadTargets(connection, withRows, limit, onlyDocument)
 
   let read = 0
   let found = 0

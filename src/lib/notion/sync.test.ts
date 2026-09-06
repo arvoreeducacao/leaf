@@ -545,6 +545,24 @@ describe('resumable Notion sync', () => {
     expect(page?.cover).toBe('https://images.unsplash.com/photo-1')
   })
 
+  it('stores a cover whose external address is a signed Notion one', async () => {
+    const world = makeWorld()
+
+    world.rootCover = {
+      external: {
+        url: 'https://img.notionusercontent.com/s3/capa.png?exp=1&sig=abc',
+      },
+    }
+
+    await run(world)
+
+    const page = await db.query.documents.findFirst({
+      where: eq(documents.title, 'Reading plan'),
+    })
+
+    expect(page?.cover).toBe('/api/uploads/u/cover')
+  })
+
   it('gives a cover to a page the rerun skips', async () => {
     const world = makeWorld()
 
