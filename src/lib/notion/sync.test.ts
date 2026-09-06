@@ -66,6 +66,8 @@ type World = {
   dbDead?: boolean
   brokenIds?: Array<string>
   rootIcon: { name: string; color: string } | null
+  rootCover: { file?: { url: string }; external?: { url: string } } | null
+  abortOnRows?: AbortController
 }
 
 function makeWorld(): World {
@@ -73,6 +75,7 @@ function makeWorld(): World {
     childText: 'child body',
     pageCalls: [],
     dbInline: true,
+    rootCover: null,
     rootIcon: { color: 'gray', name: 'alien-pixel' },
     editedAt: {
       [childId]: '2026-01-02T00:00:00.000Z',
@@ -102,6 +105,7 @@ function makeClient(world: World): NotionClient {
       properties: title('Class A'),
     }),
     [norm(rootId)]: () => ({
+      cover: world.rootCover ?? undefined,
       created_time: '2025-12-01T00:00:00.000Z',
       icon: world.rootIcon ? { icon: world.rootIcon, type: 'icon' } : undefined,
       id: rootId,
@@ -231,6 +235,8 @@ function makeClient(world: World): NotionClient {
       return page()
     },
     rows: async function* (id: string) {
+      world.abortOnRows?.abort()
+
       if (norm(id) === norm(databaseId)) {
         yield rows[norm(rowOneId)]()
         yield rows[norm(rowTwoId)]()
@@ -475,6 +481,111 @@ describe('resumable Notion sync', () => {
     })
 
     expect(after?.icon).toBe('https://www.notion.so/icons/fireworks_gray.svg')
+  })
+
+  it('brings the page cover from Notion into the document', async () => {
+    const world = makeWorld()
+
+    world.rootCover = {
+      file: { url: 'https://files.notion.so/cover.png?sig=1' },
+    }
+
+    await run(world)
+
+    const page = await db.query.documents.findFirst({
+      where: eq(documents.title, 'Reading plan'),
+    })
+
+    expect(page?.cover).toBe('/api/uploads/u/cover')
+  })
+
+  it('keeps an external cover as its own address', async () => {
+    const world = makeWorld()
+
+    world.rootCover = {
+      external: { url: 'https://images.unsplash.com/photo-1' },
+    }
+
+    await run(world)
+
+    const page = await db.query.documents.findFirst({
+      where: eq(documents.title, 'Reading plan'),
+    })
+
+    expect(page?.cover).toBe('https://images.unsplash.com/photo-1')
+  })
+
+  it('gives a cover to a page the rerun skips', async () => {
+    const world = makeWorld()
+
+    await run(world)
+
+    const before = await db.query.documents.findFirst({
+      where: eq(documents.title, 'Reading plan'),
+    })
+
+    expect(before?.cover).toBeNull()
+
+    world.rootCover = {
+      external: { url: 'https://images.unsplash.com/photo-2' },
+    }
+
+    const summary = await run(world)
+
+    expect(summary.pages).toBe(0)
+
+    const after = await db.query.documents.findFirst({
+      where: eq(documents.title, 'Reading plan'),
+    })
+
+    expect(after?.cover).toBe('https://images.unsplash.com/photo-2')
+  })
+
+  it('never erases a cover chosen here because Notion has none', async () => {
+    const world = makeWorld()
+
+    world.rootCover = {
+      external: { url: 'https://images.unsplash.com/photo-3' },
+    }
+
+    await run(world)
+
+    world.rootCover = null
+
+    await run(world)
+
+    const page = await db.query.documents.findFirst({
+      where: eq(documents.title, 'Reading plan'),
+    })
+
+    expect(page?.cover).toBe('https://images.unsplash.com/photo-3')
+  })
+
+  it('stores the image address before the run ends, not only at the end', async () => {
+    const world = makeWorld()
+
+    world.abortOnRows = new AbortController()
+
+    for await (const _event of syncNotion(
+      makeClient(world),
+      [{ id: rootId, kind: 'page' }],
+      owner,
+      messages,
+      world.abortOnRows.signal,
+      {
+        storeAsset: async (_bytes, _contentType, fileName) =>
+          `/api/uploads/u/${fileName}`,
+      },
+    )) {
+      continue
+    }
+
+    const child = await db.query.documents.findFirst({
+      where: eq(documents.title, 'Class A'),
+    })
+
+    expect(child?.content).toContain('/api/uploads/u/image')
+    expect(child?.content).not.toContain('notion://asset/')
   })
 
   it('repairs the icon of a page the rerun skips', async () => {

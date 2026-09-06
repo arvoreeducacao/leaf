@@ -165,3 +165,27 @@ export function parseCoverCredit(raw: string | null | undefined) {
 export function serializeCoverCredit(credit: CoverCredit | null) {
   return credit ? JSON.stringify(credit) : null
 }
+
+export type NotionCoverPayload = Readonly<{
+  external?: { url?: string } | null
+  file?: { url?: string } | null
+}>
+
+export function notionCoverValue(
+  cover: NotionCoverPayload | null | undefined,
+  storedUrlFor: (url: string, fallbackName: string) => string | null,
+): string | null {
+  const external = cover?.external?.url
+
+  if (typeof external === 'string' && isHttpsImageUrl(external)) {
+    return external
+  }
+
+  const file = cover?.file?.url
+
+  if (typeof file === 'string' && file.startsWith('https://')) {
+    return storedUrlFor(file, 'cover')
+  }
+
+  return null
+}
