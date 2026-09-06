@@ -152,7 +152,10 @@ export function InlineComments({
     setTops((current) => (sameNumbers(current, next) ? current : next))
 
     const column = container.querySelector('.bn-block-outer') ?? container
-    const fit = fitLane(column.getBoundingClientRect().right, window.innerWidth)
+    const fit = fitLane(
+      column.getBoundingClientRect().right,
+      document.documentElement.clientWidth,
+    )
 
     setLane((current) => {
       if (fit === null) {

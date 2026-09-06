@@ -25,13 +25,13 @@ describe('fitLane', () => {
   })
 
   it('closes the gap only after the card reaches its floor', () => {
-    const lane = fitLane(1_200, 1_476)
+    const lane = fitLane(1_200, 1_484)
 
     expect(lane).toEqual({ left: 1_200 + CARD_MIN_GAP, width: CARD_MIN_WIDTH })
   })
 
   it('gives up when the narrowest card no longer fits', () => {
-    expect(fitLane(1_200, 1_475)).toBeNull()
+    expect(fitLane(1_200, 1_483)).toBeNull()
     expect(fitLane(1_074, 1_280)).toBeNull()
   })
 })

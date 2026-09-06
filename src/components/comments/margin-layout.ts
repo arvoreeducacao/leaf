@@ -8,7 +8,7 @@ export const CARD_MIN_GAP = 8
 
 export const CARD_STACK_GAP = 10
 
-export const LANE_GUTTER = 8
+export const LANE_GUTTER = 16
 
 export const CARD_ANCHOR_OFFSET = 7
 

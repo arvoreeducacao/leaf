@@ -3,6 +3,7 @@ import { expect, test, type Page } from '@playwright/test'
 import {
   createDocument,
   editorBody,
+  expectNoHorizontalOverflow,
   signUp,
   typeInEditor,
   uniqueEmail,
@@ -556,6 +557,11 @@ test.describe('comments', () => {
       expect(cardBox?.x ?? 0).toBeGreaterThan(
         (blockBox?.x ?? 0) + (blockBox?.width ?? 0),
       )
+
+      await expectNoHorizontalOverflow(page)
+
+      await card.click()
+      await expectNoHorizontalOverflow(page)
     })
 
     test('the commented passage is marked and opens its card', async ({
@@ -638,6 +644,26 @@ test.describe('comments', () => {
 
       await expect(page.getByText('Comentário resolvido').first()).toBeVisible()
       await expect(page.getByTestId('margin-comment-card')).toHaveCount(0)
+    })
+
+    test('the lane never pushes the page sideways', async ({ page }) => {
+      await signUp(page, uniqueEmail('no-overflow'), 'Author')
+      await createDocument(page, 'Document measured at every width')
+
+      await typeInEditor(page, 'first paragraph')
+      await page.keyboard.press('Enter')
+      await page.keyboard.type('second paragraph')
+      await waitForSaved(page)
+
+      await selectLastWord(page, 'second paragraph'.length)
+      await commentFromToolbar(page, 'Does the card fit?')
+      await page.keyboard.press('Escape')
+
+      for (const width of [1_600, 1_520, 1_484, 1_440, 1_280]) {
+        await page.setViewportSize({ width, height: 900 })
+        await page.waitForTimeout(200)
+        await expectNoHorizontalOverflow(page)
+      }
     })
 
     test('the commented passage is still editable', async ({ page }) => {
