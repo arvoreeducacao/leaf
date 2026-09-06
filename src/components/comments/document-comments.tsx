@@ -80,43 +80,42 @@ export function DocumentComments({
 
   const threads = pageComments(state)
   const canComment = state.canComment
-  const empty = threads.length === 0
 
-  if (empty && !canComment) {
+  if (threads.length === 0) {
     return null
   }
 
   return (
     <section
       aria-label={t('documentSectionLabel')}
-      className="mt-8 px-4 tablet:px-[54px]"
+      className="mt-4 mb-2 px-4 tablet:px-[54px]"
       data-testid="document-comments"
     >
-      <div className="flex min-h-6 items-center gap-2 border-line-divider border-t pt-4">
-        <h2 className="font-medium text-body-small text-content-muted">
-          {t('title')}
-        </h2>
-        {slack ? (
-          <div className="ml-auto flex min-w-0 items-center gap-2">
-            {slack.name ? (
-              <span className="flex min-w-0 items-center gap-1.5 text-caption text-content-muted">
-                <SlackIcon aria-hidden="true" className="size-3.5 shrink-0" />
-                <span className="truncate">#{slack.name}</span>
-              </span>
-            ) : null}
-            <a
-              className="shrink-0 rounded-medium font-medium text-caption text-link underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-2"
-              href={slack.url}
-              rel="noreferrer"
-              target="_blank"
-            >
-              {t('openInSlack')}
-            </a>
-          </div>
-        ) : null}
-      </div>
+      <div className="border-line border-b pb-4">
+        <div className="flex min-h-6 items-center gap-2">
+          <h2 className="font-medium text-body-small text-content-muted">
+            {t('title')}
+          </h2>
+          {slack ? (
+            <div className="ml-auto flex min-w-0 items-center gap-2">
+              {slack.name ? (
+                <span className="flex min-w-0 items-center gap-1.5 text-caption text-content-muted">
+                  <SlackIcon aria-hidden="true" className="size-3.5 shrink-0" />
+                  <span className="truncate">#{slack.name}</span>
+                </span>
+              ) : null}
+              <a
+                className="shrink-0 rounded-medium font-medium text-caption text-link underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-2"
+                href={slack.url}
+                rel="noreferrer"
+                target="_blank"
+              >
+                {t('openInSlack')}
+              </a>
+            </div>
+          ) : null}
+        </div>
 
-      {empty ? null : (
         <ul
           aria-label={t('threadListLabel')}
           className="mt-2 flex flex-col gap-4"
@@ -167,28 +166,28 @@ export function DocumentComments({
             />
           ))}
         </ul>
-      )}
 
-      {canComment ? (
-        <CommentComposer
-          className="mt-4"
-          disabled={pending}
-          fieldTestId="document-comment-input"
-          label={t('documentNewLabel')}
-          onSubmit={(body) =>
-            run(() => addComment(documentId, body, null, null), t('added'))
-          }
-          placeholder={t('documentPlaceholder')}
-          submitTestId="submit-document-comment"
-          viewer={viewer}
-        />
-      ) : null}
+        {canComment ? (
+          <CommentComposer
+            className="mt-4"
+            disabled={pending}
+            fieldTestId="document-comment-input"
+            label={t('documentNewLabel')}
+            onSubmit={(body) =>
+              run(() => addComment(documentId, body, null, null), t('added'))
+            }
+            placeholder={t('documentPlaceholder')}
+            submitTestId="submit-document-comment"
+            viewer={viewer}
+          />
+        ) : null}
 
-      {slack?.pushesComments ? (
-        <p className="mt-1.5 pl-8 text-caption text-content-muted">
-          {t('goesToSlackThread')}
-        </p>
-      ) : null}
+        {slack?.pushesComments ? (
+          <p className="mt-1.5 pl-8 text-caption text-content-muted">
+            {t('goesToSlackThread')}
+          </p>
+        ) : null}
+      </div>
     </section>
   )
 }

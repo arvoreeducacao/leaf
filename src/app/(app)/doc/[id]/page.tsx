@@ -159,6 +159,13 @@ export default async function DocumentPage({ params }: Props) {
                 />
               </div>
             ) : null}
+            <DocumentComments
+              documentId={document.id}
+              initialState={comments}
+              renderedAt={relativeTimeAnchor()}
+              slack={slack}
+              viewer={viewer}
+            />
             <DocumentEditor
               aiEnabled={isAiEnabled()}
               canComment={canComment(access)}
@@ -184,13 +191,6 @@ export default async function DocumentPage({ params }: Props) {
                     }
                   : null
               }
-              viewer={viewer}
-            />
-            <DocumentComments
-              documentId={document.id}
-              initialState={comments}
-              renderedAt={relativeTimeAnchor()}
-              slack={slack}
               viewer={viewer}
             />
           </>

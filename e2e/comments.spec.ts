@@ -375,30 +375,35 @@ test.describe('comments', () => {
     ).toContainText('Orphan comment')
   })
 
-  test('the page comment lives at the foot of the document', async ({
+  test('the page conversation opens above the body of the document', async ({
     page,
   }) => {
-    await signUp(page, uniqueEmail('footer'), 'Author')
-    await createDocument(page, 'Document with a footer')
+    await signUp(page, uniqueEmail('conversation'), 'Author')
+    await createDocument(page, 'Document with a conversation')
 
     await typeInEditor(page, 'text of the page')
     await waitForSaved(page)
 
-    const footer = page.getByTestId('document-comments')
+    await expect(page.getByTestId('document-comments')).toHaveCount(0)
 
-    await expect(footer).toBeVisible()
-    await expect(footer.getByRole('heading')).toHaveText('Comentários')
-
-    await footer
-      .getByTestId('document-comment-input')
-      .fill('Does this go to everyone?')
-    await footer.getByTestId('submit-document-comment').click()
-
+    await openPanel(page)
+    await page.getByLabel('Novo comentário').fill('Does this go to everyone?')
+    await page.getByTestId('submit-comment').click()
     await expect(page.getByText('Comentário adicionado').first()).toBeVisible()
-    await expect(footer.getByTestId('document-comment-thread')).toHaveCount(1)
-    await expect(footer).toContainText('Does this go to everyone?')
-    await expect(footer).toContainText('Author')
+    await page.keyboard.press('Escape')
+
+    const conversation = page.getByTestId('document-comments')
+
+    await expect(conversation).toBeVisible()
+    await expect(conversation.getByRole('heading')).toHaveText('Comentários')
+    await expect(conversation).toContainText('Does this go to everyone?')
+    await expect(conversation).toContainText('Author')
     await expect(page.getByTestId('comments-button')).toContainText('1')
+
+    const conversationBox = await conversation.boundingBox()
+    const editorBox = await editorBody(page).boundingBox()
+
+    expect(conversationBox?.y ?? 1_000).toBeLessThan(editorBox?.y ?? 0)
 
     await selectLastWord(page, 'page'.length)
     await commentFromToolbar(page, 'And this one stays on the passage')
@@ -408,32 +413,66 @@ test.describe('comments', () => {
     await page.reload()
     await waitForEditorReady(page)
 
-    await expect(footer.getByTestId('document-comment-thread')).toHaveCount(1)
-    await expect(footer).not.toContainText('And this one stays on the passage')
+    await expect(conversation.getByTestId('document-comment-thread')).toHaveCount(
+      1,
+    )
+    await expect(conversation).not.toContainText(
+      'And this one stays on the passage',
+    )
     await expect(page.getByTestId('inline-comment-marker')).toHaveCount(1)
   })
 
-  test('resolving from the foot of the document closes the conversation', async ({
+  test('resolving from the conversation closes it and clears the block', async ({
     page,
   }) => {
-    await signUp(page, uniqueEmail('footer-resolve'), 'Author')
+    await signUp(page, uniqueEmail('conversation-resolve'), 'Author')
     await createDocument(page, 'Document to close')
 
     await typeInEditor(page, 'text to close')
     await waitForSaved(page)
 
-    const footer = page.getByTestId('document-comments')
+    await openPanel(page)
+    await page.getByLabel('Novo comentário').fill('Can we close it?')
+    await page.getByTestId('submit-comment').click()
+    await expect(page.getByText('Comentário adicionado').first()).toBeVisible()
+    await page.keyboard.press('Escape')
 
-    await footer.getByTestId('document-comment-input').fill('Can we close it?')
-    await footer.getByTestId('submit-document-comment').click()
+    const conversation = page.getByTestId('document-comments')
 
-    await expect(footer.getByTestId('document-comment-thread')).toHaveCount(1)
+    await expect(conversation.getByTestId('document-comment-thread')).toHaveCount(
+      1,
+    )
 
-    await footer.getByRole('button', { name: 'Resolver' }).click()
+    await conversation.getByRole('button', { name: 'Resolver' }).click()
 
     await expect(page.getByText('Comentário resolvido').first()).toBeVisible()
-    await expect(footer.getByTestId('document-comment-thread')).toHaveCount(0)
-    await expect(footer.getByTestId('document-comment-input')).toBeVisible()
+    await expect(page.getByTestId('document-comments')).toHaveCount(0)
+  })
+
+  test('a reply written in the conversation lands in the thread', async ({
+    page,
+  }) => {
+    await signUp(page, uniqueEmail('conversation-reply'), 'Author')
+    await createDocument(page, 'Document answered above the body')
+
+    await typeInEditor(page, 'text to answer')
+    await waitForSaved(page)
+
+    await openPanel(page)
+    await page.getByLabel('Novo comentário').fill('Opening question')
+    await page.getByTestId('submit-comment').click()
+    await expect(page.getByText('Comentário adicionado').first()).toBeVisible()
+    await page.keyboard.press('Escape')
+
+    const conversation = page.getByTestId('document-comments')
+
+    await conversation
+      .getByTestId('document-comment-input')
+      .fill('Answer above the body')
+    await conversation.getByTestId('submit-document-comment').click()
+
+    await expect(conversation).toContainText('Answer above the body')
+    await expect(page.getByTestId('comments-button')).toContainText('2')
   })
 
   test('the public page does not show comments', async ({ browser }) => {
