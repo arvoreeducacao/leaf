@@ -4,7 +4,7 @@ import type { Connection, RowDataPacket } from 'mysql2/promise'
 import { normalizeCover, notionCoverValue } from '@/lib/document-cover'
 import { createNotionClient } from '@/lib/notion/api'
 import type { NotionClient } from '@/lib/notion/api'
-import { assetKeyFor } from '@/lib/notion/import'
+import { assetKeyFor } from '@/lib/notion/paths'
 import { MAX_ASSET_BYTES } from '@/lib/notion/limits'
 import { storage } from '@/lib/storage'
 

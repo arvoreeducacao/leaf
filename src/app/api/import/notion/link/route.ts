@@ -13,7 +13,7 @@ import {
 } from '@/lib/import-destination'
 import { createNotionClient } from '@/lib/notion/api'
 import { getNotionConnection } from '@/lib/notion/connection'
-import { assetKeyFor } from '@/lib/notion/import'
+import { assetKeyFor } from '@/lib/notion/paths'
 import { notionIdFromLink } from '@/lib/notion/link'
 import { buildNotionImportMessages } from '@/lib/notion/messages'
 import {

@@ -1,3 +1,5 @@
+import { nanoid } from 'nanoid'
+
 const notionHashPattern = /[\s._-]+[0-9a-f]{32}(_all)?$/i
 
 const shortHashPattern = /[\s._-]+[0-9a-f]{8,}$/i
@@ -92,4 +94,10 @@ export function stripCommonRoot(paths: Array<string>): string {
   const candidate = first.slice(0, firstSlash + 1)
 
   return paths.every((path) => path.startsWith(candidate)) ? candidate : ''
+}
+
+export function assetKeyFor(path: string) {
+  const extension = extensionOf(path)
+
+  return `u/${nanoid(16)}${extension.length > 0 ? extension : '.bin'}`
 }
