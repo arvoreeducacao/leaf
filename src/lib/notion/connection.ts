@@ -7,6 +7,18 @@ import { NOTION_API_BASE } from '@/lib/notion/api'
 
 export const notionStateCookie = 'leaf-notion-state'
 
+export const notionReturnCookie = 'leaf-notion-return'
+
+const relativePathPattern = /^\/(?!\/)[^\s\\]*$/
+
+export function safeReturnPath(value: string | null | undefined): string | null {
+  if (!value || !relativePathPattern.test(value)) {
+    return null
+  }
+
+  return value
+}
+
 export type NotionOAuthConfig = Readonly<{
   clientId: string
   clientSecret: string

@@ -146,9 +146,19 @@ criação de conta, inclusive OAuth) e `databaseHooks.session.create.before` (co
 qualquer caminho de login). Os convites de documento e de organização usam a mesma
 lista.
 
-**Importar do Notion por link**: o Leaf é uma *public connection* do Notion, com
+**Importar do Notion**: o Leaf é uma *public connection* do Notion, com
 OAuth por pessoa — cada uma conecta a própria conta e importa só o que já enxerga
-lá. A conexão se cria em `https://app.notion.com/developers/connections`, com
+lá. Três caminhos usam a mesma conexão: **Importar do Notion** na seção Privado da
+barra lateral (e na paleta ⌘K) traz para o Privado da pessoa tudo que ela marcou
+na tela de consentimento do Notion, pulando o que outra conta da organização já
+trouxe e avisando quantas páginas ficaram de fora; **Importar do Notion** no menu
+`/` do editor traz uma página e a árvore dela como subpágina do documento aberto;
+e **Importar workspace do Notion**, na página da organização, só para dono ou
+admin, traz tudo para a organização ou um teamspace, com aviso e confirmação
+quando outra conta já importou (rodar de novo por outra conta duplica o acervo,
+porque o mapa Notion→Leaf é por pessoa). Depois do login no Notion a pessoa volta
+para onde estava (`return` relativo, validado). A conexão se cria em
+`https://app.notion.com/developers/connections`, com
 escopo de instalação **"selected workspaces only"** (escolha que não se muda
 depois) e o redirect acima. As capacidades a marcar são **ler conteúdo**, **ler
 comentários** (senão `GET /v1/comments` responde 403 e as threads não vêm) e

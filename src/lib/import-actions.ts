@@ -161,6 +161,31 @@ export async function previewNotionLink(link: string): Promise<NotionPreview> {
   }
 }
 
+export type NotionPersonalImportState = Readonly<{
+  state: 'unavailable' | 'disconnected' | 'connected'
+  workspaceName: string | null
+}>
+
+export async function notionPersonalImportState(): Promise<NotionPersonalImportState> {
+  if (!notionOAuthConfig()) {
+    return { state: 'unavailable', workspaceName: null }
+  }
+
+  const session = await getSession()
+
+  if (!session) {
+    return { state: 'disconnected', workspaceName: null }
+  }
+
+  const connection = await getNotionConnection(session.user.id)
+
+  if (!connection) {
+    return { state: 'disconnected', workspaceName: null }
+  }
+
+  return { state: 'connected', workspaceName: connection.workspaceName }
+}
+
 export async function notionConnectionState(): Promise<
   'unavailable' | 'disconnected' | 'connected'
 > {

@@ -180,7 +180,8 @@
     "askSources": "Where I found it",
     "askEmpty": "I found nothing about that in the documents you can see.",
     "askError": "Could not answer right now.",
-    "askBack": "Back to search"
+    "askBack": "Back to search",
+    "actionNotionImport": "Import from Notion"
   },
   "home": {
     "title": "Create your first document",
@@ -977,7 +978,8 @@
     "unresolvedPeople": "{count, plural, one {# name in the person column matched nobody in the organization ({names}) and was left unassigned.} other {# names in the person column matched nobody in the organization ({names}) and were left unassigned.}}",
     "boardView": "Board",
     "unsupportedBlocks": "Blocks without an equivalent were skipped: {count} ({types}).",
-    "skippedUnchanged": "{count} pages were already up to date and were skipped."
+    "skippedUnchanged": "{count} pages were already up to date and were skipped.",
+    "alreadyImportedByOthers": "This workspace was already imported by another account ({count, plural, one {# page} other {# pages}}). Confirm you want duplicates before running."
   },
   "githubSync": {
     "databaseTitle": "GitHub pull requests",
@@ -1016,9 +1018,7 @@
     "invalidLink": "That link does not look like a Notion page.",
     "unreachable": "We could not open that page. Check that you granted access to it in the Notion connection.",
     "withComments": "Bring the open comments too",
-    "withCommentsHint": "Unresolved threads come anchored to the page, not to the passage. Makes the import slower.",
-    "workspaceOption": "Import the whole workspace",
-    "workspaceOptionHint": "Everything the Notion connection can see, keeping the hierarchy. This can take a while."
+    "withCommentsHint": "Unresolved threads come anchored to the page, not to the passage. Makes the import slower."
   },
   "teamspace": {
     "sectionTitle": "Teamspaces",
@@ -1148,5 +1148,51 @@
     "confirmAction": "Revoke access",
     "confirmCancel": "Keep access",
     "errorNotFound": "This app is no longer connected."
+  },
+  "notionImport": {
+    "sidebarAction": "Import from Notion",
+    "title": "Bring your Notion pages",
+    "description": "You will sign in to Notion and tick the pages you want to bring. They land in your Private space; share them later if you like.",
+    "benefitHierarchy": "Hierarchy, attachments and links between pages come along",
+    "benefitDuplicates": "A page that already exists in the team library is flagged before it becomes a copy",
+    "checking": "Checking your Notion connection…",
+    "connect": "Sign in to Notion",
+    "connected": "Connected to Notion",
+    "connectedTo": "Connected to Notion ({workspace})",
+    "reconnect": "Review pages on Notion",
+    "failedConnect": "Could not connect to Notion. Try again.",
+    "start": "Import",
+    "zipHint": "Prefer to upload an exported zip?",
+    "zipAction": "Import zip",
+    "unavailableTitle": "Importing from Notion is not switched on in this Leaf yet",
+    "unavailable": "Whoever manages the organization needs to register the Notion integration. Until then, you can upload an exported zip.",
+    "progressTitle": "Bringing your Notion pages",
+    "background": "Close and keep going in the background",
+    "backgroundHint": "The import keeps running. We will let you know when it finishes.",
+    "cancelImport": "Cancel import",
+    "doneToast": "{count, plural, one {# page imported} other {# pages imported}} into your Private space. Notion links became Leaf links.",
+    "doneNothing": "No new page came from Notion. Check what you ticked there.",
+    "open": "View",
+    "alreadyImported": "{count, plural, one {# page was} other {# pages were}} already in the team library",
+    "alreadyImportedHint": "They were not copied. Open the team version or bring them as copies into your Private space.",
+    "importAsCopies": "Bring as copies",
+    "untitledPage": "Untitled page"
+  },
+  "notionWorkspaceImport": {
+    "title": "Import a Notion workspace",
+    "description": "Brings everything your Notion connection can see, keeping the hierarchy, into the organization or a teamspace. Only managers see this section.",
+    "unavailable": "The Notion integration is not configured in this Leaf.",
+    "connect": "Connect to Notion",
+    "reconnect": "Reconnect to Notion",
+    "connected": "Connected to Notion",
+    "connectedTo": "Connected to Notion ({workspace})",
+    "failedConnect": "Could not connect to Notion. Try again.",
+    "withComments": "Bring the open comments too",
+    "withCommentsHint": "Makes the import slower.",
+    "byMeHint": "You already brought {count, plural, one {# page} other {# pages}} from this workspace. Running again brings only what changed.",
+    "byOthersWarning": "This workspace was already imported by another account: {count, plural, one {# page} other {# pages}}. Running it again from this account duplicates everything already in Leaf.",
+    "byOthersWarningDated": "This workspace was already imported by another account on {date}: {count, plural, one {# page} other {# pages}}. Running it again from this account duplicates everything already in Leaf.",
+    "acknowledge": "I understand, import anyway",
+    "start": "Import everything"
   }
 }

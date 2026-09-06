@@ -7,12 +7,16 @@ import { getSession } from '@/lib/auth'
 import {
   notionAuthorizeUrl,
   notionOAuthConfig,
+  notionReturnCookie,
   notionStateCookie,
+  safeReturnPath,
 } from '@/lib/notion/connection'
 
 export const runtime = 'nodejs'
 
-export async function GET() {
+const cookieLifetimeSeconds = 600
+
+export async function GET(request: Request) {
   const session = await getSession()
 
   if (!session) {
@@ -27,14 +31,25 @@ export async function GET() {
 
   const state = randomBytes(24).toString('base64url')
   const store = await cookies()
-
-  store.set(notionStateCookie, state, {
+  const cookieOptions = {
     httpOnly: true,
-    maxAge: 600,
+    maxAge: cookieLifetimeSeconds,
     path: '/',
-    sameSite: 'lax',
+    sameSite: 'lax' as const,
     secure: process.env.NODE_ENV === 'production',
-  })
+  }
+
+  store.set(notionStateCookie, state, cookieOptions)
+
+  const returnPath = safeReturnPath(
+    new URL(request.url).searchParams.get('return'),
+  )
+
+  if (returnPath) {
+    store.set(notionReturnCookie, returnPath, cookieOptions)
+  } else {
+    store.delete(notionReturnCookie)
+  }
 
   return NextResponse.redirect(notionAuthorizeUrl(config, state))
 }

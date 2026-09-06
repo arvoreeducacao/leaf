@@ -46,7 +46,6 @@ export function NotionLinkDialog({ open, parentId, onOpenChange }: Props) {
   const [preview, setPreview] = useState<NotionPreview | null>(null)
   const [checking, setChecking] = useState(false)
   const [withComments, setWithComments] = useState(false)
-  const [wholeWorkspace, setWholeWorkspace] = useState(false)
   const [destinations, setDestinations] =
     useState<ImportDestinationsResult | null>(null)
   const [destination, setDestination] = useState<string | null>(null)
@@ -56,7 +55,6 @@ export function NotionLinkDialog({ open, parentId, onOpenChange }: Props) {
       setLink('')
       setPreview(null)
       setWithComments(false)
-      setWholeWorkspace(false)
       setDestinations(null)
       setDestination(null)
       reset()
@@ -102,13 +100,12 @@ export function NotionLinkDialog({ open, parentId, onOpenChange }: Props) {
         destination,
         link,
         parentId,
-        workspace: wholeWorkspace,
       }),
       { 'Content-Type': 'application/json' },
     )
   }
 
-  const ready = preview?.state === 'ready' || wholeWorkspace
+  const ready = preview?.state === 'ready'
 
   const previewMessage =
     preview === null
@@ -123,42 +120,21 @@ export function NotionLinkDialog({ open, parentId, onOpenChange }: Props) {
 
   const form = (
     <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto">
-      <label className="flex cursor-pointer items-start gap-3 rounded-large px-3 py-2 transition-colors hover:bg-surface-hover has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-focus has-[:focus-visible]:outline-offset-2">
-        <Switch
-          checked={wholeWorkspace}
-          className="mt-1"
-          onCheckedChange={(checked) => {
-            setWholeWorkspace(checked)
+      <div className="flex flex-col gap-2">
+        <Label htmlFor={linkId}>{t('linkLabel')}</Label>
+        <Input
+          autoComplete="off"
+          id={linkId}
+          onChange={(event) => {
+            setLink(event.target.value)
             setPreview(null)
           }}
+          placeholder={t('linkPlaceholder')}
+          spellCheck={false}
+          value={link}
         />
-        <span className="flex min-w-0 flex-1 flex-col">
-          <span className="text-body-small text-content-strong">
-            {t('workspaceOption')}
-          </span>
-          <span className="text-body-small text-content">
-            {t('workspaceOptionHint')}
-          </span>
-        </span>
-      </label>
-
-      {wholeWorkspace ? null : (
-        <div className="flex flex-col gap-2">
-          <Label htmlFor={linkId}>{t('linkLabel')}</Label>
-          <Input
-            autoComplete="off"
-            id={linkId}
-            onChange={(event) => {
-              setLink(event.target.value)
-              setPreview(null)
-            }}
-            placeholder={t('linkPlaceholder')}
-            spellCheck={false}
-            value={link}
-          />
-          <p className="text-body-small text-content">{t('linkHelp')}</p>
-        </div>
-      )}
+        <p className="text-body-small text-content">{t('linkHelp')}</p>
+      </div>
 
       {previewMessage ? (
         <p
@@ -238,9 +214,7 @@ export function NotionLinkDialog({ open, parentId, onOpenChange }: Props) {
         <Button
           className="w-full tablet:w-auto"
           disabled={
-            checking ||
-            (!wholeWorkspace && link.trim().length === 0) ||
-            (ready && !destination)
+            checking || link.trim().length === 0 || (ready && !destination)
           }
           onClick={() => (ready ? begin() : void check())}
           type="button"

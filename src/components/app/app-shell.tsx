@@ -12,6 +12,8 @@ import { CustomizeSidebar } from '@/components/app/customize-sidebar'
 import { DocumentList } from '@/components/app/document-list'
 import { DocumentTree } from '@/components/app/document-tree'
 import { NewDocumentButton } from '@/components/app/new-document-button'
+import { NotionImportButton } from '@/components/app/notion-import-button'
+import { NotionImportHost } from '@/components/app/notion-import-host'
 import { NewItemMenu } from '@/components/app/new-item-menu'
 import { OfflineBanner } from '@/components/app/offline-banner'
 import { OfflineSync } from '@/components/app/offline-sync'
@@ -163,6 +165,7 @@ function NavContent({
           href="/documents?scope=private"
           onNavigate={onNavigate}
         />
+        <NotionImportButton onNavigate={onNavigate} />
         <NewDocumentButton variant="sidebar" />
       </SidebarSection>
     ),
@@ -359,6 +362,7 @@ export function AppShell({
         aiEnabled={aiEnabled}
         hasOrganization={organizationName !== null}
       />
+      <NotionImportHost />
       <OfflineSync />
 
       <aside
