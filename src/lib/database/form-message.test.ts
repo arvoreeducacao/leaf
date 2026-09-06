@@ -200,6 +200,65 @@ describe('slackPayloadFor', () => {
     expect(blocks.every((block) => block.type === 'section')).toBe(true)
   })
 
+  it('shows the print as a picture, with the full address', () => {
+    const blocks = slackPayloadFor(
+      config,
+      properties,
+      'Ícones',
+      { ...values, files: '/api/uploads/u/print.png' },
+      'Nome',
+      null,
+      'Abrir no Leaf',
+      'https://leaf.arvore.com.br',
+    ).blocks as Array<{ type: string; image_url?: string; alt_text?: string }>
+    const image = blocks.find((block) => block.type === 'image')
+
+    expect(image?.image_url).toBe(
+      'https://leaf.arvore.com.br/api/uploads/u/print.png',
+    )
+    expect(image?.alt_text).toBe('print.png')
+  })
+
+  it('links a file that is not a picture instead of trying to show it', () => {
+    const payloadWithPdf = slackPayloadFor(
+      config,
+      properties,
+      'Ícones',
+      { ...values, files: '/api/uploads/u/laudo.pdf' },
+      'Nome',
+      null,
+      'Abrir no Leaf',
+      'https://leaf.arvore.com.br',
+    )
+    const blocks = payloadWithPdf.blocks as Array<{ type: string }>
+
+    expect(blocks.some((block) => block.type === 'image')).toBe(false)
+    expect(payloadWithPdf.text).toContain(
+      'https://leaf.arvore.com.br/api/uploads/u/laudo.pdf',
+    )
+  })
+
+  it('shows at most five pictures, and lists every address', () => {
+    const seven = Array.from(
+      { length: 7 },
+      (_, index) => `/api/uploads/u/shot${index}.png`,
+    )
+    const payloadWithMany = slackPayloadFor(
+      config,
+      properties,
+      'Ícones',
+      { ...values, files: seven.join('\n') },
+      'Nome',
+      null,
+      'Abrir no Leaf',
+      'https://leaf.arvore.com.br',
+    )
+    const blocks = payloadWithMany.blocks as Array<{ type: string }>
+
+    expect(blocks.filter((block) => block.type === 'image')).toHaveLength(5)
+    expect(payloadWithMany.text).toContain('shot6.png')
+  })
+
   it('keeps the plain text, for whoever gets the notification without blocks', () => {
     const { text } = payload()
 

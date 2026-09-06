@@ -283,6 +283,7 @@ export async function submitForm(
         (await getTranslations('database'))('titleColumn'),
         `${appBaseUrl()}/doc/${id}`,
         t('openInLeaf'),
+        appBaseUrl(),
       ),
       replyHint: t('slackReplyHint'),
       viewId: record.view.id,
