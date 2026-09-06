@@ -473,4 +473,156 @@ test.describe('comments', () => {
     await ownerContext.close()
     await anonContext.close()
   })
+  test.describe('on a wide screen', () => {
+    test.use({ viewport: { width: 1600, height: 900 } })
+
+    test('the passage comment opens as a card beside the text', async ({
+      page,
+    }) => {
+      await signUp(page, uniqueEmail('lane'), 'Author')
+      await createDocument(page, 'Document with a lane')
+
+      await typeInEditor(page, 'first paragraph')
+      await page.keyboard.press('Enter')
+      await page.keyboard.type('second paragraph')
+      await waitForSaved(page)
+
+      await selectLastWord(page, 'second paragraph'.length)
+      await commentFromToolbar(page, 'This passage needs a source')
+      await page.keyboard.press('Escape')
+
+      await page.reload()
+      await waitForEditorReady(page)
+
+      const card = page.getByTestId('margin-comment-card')
+
+      await expect(card).toHaveCount(1)
+      await expect(card).toContainText('This passage needs a source')
+      await expect(page.getByTestId('inline-comment-marker')).toHaveCount(0)
+
+      const blockIds = await editorBody(page)
+        .locator('.bn-block-outer[data-id]')
+        .evaluateAll((elements) =>
+          elements.map((element) => element.getAttribute('data-id') ?? ''),
+        )
+
+      const blockBox = await editorBody(page)
+        .locator(`.bn-block-outer[data-id="${blockIds[1]}"]`)
+        .boundingBox()
+      const cardBox = await card.boundingBox()
+
+      expect(Math.abs((cardBox?.y ?? 0) - (blockBox?.y ?? 1_000))).toBeLessThan(
+        16,
+      )
+      expect(cardBox?.x ?? 0).toBeGreaterThan(
+        (blockBox?.x ?? 0) + (blockBox?.width ?? 0),
+      )
+    })
+
+    test('the commented passage is marked and opens its card', async ({
+      page,
+    }) => {
+      await signUp(page, uniqueEmail('anchor'), 'Author')
+      await createDocument(page, 'Document with a marked passage')
+
+      await typeInEditor(page, 'first paragraph')
+      await page.keyboard.press('Enter')
+      await page.keyboard.type('second paragraph')
+      await waitForSaved(page)
+
+      await selectLastWord(page, 'second paragraph'.length)
+      await commentFromToolbar(page, 'Where does this come from?')
+      await page.keyboard.press('Escape')
+
+      await page.reload()
+      await waitForEditorReady(page)
+
+      const blockIds = await editorBody(page)
+        .locator('.bn-block-outer[data-id]')
+        .evaluateAll((elements) =>
+          elements.map((element) => element.getAttribute('data-id') ?? ''),
+        )
+      const commented = editorBody(page).locator(
+        `.bn-block-outer[data-id="${blockIds[1]}"] .bn-inline-content`,
+      )
+      const plain = editorBody(page).locator(
+        `.bn-block-outer[data-id="${blockIds[0]}"] .bn-inline-content`,
+      )
+
+      const background = (locator: typeof commented) =>
+        locator.evaluate((element) => [
+          window.getComputedStyle(element).backgroundColor,
+          window.getComputedStyle(element).display,
+        ])
+
+      await expect.poll(() => background(commented)).not.toEqual([
+        'rgba(0, 0, 0, 0)',
+        'block',
+      ])
+      expect(await background(plain)).toEqual(['rgba(0, 0, 0, 0)', 'block'])
+
+      const card = page.getByTestId('margin-comment-card')
+
+      await expect(card).toHaveAttribute('data-active', 'false')
+
+      await commented.click()
+
+      await expect(card).toHaveAttribute('data-active', 'true')
+      await expect(card.getByTestId('margin-comment-input')).toBeVisible()
+    })
+
+    test('replying and resolving happen inside the card', async ({ page }) => {
+      await signUp(page, uniqueEmail('card-reply'), 'Author')
+      await createDocument(page, 'Document answered in the margin')
+
+      await typeInEditor(page, 'first paragraph')
+      await page.keyboard.press('Enter')
+      await page.keyboard.type('second paragraph')
+      await waitForSaved(page)
+
+      await selectLastWord(page, 'second paragraph'.length)
+      await commentFromToolbar(page, 'Opening question')
+      await page.keyboard.press('Escape')
+
+      await page.reload()
+      await waitForEditorReady(page)
+
+      const card = page.getByTestId('margin-comment-card')
+
+      await card.click()
+      await card.getByTestId('margin-comment-input').fill('Answer beside it')
+      await card.getByTestId('submit-margin-comment').click()
+
+      await expect(card).toContainText('Answer beside it')
+
+      await card.getByRole('button', { name: 'Resolver' }).click()
+
+      await expect(page.getByText('Comentário resolvido').first()).toBeVisible()
+      await expect(page.getByTestId('margin-comment-card')).toHaveCount(0)
+    })
+
+    test('the commented passage is still editable', async ({ page }) => {
+      await signUp(page, uniqueEmail('still-editable'), 'Author')
+      await createDocument(page, 'Document edited after the comment')
+
+      await typeInEditor(page, 'first paragraph')
+      await page.keyboard.press('Enter')
+      await page.keyboard.type('second paragraph')
+      await waitForSaved(page)
+
+      await selectLastWord(page, 'second paragraph'.length)
+      await commentFromToolbar(page, 'Needs an ending')
+      await page.keyboard.press('Escape')
+
+      await expect(page.getByTestId('margin-comment-card')).toHaveCount(1)
+
+      await focusEditorEnd(page)
+      await page.keyboard.type(' with an ending')
+      await waitForSaved(page)
+
+      await expect(
+        page.getByText('second paragraph with an ending'),
+      ).toBeVisible()
+    })
+  })
 })

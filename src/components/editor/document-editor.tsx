@@ -6,6 +6,8 @@ import dynamic from 'next/dynamic'
 import { WarningIcon } from '@/components/icons'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 
+import type { CommentViewer } from '@/components/comments/comment-composer'
+
 import type { LinkedDocumentIcon } from './doc-link-icons'
 import { EditorSkeleton } from './editor-skeleton'
 import { useDocumentSession } from './use-document-session'
@@ -29,6 +31,7 @@ type Props = Readonly<{
   isOwner: boolean
   canComment: boolean
   openCommentCount: number
+  viewer: CommentViewer
   realtime: RealtimeConfig | null
   aiEnabled: boolean
   linkedDocuments: ReadonlyArray<LinkedDocumentIcon>
@@ -42,6 +45,7 @@ export function DocumentEditor({
   isOwner,
   canComment,
   openCommentCount,
+  viewer,
   realtime,
   aiEnabled,
   linkedDocuments,
@@ -95,6 +99,7 @@ export function DocumentEditor({
       openCommentCount={openCommentCount}
       readOnly={readOnly}
       seed={seed}
+      viewer={viewer}
     />
   )
 }

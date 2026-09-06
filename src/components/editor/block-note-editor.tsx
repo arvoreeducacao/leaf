@@ -24,6 +24,7 @@ import {
   publishBlockIds,
   resetBlockIds,
 } from '@/components/comments/comments-bridge'
+import type { CommentViewer } from '@/components/comments/comment-composer'
 import { InlineComments } from '@/components/comments/inline-comments'
 import { WarningIcon } from '@/components/icons'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
@@ -74,6 +75,7 @@ type Props = Readonly<{
   isOwner: boolean
   canComment: boolean
   openCommentCount: number
+  viewer: CommentViewer
   collaboration: DocumentSession
   connection: ConnectionStatus
   seed: string | null
@@ -90,6 +92,7 @@ export default function BlockNoteEditor({
   isOwner,
   canComment,
   openCommentCount,
+  viewer,
   collaboration,
   connection,
   seed,
@@ -481,6 +484,7 @@ export default function BlockNoteEditor({
         containerRef={containerRef}
         documentId={documentId}
         initialOpenCount={openCommentCount}
+        viewer={viewer}
       />
       {isEditable ? (
         <DocumentImport

@@ -75,6 +75,12 @@ export default async function DocumentPage({ params }: Props) {
     ])
 
   const openComments = comments.openCount
+  const viewer = {
+    id: session.user.id,
+    image: session.user.image ?? null,
+    name:
+      authorNameOf(session.user.name, session.user.email) ?? session.user.email,
+  }
 
   const scope: ActiveTrailScope = document.teamspaceId
     ? { id: document.teamspaceId, kind: 'teamspace' }
@@ -178,19 +184,14 @@ export default async function DocumentPage({ params }: Props) {
                     }
                   : null
               }
+              viewer={viewer}
             />
             <DocumentComments
               documentId={document.id}
               initialState={comments}
               renderedAt={relativeTimeAnchor()}
               slack={slack}
-              viewer={{
-                id: session.user.id,
-                image: session.user.image ?? null,
-                name:
-                  authorNameOf(session.user.name, session.user.email) ??
-                  session.user.email,
-              }}
+              viewer={viewer}
             />
           </>
         )}

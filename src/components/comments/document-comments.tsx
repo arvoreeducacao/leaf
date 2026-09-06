@@ -1,17 +1,17 @@
 'use client'
 
 import { useFormatter, useTranslations } from 'next-intl'
-import { useEffect, useId, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 
+import { CommentComposer } from '@/components/comments/comment-composer'
+import type { CommentViewer } from '@/components/comments/comment-composer'
 import { CommentThreadItem } from '@/components/comments/comment-thread-item'
 import {
   publishCommentsState,
   useCommentsState,
 } from '@/components/comments/comments-store'
-import { CaretUpCircleIcon, SlackIcon } from '@/components/icons'
-import { Button } from '@/components/ui/button'
-import { UserAvatar } from '@/components/ui/user-avatar'
+import { SlackIcon } from '@/components/icons'
 import {
   addComment,
   editComment,
@@ -19,7 +19,6 @@ import {
   resolveComment,
 } from '@/lib/comment-actions'
 import type { CommentsResult } from '@/lib/comment-actions'
-import { MAX_COMMENT_LENGTH } from '@/lib/comment-limits'
 import { pageComments } from '@/lib/comments-state'
 import type { CommentsState } from '@/lib/comments-state'
 import type { DocumentSlackChannel } from '@/lib/slack/document-channel'
@@ -27,7 +26,7 @@ import type { DocumentSlackChannel } from '@/lib/slack/document-channel'
 type Props = Readonly<{
   documentId: string
   initialState: CommentsState
-  viewer: Readonly<{ id: string; name: string; image: string | null }>
+  viewer: CommentViewer
   slack: DocumentSlackChannel | null
   renderedAt: number
 }>
@@ -41,13 +40,11 @@ export function DocumentComments({
 }: Props) {
   const t = useTranslations('comments')
   const format = useFormatter()
-  const composerId = useId()
 
   const published = useCommentsState(documentId)
   const state = published ?? initialState
 
   const [pending, setPending] = useState(false)
-  const [draft, setDraft] = useState('')
   const [now, setNow] = useState(renderedAt)
 
   useEffect(() => {
@@ -79,17 +76,6 @@ export function DocumentComments({
     toast.success(success)
 
     return true
-  }
-
-  async function submitDraft() {
-    if (await run(() => addComment(documentId, draft, null, null), t('added'))) {
-      setDraft('')
-    }
-  }
-
-  function growComposer(field: HTMLTextAreaElement) {
-    field.style.height = 'auto'
-    field.style.height = `${field.scrollHeight}px`
   }
 
   const threads = pageComments(state)
@@ -184,50 +170,18 @@ export function DocumentComments({
       )}
 
       {canComment ? (
-        <div className="mt-4 flex items-start gap-2">
-          <UserAvatar
-            className="size-6"
-            image={viewer.image}
-            name={viewer.name}
-            userId={viewer.id}
-          />
-          <label className="sr-only" htmlFor={composerId}>
-            {t('documentNewLabel')}
-          </label>
-          <textarea
-            className="min-h-6 flex-1 resize-none bg-transparent py-0.5 text-body-small text-content-strong outline-none placeholder:text-content-muted"
-            data-testid="document-comment-input"
-            disabled={pending}
-            id={composerId}
-            maxLength={MAX_COMMENT_LENGTH}
-            onChange={(event) => {
-              setDraft(event.target.value)
-              growComposer(event.target)
-            }}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter' && !event.shiftKey) {
-                event.preventDefault()
-                void submitDraft()
-              }
-            }}
-            placeholder={t('documentPlaceholder')}
-            rows={1}
-            value={draft}
-          />
-          <Button
-            aria-label={t('sendComment')}
-            className="size-6 p-0.5 text-content-muted enabled:text-link"
-            data-testid="submit-document-comment"
-            disabled={pending || draft.trim().length === 0}
-            onClick={() => void submitDraft()}
-            size="icon"
-            title={t('sendComment')}
-            type="button"
-            variant="ghost"
-          >
-            <CaretUpCircleIcon aria-hidden="true" className="size-5" />
-          </Button>
-        </div>
+        <CommentComposer
+          className="mt-4"
+          disabled={pending}
+          fieldTestId="document-comment-input"
+          label={t('documentNewLabel')}
+          onSubmit={(body) =>
+            run(() => addComment(documentId, body, null, null), t('added'))
+          }
+          placeholder={t('documentPlaceholder')}
+          submitTestId="submit-document-comment"
+          viewer={viewer}
+        />
       ) : null}
 
       {slack?.pushesComments ? (
