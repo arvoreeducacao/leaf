@@ -121,6 +121,13 @@ function makeClient(world: World): NotionClient {
       last_edited_time: world.editedAt[rowOneId],
       properties: {
         ...title('First task'),
+        'Prints & Anexos': {
+          files: [
+            { file: { url: 'https://files.notion.so/one.png?sig=1' }, name: 'one.png' },
+            { external: { url: 'https://example.com/two.pdf' }, name: 'two.pdf' },
+          ],
+          type: 'files',
+        },
         Relacionada: { relation: [{ id: rowTwoId }], type: 'relation' },
         Status: {
           status: { name: 'Done' },
@@ -200,6 +207,7 @@ function makeClient(world: World): NotionClient {
         last_edited_time: world.editedAt[databaseId],
         properties: {
           Name: { name: 'Name', type: 'title' },
+          'Prints & Anexos': { name: 'Prints & Anexos', type: 'files' },
           Relacionada: { name: 'Relacionada', type: 'relation' },
           Status: {
             name: 'Status',
@@ -481,6 +489,28 @@ describe('resumable Notion sync', () => {
     })
 
     expect(after?.icon).toBe('https://www.notion.so/icons/fireworks_gray.svg')
+  })
+
+  it('brings a Notion attachment column in as files, stored here', async () => {
+    const world = makeWorld()
+
+    await run(world, [{ id: databaseId, kind: 'database' }])
+
+    const property = await db.query.databaseProperties.findFirst({
+      where: eq(databaseProperties.name, 'Prints & Anexos'),
+    })
+
+    expect(property?.type).toBe('files')
+
+    const row = await db.query.documents.findFirst({
+      where: eq(documents.title, 'First task'),
+    })
+    const values = parseValues(row?.properties ?? null)
+
+    expect(values[property?.id ?? '']).toEqual([
+      '/api/uploads/u/one.png',
+      '/api/uploads/u/two.pdf',
+    ])
   })
 
   it('brings the page cover from Notion into the document', async () => {

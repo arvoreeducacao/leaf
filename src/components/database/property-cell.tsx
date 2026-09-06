@@ -3,7 +3,13 @@
 import { useLocale, useTranslations } from 'next-intl'
 import { useEffect, useRef, useState } from 'react'
 
-import { CheckIcon } from '@/components/icons'
+import { uploadEditorFile } from '@/components/editor/upload-file'
+import {
+  AddIcon,
+  CancelIcon,
+  CheckIcon,
+  PaperclipIcon,
+} from '@/components/icons'
 import type { DatabaseProperty } from '@/db/schema'
 import { type Person, personOptions } from '@/lib/database/people'
 import {
@@ -13,7 +19,9 @@ import {
 import {
   type PropertyValue,
   type SelectOption,
+  fileNameOf,
   formatNumber,
+  isImageFileUrl,
   linkHrefFor,
   normalizeValue,
   parseOptions,
@@ -127,6 +135,19 @@ export function PropertyCell({
       >
         <span className="truncate">{text}</span>
       </span>
+    )
+  }
+
+  if (property.type === 'files') {
+    return (
+      <FilesCell
+        compact={compact}
+        frame={compactFrame}
+        label={label}
+        onCommit={onCommit}
+        readOnly={readOnly}
+        value={value}
+      />
     )
   }
 
@@ -320,5 +341,127 @@ function TextualCell({
       type={property.type === 'url' ? 'url' : 'text'}
       value={draft}
     />
+  )
+}
+
+function FilesCell({
+  value,
+  label,
+  readOnly,
+  compact,
+  frame,
+  onCommit,
+}: Readonly<{
+  value: PropertyValue
+  label: string
+  readOnly: boolean
+  compact: boolean
+  frame: string
+  onCommit: (value: PropertyValue) => void
+}>) {
+  const t = useTranslations('database')
+  const input = useRef<HTMLInputElement>(null)
+  const [busy, setBusy] = useState(false)
+  const urls = Array.isArray(value) ? [...value] : []
+
+  async function add(files: FileList | null) {
+    if (!files || files.length === 0) {
+      return
+    }
+
+    setBusy(true)
+
+    try {
+      const uploaded: Array<string> = []
+
+      for (const file of Array.from(files)) {
+        uploaded.push(await uploadEditorFile(file, t('fileUploadFailed')))
+      }
+
+      onCommit([...urls, ...uploaded])
+    } catch {
+      return
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div
+      aria-label={label}
+      className={cn(
+        'flex min-w-0 flex-wrap items-center gap-1',
+        compact ? frame : 'min-h-9 px-2 py-1',
+      )}
+    >
+      {urls.map((url) => {
+        const name = fileNameOf(url)
+        const picture = isImageFileUrl(url)
+
+        return (
+          <span className="group/file relative flex max-w-40" key={url}>
+            <a
+              aria-label={t('openFile', { name })}
+              className={cn(
+                'flex min-w-0 items-center gap-1 rounded-medium',
+                picture
+                  ? ''
+                  : 'bg-surface-subtle px-1.5 py-0.5 text-body-small text-content',
+              )}
+              href={url}
+              rel="noreferrer noopener"
+              target="_blank"
+              title={name}
+            >
+              {picture ? (
+                <img
+                  alt={name}
+                  className="size-6 rounded-small border border-line-muted object-cover"
+                  src={url}
+                />
+              ) : (
+                <>
+                  <PaperclipIcon aria-hidden="true" className="size-3 shrink-0" />
+                  <span className="truncate">{name}</span>
+                </>
+              )}
+            </a>
+            {readOnly ? null : (
+              <button
+                aria-label={t('removeFile', { name })}
+                className="absolute -right-1 -top-1 hidden size-4 cursor-pointer items-center justify-center rounded-full bg-surface-app text-content-subtle shadow-small hover:text-content-strong focus-visible:flex group-hover/file:flex"
+                onClick={() => onCommit(urls.filter((item) => item !== url))}
+                type="button"
+              >
+                <CancelIcon aria-hidden="true" className="size-2.5" />
+              </button>
+            )}
+          </span>
+        )
+      })}
+      {readOnly ? null : (
+        <>
+          <input
+            className="hidden"
+            multiple
+            onChange={(event) => {
+              void add(event.target.files)
+              event.target.value = ''
+            }}
+            ref={input}
+            type="file"
+          />
+          <button
+            aria-label={t('addFile')}
+            className="flex size-5 cursor-pointer items-center justify-center rounded-small text-content-subtle transition-colors hover:bg-surface-hover hover:text-content-strong disabled:cursor-not-allowed"
+            disabled={busy}
+            onClick={() => input.current?.click()}
+            type="button"
+          >
+            <AddIcon aria-hidden="true" className="size-3.5" />
+          </button>
+        </>
+      )}
+    </div>
   )
 }

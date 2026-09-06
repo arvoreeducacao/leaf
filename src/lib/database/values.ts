@@ -14,6 +14,7 @@ export const propertyTypes: ReadonlyArray<DatabasePropertyType> = [
   'person',
   'status',
   'uniqueId',
+  'files',
 ]
 
 export const optionColors = [
@@ -57,6 +58,8 @@ export const MAX_MULTI_SELECT_VALUES = 40
 export const MAX_PROPERTIES = 60
 export const MAX_SELECT_OPTIONS = 100
 export const MAX_PEOPLE_PER_VALUE = 20
+export const MAX_FILES_PER_VALUE = 20
+export const MAX_FILE_URL = 2_048
 
 const datePattern = /^\d{4}-\d{2}-\d{2}$/
 
@@ -142,7 +145,7 @@ export function emptyValueFor(type: DatabasePropertyType): PropertyValue {
     return false
   }
 
-  if (type === 'multiSelect' || type === 'person') {
+  if (type === 'multiSelect' || type === 'person' || type === 'files') {
     return []
   }
 
@@ -278,6 +281,50 @@ function coercePersonIds(
     .slice(0, MAX_PEOPLE_PER_VALUE)
 }
 
+const uploadPathPrefix = '/api/uploads/'
+
+export function isStoredFileUrl(value: string): boolean {
+  if (value.length === 0 || value.length > MAX_FILE_URL) {
+    return false
+  }
+
+  if (value.startsWith(uploadPathPrefix)) {
+    return !value.includes('..')
+  }
+
+  return sanitizeUrl(value) === value
+}
+
+const imageExtensions = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'avif', 'svg']
+
+export function isImageFileUrl(value: string): boolean {
+  const path = value.split('?')[0].toLowerCase()
+  const extension = path.slice(path.lastIndexOf('.') + 1)
+
+  return imageExtensions.includes(extension)
+}
+
+export function fileNameOf(value: string): string {
+  const path = value.split('?')[0]
+  const name = path.slice(path.lastIndexOf('/') + 1)
+
+  return name.length > 0 ? decodeURIComponent(name) : value
+}
+
+function coerceFileUrls(value: unknown): Array<string> {
+  const list = Array.isArray(value)
+    ? value
+    : typeof value === 'string' && value.length > 0
+      ? [value]
+      : []
+
+  return list
+    .filter((item): item is string => typeof item === 'string')
+    .map((item) => item.trim())
+    .filter(isStoredFileUrl)
+    .slice(0, MAX_FILES_PER_VALUE)
+}
+
 export function normalizeValue(
   type: DatabasePropertyType,
   value: unknown,
@@ -309,6 +356,10 @@ export function normalizeValue(
 
   if (type === 'person') {
     return coercePersonIds(value, options)
+  }
+
+  if (type === 'files') {
+    return coerceFileUrls(value)
   }
 
   if (type === 'url') {
@@ -404,6 +455,10 @@ export function valueToText(
 
   if (type === 'date') {
     return typeof value === 'string' ? formatDate(value, locale) : ''
+  }
+
+  if (type === 'files') {
+    return Array.isArray(value) ? value.map(fileNameOf).join(', ') : ''
   }
 
   const names = new Map(options.map((option) => [option.id, option.name]))

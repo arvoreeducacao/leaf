@@ -70,6 +70,7 @@ const operatorsByType: Record<
   person: ['isMe', 'contains', 'notContains', 'isEmpty', 'isNotEmpty'],
   status: ['is', 'isNot', 'isEmpty', 'isNotEmpty'],
   uniqueId: ['is', 'contains', 'greaterThan', 'lessThan'],
+  files: ['isEmpty', 'isNotEmpty'],
 }
 
 export function operatorsFor(

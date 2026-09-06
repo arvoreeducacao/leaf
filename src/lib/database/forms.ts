@@ -223,7 +223,7 @@ export const UPLOAD_PREFIX = '/api/uploads/'
 export const MAX_ATTACHMENTS = 10
 
 export function acceptsAttachment(type: DatabasePropertyType): boolean {
-  return type === 'text'
+  return type === 'text' || type === 'files'
 }
 
 export function acceptsLongAnswer(type: DatabasePropertyType): boolean {
@@ -339,7 +339,9 @@ export function resolveQuestions(
         options: parseOptions(property.options),
         description: question.description,
         required: question.required,
-        attachment: question.attachment && acceptsAttachment(property.type),
+        attachment:
+          property.type === 'files' ||
+          (question.attachment && acceptsAttachment(property.type)),
         long:
           question.long &&
           !question.attachment &&
@@ -433,8 +435,11 @@ export function buildSubmission(
       continue
     }
 
+    const links = question.attachment ? attachmentLinks(answer) : []
     const value = question.attachment
-      ? attachmentLinks(answer).join('\n')
+      ? question.type === 'files'
+        ? links
+        : links.join('\n')
       : normalizeValue(question.type, answer, question.options)
 
     if (question.required && isEmptyValue(value)) {

@@ -687,6 +687,15 @@ export async function* syncNotion(
     for (const [key, value] of Object.entries(values)) {
       if (typeof value === 'string' && value.includes(placeholderPrefix)) {
         values[key] = resolveAssetUrl(value)
+        continue
+      }
+
+      if (Array.isArray(value)) {
+        values[key] = value.map((item) =>
+          typeof item === 'string' && item.includes(placeholderPrefix)
+            ? resolveAssetUrl(item)
+            : item,
+        )
       }
     }
   }
