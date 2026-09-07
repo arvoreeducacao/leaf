@@ -21,11 +21,13 @@ import type {
   DatabaseView,
   DatabaseViewType,
 } from '@/db/schema'
+import { timelineScales } from '@/lib/database/calendar'
 import {
   MAX_FILTERS,
   MAX_SORTS,
   TITLE_PROPERTY_ID,
   type ViewConfig,
+  isColorableType,
   isGroupableType,
   operatorsFor,
 } from '@/lib/database/views'
@@ -36,7 +38,10 @@ import {
   FilterMenuIcon,
   GroupIcon,
   LinkMenuIcon,
+  PersonTypeIcon,
+  SelectTypeIcon,
   SortMenuIcon,
+  TimelineLayoutIcon,
   WrapIcon,
 } from './icons'
 import { layoutIcon, layoutOrder, scheduleLayouts } from './layouts'
@@ -72,6 +77,12 @@ export function ViewSettings({
 
   const dateProperties = properties.filter(
     (property) => property.type === 'date',
+  )
+  const colorProperties = properties.filter((property) =>
+    isColorableType(property.type),
+  )
+  const personProperties = properties.filter(
+    (property) => property.type === 'person',
   )
   const hidden = new Set(config.hiddenPropertyIds)
   const visibleCount = properties.filter(
@@ -378,7 +389,101 @@ export function ViewSettings({
           </DropdownMenuSub>
         ) : null}
 
-        {view.type === 'board' ? (
+        {view.type === 'timeline' ? (
+          <>
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger>
+                <TimelineLayoutIcon aria-hidden="true" className="size-5" />
+                <span className="flex-1">{t('timelineScale')}</span>
+                <span className="text-content-subtle">
+                  {t(`scale_${config.timelineScale}`)}
+                </span>
+              </DropdownMenuSubTrigger>
+              <DropdownMenuSubContent className="w-64">
+                {timelineScales.map((scale) => (
+                  <DropdownMenuCheckboxItem
+                    checked={config.timelineScale === scale}
+                    key={scale}
+                    onCheckedChange={() =>
+                      onConfigChange({ ...config, timelineScale: scale })
+                    }
+                  >
+                    {t(`scale_${scale}`)}
+                  </DropdownMenuCheckboxItem>
+                ))}
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger>
+                <SelectTypeIcon aria-hidden="true" className="size-5" />
+                <span className="flex-1">{t('colorBy')}</span>
+                <span className="max-w-32 truncate text-content-subtle">
+                  {config.colorPropertyId
+                    ? nameOf(config.colorPropertyId)
+                    : t('noColor')}
+                </span>
+              </DropdownMenuSubTrigger>
+              <DropdownMenuSubContent className="w-64">
+                <DropdownMenuItem
+                  onSelect={() =>
+                    onConfigChange({ ...config, colorPropertyId: null })
+                  }
+                >
+                  {t('noColor')}
+                </DropdownMenuItem>
+                {colorProperties.map((property) => (
+                  <DropdownMenuItem
+                    key={property.id}
+                    onSelect={() =>
+                      onConfigChange({ ...config, colorPropertyId: property.id })
+                    }
+                  >
+                    <PropertyIcon type={property.type} />
+                    <span className="min-w-0 truncate">{property.name}</span>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger>
+                <PersonTypeIcon aria-hidden="true" className="size-5" />
+                <span className="flex-1">{t('peopleOnBars')}</span>
+                <span className="max-w-32 truncate text-content-subtle">
+                  {config.peoplePropertyId
+                    ? nameOf(config.peoplePropertyId)
+                    : t('none')}
+                </span>
+              </DropdownMenuSubTrigger>
+              <DropdownMenuSubContent className="w-64">
+                <DropdownMenuItem
+                  onSelect={() =>
+                    onConfigChange({ ...config, peoplePropertyId: null })
+                  }
+                >
+                  {t('none')}
+                </DropdownMenuItem>
+                {personProperties.map((property) => (
+                  <DropdownMenuItem
+                    key={property.id}
+                    onSelect={() =>
+                      onConfigChange({
+                        ...config,
+                        peoplePropertyId: property.id,
+                      })
+                    }
+                  >
+                    <PropertyIcon type={property.type} />
+                    <span className="min-w-0 truncate">{property.name}</span>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+          </>
+        ) : null}
+
+        {view.type === 'board' || view.type === 'timeline' ? (
           <DropdownMenuSub>
             <DropdownMenuSubTrigger>
               <GroupIcon aria-hidden="true" className="size-5" />

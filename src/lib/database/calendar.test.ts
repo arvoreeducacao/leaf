@@ -7,9 +7,13 @@ import {
   daysBetween,
   localIsoDate,
   monthGridOf,
+  endOfMonth,
   rowsByDate,
   startOfMonth,
+  startOfWeek,
+  timelineColumnsOf,
   timelineSpanOf,
+  todayOffsetOf,
 } from './calendar'
 import type { DatabaseRow } from './views'
 
@@ -122,5 +126,68 @@ describe('the timeline bars', () => {
     const span = timelineSpanOf(rows, due, finish, '2026-09-17')
 
     expect(span.undated.map((item) => item.id)).toEqual(['c'])
+  })
+})
+
+describe('the timeline by week and by month', () => {
+  const rows = [
+    row('a', { due: '2026-09-10', finish: '2026-09-12' }),
+    row('b', { due: '2026-09-14' }),
+  ]
+
+  it('opens the week on a monday and closes it on a sunday', () => {
+    expect(startOfWeek('2026-09-10')).toBe('2026-09-07')
+    expect(startOfWeek('2026-09-07')).toBe('2026-09-07')
+    expect(startOfWeek('2026-09-06')).toBe('2026-08-31')
+
+    const span = timelineSpanOf(rows, due, finish, '2026-09-17', 'week')
+
+    expect(span.from).toBe('2026-08-31')
+    expect(span.to).toBe('2026-10-04')
+    expect(span.days % 7).toBe(0)
+    expect(span.bars[0].offset).toBe(10)
+  })
+
+  it('stretches the month scale to whole months', () => {
+    expect(endOfMonth('2026-02-03')).toBe('2026-02-28')
+    expect(endOfMonth('2028-02-03')).toBe('2028-02-29')
+
+    const span = timelineSpanOf(rows, due, finish, '2026-09-17', 'month')
+
+    expect(span.from).toBe('2026-09-01')
+    expect(span.to).toBe('2026-09-30')
+    expect(span.days).toBe(30)
+  })
+
+  it('cuts the columns by the scale', () => {
+    expect(
+      timelineColumnsOf('2026-08-31', 14, 'week').map((column) => [
+        column.start,
+        column.days,
+        column.offset,
+      ]),
+    ).toEqual([
+      ['2026-08-31', 7, 0],
+      ['2026-09-07', 7, 7],
+    ])
+    expect(
+      timelineColumnsOf('2026-09-01', 61, 'month').map((column) => [
+        column.start,
+        column.days,
+      ]),
+    ).toEqual([
+      ['2026-09-01', 30],
+      ['2026-10-01', 31],
+    ])
+    expect(timelineColumnsOf('2026-09-01', 3, 'day')).toHaveLength(3)
+  })
+
+  it('places today only when it falls inside the span', () => {
+    const span = { from: '2026-09-01', to: '2026-09-30' }
+
+    expect(todayOffsetOf(span, '2026-09-17')).toBe(16)
+    expect(todayOffsetOf(span, '2026-09-01')).toBe(0)
+    expect(todayOffsetOf(span, '2026-10-01')).toBeNull()
+    expect(todayOffsetOf(span, '2026-08-31')).toBeNull()
   })
 })

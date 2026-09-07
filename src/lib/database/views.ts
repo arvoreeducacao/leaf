@@ -5,6 +5,7 @@ import type {
   DatabaseViewType,
 } from '@/db/schema'
 
+import { type TimelineScale, isTimelineScale } from './calendar'
 import { parseUniqueIdConfig, toUniqueIdNumber } from './unique-id'
 import {
   type FormConfig,
@@ -119,6 +120,10 @@ export function isGroupableType(type: DatabasePropertyType): boolean {
   return type === 'select' || type === 'status' || type === 'person'
 }
 
+export function isColorableType(type: DatabasePropertyType): boolean {
+  return type === 'select' || type === 'status'
+}
+
 export type ViewFilter = Readonly<{
   propertyId: string
   operator: FilterOperator
@@ -134,6 +139,9 @@ export type ViewConfig = Readonly<{
   groupByPropertyId: string | null
   datePropertyId: string | null
   endDatePropertyId: string | null
+  timelineScale: TimelineScale
+  colorPropertyId: string | null
+  peoplePropertyId: string | null
   filters: ReadonlyArray<ViewFilter>
   sorts: ReadonlyArray<ViewSort>
   hiddenPropertyIds: ReadonlyArray<string>
@@ -147,6 +155,9 @@ export const emptyViewConfig: ViewConfig = {
   groupByPropertyId: null,
   datePropertyId: null,
   endDatePropertyId: null,
+  timelineScale: 'day',
+  colorPropertyId: null,
+  peoplePropertyId: null,
   filters: [],
   sorts: [],
   hiddenPropertyIds: [],
@@ -258,6 +269,15 @@ export function parseViewConfig(raw: string | null): ViewConfig {
       typeof source.endDatePropertyId === 'string'
         ? source.endDatePropertyId
         : null,
+    timelineScale: isTimelineScale(source.timelineScale)
+      ? source.timelineScale
+      : 'day',
+    colorPropertyId:
+      typeof source.colorPropertyId === 'string' ? source.colorPropertyId : null,
+    peoplePropertyId:
+      typeof source.peoplePropertyId === 'string'
+        ? source.peoplePropertyId
+        : null,
     filters,
     sorts,
     hiddenPropertyIds: asStringArray(source.hiddenPropertyIds),
@@ -275,6 +295,9 @@ export function serializeViewConfig(config: ViewConfig): string {
     sorts: config.sorts.slice(0, MAX_SORTS),
     datePropertyId: config.datePropertyId,
     endDatePropertyId: config.endDatePropertyId,
+    timelineScale: config.timelineScale,
+    colorPropertyId: config.colorPropertyId,
+    peoplePropertyId: config.peoplePropertyId,
     hiddenPropertyIds: config.hiddenPropertyIds,
     wrapCells: config.wrapCells,
     showVerticalLines: config.showVerticalLines,
@@ -739,4 +762,41 @@ export function boardPropertyOf(
   }
 
   return properties.find((property) => isGroupableType(property.type)) ?? null
+}
+
+function propertyMatching<T extends PropertyLike>(
+  properties: ReadonlyArray<T>,
+  propertyId: string | null,
+  accepts: (type: DatabasePropertyType) => boolean,
+): T | null {
+  return (
+    properties.find(
+      (property) => property.id === propertyId && accepts(property.type),
+    ) ?? null
+  )
+}
+
+export function timelineGroupPropertyOf<T extends PropertyLike>(
+  properties: ReadonlyArray<T>,
+  config: ViewConfig,
+): T | null {
+  return propertyMatching(properties, config.groupByPropertyId, isGroupableType)
+}
+
+export function colorPropertyOf<T extends PropertyLike>(
+  properties: ReadonlyArray<T>,
+  config: ViewConfig,
+): T | null {
+  return propertyMatching(properties, config.colorPropertyId, isColorableType)
+}
+
+export function peoplePropertyOf<T extends PropertyLike>(
+  properties: ReadonlyArray<T>,
+  config: ViewConfig,
+): T | null {
+  return propertyMatching(
+    properties,
+    config.peoplePropertyId,
+    (type) => type === 'person',
+  )
 }

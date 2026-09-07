@@ -47,9 +47,12 @@ import {
   applySearch,
   applySorts,
   boardPropertyOf,
+  colorPropertyOf,
   groupRows,
   parseViewConfig,
+  peoplePropertyOf,
   serializeViewConfig,
+  timelineGroupPropertyOf,
   visibleProperties,
 } from '@/lib/database/views'
 import type { DatabaseSnapshot } from '@/lib/databases'
@@ -692,11 +695,17 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
     ],
   )
 
-  const groupProperty = useMemo(
-    () =>
-      activeView?.type === 'board' ? boardPropertyOf(properties, config) : null,
-    [activeView, config, properties],
-  )
+  const groupProperty = useMemo(() => {
+    if (activeView?.type === 'board') {
+      return boardPropertyOf(properties, config)
+    }
+
+    if (activeView?.type === 'timeline') {
+      return timelineGroupPropertyOf(properties, config)
+    }
+
+    return null
+  }, [activeView, config, properties])
 
   const resolvedGroupProperty = groupProperty
     ? (properties.find((item) => item.id === groupProperty.id) ?? null)
@@ -943,10 +952,16 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
       {activeView.type === 'timeline' ? (
         <TimelineView
           canEdit={canEdit}
+          colorProperty={colorPropertyOf(properties, config)}
           compact={compact}
           endProperty={schedule.end}
+          groupProperty={resolvedGroupProperty}
+          groups={resolvedGroupProperty ? groups : null}
           handlers={handlers}
+          people={snapshot.people}
+          peopleProperty={peoplePropertyOf(properties, config)}
           rows={filtered}
+          scale={config.timelineScale}
           showPageIcon={config.showPageIcon}
           startProperty={schedule.start}
         />
