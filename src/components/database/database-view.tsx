@@ -28,6 +28,7 @@ import {
   renameDatabaseRow,
   saveDatabaseViewDraft,
   setDatabaseRowValue,
+  setDatabaseRowValues,
   setDatabaseUniqueIdPrefix,
   updateDatabaseView,
 } from '@/lib/database-actions'
@@ -38,8 +39,16 @@ import {
   parseUniqueIdConfig,
   serializeUniqueIdConfig,
 } from '@/lib/database/unique-id'
-import { parseOptions, serializeOptions } from '@/lib/database/values'
-import { calendarPropertiesOf } from '@/lib/database/calendar'
+import {
+  type PropertyValue,
+  parseOptions,
+  serializeOptions,
+} from '@/lib/database/values'
+import {
+  baselinePropertiesOf,
+  calendarPropertiesOf,
+  dateValueOf,
+} from '@/lib/database/calendar'
 import {
   DEFAULT_VIEW_ID,
   type ViewConfig,
@@ -716,6 +725,56 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
     [config, properties],
   )
 
+  const baseline = useMemo(
+    () => baselinePropertiesOf(properties, config),
+    [config, properties],
+  )
+
+  function saveBaseline() {
+    if (!baseline || !canEdit) {
+      return
+    }
+
+    const targets = filtered.flatMap((row) => {
+      const start = dateValueOf(row, schedule.start)
+
+      if (!start) {
+        return []
+      }
+
+      const end = dateValueOf(row, schedule.end)
+      const values: Record<string, PropertyValue> = {
+        [baseline.start.id]: start,
+      }
+
+      if (baseline.end) {
+        values[baseline.end.id] = end ?? start
+      }
+
+      return [{ rowId: row.id, values }]
+    })
+
+    if (targets.length === 0) {
+      toast.error(t('baselineNothingToSave'))
+
+      return
+    }
+
+    setRows((current) =>
+      current.map((row) => {
+        const target = targets.find((item) => item.rowId === row.id)
+
+        return target ? { ...row, values: { ...row.values, ...target.values } } : row
+      }),
+    )
+
+    for (const target of targets) {
+      void guard(() => setDatabaseRowValues(target.rowId, target.values))
+    }
+
+    toast.success(t('baselineSaved', { count: targets.length }))
+  }
+
   const groups = useMemo(
     () =>
       groupRows(
@@ -839,6 +898,7 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
         filtersChanged={filtersChanged}
         onChangeLayout={changeLayout}
         onConfigChange={changeConfig}
+        onSaveBaseline={activeView.type === 'timeline' ? saveBaseline : undefined}
         databaseTitle={snapshot.title}
         defaultTemplateId={snapshot.defaultTemplateId}
         onCreateRow={() =>
@@ -951,6 +1011,7 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
 
       {activeView.type === 'timeline' ? (
         <TimelineView
+          baseline={baseline}
           canEdit={canEdit}
           colorProperty={colorPropertyOf(properties, config)}
           compact={compact}

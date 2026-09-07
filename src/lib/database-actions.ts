@@ -655,6 +655,58 @@ export async function setDatabaseRowValue(
   return { ok: true }
 }
 
+export async function setDatabaseRowValues(
+  rowId: string,
+  values: Readonly<Record<string, unknown>>,
+): Promise<DatabaseActionResult> {
+  const row = await db.query.documents.findFirst({
+    where: and(
+      eq(documents.id, rowId),
+      inArray(documents.kind, ['row', 'template']),
+    ),
+  })
+
+  if (!row || !row.parentId || row.deletedAt !== null) {
+    return notAllowed()
+  }
+
+  const session = await canEditDatabase(row.parentId)
+
+  if (!session) {
+    return notAllowed()
+  }
+
+  const properties = await db.query.databaseProperties.findMany({
+    where: eq(databaseProperties.databaseId, row.parentId),
+  })
+  const next = { ...parseValues(row.properties) }
+
+  for (const [propertyId, value] of Object.entries(values)) {
+    const property = properties.find((item) => item.id === propertyId)
+
+    if (!property || property.type === 'uniqueId') {
+      return notAllowed()
+    }
+
+    next[propertyId] = await normalizeForProperty(
+      property,
+      value,
+      row.orgId,
+      session.user.id,
+    )
+  }
+
+  await db
+    .update(documents)
+    .set({ properties: serializeValues(next), updatedAt: new Date() })
+    .where(eq(documents.id, rowId))
+
+  revalidatePath(`/doc/${row.parentId}`)
+  revalidatePath(`/doc/${rowId}`)
+
+  return { ok: true }
+}
+
 export async function renameDatabaseRow(
   rowId: string,
   title: string,

@@ -67,6 +67,7 @@ type Props = Readonly<{
   onRenameView: (id: string, name: string) => void
   onDeleteView: (id: string) => void
   onConfigChange: (config: ViewConfig) => void
+  onSaveBaseline?: () => void
   onCreateRow: () => void
   onUseTemplate: (templateId: string) => void
   databaseTitle: string
@@ -93,6 +94,7 @@ export function ViewToolbar({
   onRenameView,
   onDeleteView,
   onConfigChange,
+  onSaveBaseline,
   onCreateRow,
   onUseTemplate,
   databaseTitle,
@@ -318,6 +320,7 @@ export function ViewToolbar({
           onChangeLayout={onChangeLayout}
           onConfigChange={onConfigChange}
           onRenameView={onRenameView}
+          onSaveBaseline={onSaveBaseline}
           properties={properties}
           view={activeView}
         >

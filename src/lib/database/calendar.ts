@@ -241,13 +241,43 @@ export function rowsByDate(
   return byDate
 }
 
+export type TimelineRange = Readonly<{
+  start: string
+  end: string
+  offset: number
+  length: number
+}>
+
 export type TimelineBar = Readonly<{
   row: DatabaseRow
   start: string
   end: string
   offset: number
   length: number
+  dated: boolean
+  baseline: TimelineRange | null
 }>
+
+export type BaselineColumns = Readonly<{
+  start: DateColumn | null
+  end: DateColumn | null
+}>
+
+function rangeOf(
+  row: DatabaseRow,
+  startProperty: DateColumn | null,
+  endProperty: DateColumn | null,
+): Readonly<{ start: string; end: string }> | null {
+  const start = dateValueOf(row, startProperty)
+
+  if (!start) {
+    return null
+  }
+
+  const rawEnd = dateValueOf(row, endProperty)
+
+  return { start, end: rawEnd && toUtc(rawEnd) > toUtc(start) ? rawEnd : start }
+}
 
 export type TimelineSpan = Readonly<{
   from: string
@@ -263,48 +293,69 @@ export function timelineSpanOf(
   endProperty: DateColumn | null,
   today: string,
   scale: TimelineScale = 'day',
+  baseline: BaselineColumns | null = null,
 ): TimelineSpan {
-  const dated: Array<{ row: DatabaseRow; start: string; end: string }> = []
+  const dated: Array<{
+    row: DatabaseRow
+    main: Readonly<{ start: string; end: string }> | null
+    planned: Readonly<{ start: string; end: string }> | null
+  }> = []
   const undated: Array<DatabaseRow> = []
 
   for (const row of rows) {
-    const start = dateValueOf(row, startProperty)
+    const main = rangeOf(row, startProperty, endProperty)
+    const planned = baseline
+      ? rangeOf(row, baseline.start, baseline.end)
+      : null
 
-    if (!start) {
+    if (!main && !planned) {
       undated.push(row)
 
       continue
     }
 
-    const rawEnd = dateValueOf(row, endProperty)
-    const end = rawEnd && toUtc(rawEnd) > toUtc(start) ? rawEnd : start
-
-    dated.push({ row, start, end })
+    dated.push({ row, main, planned })
   }
 
-  const anchor = startOfMonth(dated[0]?.start ?? today)
-  const from = dated.reduce(
-    (earliest, item) => (toUtc(item.start) < toUtc(earliest) ? item.start : earliest),
+  const ranges = dated.flatMap((item) =>
+    [item.main, item.planned].flatMap((range) => (range ? [range] : [])),
+  )
+  const anchor = startOfMonth(ranges[0]?.start ?? today)
+  const from = ranges.reduce(
+    (earliest, range) =>
+      toUtc(range.start) < toUtc(earliest) ? range.start : earliest,
     anchor,
   )
-  const to = dated.reduce(
-    (latest, item) => (toUtc(item.end) > toUtc(latest) ? item.end : latest),
+  const to = ranges.reduce(
+    (latest, range) => (toUtc(range.end) > toUtc(latest) ? range.end : latest),
     addDays(from, daysInWeek * 4),
   )
 
   const aligned = alignSpan(from, to, scale)
 
+  function placed(range: Readonly<{ start: string; end: string }>): TimelineRange {
+    return {
+      start: range.start,
+      end: range.end,
+      offset: daysBetween(aligned.from, range.start),
+      length: daysBetween(range.start, range.end) + 1,
+    }
+  }
+
   return {
     from: aligned.from,
     to: aligned.to,
     days: daysBetween(aligned.from, aligned.to) + 1,
-    bars: dated.map((item) => ({
-      row: item.row,
-      start: item.start,
-      end: item.end,
-      offset: daysBetween(aligned.from, item.start),
-      length: daysBetween(item.start, item.end) + 1,
-    })),
+    bars: dated.map((item) => {
+      const shown = placed(item.main ?? (item.planned as Readonly<{ start: string; end: string }>))
+
+      return {
+        row: item.row,
+        ...shown,
+        dated: item.main !== null,
+        baseline: item.planned ? placed(item.planned) : null,
+      }
+    }),
     undated,
   }
 }
@@ -317,4 +368,17 @@ export function calendarPropertiesOf<Column extends DateColumn>(
     start: datePropertyOf(properties, config.datePropertyId),
     end: endPropertyOf(properties, config.endDatePropertyId),
   }
+}
+
+export function baselinePropertiesOf<Column extends DateColumn>(
+  properties: ReadonlyArray<Column>,
+  config: ViewConfig,
+): Readonly<{ start: Column | null; end: Column | null }> | null {
+  const start = endPropertyOf(properties, config.baselineStartPropertyId)
+
+  if (!start) {
+    return null
+  }
+
+  return { start, end: endPropertyOf(properties, config.baselineEndPropertyId) }
 }

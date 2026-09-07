@@ -142,6 +142,8 @@ export type ViewConfig = Readonly<{
   timelineScale: TimelineScale
   colorPropertyId: string | null
   peoplePropertyId: string | null
+  baselineStartPropertyId: string | null
+  baselineEndPropertyId: string | null
   filters: ReadonlyArray<ViewFilter>
   sorts: ReadonlyArray<ViewSort>
   hiddenPropertyIds: ReadonlyArray<string>
@@ -158,6 +160,8 @@ export const emptyViewConfig: ViewConfig = {
   timelineScale: 'day',
   colorPropertyId: null,
   peoplePropertyId: null,
+  baselineStartPropertyId: null,
+  baselineEndPropertyId: null,
   filters: [],
   sorts: [],
   hiddenPropertyIds: [],
@@ -278,6 +282,14 @@ export function parseViewConfig(raw: string | null): ViewConfig {
       typeof source.peoplePropertyId === 'string'
         ? source.peoplePropertyId
         : null,
+    baselineStartPropertyId:
+      typeof source.baselineStartPropertyId === 'string'
+        ? source.baselineStartPropertyId
+        : null,
+    baselineEndPropertyId:
+      typeof source.baselineEndPropertyId === 'string'
+        ? source.baselineEndPropertyId
+        : null,
     filters,
     sorts,
     hiddenPropertyIds: asStringArray(source.hiddenPropertyIds),
@@ -298,6 +310,8 @@ export function serializeViewConfig(config: ViewConfig): string {
     timelineScale: config.timelineScale,
     colorPropertyId: config.colorPropertyId,
     peoplePropertyId: config.peoplePropertyId,
+    baselineStartPropertyId: config.baselineStartPropertyId,
+    baselineEndPropertyId: config.baselineEndPropertyId,
     hiddenPropertyIds: config.hiddenPropertyIds,
     wrapCells: config.wrapCells,
     showVerticalLines: config.showVerticalLines,
