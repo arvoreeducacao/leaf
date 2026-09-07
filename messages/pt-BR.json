@@ -196,6 +196,24 @@
     "askBack": "Voltar para a busca",
     "actionNotionImport": "Importar do Notion"
   },
+  "ai": {
+    "orbLabel": "Perguntar à IA",
+    "panelTitle": "Nova conversa",
+    "close": "Fechar",
+    "newChat": "Começar outra conversa",
+    "greeting": "Oi! Como posso ajudar?",
+    "intro": "Eu leio os documentos que você pode ver e respondo com o que encontrar neles.",
+    "starterHow": "Como funciona…",
+    "starterWho": "Quem decidiu…",
+    "starterWhere": "Onde está…",
+    "placeholder": "Pergunte qualquer coisa",
+    "send": "Enviar pergunta",
+    "scope": "Responde sobre os documentos que você pode ver",
+    "thinking": "Lendo seus documentos…",
+    "empty": "Não achei nada sobre isso nos documentos que você pode ver.",
+    "error": "Não deu para responder agora.",
+    "sources": "Onde encontrei"
+  },
   "home": {
     "title": "Crie seu primeiro documento",
     "subtitle": "Escreva, formate e organize suas ideias em um só lugar"

@@ -196,6 +196,24 @@
     "askBack": "Back to search",
     "actionNotionImport": "Import from Notion"
   },
+  "ai": {
+    "orbLabel": "Ask AI",
+    "panelTitle": "New chat",
+    "close": "Close",
+    "newChat": "Start another chat",
+    "greeting": "Hi! How can I help?",
+    "intro": "I read the documents you can see and answer with what I find in them.",
+    "starterHow": "How does… work",
+    "starterWho": "Who decided…",
+    "starterWhere": "Where is…",
+    "placeholder": "Ask anything",
+    "send": "Send question",
+    "scope": "Answers about the documents you can see",
+    "thinking": "Reading your documents…",
+    "empty": "I found nothing about that in the documents you can see.",
+    "error": "Could not answer right now.",
+    "sources": "Where I found it"
+  },
   "home": {
     "title": "Create your first document",
     "subtitle": "Write, format, and organize your ideas in one place"

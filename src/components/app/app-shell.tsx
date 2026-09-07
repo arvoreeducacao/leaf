@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Fragment, useCallback, useEffect, useRef, useState } from 'react'
 
+import { AiAssistant } from '@/components/ai/ai-assistant'
 import { CommandPalette } from '@/components/app/command-palette'
 import { CommandPaletteTrigger } from '@/components/app/command-palette-trigger'
 import type { CustomizableSection } from '@/components/app/customize-sidebar'
@@ -479,6 +480,8 @@ export function AppShell({
 
         <main className="min-w-0 flex-1">{children}</main>
       </div>
+
+      {aiEnabled ? <AiAssistant /> : null}
 
       <Sheet onOpenChange={setMobileOpen} open={mobileOpen}>
         <SheetContent
