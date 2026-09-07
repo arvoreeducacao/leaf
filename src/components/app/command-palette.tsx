@@ -31,9 +31,9 @@ import {
 import { PaletteAsk } from '@/components/app/palette-ask'
 import {
   AddIcon,
-  ArchiveDownloadIcon,
   ArchiveUploadIcon,
   MagicWandIcon,
+  NotionIcon,
   SearchIcon,
   TeamIcon,
 } from '@/components/icons'
@@ -234,7 +234,7 @@ export function CommandPalette({ hasOrganization, aiEnabled }: Props) {
       label: t('actionNotionImport'),
       hit: null,
       action: 'notion',
-      icon: <ArchiveDownloadIcon aria-hidden="true" className={paletteIcon} />,
+      icon: <NotionIcon aria-hidden="true" className={paletteIcon} />,
     })
 
     const term = query.trim().toLowerCase()
