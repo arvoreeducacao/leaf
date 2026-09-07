@@ -6,11 +6,14 @@ import { useId, useRef, useState, useTransition } from 'react'
 import { toast } from 'sonner'
 
 import { uploadEditorFile } from '@/components/editor/upload-file'
-import { TrashIcon, UploadIcon, UserIcon } from '@/components/icons'
+import { TrashIcon, UploadIcon } from '@/components/icons'
+import {
+  SettingsRow,
+  SettingsSection,
+} from '@/components/settings/settings-panel'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Separator } from '@/components/ui/separator'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { UserAvatar } from '@/components/ui/user-avatar'
 import {
@@ -131,57 +134,45 @@ export function AccountForm({ userId, name, email, image }: Props) {
   }
 
   return (
-    <div className="flex flex-col gap-8">
-      <header className="flex flex-col gap-2">
-        <div className="flex items-center gap-2">
-          <UserIcon aria-hidden="true" className="size-6 shrink-0 text-brand" />
-          <h1 className="font-bold text-heading-large text-content-strong">
-            {t('title')}
-          </h1>
-        </div>
-        <p className="text-body-medium text-content">{t('subtitle')}</p>
-      </header>
-
-      <section className="flex flex-col gap-4">
+    <>
+      <SettingsSection>
         <div className="flex flex-wrap items-center gap-4">
           <UserAvatar
-            className="size-20"
+            className="size-16"
             email={email}
             image={currentImage}
             name={currentName}
             userId={userId}
           />
-          <div className="flex min-w-0 flex-col gap-2">
-            <p className="text-body-small text-content">
+          <div className="flex min-w-0 flex-col items-start gap-1">
+            <p className="max-w-prose-leaf text-caption text-content">
               {currentImage ? t('avatarHintChosen') : t('avatarHint')}
             </p>
             {currentImage ? (
-              <div>
-                <Button
-                  className="text-content-subtle"
-                  disabled={busy}
-                  onClick={clearAvatar}
-                  size="sm"
-                  type="button"
-                  variant="ghost"
-                >
-                  <TrashIcon aria-hidden="true" />
-                  {t('avatarReset')}
-                </Button>
-              </div>
+              <Button
+                className="text-content-subtle"
+                disabled={busy}
+                onClick={clearAvatar}
+                size="sm"
+                type="button"
+                variant="ghost"
+              >
+                <TrashIcon aria-hidden="true" />
+                {t('avatarReset')}
+              </Button>
             ) : null}
           </div>
         </div>
 
-        <Tabs className="gap-4" defaultValue="gallery">
-          <TabsList className="h-10 min-w-0 gap-4 overflow-x-auto">
+        <Tabs className="gap-3" defaultValue="gallery">
+          <TabsList className="h-9 min-w-0 gap-4 overflow-x-auto">
             <TabsTrigger value="gallery">{t('tabGallery')}</TabsTrigger>
             <TabsTrigger value="upload">{t('tabUpload')}</TabsTrigger>
             <TabsTrigger value="link">{t('tabLink')}</TabsTrigger>
           </TabsList>
 
           <TabsContent value="gallery">
-            <ul className="grid grid-cols-5 gap-2 tablet:grid-cols-8">
+            <ul className="grid grid-cols-6 gap-2 tablet:grid-cols-8">
               {avatarGallerySeeds.map((seed) => {
                 const url = generatedAvatarUrl(seed)
                 const selected = currentUrl === url
@@ -226,7 +217,7 @@ export function AccountForm({ userId, name, email, image }: Props) {
               />
               <Button
                 aria-busy={uploading}
-                className="w-full tablet:w-auto"
+                className="w-full tablet:w-auto tablet:self-start"
                 disabled={busy}
                 onClick={() => fileRef.current?.click()}
                 type="button"
@@ -235,7 +226,7 @@ export function AccountForm({ userId, name, email, image }: Props) {
                 <UploadIcon aria-hidden="true" />
                 {t('uploadButton')}
               </Button>
-              <p className="text-body-small text-content">{t('uploadHint')}</p>
+              <p className="text-caption text-content">{t('uploadHint')}</p>
             </div>
           </TabsContent>
 
@@ -275,17 +266,18 @@ export function AccountForm({ userId, name, email, image }: Props) {
             </form>
           </TabsContent>
         </Tabs>
-      </section>
+      </SettingsSection>
 
-      <Separator />
-
-      <section className="flex flex-col gap-4">
-        <form
-          className="flex flex-col gap-3 tablet:flex-row tablet:items-end"
-          onSubmit={submitName}
+      <SettingsSection>
+        <SettingsRow
+          description={t('nameHint')}
+          htmlFor={nameId}
+          title={t('nameLabel')}
         >
-          <div className="flex min-w-0 flex-1 flex-col gap-2">
-            <Label htmlFor={nameId}>{t('nameLabel')}</Label>
+          <form
+            className="flex w-full shrink-0 flex-col gap-2 tablet:w-80 tablet:flex-row"
+            onSubmit={submitName}
+          >
             <Input
               className="max-w-full"
               disabled={pending}
@@ -294,31 +286,33 @@ export function AccountForm({ userId, name, email, image }: Props) {
               onChange={(event) => setCurrentName(event.target.value)}
               value={currentName}
             />
-          </div>
-          <Button
-            aria-busy={pending}
-            className="w-full tablet:w-auto"
-            disabled={pending || currentName.trim() === name.trim()}
-            type="submit"
-            variant="secondary"
-          >
-            {t('nameSave')}
-          </Button>
-        </form>
-        <p className="text-body-small text-content">{t('nameHint')}</p>
+            <Button
+              aria-busy={pending}
+              className="w-full tablet:w-auto"
+              disabled={pending || currentName.trim() === name.trim()}
+              type="submit"
+              variant="secondary"
+            >
+              {t('nameSave')}
+            </Button>
+          </form>
+        </SettingsRow>
 
-        <div className="flex min-w-0 flex-col gap-2">
-          <Label htmlFor={emailId}>{t('emailLabel')}</Label>
-          <Input
-            className="max-w-full"
-            disabled
-            id={emailId}
-            readOnly
-            value={email}
-          />
-          <p className="text-body-small text-content">{t('emailHint')}</p>
-        </div>
-      </section>
-    </div>
+        <SettingsRow
+          control={
+            <Input
+              className="w-full tablet:w-80"
+              disabled
+              id={emailId}
+              readOnly
+              value={email}
+            />
+          }
+          description={t('emailHint')}
+          htmlFor={emailId}
+          title={t('emailLabel')}
+        />
+      </SettingsSection>
+    </>
   )
 }

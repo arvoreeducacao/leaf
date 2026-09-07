@@ -13,6 +13,7 @@ import { ImportDestinationPicker } from '@/components/editor/import-destination-
 import { ImportProgress } from '@/components/editor/import-progress'
 import { useImportStream } from '@/components/editor/use-import-stream'
 import { AlertIcon, CheckCircleIcon } from '@/components/icons'
+import { SettingsSection } from '@/components/settings/settings-panel'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
 import type {
@@ -128,14 +129,7 @@ export function NotionWorkspaceImport({
   }
 
   return (
-    <section className="flex flex-col gap-3">
-      <div className="flex flex-col gap-1">
-        <h2 className="font-bold text-heading-medium text-content-strong">
-          {t('title')}
-        </h2>
-        <p className="text-body-small text-content">{t('description')}</p>
-      </div>
-
+    <SettingsSection description={t('description')} title={t('title')}>
       <Suspense fallback={null}>
         <ConnectFailedAlert />
       </Suspense>
@@ -235,6 +229,6 @@ export function NotionWorkspaceImport({
           ) : null}
         </div>
       )}
-    </section>
+    </SettingsSection>
   )
 }

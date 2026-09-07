@@ -19,6 +19,7 @@ import {
   TeamIcon,
   UserIcon,
 } from '@/components/icons'
+import { SlidersIcon } from '@/components/icons/outline'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -157,6 +158,12 @@ export function UserMenu({
           <Link href="/account">
             <UserIcon aria-hidden="true" />
             {t('account')}
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link href="/preferences">
+            <SlidersIcon aria-hidden="true" />
+            {t('preferences')}
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>

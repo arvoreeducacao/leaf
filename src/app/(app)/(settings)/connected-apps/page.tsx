@@ -3,6 +3,10 @@ import { getTranslations } from 'next-intl/server'
 import { notFound, redirect } from 'next/navigation'
 
 import { ConnectedAppsManager } from '@/components/oauth/connected-apps-manager'
+import {
+  SettingsHeader,
+  SettingsPanel,
+} from '@/components/settings/settings-panel'
 import { getSession } from '@/lib/auth'
 import { listConnectedApps } from '@/lib/connected-apps'
 import { isMcpEnabled, mcpResourceUrl } from '@/lib/mcp-config'
@@ -14,6 +18,8 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function ConnectedAppsPage() {
+  const t = await getTranslations('connectedApps')
+
   if (!isMcpEnabled()) {
     notFound()
   }
@@ -27,8 +33,12 @@ export default async function ConnectedAppsPage() {
   const apps = await listConnectedApps(session.user.id)
 
   return (
-    <div className="mx-auto flex w-full max-w-content flex-col gap-8 px-4 py-8 tablet:px-8 tablet:py-10">
-      <ConnectedAppsManager apps={apps} mcpUrl={mcpResourceUrl()} />
-    </div>
+    <>
+      <SettingsHeader description={t('subtitle')} title={t('title')} />
+
+      <SettingsPanel>
+        <ConnectedAppsManager apps={apps} mcpUrl={mcpResourceUrl()} />
+      </SettingsPanel>
+    </>
   )
 }

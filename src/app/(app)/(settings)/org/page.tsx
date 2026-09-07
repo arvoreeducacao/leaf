@@ -7,6 +7,10 @@ import { NotionWorkspaceImport } from '@/components/org/notion-workspace-import'
 import { OrganizationManager } from '@/components/org/organization-manager'
 import { TeamspaceManager } from '@/components/org/teamspace-manager'
 import type { TeamspaceCard } from '@/components/org/teamspace-manager'
+import {
+  SettingsHeader,
+  SettingsPanel,
+} from '@/components/settings/settings-panel'
 import { readActiveOrgId } from '@/lib/active-org'
 import { getSession } from '@/lib/auth'
 import type { NotionPersonalImportState } from '@/lib/import-actions'
@@ -41,6 +45,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function OrganizationPage({ searchParams }: Props) {
+  const t = await getTranslations('org')
   const session = await getSession()
 
   if (!session) {
@@ -56,11 +61,7 @@ export default async function OrganizationPage({ searchParams }: Props) {
     null
 
   if (!membership) {
-    return (
-      <div className="mx-auto w-full max-w-content px-4 py-8 tablet:px-8 tablet:py-10">
-        <CreateOrganizationForm />
-      </div>
-    )
+    return <CreateOrganizationForm />
   }
 
   const [people, invites, teamspaces] = await Promise.all([
@@ -90,39 +91,43 @@ export default async function OrganizationPage({ searchParams }: Props) {
   )
 
   return (
-    <div className="mx-auto flex w-full max-w-content flex-col gap-8 px-4 py-8 tablet:px-8 tablet:py-10">
+    <>
+      <SettingsHeader description={t('subtitle')} title={t('title')} />
+
       {creating ? <CreateOrganizationForm /> : null}
 
-      <OrganizationManager
-        invites={invites}
-        inviteToken={inviteToken}
-        memberId={membership.memberId}
-        orgIcon={membership.orgIcon}
-        orgName={membership.orgName}
-        people={people}
-        role={membership.role}
-      />
+      <SettingsPanel>
+        <OrganizationManager
+          invites={invites}
+          inviteToken={inviteToken}
+          memberId={membership.memberId}
+          orgIcon={membership.orgIcon}
+          orgName={membership.orgName}
+          people={people}
+          role={membership.role}
+        >
+          <TeamspaceManager orgPeople={people} teamspaces={cards} />
 
-      <TeamspaceManager orgPeople={people} teamspaces={cards} />
-
-      {notionImport ? (
-        <NotionWorkspaceImport
-          connection={notionImport.connection}
-          destinations={{
-            organizationName: membership.orgName,
-            parentDestination: 'organization',
-            suggested: 'organization',
-            teamspaces: teamspaces
-              .map((teamspace) => ({
-                label: teamspace.name,
-                value: `teamspace:${teamspace.id}`,
-              }))
-              .sort((left, right) => left.label.localeCompare(right.label)),
-          }}
-          footprint={notionImport.footprint}
-        />
-      ) : null}
-    </div>
+          {notionImport ? (
+            <NotionWorkspaceImport
+              connection={notionImport.connection}
+              destinations={{
+                organizationName: membership.orgName,
+                parentDestination: 'organization',
+                suggested: 'organization',
+                teamspaces: teamspaces
+                  .map((teamspace) => ({
+                    label: teamspace.name,
+                    value: `teamspace:${teamspace.id}`,
+                  }))
+                  .sort((left, right) => left.label.localeCompare(right.label)),
+              }}
+              footprint={notionImport.footprint}
+            />
+          ) : null}
+        </OrganizationManager>
+      </SettingsPanel>
+    </>
   )
 }
 

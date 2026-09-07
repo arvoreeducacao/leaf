@@ -6,18 +6,19 @@ import { useId, useState } from 'react'
 import { toast } from 'sonner'
 
 import { IconPicker } from '@/components/app/icon-picker'
-import {
-  ClipboardIcon,
-  GlobeIcon,
-  RotateIcon,
-  TeamIcon,
-  TrashIcon,
-} from '@/components/icons'
+import { ClipboardIcon, RotateIcon, TrashIcon } from '@/components/icons'
 import { ConfirmInviteLinkChange } from '@/components/org/confirm-invite-link-change'
 import { ConfirmRemoveMember } from '@/components/org/confirm-remove-member'
 import { DeleteOrganizationDialog } from '@/components/org/delete-organization-dialog'
 import { LeaveOrganizationDialog } from '@/components/org/leave-organization-dialog'
 import { OrganizationMark } from '@/components/org/organization-mark'
+import {
+  SettingsHint,
+  SettingsList,
+  SettingsListItem,
+  SettingsRow,
+  SettingsSection,
+} from '@/components/settings/settings-panel'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { ButtonIcon } from '@/components/ui/button-icon'
@@ -30,7 +31,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Separator } from '@/components/ui/separator'
 import { Switch } from '@/components/ui/switch'
 import { UserAvatar } from '@/components/ui/user-avatar'
 import type { InviteRole, OrganizationRole } from '@/db/schema'
@@ -51,6 +51,7 @@ import type { OrgActionResult } from '@/lib/org-actions'
 import type { OrganizationPerson, PendingInvite } from '@/lib/organizations'
 
 type Props = Readonly<{
+  children?: React.ReactNode
   orgName: string
   orgIcon: string | null
   role: OrganizationRole
@@ -69,6 +70,7 @@ function joinUrlFor(token: string) {
 }
 
 export function OrganizationManager({
+  children,
   orgName,
   orgIcon,
   role,
@@ -251,19 +253,9 @@ export function OrganizationManager({
   }
 
   return (
-    <div className="flex flex-col gap-8">
-      <header className="flex flex-col gap-2">
-        <div className="flex items-center gap-2">
-          <TeamIcon aria-hidden="true" className="size-6 shrink-0 text-brand" />
-          <h1 className="font-bold text-heading-large text-content-strong">
-            {t('title')}
-          </h1>
-        </div>
-        <p className="text-body-medium text-content">{t('subtitle')}</p>
-      </header>
-
-      <section className="flex flex-col gap-3">
-        <div className="flex flex-wrap items-end gap-4">
+    <>
+      <SettingsSection>
+        <div className="flex flex-wrap items-center gap-4">
           {canManage ? (
             <button
               aria-label={orgIcon ? t('iconChange') : t('iconAdd')}
@@ -281,11 +273,16 @@ export function OrganizationManager({
 
           {canManage ? (
             <form
-              className="flex min-w-0 flex-1 flex-col gap-3 tablet:flex-row tablet:items-end"
+              className="flex min-w-0 flex-1 flex-col gap-2"
               onSubmit={submitName}
             >
-              <div className="flex min-w-0 flex-1 flex-col gap-2">
-                <Label htmlFor={nameId}>{t('nameLabel')}</Label>
+              <Label
+                className="font-medium text-body-small text-content-strong"
+                htmlFor={nameId}
+              >
+                {t('nameLabel')}
+              </Label>
+              <div className="flex min-w-0 flex-col gap-2 tablet:flex-row">
                 <Input
                   aria-describedby={nameError ? nameErrorId : undefined}
                   aria-invalid={nameError ? true : undefined}
@@ -296,30 +293,27 @@ export function OrganizationManager({
                   onChange={(event) => setName(event.target.value)}
                   value={name}
                 />
+                <Button
+                  aria-busy={pending}
+                  className="w-full tablet:w-auto"
+                  disabled={pending || name.trim() === orgName}
+                  type="submit"
+                  variant="secondary"
+                >
+                  {t('rename')}
+                </Button>
               </div>
-              <Button
-                aria-busy={pending}
-                className="w-full tablet:w-auto"
-                disabled={pending || name.trim() === orgName}
-                type="submit"
-                variant="secondary"
-              >
-                {t('rename')}
-              </Button>
+              <SettingsHint>{t('iconHelp')}</SettingsHint>
             </form>
           ) : (
-            <div className="flex min-w-0 flex-1 flex-col gap-1">
-              <span className="font-bold text-body-small text-content">
+            <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+              <span className="font-medium text-body-small text-content-strong">
                 {t('nameLabel')}
               </span>
               <p className="text-body-medium text-content-strong">{orgName}</p>
             </div>
           )}
         </div>
-
-        {canManage ? (
-          <p className="text-body-small text-content">{t('iconHelp')}</p>
-        ) : null}
 
         {canManage && nameError ? (
           <p
@@ -330,30 +324,23 @@ export function OrganizationManager({
             {nameError}
           </p>
         ) : null}
-      </section>
+      </SettingsSection>
 
-      <Separator />
-
-      <section className="flex flex-col gap-3">
-        <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h2 className="font-bold text-heading-medium text-content-strong">
-            {t('membersTitle')}
-          </h2>
-          <span className="text-body-small text-content">
+      <SettingsSection
+        action={
+          <span className="text-caption text-content">
             {t('membersCount', { count: people.length })}
           </span>
-        </div>
-
-        <ul className="flex flex-col gap-2">
+        }
+        title={t('membersTitle')}
+      >
+        <SettingsList>
           {people.map((person) => {
             const isSelf = person.memberId === memberId
             const editable = canManage && person.role !== 'owner'
 
             return (
-              <li
-                className="flex min-w-0 flex-wrap items-center gap-2 rounded-large border border-line-subtle px-3 py-2"
-                key={person.memberId}
-              >
+              <SettingsListItem key={person.memberId}>
                 <UserAvatar
                   className="size-7"
                   email={person.email}
@@ -363,7 +350,7 @@ export function OrganizationManager({
                 />
                 <span className="flex min-w-0 flex-1 basis-full flex-col tablet:basis-0">
                   <span
-                    className="truncate font-bold text-body-small text-content-strong"
+                    className="truncate font-medium text-body-small text-content-strong"
                     title={person.name || person.email}
                   >
                     {person.name || person.email}
@@ -371,7 +358,7 @@ export function OrganizationManager({
                   </span>
                   {person.name ? (
                     <span
-                      className="truncate text-body-small text-content"
+                      className="truncate text-caption text-content"
                       title={person.email}
                     >
                       {person.email}
@@ -395,7 +382,7 @@ export function OrganizationManager({
                         aria-label={t('roleOf', {
                           name: person.name || person.email,
                         })}
-                        className="w-40 shrink-0"
+                        className="w-32 shrink-0"
                       >
                         <SelectValue />
                       </SelectTrigger>
@@ -425,99 +412,84 @@ export function OrganizationManager({
                     </ButtonIcon>
                   </>
                 ) : (
-                  <Badge variant="info">{roleLabels[person.role]}</Badge>
+                  <span className="shrink-0 text-caption text-content">
+                    {roleLabels[person.role]}
+                  </span>
                 )}
-              </li>
+              </SettingsListItem>
             )
           })}
-        </ul>
+        </SettingsList>
 
-        {canManage ? null : (
-          <p className="text-body-small text-content">{t('manageHint')}</p>
-        )}
-      </section>
+        {canManage ? null : <SettingsHint>{t('manageHint')}</SettingsHint>}
+      </SettingsSection>
 
       {canManage ? (
-        <>
-          <Separator />
-
-          <section className="flex flex-col gap-3">
-            <h2 className="font-bold text-heading-medium text-content-strong">
-              {t('inviteTitle')}
-            </h2>
-
-            <form
-              className="flex flex-col gap-3 tablet:flex-row tablet:items-end"
-              onSubmit={submitInvite}
-            >
-              <div className="flex min-w-0 flex-1 flex-col gap-2">
-                <Label htmlFor={emailId}>{t('emailLabel')}</Label>
-                <Input
-                  aria-describedby={inviteError ? inviteErrorId : undefined}
-                  aria-invalid={inviteError ? true : undefined}
-                  autoComplete="email"
-                  className="max-w-full"
-                  disabled={pending}
-                  id={emailId}
-                  onChange={(event) => setEmail(event.target.value)}
-                  placeholder={t('emailPlaceholder')}
-                  type="email"
-                  value={email}
-                />
-              </div>
-              <div className="flex flex-col gap-2 tablet:w-45">
-                <Label htmlFor={roleId}>{t('roleLabel')}</Label>
-                <Select
-                  disabled={pending}
-                  onValueChange={(value) => setInviteRole(value as InviteRole)}
-                  value={inviteRole}
-                >
-                  <SelectTrigger id={roleId}>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="member">{roleLabels.member}</SelectItem>
-                    <SelectItem value="admin">{roleLabels.admin}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <Button
-                aria-busy={pending}
-                className="w-full tablet:w-auto"
+        <SettingsSection
+          description={t('inviteHelp')}
+          title={t('inviteTitle')}
+        >
+          <form
+            className="flex flex-col gap-2 tablet:flex-row tablet:items-end"
+            onSubmit={submitInvite}
+          >
+            <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+              <Label htmlFor={emailId}>{t('emailLabel')}</Label>
+              <Input
+                aria-describedby={inviteError ? inviteErrorId : undefined}
+                aria-invalid={inviteError ? true : undefined}
+                autoComplete="email"
+                className="max-w-full"
                 disabled={pending}
-                type="submit"
+                id={emailId}
+                onChange={(event) => setEmail(event.target.value)}
+                placeholder={t('emailPlaceholder')}
+                type="email"
+                value={email}
+              />
+            </div>
+            <div className="flex flex-col gap-1.5 tablet:w-36">
+              <Label htmlFor={roleId}>{t('roleLabel')}</Label>
+              <Select
+                disabled={pending}
+                onValueChange={(value) => setInviteRole(value as InviteRole)}
+                value={inviteRole}
               >
-                {t('invite')}
-              </Button>
-            </form>
+                <SelectTrigger id={roleId}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="member">{roleLabels.member}</SelectItem>
+                  <SelectItem value="admin">{roleLabels.admin}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <Button
+              aria-busy={pending}
+              className="w-full tablet:w-auto"
+              disabled={pending}
+              type="submit"
+            >
+              {t('invite')}
+            </Button>
+          </form>
 
-            {inviteError ? (
-              <p
-                className="rounded-large bg-danger-surface p-3 text-body-small text-danger"
-                id={inviteErrorId}
-                role="alert"
-              >
-                {inviteError}
-              </p>
-            ) : null}
+          {inviteError ? (
+            <p
+              className="rounded-large bg-danger-surface p-3 text-body-small text-danger"
+              id={inviteErrorId}
+              role="alert"
+            >
+              {inviteError}
+            </p>
+          ) : null}
+        </SettingsSection>
+      ) : null}
 
-            <p className="text-body-small text-content">{t('inviteHelp')}</p>
-          </section>
-
-          <section className="flex flex-col gap-3">
-            <div className="flex min-h-11 items-center justify-between gap-3">
-              <div className="flex min-w-0 items-center gap-2">
-                <GlobeIcon
-                  aria-hidden="true"
-                  className="size-4 shrink-0 text-content-muted"
-                />
-                <Label
-                  className="font-bold text-body-small text-content-strong"
-                  htmlFor={inviteLinkSwitchId}
-                >
-                  {t('inviteLinkTitle')}
-                </Label>
-              </div>
+      {canManage ? (
+        <SettingsSection>
+          <SettingsRow
+            control={
               <Switch
                 checked={inviteToken !== null}
                 disabled={pending}
@@ -535,112 +507,108 @@ export function OrganizationManager({
                   )
                 }}
               />
+            }
+            description={t('inviteLinkHelp')}
+            htmlFor={inviteLinkSwitchId}
+            title={t('inviteLinkTitle')}
+          />
+
+          <ConfirmInviteLinkChange
+            mode={confirmingLink ?? 'disable'}
+            onConfirm={() => void confirmLinkChange()}
+            onOpenChange={(open) => {
+              if (!open) {
+                setConfirmingLink(null)
+              }
+            }}
+            open={confirmingLink !== null}
+            pending={pending}
+          />
+
+          {inviteToken ? (
+            <div className="flex flex-col gap-2 tablet:flex-row tablet:items-end">
+              <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                <Label htmlFor={inviteLinkId}>{t('inviteLinkAddress')}</Label>
+                <Input
+                  className="max-w-full"
+                  data-testid="org-invite-link"
+                  id={inviteLinkId}
+                  onFocus={(event) => event.currentTarget.select()}
+                  readOnly
+                  value={joinUrlFor(inviteToken)}
+                />
+              </div>
+              <Button
+                className="w-full tablet:w-auto"
+                onClick={() => void copyInviteLink(joinUrlFor(inviteToken))}
+                type="button"
+                variant="secondary"
+              >
+                <ClipboardIcon aria-hidden="true" />
+                {t('inviteLinkCopy')}
+              </Button>
+              <Button
+                className="w-full tablet:w-auto"
+                disabled={pending}
+                onClick={() => setConfirmingLink('reset')}
+                type="button"
+                variant="secondary"
+              >
+                <RotateIcon aria-hidden="true" />
+                {t('inviteLinkResetAction')}
+              </Button>
             </div>
+          ) : null}
+        </SettingsSection>
+      ) : null}
 
-            <ConfirmInviteLinkChange
-              mode={confirmingLink ?? 'disable'}
-              onConfirm={() => void confirmLinkChange()}
-              onOpenChange={(open) => {
-                if (!open) {
-                  setConfirmingLink(null)
-                }
-              }}
-              open={confirmingLink !== null}
-              pending={pending}
-            />
+      {canManage ? (
+        <SettingsSection title={t('invitesTitle')}>
+          {invites.length === 0 ? (
+            <SettingsHint>{t('invitesEmpty')}</SettingsHint>
+          ) : (
+            <SettingsList>
+              {invites.map((invite) => (
+                <SettingsListItem key={invite.id}>
+                  <span className="min-w-0 flex-1 truncate text-body-small text-content-strong">
+                    {invite.email}
+                  </span>
+                  <Badge variant="info">{roleLabels[invite.role]}</Badge>
+                  <ButtonIcon
+                    aria-label={t('cancelInvite', { email: invite.email })}
+                    disabled={pending}
+                    onClick={() => void cancelInvite(invite)}
+                    size="large"
+                    variant="ghost"
+                  >
+                    <TrashIcon aria-hidden="true" />
+                  </ButtonIcon>
+                </SettingsListItem>
+              ))}
+            </SettingsList>
+          )}
+        </SettingsSection>
+      ) : null}
 
-            <p className="text-body-small text-content">
-              {t('inviteLinkHelp')}
-            </p>
+      {children}
 
-            {inviteToken ? (
-              <div className="flex flex-col gap-2 tablet:flex-row tablet:items-end">
-                <div className="flex min-w-0 flex-1 flex-col gap-2">
-                  <Label htmlFor={inviteLinkId}>
-                    {t('inviteLinkAddress')}
-                  </Label>
-                  <Input
-                    className="max-w-full"
-                    data-testid="org-invite-link"
-                    id={inviteLinkId}
-                    onFocus={(event) => event.currentTarget.select()}
-                    readOnly
-                    value={joinUrlFor(inviteToken)}
-                  />
-                </div>
-                <Button
-                  className="w-full tablet:w-auto"
-                  onClick={() => void copyInviteLink(joinUrlFor(inviteToken))}
-                  type="button"
-                  variant="secondary"
-                >
-                  <ClipboardIcon aria-hidden="true" />
-                  {t('inviteLinkCopy')}
-                </Button>
+      <SettingsSection>
+        {canLeave ? (
+          <>
+            <SettingsRow
+              control={
                 <Button
                   className="w-full tablet:w-auto"
                   disabled={pending}
-                  onClick={() => setConfirmingLink('reset')}
+                  onClick={() => setLeaving(true)}
                   type="button"
                   variant="secondary"
                 >
-                  <RotateIcon aria-hidden="true" />
-                  {t('inviteLinkResetAction')}
+                  {t('leave')}
                 </Button>
-              </div>
-            ) : null}
-          </section>
-
-          <section className="flex flex-col gap-3">
-            <h2 className="font-bold text-heading-medium text-content-strong">
-              {t('invitesTitle')}
-            </h2>
-
-            {invites.length === 0 ? (
-              <p className="text-body-small text-content">
-                {t('invitesEmpty')}
-              </p>
-            ) : (
-              <ul className="flex flex-col gap-2">
-                {invites.map((invite) => (
-                  <li
-                    className="flex min-w-0 flex-wrap items-center gap-2 rounded-large border border-line-subtle px-3 py-2"
-                    key={invite.id}
-                  >
-                    <span className="min-w-0 flex-1 truncate text-body-small text-content-strong">
-                      {invite.email}
-                    </span>
-                    <Badge variant="info">{roleLabels[invite.role]}</Badge>
-                    <ButtonIcon
-                      aria-label={t('cancelInvite', { email: invite.email })}
-                      disabled={pending}
-                      onClick={() => void cancelInvite(invite)}
-                      size="large"
-                      variant="ghost"
-                    >
-                      <TrashIcon aria-hidden="true" />
-                    </ButtonIcon>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-        </>
-      ) : null}
-
-      <Separator />
-
-      <section className="flex flex-col items-start gap-3">
-        {canLeave ? (
-          <>
-            <Button
-              disabled={pending}
-              onClick={() => setLeaving(true)}
-              type="button"
-              variant="secondary"
-            >
-              {t('leave')}
-            </Button>
+              }
+              description={t('leaveDescription')}
+            />
             <LeaveOrganizationDialog
               onConfirm={() => void confirmLeave()}
               onOpenChange={setLeaving}
@@ -649,22 +617,26 @@ export function OrganizationManager({
             />
           </>
         ) : (
-          <p className="text-body-small text-content">
-            {t('ownerCannotLeave')}
-          </p>
+          <SettingsHint>{t('ownerCannotLeave')}</SettingsHint>
         )}
 
         {role === 'owner' ? (
           <>
-            <Button
-              data-testid="delete-org"
-              disabled={pending}
-              onClick={() => setDeleting(true)}
-              type="button"
-              variant="destructive"
-            >
-              {t('deleteOrgAction')}
-            </Button>
+            <SettingsRow
+              control={
+                <Button
+                  className="w-full tablet:w-auto"
+                  data-testid="delete-org"
+                  disabled={pending}
+                  onClick={() => setDeleting(true)}
+                  type="button"
+                  variant="destructive"
+                >
+                  {t('deleteOrgAction')}
+                </Button>
+              }
+              description={t('deleteOrgDescription')}
+            />
             <DeleteOrganizationDialog
               onConfirm={() => void confirmDelete()}
               onOpenChange={setDeleting}
@@ -674,7 +646,7 @@ export function OrganizationManager({
             />
           </>
         ) : null}
-      </section>
+      </SettingsSection>
 
       {canManage ? (
         <IconPicker
@@ -701,6 +673,6 @@ export function OrganizationManager({
         open={removing !== null}
         pending={pending}
       />
-    </div>
+    </>
   )
 }

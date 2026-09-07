@@ -20,7 +20,8 @@
     "join": "Invite | Leaf",
     "consent": "Authorize app | Leaf",
     "connectedApps": "Connected apps | Leaf",
-    "account": "Account | Leaf"
+    "account": "Account | Leaf",
+    "preferences": "Preferences | Leaf"
   },
   "auth": {
     "loginTitle": "Welcome to Leaf",
@@ -66,7 +67,19 @@
     "localeEnUS": "English (US)",
     "switchingLanguage": "Switching language",
     "connectedApps": "Connected apps",
-    "installApp": "Install Leaf"
+    "installApp": "Install Leaf",
+    "title": "Settings",
+    "groupAccount": "Account",
+    "groupWorkspace": "Workspace",
+    "groupResources": "Resources",
+    "preferences": "Preferences",
+    "preferencesSubtitle": "Choose how Leaf looks and behaves",
+    "themeLabel": "Theme",
+    "themeHint": "Choose a theme for Leaf on this device",
+    "languageHint": "Choose the language you want to use Leaf in",
+    "sectionLanguage": "Language and time",
+    "sectionApp": "App",
+    "installAppHint": "Open Leaf straight from your computer, without the browser"
   },
   "account": {
     "title": "Account",
