@@ -8,7 +8,6 @@ import {
   CloudOffIcon,
   EyeIcon,
   SyncIcon,
-  UsersIcon,
   WarningIcon,
 } from '@/components/icons'
 import type {
@@ -42,15 +41,6 @@ function ConnectionChip({
 
   if (online && connection === 'solo') {
     return null
-  }
-
-  if (online && connection === 'connected') {
-    return (
-      <p className="flex items-center gap-1 whitespace-nowrap">
-        <UsersIcon aria-hidden="true" className="size-3.5" />
-        {t('connected')}
-      </p>
-    )
   }
 
   if (!online || connection === 'offline') {
@@ -87,8 +77,7 @@ export function DocumentStatus() {
   const t = useTranslations('editor')
   const tCommon = useTranslations('common')
   const tOffline = useTranslations('offline')
-  const { ready, readOnly, save, stats, connection, conflict } =
-    useEditorStatus()
+  const { ready, readOnly, save, connection, conflict } = useEditorStatus()
   const online = useOnlineStatus()
 
   if (!ready) {
@@ -107,18 +96,6 @@ export function DocumentStatus() {
         <p className="flex items-center gap-1" id={readOnlyHintId}>
           <EyeIcon aria-hidden="true" className="size-3.5" />
           {t('readOnly')}
-        </p>
-      ) : null}
-
-      {stats ? (
-        <p className="flex items-center gap-1 whitespace-nowrap">
-          <span>{t('words', { count: stats.words })}</span>
-          <span aria-hidden="true" className="hidden tablet:inline">
-            ·
-          </span>
-          <span className="hidden tablet:inline">
-            {t('characters', { count: stats.characters })}
-          </span>
         </p>
       ) : null}
 

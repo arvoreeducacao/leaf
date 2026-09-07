@@ -1051,7 +1051,7 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
         </p>
       ) : null}
 
-      {activeView.type === 'form' ? null : (
+      {activeView.type === 'form' || activeView.type === 'gallery' ? null : (
         <p className={cn('pt-2 text-caption text-content-subtle', gutter)}>
           {t('rowCount', { count: filtered.length })}
         </p>

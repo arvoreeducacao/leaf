@@ -31,7 +31,7 @@ export function ViewSearch({ value, placeholder, onChange }: Props) {
     return (
       <ButtonIcon
         aria-label={placeholder}
-        className="relative size-9 rounded-large p-1.5 tablet:size-7"
+        className="relative size-9 rounded-large p-1.5 tablet:size-6 tablet:p-1 [&_svg]:size-4"
         onClick={() => setOpen(true)}
         size="medium"
         variant="ghost"

@@ -304,7 +304,7 @@ test.describe('mobile 320px', () => {
 
     await page.reload()
     await expect(page.getByTestId('document-teamspace-tag')).toBeVisible()
-    await expect(page.getByTestId('document-org-tag')).toBeVisible()
+    await expect(page.getByTestId('document-org-tag')).toHaveCount(0)
     await expectNoHorizontalOverflow(page)
 
     await expect(page.getByTestId('comments-button')).toBeVisible()
