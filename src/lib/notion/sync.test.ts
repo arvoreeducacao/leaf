@@ -66,7 +66,7 @@ type World = {
   childText: string
   dbInline: boolean
   dbDead?: boolean
-  dbSources?: 'legacy' | 'two'
+  dbSources?: 'legacy' | 'two' | 'two-one-empty'
   brokenIds?: Array<string>
   rootIcon: { name: string; color: string } | null
   rootCover: { file?: { url: string }; external?: { url: string } } | null
@@ -235,7 +235,7 @@ function makeClient(world: World): NotionClient {
         return { ...base, properties: schema }
       }
 
-      if (world.dbSources === 'two') {
+      if (world.dbSources === 'two' || world.dbSources === 'two-one-empty') {
         return {
           ...base,
           data_sources: [
@@ -282,6 +282,15 @@ function makeClient(world: World): NotionClient {
         }
 
         if (norm(id) === norm(secondSourceId)) {
+          yield rows[norm(rowTwoId)]()
+        }
+
+        return
+      }
+
+      if (world.dbSources === 'two-one-empty') {
+        if (norm(id) === norm(dataSourceId)) {
+          yield rows[norm(rowOneId)]()
           yield rows[norm(rowTwoId)]()
         }
 
@@ -399,6 +408,34 @@ describe('resumable Notion sync', () => {
       .sort()
 
     expect(databaseKeys).toEqual([norm(dataSourceId), norm(secondSourceId)].sort())
+  })
+
+  it('ignores an empty extra data source and keeps the plain database', async () => {
+    const world = makeWorld()
+    world.dbSources = 'two-one-empty'
+
+    await run(world)
+
+    const databases = await db
+      .select()
+      .from(documents)
+      .where(eq(documents.kind, 'database'))
+
+    expect(databases.map((row) => row.title)).toEqual(['Tasks'])
+
+    const rows = await db
+      .select()
+      .from(documents)
+      .where(eq(documents.kind, 'row'))
+
+    expect(rows).toHaveLength(2)
+
+    const mappings = await db.select().from(notionDocuments)
+    const databaseKeys = mappings
+      .filter((mapping) => mapping.kind === 'database')
+      .map((mapping) => mapping.notionId)
+
+    expect(databaseKeys).toEqual([norm(databaseId)])
   })
 
   it('still reads a database served in the shape without data sources', async () => {
