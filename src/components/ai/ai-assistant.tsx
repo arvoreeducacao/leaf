@@ -453,15 +453,18 @@ export function AiAssistant() {
         </Tooltip>
       )}
       <aside
-        aria-hidden={!open}
+        aria-hidden={!open || undefined}
         aria-label={t('panelTitle')}
         className={cn(
-          'h-dvh shrink-0 overflow-hidden border-line border-l bg-surface-nav transition-[width] duration-200 motion-reduce:transition-none',
+          'relative hidden shrink-0 border-line border-l bg-surface-nav transition-[width] duration-200 motion-reduce:transition-none tablet:block',
           open ? 'w-[380px]' : 'w-0 border-l-0',
         )}
+        inert={!open}
       >
-        <div className="flex h-full w-[380px] flex-col">
-          {open ? conversation : null}
+        <div className="sticky top-0 h-dvh overflow-hidden">
+          <div className="flex h-full w-[380px] flex-col">
+            {open ? conversation : null}
+          </div>
         </div>
       </aside>
     </>
