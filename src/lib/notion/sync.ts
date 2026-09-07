@@ -30,13 +30,14 @@ import { sanitizeBlocks } from '@/lib/markdown/sanitize'
 import type {
   NotionBlock,
   NotionClient,
+  NotionPageObject,
   NotionUserObject,
 } from '@/lib/notion/api'
 import { plainText } from '@/lib/notion/api'
 import type { BlockNode, ImportedBlock } from '@/lib/notion/convert'
 import { convertNodes } from '@/lib/notion/convert'
 import { databaseTitle, pageTitle } from '@/lib/notion/crawl'
-import type { DatabaseParent } from '@/lib/notion/data-sources'
+import type { DatabaseParent, DatabaseSource } from '@/lib/notion/data-sources'
 import {
   createDatabaseResolver,
   isDatabaseParent,
@@ -980,7 +981,37 @@ export async function* syncNotion(
         const database = await client.database(item.id)
         const databaseName = databaseTitle(database, messages.untitled)
         const icon = notionIconValue(database.icon)
-        const sources = await loadDatabaseSources(client, database)
+        const allSources = await loadDatabaseSources(client, database)
+        const collectedRows = new Map<string, Array<NotionPageObject>>()
+
+        if (allSources.length > 1) {
+          for (const dataSource of allSources) {
+            const buffered: Array<NotionPageObject> = []
+
+            for await (const row of client.rows(dataSource.id)) {
+              buffered.push(row)
+            }
+
+            collectedRows.set(dataSource.id, buffered)
+          }
+        }
+
+        const populated = allSources.filter(
+          (dataSource) => (collectedRows.get(dataSource.id)?.length ?? 1) > 0,
+        )
+        const sources = populated.length > 0 ? populated : allSources.slice(0, 1)
+
+        async function* rowsOf(dataSource: DatabaseSource) {
+          const buffered = collectedRows.get(dataSource.id)
+
+          if (buffered) {
+            yield* buffered
+
+            return
+          }
+
+          yield* client.rows(dataSource.id)
+        }
 
         for (const dataSource of sources) {
           const sourceId = sourceKey(item.id, dataSource, sources.length)
@@ -1034,7 +1065,7 @@ export async function* syncNotion(
             created && !existing,
           )
 
-          for await (const row of client.rows(dataSource.id)) {
+          for await (const row of rowsOf(dataSource)) {
             if (signal?.aborted) {
               return
             }
