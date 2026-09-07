@@ -373,7 +373,7 @@ export function calendarPropertiesOf<Column extends DateColumn>(
 export function baselinePropertiesOf<Column extends DateColumn>(
   properties: ReadonlyArray<Column>,
   config: ViewConfig,
-): Readonly<{ start: Column | null; end: Column | null }> | null {
+): Readonly<{ start: Column; end: Column | null }> | null {
   const start = endPropertyOf(properties, config.baselineStartPropertyId)
 
   if (!start) {
