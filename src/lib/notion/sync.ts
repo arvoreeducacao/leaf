@@ -36,6 +36,14 @@ import { plainText } from '@/lib/notion/api'
 import type { BlockNode, ImportedBlock } from '@/lib/notion/convert'
 import { convertNodes } from '@/lib/notion/convert'
 import { databaseTitle, pageTitle } from '@/lib/notion/crawl'
+import type { DatabaseParent } from '@/lib/notion/data-sources'
+import {
+  createDatabaseResolver,
+  isDatabaseParent,
+  loadDatabaseSources,
+  sourceKey,
+  sourceTitle,
+} from '@/lib/notion/data-sources'
 import type {
   AlreadyImportedDocument,
   ImportEvent,
@@ -758,27 +766,48 @@ export async function* syncNotion(
       { object: string; parentId: string | null; parentType: string }
     >()
 
+    const resolveDatabaseId = createDatabaseResolver(client)
+
     for await (const result of client.search()) {
       if (signal?.aborted) {
         return
       }
 
-      const parent = (result.parent ?? {}) as {
-        type?: string
-        page_id?: string
-        database_id?: string
-        block_id?: string
+      const parent = (result.parent ?? {}) as DatabaseParent
+      const object = result.object ?? 'page'
+
+      if (object === 'data_source') {
+        const databaseId = parent.database_id
+
+        if (databaseId && !found.has(databaseId)) {
+          const databaseParent = ((result as { database_parent?: DatabaseParent })
+            .database_parent ?? {}) as DatabaseParent
+
+          found.set(databaseId, {
+            object: 'database',
+            parentId: databaseParent.page_id ?? databaseParent.block_id ?? null,
+            parentType: databaseParent.type ?? 'workspace',
+          })
+        }
+
+        continue
       }
-      const parentId =
-        parent.page_id ?? parent.database_id ?? parent.block_id ?? null
 
-      found.set(result.id, {
-        object: result.object ?? 'page',
-        parentId,
-        parentType: parent.type ?? 'workspace',
-      })
+      if (isDatabaseParent(parent)) {
+        found.set(result.id, {
+          object,
+          parentId: await resolveDatabaseId(parent),
+          parentType: 'database_id',
+        })
+      } else {
+        found.set(result.id, {
+          object,
+          parentId: parent.page_id ?? parent.block_id ?? null,
+          parentType: parent.type ?? 'workspace',
+        })
+      }
 
-      if ((result.object ?? 'page') === 'page') {
+      if (object === 'page') {
         listed.set(normalizeNotionId(result.id), {
           cover: result.cover ?? null,
           icon: notionIconValue(result.icon),
@@ -949,184 +978,201 @@ export async function* syncNotion(
     try {
       if (item.kind === 'database') {
         const database = await client.database(item.id)
-        const title = databaseTitle(database, messages.untitled)
+        const databaseName = databaseTitle(database, messages.untitled)
         const icon = notionIconValue(database.icon)
-        const existing = mappings.get(idKey)
-        const { documentId, created } = await upsertDocument(
-          item.id,
-          'database',
-          title,
-          icon,
-          stamp(database.created_time),
-          stamp(database.last_edited_time),
-          item.parentDocId,
-        )
+        const sources = await loadDatabaseSources(client, database)
 
-        if (!rootDocId) {
-          rootDocId = documentId
-          rootTitle = title
-        }
+        for (const dataSource of sources) {
+          const sourceId = sourceKey(item.id, dataSource, sources.length)
+          const sourceIdKey = normalizeNotionId(sourceId)
 
-        touchedDocIds.add(documentId)
-        await refreshCover(
-          idKey,
-          documentId,
-          await resolvedCover(database.cover),
-        )
-        await saveMapping(
-          item.id,
-          documentId,
-          'database',
-          item.parentNotionId,
-          stamp(database.last_edited_time),
-        )
-        written += created ? 1 : 0
-
-        const properties = mapDatabaseProperties(database.properties ?? {})
-        const context = await databaseContextFor(
-          item.id,
-          documentId,
-          properties,
-          created && !existing,
-        )
-
-        for await (const row of client.rows(item.id)) {
-          if (signal?.aborted) {
-            return
-          }
-
-          const rowKey = normalizeNotionId(row.id)
-
-          if (seen.has(rowKey)) {
-            continue
-          }
-
-          seen.add(rowKey)
-          processed += 1
-
-          const rowTitle = pageTitle(row, messages.untitled)
-          const rowEdited = stamp(row.last_edited_time)
-          const rowMapping = mappings.get(rowKey)
-          const unchanged =
-            rowMapping?.kind === 'row' &&
-            rowMapping.lastEditedAt &&
-            rowEdited &&
-            rowMapping.lastEditedAt.getTime() >= rowEdited.getTime()
-
-          if (unchanged) {
-            skipped += 1
-            await refreshIcon(
-              rowKey,
-              rowMapping.documentId,
-              notionIconValue(row.icon),
-            )
-            await refreshCover(
-              rowKey,
-              rowMapping.documentId,
-              await resolvedCover(row.cover),
-            )
-            enqueueKnownChildren(row.id, rowMapping.documentId)
-            continue
-          }
-
-          const source = await readConverted(row.id)
-
-          if (!source) {
-            continue
-          }
-
-          const rowDoc = await upsertDocument(
-            row.id,
-            'row',
-            rowTitle,
-            notionIconValue(row.icon),
-            stamp(row.created_time),
-            rowEdited,
-            documentId,
-          )
-
-          touchedDocIds.add(rowDoc.documentId)
-          touchedDatabaseIds.add(documentId)
-
-          const values: Record<string, PropertyValue> = {}
-
-          for (const [index, property] of context.properties.entries()) {
-            const raw = await importedValue(
-              property,
-              row.properties?.[property.notionName],
-              {
-                personLabel: async (personId) => {
-                  const author = await authorOf(personId)
-
-                  return author?.person?.email ?? author?.name ?? null
-                },
-                registerAsset,
-              },
-            )
-            const converted = toPropertyValue(
-              raw,
-              property.type,
-              context.optionsByIndex[index],
-            )
-
-            if (
-              converted &&
-              typeof converted === 'object' &&
-              'relation' in converted
-            ) {
-              pendingRelationValues.push({
-                documentId: rowDoc.documentId,
-                ids: converted.relation,
-                propertyId: context.propertyIds[index],
-                values,
-              })
+          if (sourceIdKey !== idKey) {
+            if (seen.has(sourceIdKey)) {
               continue
             }
 
-            if (converted !== null) {
-              values[context.propertyIds[index]] = converted
+            seen.add(sourceIdKey)
+          }
+
+          const title = sourceTitle(databaseName, dataSource, sources.length)
+          const existing = mappings.get(sourceIdKey)
+          const { documentId, created } = await upsertDocument(
+            sourceId,
+            'database',
+            title,
+            icon,
+            stamp(database.created_time),
+            stamp(database.last_edited_time),
+            item.parentDocId,
+          )
+
+          if (!rootDocId) {
+            rootDocId = documentId
+            rootTitle = title
+          }
+
+          touchedDocIds.add(documentId)
+          await refreshCover(
+            sourceIdKey,
+            documentId,
+            await resolvedCover(database.cover),
+          )
+          await saveMapping(
+            sourceId,
+            documentId,
+            'database',
+            item.parentNotionId,
+            stamp(database.last_edited_time),
+          )
+          written += created ? 1 : 0
+
+          const properties = mapDatabaseProperties(dataSource.properties)
+          const context = await databaseContextFor(
+            sourceId,
+            documentId,
+            properties,
+            created && !existing,
+          )
+
+          for await (const row of client.rows(dataSource.id)) {
+            if (signal?.aborted) {
+              return
+            }
+
+            const rowKey = normalizeNotionId(row.id)
+
+            if (seen.has(rowKey)) {
+              continue
+            }
+
+            seen.add(rowKey)
+            processed += 1
+
+            const rowTitle = pageTitle(row, messages.untitled)
+            const rowEdited = stamp(row.last_edited_time)
+            const rowMapping = mappings.get(rowKey)
+            const unchanged =
+              rowMapping?.kind === 'row' &&
+              rowMapping.lastEditedAt &&
+              rowEdited &&
+              rowMapping.lastEditedAt.getTime() >= rowEdited.getTime()
+
+            if (unchanged) {
+              skipped += 1
+              await refreshIcon(
+                rowKey,
+                rowMapping.documentId,
+                notionIconValue(row.icon),
+              )
+              await refreshCover(
+                rowKey,
+                rowMapping.documentId,
+                await resolvedCover(row.cover),
+              )
+              enqueueKnownChildren(row.id, rowMapping.documentId)
+              continue
+            }
+
+            const source = await readConverted(row.id)
+
+            if (!source) {
+              continue
+            }
+
+            const rowDoc = await upsertDocument(
+              row.id,
+              'row',
+              rowTitle,
+              notionIconValue(row.icon),
+              stamp(row.created_time),
+              rowEdited,
+              documentId,
+            )
+
+            touchedDocIds.add(rowDoc.documentId)
+            touchedDatabaseIds.add(documentId)
+
+            const values: Record<string, PropertyValue> = {}
+
+            for (const [index, property] of context.properties.entries()) {
+              const raw = await importedValue(
+                property,
+                row.properties?.[property.notionName],
+                {
+                  personLabel: async (personId) => {
+                    const author = await authorOf(personId)
+
+                    return author?.person?.email ?? author?.name ?? null
+                  },
+                  registerAsset,
+                },
+              )
+              const converted = toPropertyValue(
+                raw,
+                property.type,
+                context.optionsByIndex[index],
+              )
+
+              if (
+                converted &&
+                typeof converted === 'object' &&
+                'relation' in converted
+              ) {
+                pendingRelationValues.push({
+                  documentId: rowDoc.documentId,
+                  ids: converted.relation,
+                  propertyId: context.propertyIds[index],
+                  values,
+                })
+                continue
+              }
+
+              if (converted !== null) {
+                values[context.propertyIds[index]] = converted
+              }
+            }
+
+            const rowCover = await resolvedCover(row.cover)
+
+            await flushAssets()
+            resolveAssetPlaceholdersInValues(values)
+            resolveAssetPlaceholdersInBlocks(source.blocks)
+
+            await db
+              .update(documents)
+              .set({
+                content: JSON.stringify(source.blocks),
+                properties: serializeValues(values),
+                kind: 'row',
+              })
+              .where(eq(documents.id, rowDoc.documentId))
+
+            await refreshCover(rowKey, rowDoc.documentId, rowCover)
+
+            if (rowDoc.created && options?.comments) {
+              await importComments(row.id, rowDoc.documentId)
+            }
+
+            await saveMapping(row.id, rowDoc.documentId, 'row', sourceId, rowEdited)
+            enqueueChildren(source.tree, rowDoc.documentId, row.id)
+            written += 1
+            yield {
+              done: written + skipped,
+              label: rowTitle,
+              phase: 'reading',
+              total: 0,
+              type: 'progress',
             }
           }
 
-          const rowCover = await resolvedCover(row.cover)
-
-          await flushAssets()
-          resolveAssetPlaceholdersInValues(values)
-          resolveAssetPlaceholdersInBlocks(source.blocks)
-
-          await db
-            .update(documents)
-            .set({
-              content: JSON.stringify(source.blocks),
-              properties: serializeValues(values),
-              kind: 'row',
-            })
-            .where(eq(documents.id, rowDoc.documentId))
-
-          await refreshCover(rowKey, rowDoc.documentId, rowCover)
-
-          if (rowDoc.created && options?.comments) {
-            await importComments(row.id, rowDoc.documentId)
-          }
-
-          await saveMapping(row.id, rowDoc.documentId, 'row', item.id, rowEdited)
-          enqueueChildren(source.tree, rowDoc.documentId, row.id)
-          written += 1
           yield {
             done: written + skipped,
-            label: rowTitle,
+            label: title,
             phase: 'reading',
             total: 0,
             type: 'progress',
           }
-        }
 
-        yield {
-          done: written + skipped,
-          label: title,
-          phase: 'reading',
-          total: 0,
-          type: 'progress',
         }
 
         continue

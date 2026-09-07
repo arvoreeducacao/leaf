@@ -1,7 +1,7 @@
 export const NOTION_API_BASE = 'https://api.notion.com/v1'
 
 export const NOTION_API_VERSION =
-  process.env.NOTION_API_VERSION?.trim() || '2022-06-28'
+  process.env.NOTION_API_VERSION?.trim() || '2025-09-03'
 
 const pageSize = 100
 
@@ -79,16 +79,37 @@ export type NotionPropertyConfig = Readonly<{
   [key: string]: unknown
 }>
 
+export type NotionDataSourceRef = Readonly<{
+  id: string
+  name?: string | null
+}>
+
 export type NotionDatabaseObject = Readonly<{
   id: string
   object?: string
   title?: Array<NotionRichText>
   is_inline?: boolean
+  in_trash?: boolean
+  archived?: boolean
   icon?: NotionIcon | null
   cover?: NotionFile | null
   created_time?: string
   last_edited_time?: string
   parent?: Record<string, unknown>
+  data_sources?: Array<NotionDataSourceRef>
+  properties?: Record<string, NotionPropertyConfig>
+}>
+
+export type NotionDataSourceObject = Readonly<{
+  id: string
+  object?: string
+  title?: Array<NotionRichText>
+  in_trash?: boolean
+  archived?: boolean
+  created_time?: string
+  last_edited_time?: string
+  parent?: Record<string, unknown>
+  database_parent?: Record<string, unknown>
   properties?: Record<string, NotionPropertyConfig>
 }>
 
@@ -117,8 +138,9 @@ export type NotionSearchResult = NotionPageObject
 export type NotionClient = Readonly<{
   page: (id: string) => Promise<NotionPageObject>
   database: (id: string) => Promise<NotionDatabaseObject>
+  dataSource: (id: string) => Promise<NotionDataSourceObject>
   children: (id: string) => AsyncGenerator<NotionBlock>
-  rows: (databaseId: string) => AsyncGenerator<NotionPageObject>
+  rows: (dataSourceId: string) => AsyncGenerator<NotionPageObject>
   comments: (blockId: string) => AsyncGenerator<NotionComment>
   user: (id: string) => Promise<NotionUserObject>
   search: () => AsyncGenerator<NotionSearchResult>
@@ -254,6 +276,8 @@ export function createNotionClient(
 
     database: (id) => request<NotionDatabaseObject>(`/databases/${id}`),
 
+    dataSource: (id) => request<NotionDataSourceObject>(`/data_sources/${id}`),
+
     download: async (url) => {
       for (let attempt = 0; ; attempt += 1) {
         let response: Response | null = null
@@ -291,10 +315,10 @@ export function createNotionClient(
 
     user: (id) => request<NotionUserObject>(`/users/${id}`),
 
-    rows: (databaseId) =>
+    rows: (dataSourceId) =>
       paginate<NotionPageObject>((cursor) =>
         request<NotionList<NotionPageObject>>(
-          `/databases/${databaseId}/query`,
+          `/data_sources/${dataSourceId}/query`,
           {
             body: JSON.stringify(
               cursor

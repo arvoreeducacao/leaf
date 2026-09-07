@@ -17,6 +17,11 @@ import type {
 } from '@/lib/notion/convert'
 import { convertNodes } from '@/lib/notion/convert'
 import {
+  loadDatabaseSources,
+  sourceKey,
+  sourceTitle,
+} from '@/lib/notion/data-sources'
+import {
   MAX_ASSET_BYTES,
   MAX_ASSET_LABEL,
   MAX_CRAWL_PAGES,
@@ -507,33 +512,39 @@ async function* crawlNotion(
     if (item.kind === 'database') {
       try {
         const database = await client.database(item.id)
-        const title = databaseTitle(database, messages.untitled)
-        const path = pathOfDatabase(item.id)
-        const properties = mapDatabaseProperties(database.properties ?? {})
+        const databaseName = databaseTitle(database, messages.untitled)
+        const sources = await loadDatabaseSources(client, database)
 
-        databaseIds.add(item.id)
-        titleById.set(item.id, title)
-        metaByKey.set(path, metaOf(database))
-        databasesByKey.set(path, { properties })
-        pages.push({
-          key: path,
-          kind: 'csv',
-          parentKey: item.parentKey,
-          sourcePath: path,
-          title,
-        })
-        pathToPageKey.set(path, path)
+        for (const dataSource of sources) {
+          const sourceId = sourceKey(item.id, dataSource, sources.length)
+          const title = sourceTitle(databaseName, dataSource, sources.length)
+          const path = pathOfDatabase(sourceId)
+          const properties = mapDatabaseProperties(dataSource.properties)
 
-        for await (const row of client.rows(item.id)) {
-          if (signal?.aborted) {
-            return
+          databaseIds.add(sourceId)
+          titleById.set(sourceId, title)
+          metaByKey.set(path, metaOf(database))
+          databasesByKey.set(path, { properties })
+          pages.push({
+            key: path,
+            kind: 'csv',
+            parentKey: item.parentKey,
+            sourcePath: path,
+            title,
+          })
+          pathToPageKey.set(path, path)
+
+          for await (const row of client.rows(dataSource.id)) {
+            if (signal?.aborted) {
+              return
+            }
+
+            queue.push({ kind: 'row', page: row, parentKey: path, properties })
           }
 
-          queue.push({ kind: 'row', page: row, parentKey: path, properties })
+          done += 1
+          yield { done, title, type: 'page' }
         }
-
-        done += 1
-        yield { done, title, type: 'page' }
       } catch {
         warnings.push(messages.pageFailed(item.id))
       }

@@ -1,5 +1,5 @@
 const NOTION_API_BASE = 'https://api.notion.com/v1'
-const NOTION_API_VERSION = '2022-06-28'
+const NOTION_API_VERSION = '2025-09-03'
 const MAX_PROPERTY_NAME = 120
 const QUERY_PAGE_SIZE = 100
 const REQUEST_INTERVAL = 340
