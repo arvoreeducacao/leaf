@@ -11,13 +11,16 @@ import {
   applySearch,
   applySorts,
   boardPropertyOf,
+  colorPropertyOf,
   emptyViewConfig,
   filterOptionIds,
   filterValueFor,
   groupRows,
   operatorsFor,
   parseViewConfig,
+  peoplePropertyOf,
   serializeViewConfig,
+  timelineGroupPropertyOf,
   visibleProperties,
 } from './views'
 
@@ -113,6 +116,9 @@ describe('view configuration', () => {
       wrapCells: true,
       datePropertyId: null,
       endDatePropertyId: null,
+      timelineScale: 'week',
+      colorPropertyId: 'status',
+      peoplePropertyId: null,
       showVerticalLines: true,
       showPageIcon: true,
       form: null,
@@ -710,5 +716,60 @@ describe('a filter that holds more than one option', () => {
     expect(filterOptionIds('c1')).toEqual(['c1'])
     expect(filterOptionIds(['c1', 'c2'])).toEqual(['c1', 'c2'])
     expect(filterOptionIds(null)).toEqual([])
+  })
+})
+
+describe('the timeline lanes', () => {
+  it('groups only when the person chose a property that groups', () => {
+    expect(timelineGroupPropertyOf(properties, emptyViewConfig)).toBeNull()
+    expect(
+      timelineGroupPropertyOf(properties, {
+        ...emptyViewConfig,
+        groupByPropertyId: 'points',
+      }),
+    ).toBeNull()
+    expect(
+      timelineGroupPropertyOf(properties, {
+        ...emptyViewConfig,
+        groupByPropertyId: 'status',
+      })?.id,
+    ).toBe('status')
+  })
+
+  it('colors by a select and shows people from a person column, nothing else', () => {
+    expect(
+      colorPropertyOf(properties, {
+        ...emptyViewConfig,
+        colorPropertyId: 'status',
+      })?.id,
+    ).toBe('status')
+    expect(
+      colorPropertyOf(properties, {
+        ...emptyViewConfig,
+        colorPropertyId: 'points',
+      }),
+    ).toBeNull()
+    expect(
+      peoplePropertyOf([...properties, owners], {
+        ...emptyViewConfig,
+        peoplePropertyId: 'owners',
+      })?.id,
+    ).toBe('owners')
+    expect(
+      peoplePropertyOf(properties, {
+        ...emptyViewConfig,
+        peoplePropertyId: 'status',
+      }),
+    ).toBeNull()
+  })
+
+  it('falls back to the day scale when the saved one is unknown', () => {
+    expect(
+      parseViewConfig(JSON.stringify({ timelineScale: 'fortnight' }))
+        .timelineScale,
+    ).toBe('day')
+    expect(
+      parseViewConfig(JSON.stringify({ timelineScale: 'week' })).timelineScale,
+    ).toBe('week')
   })
 })
