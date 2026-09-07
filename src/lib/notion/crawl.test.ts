@@ -224,6 +224,9 @@ function fakeClient(
       }
     },
     database: async () => database,
+    dataSource: async (id: string) => {
+      throw new Error(`no data source ${id}`)
+    },
     download: async (url: string) => {
       downloads.push(url)
 

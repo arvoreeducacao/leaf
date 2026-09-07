@@ -28,6 +28,8 @@ import { syncNotion } from '@/lib/notion/sync'
 const rootId = '11111111-1111-1111-1111-111111111111'
 const childId = '22222222-2222-2222-2222-222222222222'
 const databaseId = '33333333-3333-3333-3333-333333333333'
+const dataSourceId = '66666666-6666-6666-6666-666666666666'
+const secondSourceId = '77777777-7777-7777-7777-777777777777'
 const rowOneId = '44444444-4444-4444-4444-444444444444'
 const rowTwoId = '55555555-5555-5555-5555-555555555555'
 const imageUrl = 'https://files.notion.so/shot.png?sig=abc'
@@ -64,6 +66,7 @@ type World = {
   childText: string
   dbInline: boolean
   dbDead?: boolean
+  dbSources?: 'legacy' | 'two'
   brokenIds?: Array<string>
   rootIcon: { name: string; color: string } | null
   rootCover: { file?: { url: string }; external?: { url: string } } | null
@@ -94,6 +97,26 @@ function title(text: string) {
 function norm(id: string): string {
   return id.replace(/-/g, '')
 }
+
+const schema = {
+          Name: { name: 'Name', type: 'title' },
+          'Prints & Anexos': { name: 'Prints & Anexos', type: 'files' },
+          Relacionada: { name: 'Relacionada', type: 'relation' },
+          Status: {
+            name: 'Status',
+            status: {
+              groups: [
+                { name: 'To-do', option_ids: ['opt-open'] },
+                { name: 'Complete', option_ids: ['opt-done'] },
+              ],
+              options: [
+                { color: 'gray', id: 'opt-open', name: 'Open' },
+                { color: 'green', id: 'opt-done', name: 'Done' },
+              ],
+            },
+            type: 'status',
+          },
+        }
 
 function makeClient(world: World): NotionClient {
   const pages: Record<string, () => NotionPageObject> = {
@@ -200,31 +223,39 @@ function makeClient(world: World): NotionClient {
         throw new Error(`no database ${id}`)
       }
 
-      return {
+      const base = {
         created_time: '2025-12-01T00:00:00.000Z',
         id: databaseId,
         is_inline: world.dbInline,
         last_edited_time: world.editedAt[databaseId],
-        properties: {
-          Name: { name: 'Name', type: 'title' },
-          'Prints & Anexos': { name: 'Prints & Anexos', type: 'files' },
-          Relacionada: { name: 'Relacionada', type: 'relation' },
-          Status: {
-            name: 'Status',
-            status: {
-              groups: [
-                { name: 'To-do', option_ids: ['opt-open'] },
-                { name: 'Complete', option_ids: ['opt-done'] },
-              ],
-              options: [
-                { color: 'gray', id: 'opt-open', name: 'Open' },
-                { color: 'green', id: 'opt-done', name: 'Done' },
-              ],
-            },
-            type: 'status',
-          },
-        },
         title: [{ plain_text: 'Tasks' }],
+      }
+
+      if (world.dbSources === 'legacy') {
+        return { ...base, properties: schema }
+      }
+
+      if (world.dbSources === 'two') {
+        return {
+          ...base,
+          data_sources: [
+            { id: dataSourceId, name: 'Ativas' },
+            { id: secondSourceId, name: 'Arquivadas' },
+          ],
+        }
+      }
+
+      return { ...base, data_sources: [{ id: dataSourceId, name: 'Tasks' }] }
+    },
+    dataSource: async (id: string) => {
+      if (norm(id) !== norm(dataSourceId) && norm(id) !== norm(secondSourceId)) {
+        throw new Error(`no data source ${id}`)
+      }
+
+      return {
+        id,
+        parent: { database_id: databaseId, type: 'database_id' },
+        properties: schema,
       }
     },
     download: async () => ({
@@ -245,7 +276,21 @@ function makeClient(world: World): NotionClient {
     rows: async function* (id: string) {
       world.abortOnRows?.abort()
 
-      if (norm(id) === norm(databaseId)) {
+      if (world.dbSources === 'two') {
+        if (norm(id) === norm(dataSourceId)) {
+          yield rows[norm(rowOneId)]()
+        }
+
+        if (norm(id) === norm(secondSourceId)) {
+          yield rows[norm(rowTwoId)]()
+        }
+
+        return
+      }
+
+      const expected = world.dbSources === 'legacy' ? databaseId : dataSourceId
+
+      if (norm(id) === norm(expected)) {
         yield rows[norm(rowOneId)]()
         yield rows[norm(rowTwoId)]()
       }
@@ -320,6 +365,127 @@ beforeEach(async () => {
 })
 
 describe('resumable Notion sync', () => {
+  it('imports each data source of a database as its own Leaf database', async () => {
+    const world = makeWorld()
+    world.dbSources = 'two'
+
+    await run(world)
+
+
+    const databases = await db
+      .select()
+      .from(documents)
+      .where(eq(documents.kind, 'database'))
+    const titles = databases.map((row) => row.title).sort()
+
+    expect(titles).toEqual(['Tasks · Arquivadas', 'Tasks · Ativas'])
+
+    const active = databases.find((row) => row.title === 'Tasks · Ativas')
+    const archived = databases.find((row) => row.title === 'Tasks · Arquivadas')
+    const rowOne = await db.query.documents.findFirst({
+      where: eq(documents.title, 'First task'),
+    })
+    const rowTwo = await db.query.documents.findFirst({
+      where: eq(documents.title, 'Second task'),
+    })
+
+    expect(rowOne?.parentId).toBe(active?.id)
+    expect(rowTwo?.parentId).toBe(archived?.id)
+
+    const mappings = await db.select().from(notionDocuments)
+    const databaseKeys = mappings
+      .filter((mapping) => mapping.kind === 'database')
+      .map((mapping) => mapping.notionId)
+      .sort()
+
+    expect(databaseKeys).toEqual([norm(dataSourceId), norm(secondSourceId)].sort())
+  })
+
+  it('still reads a database served in the shape without data sources', async () => {
+    const world = makeWorld()
+    world.dbSources = 'legacy'
+
+    await run(world)
+
+    const database = await db.query.documents.findFirst({
+      where: eq(documents.title, 'Tasks'),
+    })
+    const rows = await db
+      .select()
+      .from(documents)
+      .where(eq(documents.kind, 'row'))
+
+    expect(database?.kind).toBe('database')
+    expect(rows).toHaveLength(2)
+  })
+
+  it('seeds rows found by the search through their data source parent', async () => {
+    const world = makeWorld()
+
+    world.search = [
+      {
+        id: rowOneId,
+        object: 'page',
+        parent: {
+          data_source_id: dataSourceId,
+          database_id: databaseId,
+          type: 'data_source_id',
+        },
+      },
+      {
+        id: rowTwoId,
+        object: 'page',
+        parent: { data_source_id: dataSourceId, type: 'data_source_id' },
+      },
+    ]
+
+    await run(world, 'workspace')
+
+    const rows = await db
+      .select()
+      .from(documents)
+      .where(eq(documents.kind, 'row'))
+
+    expect(rows).toHaveLength(2)
+
+    const databases = await db
+      .select()
+      .from(documents)
+      .where(eq(documents.kind, 'database'))
+
+    expect(databases).toHaveLength(1)
+    expect(databases[0].title).toBe('Tasks')
+  })
+
+  it('seeds a database listed by the search as a data source', async () => {
+    const world = makeWorld()
+
+    world.search = [
+      {
+        database_parent: { type: 'workspace' },
+        id: dataSourceId,
+        object: 'data_source',
+        parent: { database_id: databaseId, type: 'database_id' },
+      },
+    ]
+
+    await run(world, 'workspace')
+
+    const databases = await db
+      .select()
+      .from(documents)
+      .where(eq(documents.kind, 'database'))
+
+    expect(databases).toHaveLength(1)
+
+    const rows = await db
+      .select()
+      .from(documents)
+      .where(eq(documents.kind, 'row'))
+
+    expect(rows).toHaveLength(2)
+  })
+
   it('keeps database rows as rows when the search lists them before their database', async () => {
     const world = makeWorld()
 

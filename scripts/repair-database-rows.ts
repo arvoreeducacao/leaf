@@ -1,6 +1,7 @@
 import { createConnection } from 'mysql2/promise'
 import type { Connection, RowDataPacket } from 'mysql2/promise'
 import { createNotionClient } from '@/lib/notion/api'
+import { loadDatabaseSources } from '@/lib/notion/data-sources'
 import type { NotionClient, NotionPageObject } from '@/lib/notion/api'
 import { importedValue, mapDatabaseProperties } from '@/lib/notion/properties'
 import type { ImportedProperty, ImportedValue } from '@/lib/notion/properties'
@@ -432,7 +433,14 @@ async function main() {
       continue
     }
 
-    const properties = mapDatabaseProperties(schema.properties ?? {})
+    const sources = await loadDatabaseSources(client, schema)
+    const properties = mapDatabaseProperties(sources[0]?.properties ?? {})
+
+    async function* allRows() {
+      for (const dataSource of sources) {
+        yield* client.rows(dataSource.id)
+      }
+    }
     const stored = await loadStoredProperties(connection, databaseDocumentId)
     const storedByName = new Map(
       stored.map((property) => [property.name, property]),
@@ -460,7 +468,7 @@ async function main() {
         : new Map()
     const seen = new Set<string>()
 
-    for await (const row of client.rows(databaseNotionId)) {
+    for await (const row of allRows()) {
       const key = normalizeNotionId(row.id)
       const target = targets.get(key)
       const healthy = sample.get(key)
