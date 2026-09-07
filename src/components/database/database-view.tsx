@@ -1011,6 +1011,7 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
 
       {activeView.type === 'timeline' ? (
         <TimelineView
+          absencesDatabaseId={config.absencesDatabaseId}
           baseline={baseline}
           canEdit={canEdit}
           colorProperty={colorPropertyOf(properties, config)}

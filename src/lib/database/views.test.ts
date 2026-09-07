@@ -121,6 +121,7 @@ describe('view configuration', () => {
       peoplePropertyId: null,
       baselineStartPropertyId: 'due',
       baselineEndPropertyId: null,
+      absencesDatabaseId: 'abcdefghijkl',
       showVerticalLines: true,
       showPageIcon: true,
       form: null,
