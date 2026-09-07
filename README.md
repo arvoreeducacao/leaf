@@ -233,8 +233,13 @@ conta (`/connected-apps`); revogar apaga o consentimento e invalida os refresh
 tokens daquele cliente.
 
 Tools de leitura: `search_documents`, `get_document`, `list_documents`,
-`list_organizations`, `get_database`, `query_database` (filtro, busca e
+`list_organizations`, `list_teamspaces`, `list_members` (e-mail só pra quem
+administra), `whoami`, `get_database`, `query_database` (filtro, busca e
 ordenação por nome de propriedade, valores em texto e crus) e `list_comments`.
+Comentários e anexos (escopo `leaf:write`): `create_comment` (abre thread ou
+responde com `replyTo`), `resolve_comment` (autor ou editor) e `upload_file`
+(imagem, PDF, texto, markdown, CSV e JSON, até 500 kB; a URL devolvida serve
+numa página ou numa coluna de arquivo de linha).
 Tools de escrita (escopo `leaf:write`): `create_document` (com ícone e capa),
 `update_document` (corpo em append/replace, título, ícone, capa e valores de
 propriedade quando o documento é linha; a escrita de corpo recusa se a página

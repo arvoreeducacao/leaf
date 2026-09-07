@@ -76,6 +76,7 @@ export type McpToolErrorCode =
   | 'document_busy'
   | 'conflict'
   | 'write_disabled'
+  | 'rate_limited'
 
 export class McpToolError extends Error {
   constructor(

@@ -40,6 +40,16 @@ import {
   restoreDocumentTool,
   trashDocumentTool,
 } from '@/lib/mcp/tools-pages'
+import {
+  MAX_MCP_COMMENT_CHARS,
+  createCommentTool,
+  listMembersTool,
+  listTeamspacesTool,
+  mcpFileTypes,
+  resolveCommentTool,
+  uploadFileTool,
+  whoamiTool,
+} from '@/lib/mcp/tools-people'
 import { propertyTypes } from '@/lib/database/values'
 import { filterOperators } from '@/lib/database/views'
 
@@ -138,6 +148,7 @@ const errorMessages: Record<McpToolError['code'], string> = {
   document_busy: 'The document is being edited right now. Try again in a few seconds.',
   conflict: 'The document changed while writing. Read it again and retry.',
   write_disabled: 'Writing is not available for this connection.',
+  rate_limited: 'Too many calls in a row. Wait a moment and try again.',
 }
 
 function textResult(payload: unknown): CallToolResult {
@@ -302,6 +313,43 @@ export function createLeafMcpServer(context: McpToolContext) {
     },
     (args) =>
       run(context, 'query_database', args, () => queryDatabaseTool(context, args)),
+  )
+
+  server.registerTool(
+    'list_teamspaces',
+    {
+      title: 'List teamspaces',
+      description: `List the teamspaces you can see in your organizations, and whether you are a member. ${dataNotice}`,
+      inputSchema: {},
+      annotations: { readOnlyHint: true },
+    },
+    (args) =>
+      run(context, 'list_teamspaces', args, () => listTeamspacesTool(context)),
+  )
+
+  server.registerTool(
+    'list_members',
+    {
+      title: 'List members',
+      description: `List the people in one of your organizations with their roles. Emails are included only when you manage the organization. ${dataNotice}`,
+      inputSchema: {
+        organizationId: z.string().min(1).max(64).optional().describe('Defaults to your first organization'),
+      },
+      annotations: { readOnlyHint: true },
+    },
+    (args) =>
+      run(context, 'list_members', args, () => listMembersTool(context, args)),
+  )
+
+  server.registerTool(
+    'whoami',
+    {
+      title: 'Who am I',
+      description: 'The person this connection acts as: id, name, email and organizations with roles.',
+      inputSchema: {},
+      annotations: { readOnlyHint: true },
+    },
+    (args) => run(context, 'whoami', args, () => whoamiTool(context)),
   )
 
   server.registerTool(
@@ -621,6 +669,58 @@ export function createLeafMcpServer(context: McpToolContext) {
         run(context, 'restore_document', args, () =>
           restoreDocumentTool(context, args),
         ),
+    )
+
+    server.registerTool(
+      'create_comment',
+      {
+        title: 'Create comment',
+        description:
+          'Start a comment thread on a document you can comment on, or reply to a thread with replyTo. With blockId the thread anchors to that block.',
+        inputSchema: {
+          documentId: documentIdSchema,
+          body: z.string().min(1).max(MAX_MCP_COMMENT_CHARS),
+          blockId: z.string().min(1).max(64).optional(),
+          replyTo: z.string().min(1).max(64).optional().describe('Id of the thread to reply to'),
+        },
+        annotations: { readOnlyHint: false, destructiveHint: false },
+      },
+      (args) =>
+        run(context, 'create_comment', args, () => createCommentTool(context, args)),
+    )
+
+    server.registerTool(
+      'resolve_comment',
+      {
+        title: 'Resolve comment',
+        description:
+          'Resolve a comment thread, or reopen it with resolved false. Allowed to the author of the thread and to whoever can edit the document.',
+        inputSchema: {
+          documentId: documentIdSchema,
+          commentId: z.string().min(1).max(64),
+          resolved: z.boolean().optional(),
+        },
+        annotations: { readOnlyHint: false, destructiveHint: false },
+      },
+      (args) =>
+        run(context, 'resolve_comment', args, () => resolveCommentTool(context, args)),
+    )
+
+    server.registerTool(
+      'upload_file',
+      {
+        title: 'Upload file',
+        description:
+          'Store a file in Leaf and get the address to use in a page or in a files property of a row. Images, PDF, plain text, markdown, CSV and JSON, as base64, up to 500 kB.',
+        inputSchema: {
+          data: z.string().min(1).describe('The file bytes, base64 encoded, no data: prefix'),
+          contentType: z.enum(mcpFileTypes).describe('The file type, which must match the bytes'),
+          fileName: z.string().max(200).optional(),
+        },
+        annotations: { readOnlyHint: false, destructiveHint: false },
+      },
+      (args) =>
+        run(context, 'upload_file', args, () => uploadFileTool(context, args)),
     )
   }
 

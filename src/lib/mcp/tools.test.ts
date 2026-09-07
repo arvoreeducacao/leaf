@@ -485,9 +485,12 @@ describe('servidor MCP', () => {
       'get_document',
       'list_comments',
       'list_documents',
+      'list_members',
       'list_organizations',
+      'list_teamspaces',
       'query_database',
       'search_documents',
+      'whoami',
     ])
 
     const writable = await connectedClient(contextFor(owner))
