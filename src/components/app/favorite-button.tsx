@@ -6,7 +6,7 @@ import { useTransition } from 'react'
 import { toast } from 'sonner'
 
 import { useFavorites } from '@/components/app/favorites-provider'
-import { FavoriteFilledIcon, FavoriteIcon } from '@/components/icons'
+import { StarFilledIcon, StarIcon } from '@/components/icons/topbar'
 import { ButtonIcon } from '@/components/ui/button-icon'
 import {
   Tooltip,
@@ -58,9 +58,9 @@ export function FavoriteButton({
           variant="ghost"
         >
           {favorited ? (
-            <FavoriteFilledIcon aria-hidden="true" className="text-warn" />
+            <StarFilledIcon aria-hidden="true" className="text-warn" />
           ) : (
-            <FavoriteIcon aria-hidden="true" />
+            <StarIcon aria-hidden="true" />
           )}
         </ButtonIcon>
       </TooltipTrigger>

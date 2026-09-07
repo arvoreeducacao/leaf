@@ -16,6 +16,7 @@ import {
   useCommentsState,
 } from '@/components/comments/comments-store'
 import { ChatIcon, TargetIcon } from '@/components/icons'
+import { CommentIcon } from '@/components/icons/topbar'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import {
@@ -321,7 +322,7 @@ export function CommentsPanel({ documentId, initialOpenCount }: Props) {
         type="button"
         variant="ghost"
       >
-        <ChatIcon aria-hidden="true" className="size-5" />
+        <CommentIcon aria-hidden="true" className="size-5" />
         <span className="sr-only">{t('open')}</span>
         {openCount > 0 ? (
           <>

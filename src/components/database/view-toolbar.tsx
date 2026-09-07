@@ -4,7 +4,7 @@ import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { type ReactNode, useState } from 'react'
 
-import { ExpandIcon } from '@/components/icons'
+import { ExpandDiagonalIcon } from '@/components/icons/topbar'
 import { Button } from '@/components/ui/button'
 import { ButtonIcon } from '@/components/ui/button-icon'
 import {
@@ -240,7 +240,7 @@ export function ViewToolbar({
               variant="ghost"
             >
               <Link href={`/doc/${databaseId}`}>
-                <ExpandIcon aria-hidden="true" />
+                <ExpandDiagonalIcon aria-hidden="true" />
               </Link>
             </ButtonIcon>
           ) : null}

@@ -4,7 +4,7 @@ import { useTranslations } from 'next-intl'
 
 import { useDocumentActions } from '@/components/app/document-actions'
 import { useEditorStatus } from '@/components/editor/status-bridge'
-import { EllipsisIcon } from '@/components/icons/outline'
+import { MoreIcon } from '@/components/icons/topbar'
 import { ButtonIcon } from '@/components/ui/button-icon'
 import {
   DropdownMenu,
@@ -50,7 +50,7 @@ export function DocumentMenu({
             size="medium"
             variant="ghost"
           >
-            <EllipsisIcon aria-hidden="true" />
+            <MoreIcon aria-hidden="true" />
           </ButtonIcon>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-64">

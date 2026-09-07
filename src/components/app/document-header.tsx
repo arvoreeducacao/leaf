@@ -20,8 +20,9 @@ import {
   requestEditorFocus,
 } from '@/components/editor/focus-bridge'
 import { CrumbSeparator, crumbClass } from '@/components/app/document-breadcrumb'
-import { ClipboardContentIcon, HappyIcon } from '@/components/icons'
+import { HappyIcon } from '@/components/icons'
 import { PeopleIcon } from '@/components/icons/outline'
+import { LinkIcon } from '@/components/icons/topbar'
 import { ShareButton } from '@/components/sharing/share-button'
 import { Button } from '@/components/ui/button'
 import { ButtonIcon } from '@/components/ui/button-icon'
@@ -201,7 +202,11 @@ export function DocumentHeader({
           </span>
         ) : null}
         <PresenceIndicator />
-        <ShareButton canShare={isOwner} documentId={documentId} />
+        <ShareButton
+          canShare={isOwner}
+          documentId={documentId}
+          inTeamspace={teamspaceName !== null}
+        />
         <ButtonIcon
           aria-label={t('copyLink')}
           className="[&_svg]:size-5"
@@ -213,7 +218,7 @@ export function DocumentHeader({
           size="medium"
           variant="ghost"
         >
-          <ClipboardContentIcon aria-hidden="true" />
+          <LinkIcon aria-hidden="true" />
         </ButtonIcon>
         <CommentsPanel documentId={documentId} initialOpenCount={openComments} />
         <FavoriteButton documentId={documentId} />

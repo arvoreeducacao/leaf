@@ -4,6 +4,7 @@ import { useTranslations } from 'next-intl'
 import { useState } from 'react'
 
 import { ShareIcon } from '@/components/icons'
+import { TeamspaceIcon } from '@/components/icons/topbar'
 import { SharePanel } from '@/components/sharing/share-panel'
 import { Button } from '@/components/ui/button'
 import {
@@ -25,9 +26,14 @@ import { useIsMobile } from '@/shared/hooks/use-mobile'
 type Props = Readonly<{
   documentId: string
   canShare: boolean
+  inTeamspace?: boolean
 }>
 
-export function ShareButton({ documentId, canShare }: Props) {
+export function ShareButton({
+  documentId,
+  canShare,
+  inTeamspace = false,
+}: Props) {
   const t = useTranslations('share')
   const title = t('title')
   const description = t('description')
@@ -36,7 +42,11 @@ export function ShareButton({ documentId, canShare }: Props) {
 
   const trigger = (
     <Button className="gap-1 px-2" size="sm" type="button" variant="ghost">
-      <ShareIcon aria-hidden="true" className="size-4.5" />
+      {inTeamspace ? (
+        <TeamspaceIcon aria-hidden="true" className="size-5" />
+      ) : (
+        <ShareIcon aria-hidden="true" className="size-4.5" />
+      )}
       <span className="sr-only tablet:not-sr-only">{t('open')}</span>
     </Button>
   )

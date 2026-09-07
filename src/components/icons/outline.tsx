@@ -22,9 +22,9 @@ function OutlineIcon({ children, ...props }: IconProps) {
 
 export function SidebarIcon(props: IconProps) {
   return (
-    <OutlineIcon {...props}>
-      <rect height="10.5" rx="2.25" width="12.5" x="1.75" y="2.75" />
-      <path d="M6.25 2.75v10.5" />
+    <OutlineIcon strokeWidth={1} {...props}>
+      <rect height="9.1" rx="1.2" width="12.4" x="1.8" y="3.4" />
+      <path d="M5.66 3.4v9.1" />
     </OutlineIcon>
   )
 }

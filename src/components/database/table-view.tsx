@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 
 import { DocumentIcon } from '@/components/app/document-icon'
-import { ExpandIcon } from '@/components/icons'
+import { ExpandDiagonalIcon } from '@/components/icons/topbar'
 import type { DatabaseProperty } from '@/db/schema'
 import { type Person, optionsFor } from '@/lib/database/people'
 import { valueOf } from '@/lib/database/values'
@@ -240,7 +240,7 @@ export function TableView({
                             className="flex h-6 shrink-0 cursor-pointer items-center gap-1 rounded-large border border-line-strong bg-surface-card px-1.5 font-medium text-caption text-content uppercase transition-colors hover:bg-surface-hover hover:text-content-strong focus-visible:outline-2 focus-visible:outline-focus"
                             href={`/doc/${row.id}`}
                           >
-                            <ExpandIcon
+                            <ExpandDiagonalIcon
                               aria-hidden="true"
                               className="size-3"
                             />

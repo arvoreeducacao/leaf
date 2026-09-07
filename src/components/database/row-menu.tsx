@@ -8,11 +8,12 @@ import { toast } from 'sonner'
 import {
   ArrowUpRightIcon,
   ClipboardContentIcon,
-  EllipsisVerticalIcon,
-  ExpandIcon,
   HierarchyIcon,
   TrashIcon,
 } from '@/components/icons'
+import { ExpandDiagonalIcon } from '@/components/icons/topbar'
+
+import { EllipsisIcon } from './icons'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -69,7 +70,7 @@ function useRowActions({
 
   const entries: Array<MenuEntry> = [
     {
-      icon: ExpandIcon,
+      icon: ExpandDiagonalIcon,
       key: 'open',
       label: t('openRow'),
       onSelect: () => router.push(rowPath),
@@ -153,7 +154,7 @@ export function RowMenu(props: Props) {
             size="medium"
             variant="ghost"
           >
-            <EllipsisVerticalIcon aria-hidden="true" />
+            <EllipsisIcon aria-hidden="true" />
           </ButtonIcon>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
