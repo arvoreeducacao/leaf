@@ -9,8 +9,10 @@ import { DocumentIcon } from '@/components/app/document-icon'
 import { UserAvatar } from '@/components/ui/user-avatar'
 import type { DatabaseProperty } from '@/db/schema'
 import {
+  type BaselineColumns,
   type TimelineBar,
   type TimelineColumn,
+  type TimelineRange,
   type TimelineScale,
   addDays,
   dayWidthOf,
@@ -22,7 +24,7 @@ import {
   todayOffsetOf,
 } from '@/lib/database/calendar'
 import type { Person } from '@/lib/database/people'
-import { parseOptions } from '@/lib/database/values'
+import { formatDate, parseOptions } from '@/lib/database/values'
 import type { BoardGroup, DatabaseRow } from '@/lib/database/views'
 import { cn } from '@/shared/utils'
 
@@ -44,6 +46,7 @@ type Props = Readonly<{
   rows: ReadonlyArray<DatabaseRow>
   startProperty: DatabaseProperty | null
   endProperty: DatabaseProperty | null
+  baseline: BaselineColumns | null
   groups: ReadonlyArray<BoardGroup> | null
   groupProperty: DatabaseProperty | null
   colorProperty: DatabaseProperty | null
@@ -60,6 +63,7 @@ export function TimelineView({
   rows,
   startProperty,
   endProperty,
+  baseline,
   groups,
   groupProperty,
   colorProperty,
@@ -85,8 +89,9 @@ export function TimelineView({
   }, [])
 
   const span = useMemo(
-    () => timelineSpanOf(rows, startProperty, endProperty, today, scale),
-    [endProperty, rows, scale, startProperty, today],
+    () =>
+      timelineSpanOf(rows, startProperty, endProperty, today, scale, baseline),
+    [baseline, endProperty, rows, scale, startProperty, today],
   )
 
   const lanes = useMemo<ReadonlyArray<Lane>>(() => {
@@ -241,6 +246,13 @@ export function TimelineView({
     return row.title.trim().length > 0 ? row.title : t('untitledRow')
   }
 
+  function plannedTitleOf(range: TimelineRange): string {
+    return t('plannedRange', {
+      from: formatDate(range.start, locale),
+      to: formatDate(range.end, locale),
+    })
+  }
+
   return (
     <div className={cn('flex flex-col gap-2', compact ? '' : 'px-4 tablet:px-24')}>
       <div className="flex overflow-hidden rounded-large border border-line-divider">
@@ -319,17 +331,34 @@ export function TimelineView({
                     className="relative h-9 border-line-divider border-b last:border-b-0"
                     key={bar.row.id}
                   >
+                    {bar.baseline ? (
+                      <span
+                        aria-hidden="true"
+                        className="absolute top-1 h-7 rounded-pill border border-content-subtle/60 border-dashed"
+                        style={{
+                          insetInlineStart: bar.baseline.offset * dayWidth + 1,
+                          width: bar.baseline.length * dayWidth - 2,
+                        }}
+                        title={plannedTitleOf(bar.baseline)}
+                      />
+                    ) : null}
                     <Link
                       className={cn(
                         'absolute top-1.5 flex h-6 items-center gap-1 rounded-pill px-2 text-body-small transition-colors focus-visible:outline-2 focus-visible:outline-focus',
-                        barClassOf(bar.row),
+                        bar.dated
+                          ? barClassOf(bar.row)
+                          : 'bg-transparent text-content-subtle hover:text-content',
                       )}
                       href={`/doc/${bar.row.id}`}
                       style={{
                         insetInlineStart: bar.offset * dayWidth + 2,
                         width: bar.length * dayWidth - 4,
                       }}
-                      title={titleOf(bar.row)}
+                      title={
+                        bar.dated || !bar.baseline
+                          ? titleOf(bar.row)
+                          : plannedTitleOf(bar.baseline)
+                      }
                     >
                       <span className="min-w-0 flex-1 truncate">
                         {titleOf(bar.row)}
@@ -356,9 +385,12 @@ export function TimelineView({
         </div>
       </div>
 
-      {span.undated.length > 0 ? (
-        <p className="text-caption text-content-subtle">
-          {t('rowsWithoutDate', { count: span.undated.length })}
+      {baseline || span.undated.length > 0 ? (
+        <p className="flex flex-wrap gap-x-4 text-caption text-content-subtle">
+          {baseline ? <span>{t('baselineLegend')}</span> : null}
+          {span.undated.length > 0 ? (
+            <span>{t('rowsWithoutDate', { count: span.undated.length })}</span>
+          ) : null}
         </p>
       ) : null}
     </div>

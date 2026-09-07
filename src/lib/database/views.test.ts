@@ -119,6 +119,8 @@ describe('view configuration', () => {
       timelineScale: 'week',
       colorPropertyId: 'status',
       peoplePropertyId: null,
+      baselineStartPropertyId: 'due',
+      baselineEndPropertyId: null,
       showVerticalLines: true,
       showPageIcon: true,
       form: null,
@@ -761,6 +763,15 @@ describe('the timeline lanes', () => {
         peoplePropertyId: 'status',
       }),
     ).toBeNull()
+  })
+
+  it('reads the baseline columns and drops anything that is not a string', () => {
+    const parsed = parseViewConfig(
+      JSON.stringify({ baselineStartPropertyId: 'due', baselineEndPropertyId: 7 }),
+    )
+
+    expect(parsed.baselineStartPropertyId).toBe('due')
+    expect(parsed.baselineEndPropertyId).toBeNull()
   })
 
   it('falls back to the day scale when the saved one is unknown', () => {

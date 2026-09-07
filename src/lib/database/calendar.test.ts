@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   addDays,
   addMonths,
+  baselinePropertiesOf,
   datePropertyOf,
   daysBetween,
   localIsoDate,
@@ -25,6 +26,18 @@ const finish = {
   options: null,
 }
 const text = { id: 'text', name: 'Nota', type: 'text' as const, options: null }
+const plannedStart = {
+  id: 'plannedStart',
+  name: 'Início planejado',
+  type: 'date' as const,
+  options: null,
+}
+const plannedEnd = {
+  id: 'plannedEnd',
+  name: 'Fim planejado',
+  type: 'date' as const,
+  options: null,
+}
 
 function row(id: string, values: DatabaseRow['values']): DatabaseRow {
   return {
@@ -189,5 +202,65 @@ describe('the timeline by week and by month', () => {
     expect(todayOffsetOf(span, '2026-09-01')).toBe(0)
     expect(todayOffsetOf(span, '2026-10-01')).toBeNull()
     expect(todayOffsetOf(span, '2026-08-31')).toBeNull()
+  })
+})
+
+describe('the baseline under the bars', () => {
+  const baseline = { start: plannedStart, end: plannedEnd }
+  const rows = [
+    row('a', {
+      due: '2026-09-14',
+      finish: '2026-09-18',
+      plannedStart: '2026-09-07',
+      plannedEnd: '2026-09-11',
+    }),
+    row('b', { plannedStart: '2026-09-21', plannedEnd: '2026-09-25' }),
+    row('c', { due: '2026-09-28' }),
+    row('d', {}),
+  ]
+
+  it('places the planned range next to the real one', () => {
+    const span = timelineSpanOf(rows, due, finish, '2026-09-17', 'day', baseline)
+    const first = span.bars[0]
+
+    expect(first.dated).toBe(true)
+    expect([first.offset, first.length]).toEqual([13, 5])
+    expect(first.baseline).toMatchObject({ offset: 6, length: 5 })
+  })
+
+  it('shows a row that only has a plan as a planned bar, not as undated', () => {
+    const span = timelineSpanOf(rows, due, finish, '2026-09-17', 'day', baseline)
+    const planned = span.bars.find((bar) => bar.row.id === 'b')
+
+    expect(planned?.dated).toBe(false)
+    expect([planned?.offset, planned?.length]).toEqual([20, 5])
+    expect(planned?.baseline).toMatchObject({ offset: 20, length: 5 })
+    expect(span.undated.map((item) => item.id)).toEqual(['d'])
+  })
+
+  it('leaves the bar without a baseline when the row has no plan', () => {
+    const span = timelineSpanOf(rows, due, finish, '2026-09-17', 'day', baseline)
+
+    expect(span.bars.find((bar) => bar.row.id === 'c')?.baseline).toBeNull()
+  })
+
+  it('widens the span so the plan fits too', () => {
+    const late = [row('e', { due: '2026-09-10', plannedStart: '2026-08-20' })]
+    const span = timelineSpanOf(late, due, finish, '2026-09-17', 'day', baseline)
+
+    expect(span.from).toBe('2026-08-20')
+  })
+
+  it('ignores the baseline when the view has none', () => {
+    const span = timelineSpanOf(rows, due, finish, '2026-09-17')
+
+    expect(span.bars.map((bar) => bar.row.id)).toEqual(['a', 'c'])
+    expect(span.bars.every((bar) => bar.baseline === null)).toBe(true)
+  })
+
+  it('needs a planned start to exist and be a date', () => {
+    expect(baselinePropertiesOf([due, plannedStart, plannedEnd], { baselineStartPropertyId: 'plannedStart', baselineEndPropertyId: 'plannedEnd' } as never)).toEqual({ start: plannedStart, end: plannedEnd })
+    expect(baselinePropertiesOf([due, text], { baselineStartPropertyId: 'text', baselineEndPropertyId: null } as never)).toBeNull()
+    expect(baselinePropertiesOf([due], { baselineStartPropertyId: null, baselineEndPropertyId: 'due' } as never)).toBeNull()
   })
 })

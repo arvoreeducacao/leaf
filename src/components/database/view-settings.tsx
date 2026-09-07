@@ -59,6 +59,7 @@ type Props = Readonly<{
   onConfigChange: (config: ViewConfig) => void
   onChangeLayout: (type: DatabaseViewType) => void
   onRenameView: (id: string, name: string) => void
+  onSaveBaseline?: () => void
   children: React.ReactNode
 }>
 
@@ -71,6 +72,7 @@ export function ViewSettings({
   onConfigChange,
   onChangeLayout,
   onRenameView,
+  onSaveBaseline,
   children,
 }: Props) {
   const t = useTranslations('database')
@@ -481,6 +483,101 @@ export function ViewSettings({
               </DropdownMenuSubContent>
             </DropdownMenuSub>
           </>
+        ) : null}
+
+        {view.type === 'timeline' ? (
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger>
+              <DateTypeIcon aria-hidden="true" className="size-5" />
+              <span className="flex-1">{t('baseline')}</span>
+              <span className="max-w-32 truncate text-content-subtle">
+                {config.baselineStartPropertyId
+                  ? nameOf(config.baselineStartPropertyId)
+                  : t('noBaseline')}
+              </span>
+            </DropdownMenuSubTrigger>
+            <DropdownMenuSubContent className="w-72">
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger>
+                  <span className="flex-1">{t('baselineStart')}</span>
+                  <span className="max-w-28 truncate text-content-subtle">
+                    {config.baselineStartPropertyId
+                      ? nameOf(config.baselineStartPropertyId)
+                      : t('none')}
+                  </span>
+                </DropdownMenuSubTrigger>
+                <DropdownMenuSubContent className="w-64">
+                  <DropdownMenuItem
+                    onSelect={() =>
+                      onConfigChange({
+                        ...config,
+                        baselineStartPropertyId: null,
+                        baselineEndPropertyId: null,
+                      })
+                    }
+                  >
+                    {t('none')}
+                  </DropdownMenuItem>
+                  {dateProperties.map((property) => (
+                    <DropdownMenuItem
+                      key={property.id}
+                      onSelect={() =>
+                        onConfigChange({
+                          ...config,
+                          baselineStartPropertyId: property.id,
+                        })
+                      }
+                    >
+                      <PropertyIcon type={property.type} />
+                      <span className="min-w-0 truncate">{property.name}</span>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger disabled={!config.baselineStartPropertyId}>
+                  <span className="flex-1">{t('baselineEnd')}</span>
+                  <span className="max-w-28 truncate text-content-subtle">
+                    {config.baselineEndPropertyId
+                      ? nameOf(config.baselineEndPropertyId)
+                      : t('none')}
+                  </span>
+                </DropdownMenuSubTrigger>
+                <DropdownMenuSubContent className="w-64">
+                  <DropdownMenuItem
+                    onSelect={() =>
+                      onConfigChange({ ...config, baselineEndPropertyId: null })
+                    }
+                  >
+                    {t('none')}
+                  </DropdownMenuItem>
+                  {dateProperties.map((property) => (
+                    <DropdownMenuItem
+                      key={property.id}
+                      onSelect={() =>
+                        onConfigChange({
+                          ...config,
+                          baselineEndPropertyId: property.id,
+                        })
+                      }
+                    >
+                      <PropertyIcon type={property.type} />
+                      <span className="min-w-0 truncate">{property.name}</span>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                disabled={
+                  !canEdit || !onSaveBaseline || !config.baselineStartPropertyId
+                }
+                onSelect={() => onSaveBaseline?.()}
+              >
+                {t('saveBaseline')}
+              </DropdownMenuItem>
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
         ) : null}
 
         {view.type === 'board' || view.type === 'timeline' ? (
