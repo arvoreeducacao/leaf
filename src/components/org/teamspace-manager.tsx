@@ -7,6 +7,10 @@ import { toast } from 'sonner'
 
 import { TeamspaceFormDialog } from '@/components/app/teamspace-form-dialog'
 import { AddIcon, PadlockIcon, TrashIcon, UsersIcon } from '@/components/icons'
+import {
+  SettingsHint,
+  SettingsSection,
+} from '@/components/settings/settings-panel'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { ButtonIcon } from '@/components/ui/button-icon'
@@ -17,7 +21,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Separator } from '@/components/ui/separator'
 import { UserAvatar } from '@/components/ui/user-avatar'
 import type { TeamspaceAccess, TeamspaceRole } from '@/db/schema'
 import type { OrganizationPerson } from '@/lib/organizations'
@@ -75,29 +78,27 @@ export function TeamspaceManager({ teamspaces, orgPeople }: Props) {
   }
 
   return (
-    <section className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="font-bold text-heading-medium text-content-strong">
-          {t('sectionTitle')}
-        </h2>
+    <SettingsSection
+      action={
         <Button
           disabled={pending}
           onClick={() => setCreating(true)}
+          size="sm"
           type="button"
           variant="secondary"
         >
           <AddIcon aria-hidden="true" />
           {t('create')}
         </Button>
-      </div>
-
-      <p className="text-body-small text-content">{t('managerHint')}</p>
-
+      }
+      description={t('managerHint')}
+      title={t('sectionTitle')}
+    >
       {teamspaces.length === 0 ? (
-        <p className="text-body-small text-content">{t('sectionEmpty')}</p>
+        <SettingsHint>{t('sectionEmpty')}</SettingsHint>
       ) : null}
 
-      <ul className="flex flex-col gap-4">
+      <ul className="flex flex-col gap-3">
         {teamspaces.map((teamspace) => {
           const available = orgPeople.filter(
             (person) =>
@@ -108,11 +109,11 @@ export function TeamspaceManager({ teamspaces, orgPeople }: Props) {
 
           return (
             <li
-              className="flex flex-col gap-3 rounded-large border border-line-subtle p-4"
+              className="flex flex-col gap-3 rounded-large border border-line-subtle p-3"
               key={teamspace.id}
             >
               <div className="flex flex-wrap items-center gap-2">
-                <h3 className="min-w-0 flex-1 truncate font-bold text-body-medium text-content-strong">
+                <h3 className="min-w-0 flex-1 truncate font-medium text-body-small text-content-strong">
                   {teamspace.name}
                 </h3>
                 <Badge className="gap-1" variant="info">
@@ -140,7 +141,7 @@ export function TeamspaceManager({ teamspaces, orgPeople }: Props) {
                       userId={person.userId}
                     />
                     <span
-                      className="min-w-0 flex-1 truncate text-body-small text-content-strong"
+                      className="min-w-0 flex-1 truncate text-body-small text-content"
                       title={person.email}
                     >
                       {person.name || person.email}
@@ -215,9 +216,7 @@ export function TeamspaceManager({ teamspaces, orgPeople }: Props) {
                 </div>
               ) : null}
 
-              <Separator />
-
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2 border-line-subtle border-t pt-3">
                 {teamspace.role === null && teamspace.access === 'open' ? (
                   <Button
                     disabled={pending}
@@ -278,6 +277,7 @@ export function TeamspaceManager({ teamspaces, orgPeople }: Props) {
                       autoFocus
                       disabled={pending}
                       onClick={() => setConfirmingDelete(null)}
+                      size="sm"
                       type="button"
                       variant="secondary"
                     >
@@ -317,6 +317,6 @@ export function TeamspaceManager({ teamspaces, orgPeople }: Props) {
         open={editing !== null}
         teamspace={editing}
       />
-    </section>
+    </SettingsSection>
   )
 }

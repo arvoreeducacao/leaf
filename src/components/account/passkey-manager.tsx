@@ -5,6 +5,12 @@ import { useState } from 'react'
 import { toast } from 'sonner'
 
 import { FingerprintIcon, TrashIcon } from '@/components/icons'
+import {
+  SettingsHint,
+  SettingsList,
+  SettingsListItem,
+  SettingsSection,
+} from '@/components/settings/settings-panel'
 import { Button } from '@/components/ui/button'
 import { authClient } from '@/lib/auth-client'
 
@@ -45,30 +51,35 @@ export function PasskeyManager() {
   }
 
   return (
-    <section className="flex flex-col gap-4">
-      <div className="flex flex-col gap-1">
-        <h2 className="font-semibold text-content-strong text-heading-medium">
-          {t('passkeyTitle')}
-        </h2>
-        <p className="text-body-small text-content">{t('passkeyHint')}</p>
-      </div>
-
+    <SettingsSection
+      action={
+        <Button
+          aria-busy={busy}
+          disabled={busy}
+          onClick={addPasskey}
+          size="sm"
+          type="button"
+          variant="secondary"
+        >
+          {t('passkeyAdd')}
+        </Button>
+      }
+      description={t('passkeyHint')}
+      title={t('passkeyTitle')}
+    >
       {isPending ? null : passkeys && passkeys.length > 0 ? (
-        <ul className="flex flex-col gap-2">
+        <SettingsList>
           {passkeys.map((passkey) => (
-            <li
-              className="flex items-center gap-3 rounded-large border border-line px-3 py-2"
-              key={passkey.id}
-            >
+            <SettingsListItem key={passkey.id}>
               <FingerprintIcon
                 aria-hidden="true"
                 className="size-4 shrink-0 text-content-subtle"
               />
               <div className="flex min-w-0 flex-1 flex-col">
-                <span className="truncate text-body-small text-content-strong">
+                <span className="truncate font-medium text-body-small text-content-strong">
                   {passkey.name || t('passkeyUnnamed')}
                 </span>
-                <span className="text-caption text-content-subtle">
+                <span className="text-caption text-content">
                   {t('passkeyCreated', {
                     date: new Date(passkey.createdAt).toLocaleDateString(locale),
                   })}
@@ -84,25 +95,12 @@ export function PasskeyManager() {
               >
                 <TrashIcon aria-hidden="true" />
               </Button>
-            </li>
+            </SettingsListItem>
           ))}
-        </ul>
+        </SettingsList>
       ) : (
-        <p className="text-body-small text-content-subtle">
-          {t('passkeyEmpty')}
-        </p>
+        <SettingsHint>{t('passkeyEmpty')}</SettingsHint>
       )}
-
-      <Button
-        aria-busy={busy}
-        className="w-full tablet:w-auto tablet:self-start"
-        disabled={busy}
-        onClick={addPasskey}
-        type="button"
-        variant="secondary"
-      >
-        {t('passkeyAdd')}
-      </Button>
-    </section>
+    </SettingsSection>
   )
 }

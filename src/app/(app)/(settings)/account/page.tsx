@@ -4,7 +4,10 @@ import { redirect } from 'next/navigation'
 
 import { AccountForm } from '@/components/account/account-form'
 import { PasskeyManager } from '@/components/account/passkey-manager'
-import { Separator } from '@/components/ui/separator'
+import {
+  SettingsHeader,
+  SettingsPanel,
+} from '@/components/settings/settings-panel'
 import { getSession } from '@/lib/auth'
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -14,6 +17,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function AccountPage() {
+  const t = await getTranslations('account')
   const session = await getSession()
 
   if (!session) {
@@ -21,17 +25,19 @@ export default async function AccountPage() {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-content flex-col gap-8 px-4 py-8 tablet:px-8 tablet:py-10">
-      <AccountForm
-        email={session.user.email}
-        image={session.user.image ?? null}
-        name={session.user.name}
-        userId={session.user.id}
-      />
+    <>
+      <SettingsHeader description={t('subtitle')} title={t('title')} />
 
-      <Separator />
+      <SettingsPanel>
+        <AccountForm
+          email={session.user.email}
+          image={session.user.image ?? null}
+          name={session.user.name}
+          userId={session.user.id}
+        />
 
-      <PasskeyManager />
-    </div>
+        <PasskeyManager />
+      </SettingsPanel>
+    </>
   )
 }
