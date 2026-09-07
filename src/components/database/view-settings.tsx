@@ -21,6 +21,7 @@ import type {
   DatabaseView,
   DatabaseViewType,
 } from '@/db/schema'
+import { databaseIdFromLink } from '@/lib/database/absences'
 import { timelineScales } from '@/lib/database/calendar'
 import {
   MAX_FILTERS,
@@ -37,6 +38,7 @@ import {
   EyeIcon,
   FilterMenuIcon,
   GroupIcon,
+  CalendarLayoutIcon,
   LinkMenuIcon,
   PersonTypeIcon,
   SelectTypeIcon,
@@ -143,6 +145,18 @@ export function ViewSettings({
     }
 
     addFilter(propertyId)
+  }
+
+  function linkAbsences(value: string) {
+    const databaseId = databaseIdFromLink(value)
+
+    if (!databaseId || databaseId === view.id) {
+      toast.error(t('absencesInvalidLink'))
+
+      return
+    }
+
+    onConfigChange({ ...config, absencesDatabaseId: databaseId })
   }
 
   async function copyViewLink() {
@@ -575,6 +589,48 @@ export function ViewSettings({
                 onSelect={() => onSaveBaseline?.()}
               >
                 {t('saveBaseline')}
+              </DropdownMenuItem>
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
+        ) : null}
+
+        {view.type === 'timeline' ? (
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger>
+              <CalendarLayoutIcon aria-hidden="true" className="size-5" />
+              <span className="flex-1">{t('absences')}</span>
+              <span className="max-w-32 truncate text-content-subtle">
+                {config.absencesDatabaseId ? t('absencesLinked') : t('none')}
+              </span>
+            </DropdownMenuSubTrigger>
+            <DropdownMenuSubContent className="w-80">
+              <p className="px-2 pt-1 pb-2 text-caption text-content-subtle">
+                {t('absencesHint')}
+              </p>
+              <div className="px-1 pb-1.5">
+                <Input
+                  aria-label={t('absencesDatabase')}
+                  className="h-9 text-body-small tablet:h-8"
+                  disabled={!canEdit}
+                  key={config.absencesDatabaseId ?? 'none'}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') {
+                      event.preventDefault()
+                      linkAbsences(event.currentTarget.value)
+                    }
+
+                    event.stopPropagation()
+                  }}
+                  placeholder={t('absencesLinkPlaceholder')}
+                />
+              </div>
+              <DropdownMenuItem
+                disabled={!canEdit || !config.absencesDatabaseId}
+                onSelect={() =>
+                  onConfigChange({ ...config, absencesDatabaseId: null })
+                }
+              >
+                {t('none')}
               </DropdownMenuItem>
             </DropdownMenuSubContent>
           </DropdownMenuSub>

@@ -23,9 +23,15 @@ import {
   toIsoDate,
   todayOffsetOf,
 } from '@/lib/database/calendar'
+import {
+  type Absence,
+  absenceColumnsOf,
+  absencesOf,
+} from '@/lib/database/absences'
 import type { Person } from '@/lib/database/people'
 import { formatDate, parseOptions } from '@/lib/database/values'
 import type { BoardGroup, DatabaseRow } from '@/lib/database/views'
+import type { DatabaseSnapshot } from '@/lib/databases'
 import { cn } from '@/shared/utils'
 
 import { optionChipClass } from './option-colors'
@@ -42,11 +48,56 @@ type Lane = Readonly<{
   bars: ReadonlyArray<TimelineBar>
 }>
 
+type AbsencesSource = Readonly<{
+  id: string
+  status: 'loading' | 'ok' | 'missing'
+  snapshot: DatabaseSnapshot | null
+}>
+
+const absenceLaneHeight = 22
+const absenceLabelGlyph = 6.5
+const absenceLabelMax = 240
+
+type PlacedAbsence = Readonly<{
+  absence: Absence
+  lane: number
+  left: number
+  boxWidth: number
+  labelWidth: number
+}>
+
+function packAbsences(
+  absences: ReadonlyArray<Absence>,
+  dayWidth: number,
+): Array<PlacedAbsence> {
+  const ends: Array<number> = []
+
+  return absences.map((absence) => {
+    const left = absence.offset * dayWidth
+    const boxWidth = Math.max(absence.length * dayWidth - 2, 6)
+    const labelWidth = Math.min(
+      absence.label.length * absenceLabelGlyph + 12,
+      absenceLabelMax,
+    )
+    const right = left + Math.max(boxWidth, labelWidth)
+    let lane = ends.findIndex((end) => end + 6 < left)
+
+    if (lane === -1) {
+      lane = ends.length
+    }
+
+    ends[lane] = right
+
+    return { absence, lane, left, boxWidth, labelWidth }
+  })
+}
+
 type Props = Readonly<{
   rows: ReadonlyArray<DatabaseRow>
   startProperty: DatabaseProperty | null
   endProperty: DatabaseProperty | null
   baseline: BaselineColumns | null
+  absencesDatabaseId: string | null
   groups: ReadonlyArray<BoardGroup> | null
   groupProperty: DatabaseProperty | null
   colorProperty: DatabaseProperty | null
@@ -64,6 +115,7 @@ export function TimelineView({
   startProperty,
   endProperty,
   baseline,
+  absencesDatabaseId,
   groups,
   groupProperty,
   colorProperty,
@@ -79,6 +131,53 @@ export function TimelineView({
   const [today, setToday] = useState(rendered.current)
   const track = useRef<HTMLDivElement>(null)
   const dayWidth = dayWidthOf[scale]
+  const [absencesSource, setAbsencesSource] = useState<AbsencesSource | null>(
+    null,
+  )
+
+  useEffect(() => {
+    if (!absencesDatabaseId) {
+      setAbsencesSource(null)
+
+      return
+    }
+
+    let active = true
+
+    setAbsencesSource({ id: absencesDatabaseId, status: 'loading', snapshot: null })
+
+    fetch(`/api/databases/${encodeURIComponent(absencesDatabaseId)}`, {
+      credentials: 'same-origin',
+    })
+      .then(async (response) => {
+        if (!response.ok) {
+          throw new Error(String(response.status))
+        }
+
+        const body = (await response.json()) as { snapshot: DatabaseSnapshot }
+
+        if (active) {
+          setAbsencesSource({
+            id: absencesDatabaseId,
+            status: 'ok',
+            snapshot: body.snapshot,
+          })
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setAbsencesSource({
+            id: absencesDatabaseId,
+            status: 'missing',
+            snapshot: null,
+          })
+        }
+      })
+
+    return () => {
+      active = false
+    }
+  }, [absencesDatabaseId])
 
   useEffect(() => {
     const local = localIsoDate()
@@ -212,6 +311,39 @@ export function TimelineView({
   }
 
   const todayOffset = todayOffsetOf(span, today)
+  const absenceColumns = absencesSource?.snapshot
+    ? absenceColumnsOf(absencesSource.snapshot.properties)
+    : null
+  const absences = absencesSource?.snapshot
+    ? packAbsences(
+        absencesOf(
+          absencesSource.snapshot.rows,
+          absenceColumns,
+          absencesSource.snapshot.people,
+          span,
+        ),
+        dayWidth,
+      )
+    : []
+  const absenceLanes = absences.reduce(
+    (most, item) => Math.max(most, item.lane + 1),
+    1,
+  )
+  const absencesHeight = 4 + absenceLanes * absenceLaneHeight
+  const absencesNote =
+    absencesSource?.status === 'missing'
+      ? t('absencesNotFound')
+      : absencesSource?.snapshot && !absenceColumns
+        ? t('absencesNoDate')
+        : null
+
+  function absenceTitleOf(absence: Absence): string {
+    return t('absenceRange', {
+      label: absence.label,
+      from: formatDate(absence.start, locale),
+      to: formatDate(absence.end, locale),
+    })
+  }
 
   function barClassOf(row: DatabaseRow): string {
     if (!colorProperty) {
@@ -258,6 +390,14 @@ export function TimelineView({
       <div className="flex overflow-hidden rounded-large border border-line-divider">
         <div className="w-60 shrink-0 border-line-divider border-r">
           <div className="h-13 border-line-divider border-b" />
+          {absencesDatabaseId ? (
+            <div
+              className="flex items-center border-line-divider border-b bg-surface-sunken px-2 font-medium text-caption text-content-subtle"
+              style={{ height: absencesHeight }}
+            >
+              {t('absences')}
+            </div>
+          ) : null}
           {lanes.map((lane) => (
             <Fragment key={lane.group ? (lane.group.id ?? 'none') : 'all'}>
               {lane.group ? (
@@ -320,6 +460,66 @@ export function TimelineView({
                 </span>
               ))}
             </div>
+
+            {absencesDatabaseId ? (
+              <div
+                className="relative border-line-divider border-b bg-surface-sunken"
+                style={{ height: absencesHeight }}
+              >
+                {absences.map(({ absence, lane, left, boxWidth, labelWidth }) => {
+                  const inside = boxWidth >= labelWidth
+
+                  return (
+                    <span
+                      className={cn(
+                        'absolute flex h-5 items-center gap-1 text-caption',
+                        absence.personal
+                          ? 'text-warning-900 dark:text-warning-200'
+                          : 'text-gray-900 dark:text-gray-200',
+                      )}
+                      key={absence.id}
+                      style={{
+                        insetInlineStart: left + 1,
+                        top: 2 + lane * absenceLaneHeight,
+                        width: inside ? boxWidth : boxWidth + labelWidth,
+                      }}
+                      title={absenceTitleOf(absence)}
+                    >
+                      <span
+                        className={cn(
+                          'flex h-5 shrink-0 items-center truncate rounded-medium',
+                          inside ? 'px-1.5' : '',
+                          absence.personal
+                            ? 'bg-warning-100 dark:bg-warning-950'
+                            : 'bg-gray-200 dark:bg-gray-800',
+                        )}
+                        style={{ width: boxWidth }}
+                      >
+                        {inside ? absence.label : null}
+                      </span>
+                      {inside ? null : (
+                        <span className="truncate">{absence.label}</span>
+                      )}
+                    </span>
+                  )
+                })}
+              </div>
+            ) : null}
+
+            {absences
+              .filter(({ absence }) => !absence.personal)
+              .map(({ absence }) => (
+                <div
+                  aria-hidden="true"
+                  className="pointer-events-none absolute bottom-0 bg-surface-sunken/80"
+                  key={`shade-${absence.id}`}
+                  style={{
+                    insetInlineStart: absence.offset * dayWidth,
+                    top: 52 + absencesHeight,
+                    width: absence.length * dayWidth,
+                  }}
+                />
+              ))}
 
             {lanes.map((lane) => (
               <Fragment key={lane.group ? (lane.group.id ?? 'none') : 'all'}>
@@ -385,8 +585,9 @@ export function TimelineView({
         </div>
       </div>
 
-      {baseline || span.undated.length > 0 ? (
+      {baseline || span.undated.length > 0 || absencesNote ? (
         <p className="flex flex-wrap gap-x-4 text-caption text-content-subtle">
+          {absencesNote ? <span>{absencesNote}</span> : null}
           {baseline ? <span>{t('baselineLegend')}</span> : null}
           {span.undated.length > 0 ? (
             <span>{t('rowsWithoutDate', { count: span.undated.length })}</span>

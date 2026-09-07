@@ -144,6 +144,7 @@ export type ViewConfig = Readonly<{
   peoplePropertyId: string | null
   baselineStartPropertyId: string | null
   baselineEndPropertyId: string | null
+  absencesDatabaseId: string | null
   filters: ReadonlyArray<ViewFilter>
   sorts: ReadonlyArray<ViewSort>
   hiddenPropertyIds: ReadonlyArray<string>
@@ -162,6 +163,7 @@ export const emptyViewConfig: ViewConfig = {
   peoplePropertyId: null,
   baselineStartPropertyId: null,
   baselineEndPropertyId: null,
+  absencesDatabaseId: null,
   filters: [],
   sorts: [],
   hiddenPropertyIds: [],
@@ -290,6 +292,10 @@ export function parseViewConfig(raw: string | null): ViewConfig {
       typeof source.baselineEndPropertyId === 'string'
         ? source.baselineEndPropertyId
         : null,
+    absencesDatabaseId:
+      typeof source.absencesDatabaseId === 'string'
+        ? source.absencesDatabaseId
+        : null,
     filters,
     sorts,
     hiddenPropertyIds: asStringArray(source.hiddenPropertyIds),
@@ -312,6 +318,7 @@ export function serializeViewConfig(config: ViewConfig): string {
     peoplePropertyId: config.peoplePropertyId,
     baselineStartPropertyId: config.baselineStartPropertyId,
     baselineEndPropertyId: config.baselineEndPropertyId,
+    absencesDatabaseId: config.absencesDatabaseId,
     hiddenPropertyIds: config.hiddenPropertyIds,
     wrapCells: config.wrapCells,
     showVerticalLines: config.showVerticalLines,
