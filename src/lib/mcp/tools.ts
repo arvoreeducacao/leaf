@@ -6,6 +6,8 @@ import { documents } from '@/db/schema'
 import type { Document } from '@/db/schema'
 import { canEdit, getDocumentAccess } from '@/lib/authz'
 import type { AccessLevel } from '@/lib/authz'
+import { normalizeCover } from '@/lib/document-cover'
+import { normalizeDocumentIcon } from '@/lib/document-icon'
 import { UNLISTED_DOCUMENT_KINDS } from '@/lib/document-kinds'
 import { listDocumentComments } from '@/lib/comments'
 import { personOptions } from '@/lib/database/people'
@@ -569,6 +571,42 @@ export async function uploadImageTool(
   }
 }
 
+function iconValueOf(icon: string | null | undefined) {
+  if (icon === undefined) {
+    return undefined
+  }
+
+  if (icon === null || icon.trim().length === 0) {
+    return null
+  }
+
+  const value = normalizeDocumentIcon(icon)
+
+  if (!value) {
+    throw new McpToolError('invalid_argument', 'icon must be an emoji or an image address')
+  }
+
+  return value
+}
+
+function coverValueOf(cover: string | null | undefined) {
+  if (cover === undefined) {
+    return undefined
+  }
+
+  if (cover === null || cover.trim().length === 0) {
+    return null
+  }
+
+  const value = normalizeCover(cover)
+
+  if (!value) {
+    throw new McpToolError('invalid_argument', 'cover must be an https image address or a gradient')
+  }
+
+  return value
+}
+
 export async function createDocumentTool(
   context: McpToolContext,
   args: Readonly<{
@@ -576,6 +614,8 @@ export async function createDocumentTool(
     markdown?: string
     html?: string
     parentId?: string
+    icon?: string | null
+    cover?: string | null
   }>,
 ) {
   requireWrite(context)
@@ -585,6 +625,9 @@ export async function createDocumentTool(
   if (title.length === 0) {
     throw new McpToolError('invalid_argument', 'title is required')
   }
+
+  const icon = iconValueOf(args.icon) ?? null
+  const cover = coverValueOf(args.cover) ?? null
 
   const blocks = await blocksOf(args, false)
   const userId = context.session.user.id
@@ -618,6 +661,8 @@ export async function createDocumentTool(
     orgAccess: parent?.orgAccess ?? null,
     kind: 'page',
     title,
+    icon,
+    cover,
     content: blocks.length > 0 ? JSON.stringify(blocks) : null,
     createdAt: now,
     updatedAt: now,
@@ -628,7 +673,7 @@ export async function createDocumentTool(
   await indexDocument(id)
   context.onDocumentWritten?.(id)
 
-  return { id, title, parentId: parent?.id ?? null, url: documentUrl(id) }
+  return { id, title, parentId: parent?.id ?? null, icon, cover, url: documentUrl(id) }
 }
 
 export async function updateDocumentTool(
@@ -638,6 +683,10 @@ export async function updateDocumentTool(
     markdown?: string
     html?: string
     mode?: 'append' | 'replace'
+    title?: string
+    icon?: string | null
+    cover?: string | null
+    values?: Readonly<Record<string, unknown>>
   }>,
   now: Date = new Date(),
 ) {
@@ -656,42 +705,130 @@ export async function updateDocumentTool(
     throw new McpToolError('not_found', 'document not found')
   }
 
-  if (document.kind === 'database') {
-    throw new McpToolError('invalid_argument', 'databases cannot be edited here')
+  const hasBody = (args.markdown?.length ?? 0) > 0 || (args.html?.length ?? 0) > 0
+  const changes: {
+    title?: string
+    icon?: string | null
+    cover?: string | null
+    coverCredit?: string | null
+    properties?: string
+  } = {}
+
+  if (args.title !== undefined) {
+    const title = args.title.trim().slice(0, MAX_MCP_TITLE_CHARS)
+
+    if (title.length === 0) {
+      throw new McpToolError('invalid_argument', 'title cannot be empty')
+    }
+
+    changes.title = title
   }
 
-  if (now.getTime() - document.updatedAt.getTime() < MCP_LIVE_EDIT_WINDOW_MS) {
+  const icon = iconValueOf(args.icon)
+
+  if (icon !== undefined) {
+    changes.icon = icon
+  }
+
+  const cover = coverValueOf(args.cover)
+
+  if (cover !== undefined) {
+    changes.cover = cover
+    changes.coverCredit = null
+  }
+
+  if (args.values !== undefined && Object.keys(args.values).length > 0) {
+    if (document.kind !== 'row' || !document.parentId) {
+      throw new McpToolError('invalid_argument', 'values only apply to database rows')
+    }
+
+    const { valuesFrom } = await import('@/lib/mcp/row-values')
+    const { listDatabaseProperties } = await import('@/lib/databases')
+    const properties = await listDatabaseProperties(document.parentId)
+    const incoming = await valuesFrom(
+      args.values,
+      properties,
+      document.orgId,
+      context.session.user.id,
+    )
+    const { parseValues, serializeValues } = await import('@/lib/database/values')
+
+    changes.properties = serializeValues({
+      ...parseValues(document.properties),
+      ...incoming,
+    })
+  }
+
+  if (!hasBody && Object.keys(changes).length === 0) {
     throw new McpToolError(
-      'document_busy',
-      'document was edited moments ago; retry in a few seconds',
+      'invalid_argument',
+      'send a body, a title, an icon, a cover or values',
     )
   }
 
-  const mode = args.mode ?? 'append'
-  const incoming = await blocksOf(args, true)
-  const blocks =
-    mode === 'append'
-      ? [...parseContentBlocks(document.content), ...incoming]
-      : incoming
+  let written = false
 
-  const outcome = await persistDocumentContentIfUnchanged(
-    id,
-    JSON.stringify(blocks),
-    context.session.user.id,
-    document.updatedAt,
-  )
+  if (hasBody) {
+    if (document.kind === 'database') {
+      throw new McpToolError('invalid_argument', 'databases have no body to edit')
+    }
 
-  if (outcome === 'conflict') {
-    throw new McpToolError('conflict', 'document changed while writing; retry')
+    if (now.getTime() - document.updatedAt.getTime() < MCP_LIVE_EDIT_WINDOW_MS) {
+      throw new McpToolError(
+        'document_busy',
+        'document was edited moments ago; retry in a few seconds',
+      )
+    }
+
+    const mode = args.mode ?? 'append'
+    const incoming = await blocksOf(args, true)
+    const blocks =
+      mode === 'append'
+        ? [...parseContentBlocks(document.content), ...incoming]
+        : incoming
+
+    const outcome = await persistDocumentContentIfUnchanged(
+      id,
+      JSON.stringify(blocks),
+      context.session.user.id,
+      document.updatedAt,
+    )
+
+    if (outcome === 'conflict') {
+      throw new McpToolError('conflict', 'document changed while writing; retry')
+    }
+
+    if (outcome === 'missing') {
+      throw new McpToolError('not_found', 'document not found')
+    }
+
+    written = outcome === 'written'
   }
 
-  if (outcome === 'missing') {
-    throw new McpToolError('not_found', 'document not found')
+  if (Object.keys(changes).length > 0) {
+    await db
+      .update(documents)
+      .set({ ...changes, updatedAt: new Date() })
+      .where(eq(documents.id, id))
+
+    if (changes.title !== undefined) {
+      const { indexDocument } = await import('@/lib/search-index')
+
+      await indexDocument(id)
+    }
+
+    written = true
   }
 
-  if (outcome === 'written') {
+  if (written) {
     context.onDocumentWritten?.(id)
   }
 
-  return { id, mode, written: outcome === 'written', url: documentUrl(id) }
+  return {
+    id,
+    mode: hasBody ? (args.mode ?? 'append') : null,
+    written,
+    updated: Object.keys(changes).filter((key) => key !== 'coverCredit'),
+    url: documentUrl(id),
+  }
 }

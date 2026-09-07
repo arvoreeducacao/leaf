@@ -34,6 +34,12 @@ import {
   updateDatabaseRowTool,
   updateDatabaseViewTool,
 } from '@/lib/mcp/tools-database'
+import {
+  duplicateDocumentTool,
+  moveDocumentTool,
+  restoreDocumentTool,
+  trashDocumentTool,
+} from '@/lib/mcp/tools-pages'
 import { propertyTypes } from '@/lib/database/values'
 import { filterOperators } from '@/lib/database/views'
 
@@ -106,6 +112,20 @@ const viewPatchSchema = {
   groupBy: propertyRefSchema.nullable().optional().describe('Property to group rows by, or null to ungroup'),
   hiddenProperties: z.array(propertyRefSchema).optional(),
 }
+
+const iconSchema = z
+  .string()
+  .max(1024)
+  .nullable()
+  .optional()
+  .describe('An emoji or an image address; null removes the icon')
+
+const coverSchema = z
+  .string()
+  .max(2048)
+  .nullable()
+  .optional()
+  .describe('An https image address or a gradient name; null removes the cover')
 
 const propertyTypeSchema = z
   .enum(propertyTypes as [string, ...Array<string>])
@@ -308,6 +328,8 @@ export function createLeafMcpServer(context: McpToolContext) {
           markdown: markdownSchema,
           html: htmlSchema,
           parentId: documentIdSchema.optional(),
+          icon: iconSchema,
+          cover: coverSchema,
         },
         annotations: { readOnlyHint: false, destructiveHint: false },
       },
@@ -343,12 +365,16 @@ export function createLeafMcpServer(context: McpToolContext) {
       {
         title: 'Update document',
         description:
-          'Append markdown or an HTML page to a page you can edit, or replace its body. Send one of the two, never both. Refuses to write while someone is editing the page live; retry a few seconds later.',
+          'Change a document you can edit: append markdown or an HTML page to its body or replace the body (send one of the two, never both), rename it, set or remove its icon and cover, and on a database row set property values by name. Body writes are refused while someone is editing the page live; retry a few seconds later.',
         inputSchema: {
           documentId: documentIdSchema,
           markdown: markdownSchema,
           html: htmlSchema,
           mode: z.enum(['append', 'replace']).optional(),
+          title: z.string().min(1).max(MAX_MCP_TITLE_CHARS).optional(),
+          icon: iconSchema,
+          cover: coverSchema,
+          values: valuesSchema,
         },
         annotations: { readOnlyHint: false, destructiveHint: true },
       },
@@ -533,6 +559,67 @@ export function createLeafMcpServer(context: McpToolContext) {
       (args) =>
         run(context, 'update_database_view', args, () =>
           updateDatabaseViewTool(context, args),
+        ),
+    )
+
+    server.registerTool(
+      'move_document',
+      {
+        title: 'Move document',
+        description:
+          'Move a document you own, with its subpages: under another page you own, to a teamspace, to the organization root, or back to your private space. Send exactly one target.',
+        inputSchema: {
+          documentId: documentIdSchema,
+          parentId: documentIdSchema.optional(),
+          teamspaceId: z.string().min(1).max(64).optional(),
+          destination: z.enum(['private', 'organization']).optional(),
+        },
+        annotations: { readOnlyHint: false, destructiveHint: false },
+      },
+      (args) =>
+        run(context, 'move_document', args, () => moveDocumentTool(context, args)),
+    )
+
+    server.registerTool(
+      'duplicate_document',
+      {
+        title: 'Duplicate document',
+        description:
+          'Copy a page or a whole database you own, next to the original, with its rows and properties.',
+        inputSchema: { documentId: documentIdSchema },
+        annotations: { readOnlyHint: false, destructiveHint: false },
+      },
+      (args) =>
+        run(context, 'duplicate_document', args, () =>
+          duplicateDocumentTool(context, args),
+        ),
+    )
+
+    server.registerTool(
+      'trash_document',
+      {
+        title: 'Trash document',
+        description:
+          'Move a document you own to the trash, with its subpages. Nothing is erased for good: restore_document brings it back.',
+        inputSchema: { documentId: documentIdSchema },
+        annotations: { readOnlyHint: false, destructiveHint: true },
+      },
+      (args) =>
+        run(context, 'trash_document', args, () => trashDocumentTool(context, args)),
+    )
+
+    server.registerTool(
+      'restore_document',
+      {
+        title: 'Restore document',
+        description:
+          'Bring a document you own back from the trash, with its subpages. If its parent is gone it lands at the root.',
+        inputSchema: { documentId: documentIdSchema },
+        annotations: { readOnlyHint: false, destructiveHint: false },
+      },
+      (args) =>
+        run(context, 'restore_document', args, () =>
+          restoreDocumentTool(context, args),
         ),
     )
   }

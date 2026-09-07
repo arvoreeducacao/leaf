@@ -235,10 +235,14 @@ tokens daquele cliente.
 Tools de leitura: `search_documents`, `get_document`, `list_documents`,
 `list_organizations`, `get_database`, `query_database` (filtro, busca e
 ordenação por nome de propriedade, valores em texto e crus) e `list_comments`.
-Tools de escrita (escopo `leaf:write`): `create_document`, `update_document`
-(append/replace, recusa escrever se a página foi editada nos últimos 15 s,
-provavelmente há uma sala de colaboração aberta, e usa guard otimista no
-`updated_at`), `upload_image`, e as de base de dados: `create_database`,
+Tools de escrita (escopo `leaf:write`): `create_document` (com ícone e capa),
+`update_document` (corpo em append/replace, título, ícone, capa e valores de
+propriedade quando o documento é linha; a escrita de corpo recusa se a página
+foi editada nos últimos 15 s, provavelmente há uma sala de colaboração aberta,
+e usa guard otimista no `updated_at`), `move_document` (pra outra página, pra um
+teamspace, pra raiz da organização ou de volta pro Privado, com a subárvore),
+`duplicate_document`, `trash_document` e `restore_document` (só quem é dono),
+`upload_image`, e as de base de dados: `create_database`,
 `create_database_row`, `update_database_row`, `delete_database_row` (vai pra
 lixeira), `add_database_property`, `update_database_property`,
 `delete_database_property`, `create_database_view` e `update_database_view`.
