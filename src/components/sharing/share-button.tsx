@@ -35,8 +35,8 @@ export function ShareButton({ documentId, canShare }: Props) {
   const isMobile = useIsMobile()
 
   const trigger = (
-    <Button size="sm" type="button" variant="ghost">
-      <ShareIcon aria-hidden="true" className="tablet:hidden" />
+    <Button className="gap-1 px-2" size="sm" type="button" variant="ghost">
+      <ShareIcon aria-hidden="true" className="size-4.5" />
       <span className="sr-only tablet:not-sr-only">{t('open')}</span>
     </Button>
   )

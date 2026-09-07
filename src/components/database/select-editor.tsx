@@ -23,19 +23,22 @@ import { optionChipClass, optionDotClass } from './option-colors'
 
 export type EditorVariant = 'option' | 'person' | 'status'
 
-export function PersonChip({
-  option,
-  onRemove,
-  removeLabel,
-}: Readonly<{
+export type ChipProps = Readonly<{
   option: SelectOption
   onRemove?: () => void
   removeLabel?: string
-}>) {
+  small?: boolean
+}>
+
+const chipSize = (small: boolean) =>
+  small ? 'h-[18px] text-caption leading-[18px]' : 'h-5 text-body-small leading-5'
+
+export function PersonChip({ option, onRemove, removeLabel, small = false }: ChipProps) {
   return (
     <span
       className={cn(
-        'inline-flex h-5 max-w-full shrink-0 items-center gap-1.5 text-body-small leading-5',
+        'inline-flex max-w-full shrink-0 items-center gap-1.5',
+        chipSize(small),
         onRemove ? 'rounded-pill bg-surface-hover pr-1.5 pl-0.5' : null,
       )}
     >
@@ -62,19 +65,12 @@ export function PersonChip({
   )
 }
 
-export function StatusChip({
-  option,
-  onRemove,
-  removeLabel,
-}: Readonly<{
-  option: SelectOption
-  onRemove?: () => void
-  removeLabel?: string
-}>) {
+export function StatusChip({ option, onRemove, removeLabel, small = false }: ChipProps) {
   return (
     <span
       className={cn(
-        'inline-flex h-5 max-w-full shrink-0 items-center gap-1.5 rounded-medium px-1.5 font-regular text-body-small leading-5',
+        'inline-flex max-w-full shrink-0 items-center gap-1.5 rounded-medium px-1.5 font-regular',
+        chipSize(small),
         optionChipClass[option.color],
       )}
     >
@@ -103,19 +99,12 @@ export function StatusChip({
   )
 }
 
-export function OptionChip({
-  option,
-  onRemove,
-  removeLabel,
-}: Readonly<{
-  option: SelectOption
-  onRemove?: () => void
-  removeLabel?: string
-}>) {
+export function OptionChip({ option, onRemove, removeLabel, small = false }: ChipProps) {
   return (
     <span
       className={cn(
-        'inline-flex h-5 max-w-full shrink-0 items-center gap-1 rounded-medium px-1.5 font-regular text-body-small leading-5',
+        'inline-flex max-w-full shrink-0 items-center gap-1 rounded-medium px-1.5 font-regular',
+        chipSize(small),
         optionChipClass[option.color],
       )}
     >

@@ -19,6 +19,7 @@ type Props = Readonly<{
   properties: ReadonlyArray<DatabaseProperty>
   people: ReadonlyArray<Person>
   showIcons?: boolean
+  small?: boolean
   className?: string
 }>
 
@@ -27,12 +28,13 @@ export function CardProperties({
   properties,
   people,
   showIcons = true,
+  small = false,
   className,
 }: Props) {
   const locale = useLocale()
 
   return (
-    <dl className={cn('flex flex-col gap-1', className)}>
+    <dl className={cn('flex flex-col', small ? '' : 'gap-1', className)}>
       {properties.map((property) => {
         const options = optionsFor(property, people)
         const value = valueOf(row.values, property, options)
@@ -56,20 +58,28 @@ export function CardProperties({
               : OptionChip
 
         return (
-          <div className="flex items-center gap-2" key={property.id}>
+          <div
+            className={cn('flex items-center gap-2', small && 'py-[5px]')}
+            key={property.id}
+          >
             <dt className="flex shrink-0 items-center gap-1 text-caption text-content-subtle">
               {showIcons ? (
                 <PropertyIcon className="size-3.5" type={property.type} />
               ) : null}
               <span className="sr-only">{property.name}</span>
             </dt>
-            <dd className="flex min-w-0 flex-1 flex-wrap items-center gap-1 truncate text-caption text-content">
+            <dd
+              className={cn(
+                'flex min-w-0 flex-1 flex-wrap items-center truncate text-caption text-content',
+                small ? 'gap-x-1.5 gap-y-1' : 'gap-1',
+              )}
+            >
               {chipKinds.includes(property.type)
                 ? (Array.isArray(value) ? value : [value]).map((id) => {
                     const option = options.find((item) => item.id === id)
 
                     return option ? (
-                      <Chip key={option.id} option={option} />
+                      <Chip key={option.id} option={option} small={small} />
                     ) : null
                   })
                 : text}

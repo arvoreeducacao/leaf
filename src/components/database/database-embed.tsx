@@ -1,10 +1,8 @@
 'use client'
 
 import { useTranslations } from 'next-intl'
-import Link from 'next/link'
 import { useEffect, useState } from 'react'
 
-import { DatabaseIcon, ExpandIcon } from '@/components/icons'
 import { Skeleton } from '@/components/ui/skeleton'
 import type { DatabaseSnapshot } from '@/lib/databases'
 
@@ -67,7 +65,7 @@ export default function DatabaseEmbed({ databaseId }: Props) {
 
   if (state.status === 'loading') {
     return (
-      <div className="flex flex-col gap-2 rounded-large border border-line p-3">
+      <div className="flex flex-col gap-2 py-1">
         <span className="sr-only">{t('blockLoading')}</span>
         <Skeleton className="h-8 w-40" />
         <Skeleton className="h-24 w-full" />
@@ -84,27 +82,6 @@ export default function DatabaseEmbed({ databaseId }: Props) {
   }
 
   return (
-    <div className="flex flex-col gap-2 rounded-large border border-line p-3">
-      <div className="flex items-center gap-2">
-        <DatabaseIcon
-          aria-hidden="true"
-          className="size-4 shrink-0 text-content-subtle"
-        />
-        <Link
-          className="min-w-0 flex-1 truncate rounded-medium font-bold text-body-small text-content-strong transition-colors hover:text-link focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-2"
-          href={`/doc/${databaseId}`}
-        >
-          {state.snapshot.title}
-        </Link>
-        <Link
-          aria-label={t('openFullPage')}
-          className="flex size-8 shrink-0 items-center justify-center rounded-large text-content transition-colors hover:bg-surface-hover hover:text-content-strong focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-2"
-          href={`/doc/${databaseId}`}
-        >
-          <ExpandIcon aria-hidden="true" className="size-4" />
-        </Link>
-      </div>
-      <DatabaseView canEdit={state.canEdit} compact snapshot={state.snapshot} />
-    </div>
+    <DatabaseView canEdit={state.canEdit} compact snapshot={state.snapshot} />
   )
 }

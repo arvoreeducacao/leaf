@@ -149,6 +149,7 @@ export function RowMenu(props: Props) {
         <DropdownMenuTrigger asChild>
           <ButtonIcon
             aria-label={t('rowMenu', { title: label })}
+            className="size-9 p-1.5 tablet:size-6 tablet:p-1"
             size="medium"
             variant="ghost"
           >

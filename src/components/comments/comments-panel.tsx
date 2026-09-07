@@ -311,6 +311,7 @@ export function CommentsPanel({ documentId, initialOpenCount }: Props) {
   return (
     <>
       <Button
+        className="px-1 text-content-subtle"
         data-testid="comments-button"
         onClick={() => {
           setAnchorId(null)
@@ -320,7 +321,7 @@ export function CommentsPanel({ documentId, initialOpenCount }: Props) {
         type="button"
         variant="ghost"
       >
-        <ChatIcon aria-hidden="true" />
+        <ChatIcon aria-hidden="true" className="size-5" />
         <span className="sr-only">{t('open')}</span>
         {openCount > 0 ? (
           <>

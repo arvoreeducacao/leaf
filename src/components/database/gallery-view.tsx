@@ -26,6 +26,11 @@ type Props = Readonly<{
   compact?: boolean
 }>
 
+const coverHeight = 'h-[146px]'
+
+const cardRing =
+  'shadow-[0_0_0_1px_var(--color-line),0_2px_4px_rgba(15,15,15,0.06)]'
+
 function Cover({
   cover,
   preview,
@@ -36,7 +41,7 @@ function Cover({
     return (
       <span
         aria-hidden="true"
-        className="block h-28 w-full"
+        className={cn('block w-full', coverHeight)}
         style={{ background: gradient.css }}
       />
     )
@@ -48,14 +53,19 @@ function Cover({
     return (
       <img
         alt=""
-        className="block h-28 w-full object-cover"
+        className={cn('block w-full object-cover', coverHeight)}
         draggable={false}
         src={image}
       />
     )
   }
 
-  return <span aria-hidden="true" className="block h-28 w-full bg-surface-subtle" />
+  return (
+    <span
+      aria-hidden="true"
+      className={cn('block w-full bg-surface-subtle', coverHeight)}
+    />
+  )
 }
 
 export function GalleryView({
@@ -70,8 +80,13 @@ export function GalleryView({
   const t = useTranslations('database')
 
   return (
-    <div className={cn('flex flex-col gap-2', compact ? '' : 'px-4 tablet:px-24')}>
-      <ul className="grid grid-cols-1 gap-4 tablet:grid-cols-3 desktop:grid-cols-4">
+    <div className={compact ? undefined : 'px-4 tablet:px-24'}>
+      <ul
+        className={cn(
+          'grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-4 pb-1',
+          compact ? 'pt-3' : 'pt-4',
+        )}
+      >
         {rows.map((row) => {
           const title = row.title.trim().length > 0 ? row.title : t('untitledRow')
 
@@ -83,17 +98,22 @@ export function GalleryView({
                 rowId={row.id}
                 title={row.title}
               >
-                <article className="group/card flex h-full flex-col overflow-hidden rounded-large border border-line bg-surface-card shadow-down-small transition-colors hover:border-line-strong">
+                <article
+                  className={cn(
+                    'group/card flex h-full flex-col overflow-hidden rounded-xlarge bg-surface-card transition-colors hover:bg-surface-hover',
+                    cardRing,
+                  )}
+                >
                   <Cover cover={row.cover} preview={row.preview} />
-                  <div className="flex flex-1 flex-col gap-2 p-3">
-                    <div className="flex items-start gap-1">
+                  <div className="flex flex-1 flex-col pb-2">
+                    <div className="flex items-center gap-1 px-2.5 pt-2 pb-1.5">
                       <Link
-                        className="flex min-w-0 flex-1 items-start gap-1.5 rounded-medium font-bold text-body-small text-content-strong transition-colors hover:text-link focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-2"
+                        className="flex min-w-0 flex-1 items-center rounded-medium font-medium text-[15px] text-content-strong leading-normal focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-2"
                         href={`/doc/${row.id}`}
                       >
                         {showPageIcon ? (
                           <DocumentIcon
-                            className="mt-0.5 size-4 shrink-0 text-content-subtle"
+                            className="-ml-0.5 mr-1 size-5 shrink-0 text-[18px] text-content-subtle"
                             icon={row.icon}
                           />
                         ) : null}
@@ -109,9 +129,12 @@ export function GalleryView({
                       </div>
                     </div>
                     <CardProperties
+                      className="px-[11px]"
                       people={people}
                       properties={properties}
                       row={row}
+                      showIcons={false}
+                      small
                     />
                   </div>
                 </article>
@@ -119,18 +142,23 @@ export function GalleryView({
             </li>
           )
         })}
-      </ul>
 
-      {canEdit ? (
-        <button
-          className="flex h-9 w-fit cursor-pointer items-center gap-1.5 rounded-large px-2 text-body-small text-content transition-colors hover:bg-surface-hover hover:text-content-strong focus-visible:outline-2 focus-visible:outline-focus focus-visible:-outline-offset-2"
-          onClick={() => handlers.createRow()}
-          type="button"
-        >
-          <PlusIcon aria-hidden="true" className="size-4" />
-          {t('newRow')}
-        </button>
-      ) : null}
+        {canEdit ? (
+          <li>
+            <button
+              className={cn(
+                'flex h-10 w-full cursor-pointer items-center justify-center gap-1 rounded-xlarge px-3.5 text-[15px] text-content-subtle transition-colors hover:bg-surface-hover hover:text-content-strong focus-visible:outline-2 focus-visible:outline-focus focus-visible:-outline-offset-2',
+                cardRing,
+              )}
+              onClick={() => handlers.createRow()}
+              type="button"
+            >
+              <PlusIcon aria-hidden="true" className="size-4" />
+              {t('newRow')}
+            </button>
+          </li>
+        ) : null}
+      </ul>
     </div>
   )
 }

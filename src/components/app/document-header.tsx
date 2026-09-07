@@ -19,8 +19,9 @@ import {
   documentTitleInputId,
   requestEditorFocus,
 } from '@/components/editor/focus-bridge'
+import { CrumbSeparator, crumbClass } from '@/components/app/document-breadcrumb'
 import { ClipboardContentIcon, HappyIcon } from '@/components/icons'
-import { ChevronRightIcon, PeopleIcon } from '@/components/icons/outline'
+import { PeopleIcon } from '@/components/icons/outline'
 import { ShareButton } from '@/components/sharing/share-button'
 import { Button } from '@/components/ui/button'
 import { ButtonIcon } from '@/components/ui/button-icon'
@@ -31,6 +32,8 @@ import {
 } from '@/lib/document-actions'
 import { readDocumentIcon } from '@/lib/document-icon'
 import { cn } from '@/shared/utils'
+
+const dayInMs = 24 * 60 * 60 * 1000
 
 type Props = Readonly<{
   documentId: string
@@ -81,6 +84,13 @@ export function DocumentHeader({
   const loadedFor = useRef(documentId)
   const fieldRef = useRef<HTMLTextAreaElement>(null)
   const hasIcon = readDocumentIcon(icon) !== null
+  const editedAt =
+    updatedAt && updatedAt.getTime() > now.getTime() ? now : updatedAt
+  const editedLabel = editedAt
+    ? now.getTime() - editedAt.getTime() < dayInMs
+      ? format.relativeTime(editedAt, now)
+      : format.dateTime(editedAt, { day: 'numeric', month: 'short' })
+    : null
 
   const fitToContent = useCallback(() => {
     const field = fieldRef.current
@@ -136,69 +146,65 @@ export function DocumentHeader({
 
   const topbar = (
     <>
-      <div className="flex min-w-0 flex-1 items-center gap-1 text-body-small text-content">
-        {sharedWithOrganization ? (
+      <div className="flex min-w-0 flex-1 items-center text-body-small text-content">
+        {sharedWithOrganization && !teamspaceName ? (
           <>
             <span
-              className="hidden min-w-0 shrink items-center rounded-large px-1.5 py-0.5 desktop:inline-flex"
+              className={cn(crumbClass, 'hidden shrink desktop:inline-flex')}
               data-testid="document-org-tag"
               title={t('orgTagHint')}
             >
-              <PeopleIcon aria-hidden="true" className="mr-1.5 size-4 shrink-0" />
+              <PeopleIcon aria-hidden="true" className="mr-1 size-4.5 shrink-0" />
               <span className="min-w-0 truncate">{t('orgTag')}</span>
             </span>
-            <ChevronRightIcon
-              aria-hidden="true"
-              className="hidden size-3 shrink-0 text-content-disabled desktop:block"
-            />
+            <span className="hidden desktop:contents">
+              <CrumbSeparator />
+            </span>
           </>
         ) : null}
         {teamspaceName ? (
           <>
             <span
-              className="hidden min-w-0 max-w-40 shrink items-center rounded-large px-1.5 py-0.5 tablet:inline-flex"
+              className={cn(crumbClass, 'hidden shrink tablet:inline-flex')}
               data-testid="document-teamspace-tag"
               title={tTeamspace('badgeHint')}
             >
-              <PeopleIcon aria-hidden="true" className="mr-1.5 size-4 shrink-0" />
+              <PeopleIcon aria-hidden="true" className="mr-1 size-4.5 shrink-0" />
               <span className="min-w-0 truncate">{teamspaceName}</span>
             </span>
-            <ChevronRightIcon
-              aria-hidden="true"
-              className="hidden size-3 shrink-0 text-content-disabled tablet:block"
-            />
+            <span className="hidden tablet:contents">
+              <CrumbSeparator />
+            </span>
           </>
         ) : null}
         {breadcrumb}
-        {breadcrumb ? (
-          <ChevronRightIcon
-            aria-hidden="true"
-            className="size-3 shrink-0 text-content-disabled"
+        {breadcrumb ? <CrumbSeparator /> : null}
+        <span className={cn(crumbClass, 'shrink-0 hover:bg-transparent')}>
+          <DocumentIcon
+            className="mr-1 size-4.5 text-[16px]"
+            icon={icon}
+            kind={kind}
           />
-        ) : null}
-        <span className="inline-flex min-w-0 shrink-0 basis-24 items-center rounded-large px-1.5 py-0.5 text-content-strong">
-          <DocumentIcon className="mr-1.5 size-4" icon={icon} kind={kind} />
           <span className="min-w-0 truncate">
             {value.trim().length > 0 ? value : t('untitled')}
           </span>
         </span>
       </div>
 
-      <div className="flex shrink-0 items-center justify-end gap-1">
+      <div className="flex shrink-0 items-center justify-end gap-0.5">
         <span className="hidden desktop:contents">
           <DocumentStatus />
         </span>
-        {updatedAt ? (
-          <span className="hidden shrink-0 px-1.5 text-caption text-content-subtle desktop-xlarge:inline">
-            {t('editedAt', { time: format.relativeTime(updatedAt, now) })}
+        {editedLabel ? (
+          <span className="hidden shrink-0 px-2 text-body-small text-content-subtle desktop:inline">
+            {t('editedAt', { time: editedLabel })}
           </span>
         ) : null}
         <PresenceIndicator />
-        <FavoriteButton documentId={documentId} />
-        <CommentsPanel documentId={documentId} initialOpenCount={openComments} />
         <ShareButton canShare={isOwner} documentId={documentId} />
         <ButtonIcon
           aria-label={t('copyLink')}
+          className="[&_svg]:size-5"
           onClick={() => {
             void navigator.clipboard
               .writeText(window.location.href)
@@ -209,6 +215,8 @@ export function DocumentHeader({
         >
           <ClipboardContentIcon aria-hidden="true" />
         </ButtonIcon>
+        <CommentsPanel documentId={documentId} initialOpenCount={openComments} />
+        <FavoriteButton documentId={documentId} />
         <DocumentMenu
           canEdit={canEdit}
           canMoveToTeamspace={canMoveToTeamspace}

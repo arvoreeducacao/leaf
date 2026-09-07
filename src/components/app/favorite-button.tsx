@@ -51,6 +51,7 @@ export function FavoriteButton({
         <ButtonIcon
           aria-label={label}
           aria-pressed={favorited}
+          className="[&_svg]:size-5"
           disabled={pending}
           onClick={handleClick}
           size="medium"
