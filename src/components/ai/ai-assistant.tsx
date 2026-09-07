@@ -298,9 +298,7 @@ export function AiAssistant() {
               <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full border border-line bg-surface-card text-content-strong">
                 <AiFace
                   size={18}
-                  state={
-                    turn.id === last?.id ? state : ('resting' as FaceState)
-                  }
+                  state={turn.id === last?.id ? state : 'resting'}
                 />
               </span>
               <div className="min-w-0 flex-1">
