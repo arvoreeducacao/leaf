@@ -157,7 +157,7 @@ export function ViewToolbar({
 
           if (renaming === view.id) {
             return (
-              <li key={view.id}>
+              <li className="shrink-0" key={view.id}>
                 <input
                   aria-label={t('viewNameLabel')}
                   autoFocus
@@ -199,7 +199,7 @@ export function ViewToolbar({
           )
 
           return (
-            <li className="flex items-center" key={view.id}>
+            <li className="flex shrink-0 items-center" key={view.id}>
               {canEdit && active ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>{tab}</DropdownMenuTrigger>
@@ -225,7 +225,7 @@ export function ViewToolbar({
         })}
 
         {canEdit ? (
-          <li>
+          <li className="shrink-0">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <ButtonIcon
