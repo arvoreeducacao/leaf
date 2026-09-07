@@ -97,7 +97,7 @@ export function canWrite(context: McpToolContext) {
   return isMcpWriteEnabled() && context.scopes.includes(mcpWriteScope)
 }
 
-function documentUrl(id: string) {
+export function documentUrl(id: string) {
   return `${authIssuer()}/doc/${id}`
 }
 
@@ -105,7 +105,7 @@ function toIso(value: Date | string) {
   return value instanceof Date ? value.toISOString() : new Date(value).toISOString()
 }
 
-function requireDocumentId(value: string) {
+export function requireDocumentId(value: string) {
   if (!isDocumentIdShaped(value)) {
     throw new McpToolError('invalid_argument', 'documentId is malformed')
   }
@@ -113,13 +113,13 @@ function requireDocumentId(value: string) {
   return value
 }
 
-function requireWrite(context: McpToolContext) {
+export function requireWrite(context: McpToolContext) {
   if (!canWrite(context)) {
     throw new McpToolError('write_disabled', 'writing is not available')
   }
 }
 
-function clampLimit(limit: number | undefined, fallback: number) {
+export function clampLimit(limit: number | undefined, fallback: number) {
   if (limit === undefined || !Number.isFinite(limit)) {
     return fallback
   }
@@ -127,7 +127,7 @@ function clampLimit(limit: number | undefined, fallback: number) {
   return Math.min(MAX_MCP_RESULTS, Math.max(1, Math.trunc(limit)))
 }
 
-async function requireReadable(
+export async function requireReadable(
   documentId: string,
   context: McpToolContext,
 ): Promise<{ access: AccessLevel; document: Document }> {
@@ -494,7 +494,7 @@ function requireHtml(html: string) {
 
 type WrittenBody = Readonly<{ markdown?: string; html?: string }>
 
-async function blocksOf(body: WrittenBody, required: boolean) {
+export async function blocksOf(body: WrittenBody, required: boolean) {
   const markdown = body.markdown ?? ''
   const html = body.html ?? ''
 

@@ -486,6 +486,7 @@ describe('servidor MCP', () => {
       'list_comments',
       'list_documents',
       'list_organizations',
+      'query_database',
       'search_documents',
     ])
 

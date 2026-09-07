@@ -232,13 +232,20 @@ revoga os aplicativos autorizados em **Aplicativos conectados**, no menu da
 conta (`/connected-apps`); revogar apaga o consentimento e invalida os refresh
 tokens daquele cliente.
 
-Tools: `search_documents`, `get_document`, `list_documents`,
-`list_organizations`, `get_database`, `list_comments`, `create_document`,
-`update_document` (append/replace, recusa escrever se a página foi editada nos
-últimos 15 s — provavelmente há uma sala de colaboração aberta — e usa guard
-otimista no `updated_at`). Nada de apagar, compartilhar, link público ou
-membros. Limites: body até 1 MB, 60 chamadas/min por pessoa, até 50 resultados
-por chamada, markdown até 400 mil caracteres.
+Tools de leitura: `search_documents`, `get_document`, `list_documents`,
+`list_organizations`, `get_database`, `query_database` (filtro, busca e
+ordenação por nome de propriedade, valores em texto e crus) e `list_comments`.
+Tools de escrita (escopo `leaf:write`): `create_document`, `update_document`
+(append/replace, recusa escrever se a página foi editada nos últimos 15 s,
+provavelmente há uma sala de colaboração aberta, e usa guard otimista no
+`updated_at`), `upload_image`, e as de base de dados: `create_database`,
+`create_database_row`, `update_database_row`, `delete_database_row` (vai pra
+lixeira), `add_database_property`, `update_database_property`,
+`delete_database_property`, `create_database_view` e `update_database_view`.
+Toda referência a propriedade aceita nome ou id; opção de seleção e pessoa
+aceitam nome. Lixeira sim, apagar pra sempre não; compartilhar, link público e
+membros continuam fora. Limites: body até 1 MB, 60 chamadas/min por pessoa, até
+50 resultados por chamada, markdown até 400 mil caracteres.
 
 Como conectar (troque `https://leaf.exemplo.org` pela `BETTER_AUTH_URL` da sua
 instalação):
