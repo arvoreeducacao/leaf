@@ -57,3 +57,16 @@ export function hasValidRealtimeSecret(request: Request) {
 
   return request.headers.get(realtimeSecretHeader) === expected
 }
+
+export function realtimeServerUrl() {
+  const configured = process.env.LEAF_REALTIME_SERVER_URL?.trim()
+
+  if (configured && configured.length > 0) {
+    return configured.replace(/\/+$/, '')
+  }
+
+  return realtimeClientUrl()
+    .replace(/^wss:/, 'https:')
+    .replace(/^ws:/, 'http:')
+    .replace(/\/+$/, '')
+}

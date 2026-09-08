@@ -40,6 +40,8 @@ if (!enabled) {
 }
 
 const seedOrigin = Symbol('leaf-seed')
+const appOrigin = Symbol('leaf-app')
+const maxBodyBytes = 4_000_000
 const rooms = new Map()
 
 function log(...args) {
@@ -507,9 +509,152 @@ function setupConnection(connection, room, access) {
   })
 }
 
+function readBody(request) {
+  return new Promise((resolve, reject) => {
+    const chunks = []
+    let size = 0
+
+    request.on('data', (chunk) => {
+      size += chunk.length
+
+      if (size > maxBodyBytes) {
+        reject(new Error('body too large'))
+        request.destroy()
+
+        return
+      }
+
+      chunks.push(chunk)
+    })
+    request.on('end', () => resolve(Buffer.concat(chunks)))
+    request.on('error', reject)
+  })
+}
+
+function answer(response, status, payload) {
+  response.writeHead(status, { 'content-type': 'application/json' })
+  response.end(JSON.stringify(payload))
+}
+
+async function liveRoom(documentId) {
+  const pending = rooms.get(documentId)
+
+  if (!pending) {
+    return null
+  }
+
+  const result = await pending
+
+  return result.status === 'ok' ? result.room : null
+}
+
+function roomRoute(pathname) {
+  const match = /^\/rooms\/([^/]+)(\/update)?$/.exec(pathname)
+
+  if (!match) {
+    return null
+  }
+
+  const documentId = documentIdFromPath(`/${match[1]}`)
+
+  return documentId ? { documentId, update: match[2] === '/update' } : null
+}
+
+async function applyAppUpdate(room, request, response) {
+  let body
+
+  try {
+    body = JSON.parse((await readBody(request)).toString('utf8'))
+  } catch {
+    answer(response, 400, { status: 'bad-request' })
+
+    return
+  }
+
+  const update =
+    typeof body?.update === 'string' && body.update.length > 0
+      ? new Uint8Array(Buffer.from(body.update, 'base64'))
+      : null
+
+  if (!update || update.byteLength === 0) {
+    answer(response, 400, { status: 'bad-request' })
+
+    return
+  }
+
+  if (typeof body.authorId === 'string' && body.authorId.length > 0) {
+    room.lastAuthorId = body.authorId
+  }
+
+  try {
+    Y.applyUpdate(room.doc, update, appOrigin)
+  } catch (error) {
+    log('rejected an update from the app', room.documentId, error.message)
+    answer(response, 422, { status: 'unreadable' })
+
+    return
+  }
+
+  log('applied an update from the app', room.documentId)
+  answer(response, 200, {
+    status: 'ok',
+    applied: true,
+    connections: room.connections.size,
+  })
+}
+
+async function handleHttp(request, response) {
+  const url = new URL(request.url ?? '/', 'http://localhost')
+  const route = roomRoute(url.pathname)
+
+  if (!route) {
+    response.writeHead(200, { 'content-type': 'text/plain' })
+    response.end('leaf realtime')
+
+    return
+  }
+
+  if (request.headers['x-leaf-realtime-secret'] !== secret) {
+    answer(response, 404, { status: 'not-found' })
+
+    return
+  }
+
+  const room = await liveRoom(route.documentId)
+
+  if (!room) {
+    answer(response, 404, { status: 'no-room' })
+
+    return
+  }
+
+  if (!route.update && request.method === 'GET') {
+    answer(response, 200, {
+      status: 'ok',
+      state: Buffer.from(Y.encodeStateAsUpdate(room.doc)).toString('base64'),
+      connections: room.connections.size,
+    })
+
+    return
+  }
+
+  if (route.update && request.method === 'POST') {
+    await applyAppUpdate(room, request, response)
+
+    return
+  }
+
+  answer(response, 405, { status: 'method-not-allowed' })
+}
+
 const server = createServer((request, response) => {
-  response.writeHead(200, { 'content-type': 'text/plain' })
-  response.end('leaf realtime')
+  handleHttp(request, response).catch((error) => {
+    log('http request failed', error.message)
+
+    if (!response.headersSent) {
+      answer(response, 500, { status: 'error' })
+    }
+  })
 })
 
 const wss = new WebSocketServer({ noServer: true })

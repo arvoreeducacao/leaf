@@ -27,7 +27,10 @@ The pieces you need:
 - **Two processes from the same image**: the Next.js app, and the collaboration
   server (`node scripts/dev-realtime.mjs`) that speaks the y-websocket protocol.
   Point the app at it with `LEAF_REALTIME_URL` and share `LEAF_REALTIME_SECRET`
-  between them.
+  between them. The app also calls that process over plain HTTP to write into
+  rooms that are open (MCP writes, for one): set `LEAF_REALTIME_SERVER_URL` to
+  its internal address when the public `LEAF_REALTIME_URL` does not route HTTP
+  to the same process.
 
 Anything else — SSO, AI, Unsplash, Notion import, semantic search — is optional
 and switches itself off when its keys are absent.
