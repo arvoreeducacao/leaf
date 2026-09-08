@@ -15,6 +15,7 @@ export type SaveStatus =
 export type ConnectionStatus =
   | 'connected'
   | 'reconnecting'
+  | 'lost'
   | 'offline'
   | 'solo'
 
@@ -105,5 +106,19 @@ export function onSaveRetryRequest(handler: () => void) {
 
   return () => {
     window.removeEventListener(retryEvent, handler)
+  }
+}
+
+const reconnectEvent = 'leaf:reconnect-realtime'
+
+export function requestRealtimeReconnect() {
+  window.dispatchEvent(new Event(reconnectEvent))
+}
+
+export function onRealtimeReconnectRequest(handler: () => void) {
+  window.addEventListener(reconnectEvent, handler)
+
+  return () => {
+    window.removeEventListener(reconnectEvent, handler)
   }
 }

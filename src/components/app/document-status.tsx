@@ -16,6 +16,7 @@ import type {
 } from '@/components/editor/status-bridge'
 import {
   readOnlyHintId,
+  requestRealtimeReconnect,
   requestSaveRetry,
   useEditorStatus,
 } from '@/components/editor/status-bridge'
@@ -53,6 +54,27 @@ function ConnectionChip({
           <CloudOffIcon aria-hidden="true" className="size-3.5" />
           {tOffline('badge')}
         </p>
+      </>
+    )
+  }
+
+  if (connection === 'lost') {
+    return (
+      <>
+        <span aria-live="polite" className="sr-only" role="status">
+          {t('lost')}
+        </span>
+        <p className="flex items-center gap-1 whitespace-nowrap text-content-subtle">
+          <CloudOffIcon aria-hidden="true" className="size-3.5" />
+          {t('lost')}
+        </p>
+        <button
+          className="cursor-pointer whitespace-nowrap underline underline-offset-2 hover:text-content-strong"
+          onClick={requestRealtimeReconnect}
+          type="button"
+        >
+          {t('retry')}
+        </button>
       </>
     )
   }

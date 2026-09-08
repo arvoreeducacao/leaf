@@ -1139,7 +1139,9 @@
     "reconnecting": "Reconnecting. Your changes are saved on this device",
     "someone": "Someone",
     "you": "{name} (you)",
-    "peopleHere": "{count, plural, one {# person in this document} other {# people in this document}}"
+    "peopleHere": "{count, plural, one {# person in this document} other {# people in this document}}",
+    "lost": "Live collaboration is off",
+    "retry": "Try again"
   },
   "offline": {
     "banner": "No connection",

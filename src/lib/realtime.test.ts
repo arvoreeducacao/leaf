@@ -1,8 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
+import { readFileSync } from 'node:fs'
+
 import {
   documentIdFromRoom,
   isDocumentIdShaped,
+  realtimeCloseCodes,
+  realtimeCloseIsFinal,
   realtimeRoomName,
   realtimeSecretHeader,
 } from './realtime'
@@ -152,5 +156,34 @@ describe('identity of the people in the room', () => {
     expect(peers.map((peer) => peer.name)).toEqual(['Someone', 'Ana'])
     expect(peers.find((peer) => peer.clientId === 7)?.isSelf).toBe(true)
     expect(peers.find((peer) => peer.clientId === 3)?.isSelf).toBe(false)
+  })
+})
+
+describe('realtimeCloseIsFinal', () => {
+  it('marks the range the websocket client refuses to retry', () => {
+    expect(realtimeCloseIsFinal(4400)).toBe(true)
+    expect(realtimeCloseIsFinal(4499)).toBe(true)
+    expect(realtimeCloseIsFinal(4399)).toBe(false)
+    expect(realtimeCloseIsFinal(4500)).toBe(false)
+    expect(realtimeCloseIsFinal(1006)).toBe(false)
+  })
+
+  it('only ends the session for reasons a retry cannot fix', () => {
+    expect(realtimeCloseIsFinal(realtimeCloseCodes.forbidden)).toBe(true)
+    expect(realtimeCloseIsFinal(realtimeCloseCodes.notFound)).toBe(true)
+    expect(realtimeCloseIsFinal(realtimeCloseCodes.unreadable)).toBe(true)
+  })
+
+  it('keeps retrying when the server could not answer, which a deploy causes', () => {
+    expect(realtimeCloseIsFinal(realtimeCloseCodes.unavailable)).toBe(false)
+  })
+
+  it('agrees with the codes the collaboration server actually sends', () => {
+    const server = readFileSync('scripts/dev-realtime.mjs', 'utf8')
+
+    for (const [name, code] of Object.entries(realtimeCloseCodes)) {
+      expect(server).toContain(`= ${code}`)
+      expect(name.length).toBeGreaterThan(0)
+    }
   })
 })

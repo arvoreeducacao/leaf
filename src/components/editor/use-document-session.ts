@@ -22,6 +22,7 @@ import { avatarUrlFor } from '@/lib/avatar'
 import { peersFromAwareness, realtimeColorFor } from '@/lib/realtime-user'
 
 import { publishPresence, resetPresence } from './presence-bridge'
+import { onRealtimeReconnectRequest } from './status-bridge'
 import { markLive, unmarkLive } from '@/lib/offline/live-documents'
 
 export type DocumentUser = Readonly<{
@@ -39,7 +40,12 @@ export type DocumentSession = Readonly<{
 
 export type SessionPhase = 'loading' | 'ready' | 'unavailable'
 
-export type SessionConnection = 'connected' | 'reconnecting' | 'offline' | 'solo'
+export type SessionConnection =
+  | 'connected'
+  | 'reconnecting'
+  | 'lost'
+  | 'offline'
+  | 'solo'
 
 const snapshotTimeoutMs = 4_000
 const offlineRetryMs = 5_000
@@ -148,6 +154,7 @@ export function useDocumentSession({
     let syncTimeout = 0
     let pendingRetry: (() => void) | null = null
     let retryTimer = 0
+    let stopReconnectRequests = () => {}
 
     function runPendingRetry() {
       const retry = pendingRetry
@@ -164,6 +171,7 @@ export function useDocumentSession({
       }
 
       disposed = true
+      stopReconnectRequests()
       window.clearTimeout(syncTimeout)
       window.removeEventListener('online', runPendingRetry)
       window.clearTimeout(retryTimer)
@@ -270,6 +278,25 @@ export function useDocumentSession({
         }
 
         publishPeers(online)
+      })
+
+      socket.on('closed', () => {
+        if (disposed) {
+          return
+        }
+
+        unmarkLive(documentId)
+        setConnection('lost')
+        publishPeers(false)
+      })
+
+      stopReconnectRequests = onRealtimeReconnectRequest(() => {
+        if (disposed || socket.shouldConnect) {
+          return
+        }
+
+        setConnection('reconnecting')
+        socket.connect()
       })
 
       socket.awareness.on('change', () => publishPeers(online))
