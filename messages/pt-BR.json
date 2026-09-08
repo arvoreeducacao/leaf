@@ -1163,7 +1163,7 @@
     "iosStepShare": "Toque em Compartilhar, na barra de baixo",
     "iosStepAdd": "Escolha \"Adicionar à Tela de Início\"",
     "iosStepConfirm": "Toque em Adicionar, no canto de cima",
-    "iosBrowserBody": "Abra leaf.arvore.com.br no Safari e toque em Compartilhar para adicionar o Leaf à Tela de Início. Os outros navegadores do iPhone não conseguem fazer isso."
+    "iosBrowserBody": "Abra {host} no Safari e toque em Compartilhar para adicionar o Leaf à Tela de Início. Os outros navegadores do iPhone não conseguem fazer isso."
   },
   "join": {
     "heading": "Você recebeu um convite para entrar em {org}",
