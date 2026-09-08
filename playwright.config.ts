@@ -27,12 +27,12 @@ export default defineConfig({
     {
       name: 'desktop',
       use: { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 900 } },
-      testIgnore: /(mobile|realtime|restricted-auth|sso-auth)\.spec\.ts/,
+      testIgnore: /(mobile|install|realtime|restricted-auth|sso-auth)\.spec\.ts/,
     },
     {
       name: 'mobile',
       use: { ...devices['Desktop Chrome'], viewport: { width: 375, height: 780 } },
-      testMatch: /mobile\.spec\.ts/,
+      testMatch: /(mobile|install)\.spec\.ts/,
     },
     {
       name: 'realtime',

@@ -70,9 +70,20 @@ Leaf opens and edits with no network. Three independent layers, and none of them
 
 Navigating from the sidebar is not a browser navigation — Next only fetches the payload, so the page HTML would never enter the cache. That is why the client asks the service worker to *warm* the open page (`leaf:warm-page`), on the first visit and again when the tab is hidden. It is what makes a refresh with no network still open the document instead of the offline screen.
 
-### Instalação como app (desktop)
+### Instalação como app (desktop, Android e iPhone)
 
-O Leaf é instalável no Chrome e no Edge do desktop: `public/manifest.webmanifest` (id, escopo, ícones PNG 192/512 e um maskable de sangria total em `public/icon-maskable.svg`) mais o `apple-touch-icon.png` e as metatags de web app no `src/app/layout.tsx`. O menu da pessoa ganha **Instalar o Leaf** quando um navegador de desktop entrega o `beforeinstallprompt`; instalado (display standalone), o item some. No celular o item nunca aparece e o evento é engolido — a barra "adicionar à tela inicial" do Chrome no Android não sobe — porque lá o caminho é o app nativo. Os ícones PNG são gerados uma vez a partir dos SVGs de `public/` — ao mudar o logo, regenere os quatro.
+O Leaf é instalável no desktop, no Android e no iPhone: `public/manifest.webmanifest` (id, escopo, ícones PNG 192/512 e um maskable de sangria total em `public/icon-maskable.svg`) mais o `apple-touch-icon.png` e as metatags de web app no `src/app/layout.tsx`. Os ícones PNG são gerados uma vez a partir dos SVGs de `public/`; ao mudar o logo, regenere os quatro.
+
+Quem decide o que oferecer é `installOfferFor` (`src/lib/pwa/install.ts`), com quatro respostas:
+
+| Resposta | Onde | O que acontece |
+|---|---|---|
+| `prompt` | Chrome e Edge, no desktop e no Android | chama o `beforeinstallprompt` que o navegador entregou |
+| `ios-safari` | Safari do iPhone e do iPad | abre a folha ensinando Compartilhar › Adicionar à Tela de Início, porque no iOS o site não se instala sozinho |
+| `ios-browser` | Chrome, Firefox e afins no iPhone | manda abrir no Safari, o único que adiciona à tela de início no iOS |
+| `none` | já instalado, ou navegador sem caminho nenhum | não oferece nada |
+
+A oferta aparece em dois lugares: o item **Instalar o Leaf** no menu da pessoa e em `/preferences`, e uma faixa no topo só no celular (`InstallBanner`, escondida a partir de `tablet:`). Dispensar a faixa é definitivo e fica guardado no aparelho (`leaf:install-banner-dismissed` no `localStorage`); o item do menu continua lá para quem mudar de ideia. O `beforeinstallprompt` é capturado no módulo, não no componente, porque no celular o menu vive dentro do Sheet e só monta muito depois de o navegador disparar o evento.
 
 ### Why the Yjs state became a table
 

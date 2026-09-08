@@ -79,7 +79,7 @@
     "languageHint": "Choose the language you want to use Leaf in",
     "sectionLanguage": "Language and time",
     "sectionApp": "App",
-    "installAppHint": "Open Leaf straight from your computer, without the browser"
+    "installAppHint": "Open Leaf straight from your device, without the browser"
   },
   "account": {
     "title": "Account",
@@ -1152,6 +1152,18 @@
     "retry": "Try again",
     "documentUnavailableTitle": "This document is not available offline yet",
     "documentUnavailableBody": "Open it once with a connection and it starts working offline on this device."
+  },
+  "install": {
+    "bannerBody": "Install Leaf on your phone",
+    "bannerAction": "Install",
+    "bannerDismiss": "Dismiss",
+    "iosTitle": "Add Leaf to your Home Screen",
+    "iosSafariSubtitle": "Three taps, and Leaf opens like an app.",
+    "iosBrowserSubtitle": "On the iPhone, only Safari can do this.",
+    "iosStepShare": "Tap Share, on the bottom bar",
+    "iosStepAdd": "Pick \"Add to Home Screen\"",
+    "iosStepConfirm": "Tap Add, on the top corner",
+    "iosBrowserBody": "Open leaf.arvore.com.br in Safari and tap Share to add Leaf to your Home Screen. The other iPhone browsers cannot do it."
   },
   "join": {
     "heading": "You've been invited to join {org}",

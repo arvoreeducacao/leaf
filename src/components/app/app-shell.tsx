@@ -12,6 +12,7 @@ import type { CustomizableSection } from '@/components/app/customize-sidebar'
 import { CustomizeSidebar } from '@/components/app/customize-sidebar'
 import { DocumentList } from '@/components/app/document-list'
 import { DocumentTree } from '@/components/app/document-tree'
+import { InstallBanner, InstallGuide } from '@/components/app/install-app'
 import { NewDocumentButton } from '@/components/app/new-document-button'
 import { NotionImportButton } from '@/components/app/notion-import-button'
 import { NotionImportHost } from '@/components/app/notion-import-host'
@@ -365,6 +366,7 @@ export function AppShell({
       />
       <NotionImportHost />
       <OfflineSync />
+      <InstallGuide />
 
       <aside
         aria-hidden={collapsed || undefined}
@@ -477,6 +479,8 @@ export function AppShell({
 
           <OfflineBanner />
         </header>
+
+        <InstallBanner />
 
         <main className="min-w-0 flex-1">{children}</main>
       </div>

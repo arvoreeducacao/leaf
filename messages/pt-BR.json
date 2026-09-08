@@ -79,7 +79,7 @@
     "languageHint": "Escolha o idioma em que você quer usar o Leaf",
     "sectionLanguage": "Idioma e horário",
     "sectionApp": "Aplicativo",
-    "installAppHint": "Abra o Leaf direto do computador, sem passar pelo navegador"
+    "installAppHint": "Abra o Leaf direto do aparelho, sem passar pelo navegador"
   },
   "account": {
     "title": "Conta",
@@ -1152,6 +1152,18 @@
     "retry": "Tentar de novo",
     "documentUnavailableTitle": "Este documento ainda não está disponível offline",
     "documentUnavailableBody": "Abra ele uma vez com internet e ele passa a funcionar sem conexão neste aparelho."
+  },
+  "install": {
+    "bannerBody": "Instale o Leaf no seu celular",
+    "bannerAction": "Instalar",
+    "bannerDismiss": "Dispensar",
+    "iosTitle": "Adicione o Leaf à Tela de Início",
+    "iosSafariSubtitle": "São três toques, e o Leaf abre como um app.",
+    "iosBrowserSubtitle": "No iPhone, só o Safari faz isso.",
+    "iosStepShare": "Toque em Compartilhar, na barra de baixo",
+    "iosStepAdd": "Escolha \"Adicionar à Tela de Início\"",
+    "iosStepConfirm": "Toque em Adicionar, no canto de cima",
+    "iosBrowserBody": "Abra leaf.arvore.com.br no Safari e toque em Compartilhar para adicionar o Leaf à Tela de Início. Os outros navegadores do iPhone não conseguem fazer isso."
   },
   "join": {
     "heading": "Você recebeu um convite para entrar em {org}",
