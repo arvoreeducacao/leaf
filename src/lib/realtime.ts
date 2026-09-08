@@ -65,3 +65,23 @@ export function realtimeConnectionFrom(
 
   return provider.connected && provider.synced ? 'connected' : 'reconnecting'
 }
+
+export type RealtimeChip = 'none' | 'offline' | 'lost' | 'reconnecting'
+
+export function realtimeChipFor(
+  state: Readonly<{ online: boolean; connection: RealtimeConnection | 'solo' }>,
+): RealtimeChip {
+  if (!state.online) {
+    return 'offline'
+  }
+
+  if (state.connection === 'connected' || state.connection === 'solo') {
+    return 'none'
+  }
+
+  if (state.connection === 'offline') {
+    return 'offline'
+  }
+
+  return state.connection === 'lost' ? 'lost' : 'reconnecting'
+}

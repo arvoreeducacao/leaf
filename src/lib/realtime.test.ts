@@ -7,6 +7,7 @@ import {
   isDocumentIdShaped,
   realtimeCloseCodes,
   realtimeCloseIsFinal,
+  realtimeChipFor,
   realtimeConnectionFrom,
   realtimeRoomName,
   realtimeSecretHeader,
@@ -249,5 +250,44 @@ describe('realtimeConnectionFrom', () => {
     expect(realtimeConnectionFrom({ ...stuck, connected: true, synced: true })).toBe(
       'connected',
     )
+  })
+})
+
+describe('realtimeChipFor', () => {
+  it('says nothing when the connection is healthy', () => {
+    expect(realtimeChipFor({ online: true, connection: 'connected' })).toBe(
+      'none',
+    )
+    expect(realtimeChipFor({ online: true, connection: 'solo' })).toBe('none')
+  })
+
+  it('never calls a healthy connection reconnecting', () => {
+    for (const connection of ['connected', 'solo'] as const) {
+      expect(realtimeChipFor({ online: true, connection })).not.toBe(
+        'reconnecting',
+      )
+    }
+  })
+
+  it('warns only while something is actually wrong', () => {
+    expect(realtimeChipFor({ online: true, connection: 'reconnecting' })).toBe(
+      'reconnecting',
+    )
+    expect(realtimeChipFor({ online: true, connection: 'lost' })).toBe('lost')
+    expect(realtimeChipFor({ online: true, connection: 'offline' })).toBe(
+      'offline',
+    )
+  })
+
+  it('puts the browser being offline above the session state', () => {
+    for (const connection of [
+      'connected',
+      'solo',
+      'reconnecting',
+      'lost',
+      'offline',
+    ] as const) {
+      expect(realtimeChipFor({ online: false, connection })).toBe('offline')
+    }
   })
 })

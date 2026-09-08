@@ -21,6 +21,7 @@ import {
   useEditorStatus,
 } from '@/components/editor/status-bridge'
 import { Button } from '@/components/ui/button'
+import { realtimeChipFor } from '@/lib/realtime'
 import { useOnlineStatus } from '@/shared/hooks/use-online-status'
 import { cn } from '@/shared/utils'
 
@@ -39,12 +40,13 @@ function ConnectionChip({
 }: Readonly<{ connection: ConnectionStatus; online: boolean }>) {
   const t = useTranslations('realtime')
   const tOffline = useTranslations('offline')
+  const chip = realtimeChipFor({ connection, online })
 
-  if (online && connection === 'solo') {
+  if (chip === 'none') {
     return null
   }
 
-  if (!online || connection === 'offline') {
+  if (chip === 'offline') {
     return (
       <>
         <span aria-live="polite" className="sr-only" role="status">
@@ -58,7 +60,7 @@ function ConnectionChip({
     )
   }
 
-  if (connection === 'lost') {
+  if (chip === 'lost') {
     return (
       <>
         <span aria-live="polite" className="sr-only" role="status">
