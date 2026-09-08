@@ -7,6 +7,7 @@ import {
   isDocumentIdShaped,
   realtimeCloseCodes,
   realtimeCloseIsFinal,
+  realtimeConnectionFrom,
   realtimeRoomName,
   realtimeSecretHeader,
 } from './realtime'
@@ -185,5 +186,68 @@ describe('realtimeCloseIsFinal', () => {
       expect(server).toContain(`= ${code}`)
       expect(name.length).toBeGreaterThan(0)
     }
+  })
+})
+
+describe('realtimeConnectionFrom', () => {
+  const live = {
+    online: true,
+    connected: true,
+    synced: true,
+    stillTrying: true,
+  }
+
+  it('is connected only once the document actually synced', () => {
+    expect(realtimeConnectionFrom(live)).toBe('connected')
+    expect(realtimeConnectionFrom({ ...live, synced: false })).toBe(
+      'reconnecting',
+    )
+    expect(realtimeConnectionFrom({ ...live, connected: false })).toBe(
+      'reconnecting',
+    )
+  })
+
+  it('says the session ended instead of pretending to retry', () => {
+    expect(realtimeConnectionFrom({ ...live, stillTrying: false })).toBe('lost')
+    expect(
+      realtimeConnectionFrom({ ...live, connected: false, stillTrying: false }),
+    ).toBe('lost')
+  })
+
+  it('puts being offline above everything else', () => {
+    expect(realtimeConnectionFrom({ ...live, online: false })).toBe('offline')
+    expect(
+      realtimeConnectionFrom({
+        online: false,
+        connected: false,
+        synced: false,
+        stillTrying: false,
+      }),
+    ).toBe('offline')
+  })
+
+  it('always answers the same thing for the same reading, so it cannot get stuck', () => {
+    for (const online of [true, false]) {
+      for (const connected of [true, false]) {
+        for (const synced of [true, false]) {
+          for (const stillTrying of [true, false]) {
+            const reading = { online, connected, synced, stillTrying }
+
+            expect(realtimeConnectionFrom(reading)).toBe(
+              realtimeConnectionFrom(reading),
+            )
+          }
+        }
+      }
+    }
+  })
+
+  it('leaves reconnecting as soon as the reading says it is live again', () => {
+    const stuck = { ...live, connected: false, synced: false }
+
+    expect(realtimeConnectionFrom(stuck)).toBe('reconnecting')
+    expect(realtimeConnectionFrom({ ...stuck, connected: true, synced: true })).toBe(
+      'connected',
+    )
   })
 })

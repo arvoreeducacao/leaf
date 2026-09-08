@@ -40,3 +40,28 @@ export const realtimeGivesUpUntil = 4500
 export function realtimeCloseIsFinal(code: number) {
   return code >= realtimeGivesUpFrom && code < realtimeGivesUpUntil
 }
+
+export type RealtimeConnection =
+  | 'connected'
+  | 'reconnecting'
+  | 'lost'
+  | 'offline'
+
+export function realtimeConnectionFrom(
+  provider: Readonly<{
+    online: boolean
+    connected: boolean
+    synced: boolean
+    stillTrying: boolean
+  }>,
+) {
+  if (!provider.online) {
+    return 'offline'
+  }
+
+  if (!provider.stillTrying) {
+    return 'lost'
+  }
+
+  return provider.connected && provider.synced ? 'connected' : 'reconnecting'
+}
