@@ -122,6 +122,9 @@ importers:
       lib0:
         specifier: ^0.2.117
         version: 0.2.117
+      lucide-react:
+        specifier: ^1.43.0
+        version: 1.43.0(react@19.2.8)
       mysql2:
         specifier: ^3.24.2
         version: 3.24.2(@types/node@20.19.43)
@@ -3554,6 +3557,11 @@ packages:
 
   lucide-react@0.525.0:
     resolution: {integrity: sha512-Tm1txJ2OkymCGkvwoHt33Y2JpN5xucVq1slHcgE6Lk0WjDfjgKWor5CdVER8U6DvcfMwh4M8XxmpTiyzfmfDYQ==}
+    peerDependencies:
+      react: ^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0
+
+  lucide-react@1.43.0:
+    resolution: {integrity: sha512-ubtnda1fVK5ky0PNEpOmB0wiwhpZUyJiol4K14KCm+QKvuCkfUu54Et/rIjyupJpwiJ5Hg+BLQE86/GEsS+IgQ==}
     peerDependencies:
       react: ^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0
 
@@ -7620,6 +7628,10 @@ snapshots:
   lru.min@1.1.4: {}
 
   lucide-react@0.525.0(react@19.2.8):
+    dependencies:
+      react: 19.2.8
+
+  lucide-react@1.43.0(react@19.2.8):
     dependencies:
       react: 19.2.8
 
