@@ -1,0 +1,53 @@
+services:
+  db:
+    image: mysql:8
+    environment:
+      MYSQL_ROOT_PASSWORD: leaf
+      MYSQL_DATABASE: leaf
+    command: --default-authentication-plugin=caching_sha2_password
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-pleaf"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    volumes:
+      - db:/var/lib/mysql
+
+  minio:
+    image: minio/minio
+    command: server /data
+    environment:
+      MINIO_ROOT_USER: leaf
+      MINIO_ROOT_PASSWORD: leafleaf
+    volumes:
+      - files:/data
+
+  createbucket:
+    image: minio/mc
+    depends_on:
+      - minio
+    entrypoint: >
+      sh -c "
+      mc alias set local http://minio:9000 leaf leafleaf &&
+      mc mb --ignore-existing local/leaf-uploads
+      "
+
+  app:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: mysql://root:leaf@db:3306/leaf
+      BETTER_AUTH_URL: http://localhost:3000
+      BETTER_AUTH_SECRET: change-me-this-is-not-a-secret
+      S3_ENDPOINT: http://minio:9000
+      S3_BUCKET: leaf-uploads
+      S3_ACCESS_KEY_ID: leaf
+      S3_SECRET_ACCESS_KEY: leafleaf
+    ports:
+      - "3000:3000"
+
+volumes:
+  db:
+  files:

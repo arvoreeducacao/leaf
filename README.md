@@ -1,298 +1,431 @@
 # 🍃 Leaf
 
-Editor de documentos colaborativo no espírito do Notion: blocos, hierarquia de páginas, organizações e colaboração em tempo real — com migração completa de exports do Notion.
+A collaborative document editor in the spirit of Notion: blocks, a page
+hierarchy, organisations and real-time collaboration — with a complete migration
+path from Notion.
 
-## Funcionalidades
+Leaf is built and used by [Árvore](https://arvore.com.br) and released under the
+AGPL-3.0. You can run your own: everything about where it runs comes from the
+environment, and every integration switches itself off when its keys are absent.
 
-- **Editor de blocos** (BlockNote): parágrafos, títulos, listas, checklists, citações, código, tabelas, imagens, destaques; slash menu (`/`), toolbar de formatação, atalhos markdown ao digitar e colagem rica direto do Notion ou Google Docs
-- **Incorporar** (`/incorporar` ou colando o link numa linha vazia): Figma, YouTube, Vimeo, Loom, Miro, Google Docs, Sheets, Slides, Forms e Drive, Canva, Spotify, Typeform, CodeSandbox e CodePen aparecem dentro da página; link de fora dessa lista vira um cartão com o endereço, e o import do Notion traz os embeds dele já assim
-- **Hierarquia de páginas**: subpáginas ilimitadas, sidebar em árvore, breadcrumb, mover documentos, lixeira em cascata com desfazer
-- **Importação agnóstica** via slash menu: arquivos `.md` inseridos no ponto do cursor, ou o **zip de export do Notion inteiro** virando árvore de páginas (imagens, links internos, callouts e databases CSV convertidos)
-- **Capa da página** no estilo do Notion: *Adicionar capa* ao passar o mouse no título, galeria de cores e gradientes, upload, link ou busca no **Unsplash** (com crédito ao fotógrafo), reposicionar arrastando e remover; a capa aparece também no link público
-- **Exportação** para Markdown e HTML
-- **Compartilhamento**: convites por email com papéis Pode ver / Pode comentar / Pode editar, link público somente leitura revogável
-- **Organizações e teamspaces**: documento nasce privado; seções Privado / Organização / Teamspaces na sidebar; teamspaces abertos ou fechados; múltiplas organizações por pessoa com switcher; convidados externos com selo próprio
-- **Comentários**: threads ancoradas em blocos, respostas, resolver e reabrir, papel dedicado de comentarista
-- **Histórico de versões**: snapshots automáticos com throttle, preview e restauração
-- **Busca**: `Ctrl+K` / `Alt+K` abrem a command palette (full-text via índice `FULLTEXT` do MySQL, recentes e ações rápidas), sempre filtrada por permissão no servidor. Com `OPENAI_API_KEY`, entra também a busca semântica: cada documento vira trechos com embedding em `document_chunks`, e a palette e o *Perguntar* misturam os dois rankings — sem a chave, ou se a OpenAI cair, a busca continua só no `FULLTEXT`
-- **Colaboração em tempo real**: Yjs + WebSocket, cursores nomeados, indicador de presença, escrita autorizada no handshake e fallback automático para edição solo
-- **Offline first**: the open document lives in the browser (Yjs in IndexedDB), stays editable with no connection and syncs on its own when the network is back; a service worker keeps the app shell and the pages you already visited, and falls back to its own screen when a page was never loaded
-- **IA no editor** (opcional, ligada por chave no `.env`): `/` abre *Pedir para a IA* — escrever sobre um assunto, continuar o texto, resumir a página, listar próximos passos; com texto selecionado, a barra de formatação oferece melhorar a escrita, corrigir ortografia, encurtar, desenvolver, simplificar, mudar o tom, traduzir e explicar. A resposta chega escrevendo no documento, com aceitar ou desfazer antes de valer
-- **Dois temas** (claro/escuro/sistema, contraste AA verificado) e **dois idiomas** (pt-BR e en-US)
+```bash
+docker compose up     # MySQL, an S3-compatible store and Leaf on :3000
+```
+
+## Features
+
+- **Block editor** (BlockNote): paragraphs, headings, lists, checklists, quotes,
+  code, tables, images, highlights; a slash menu (`/`), a formatting toolbar,
+  markdown shortcuts as you type, and rich paste straight from Notion or Google
+  Docs
+- **Embeds** (`/embed`, or paste a link on an empty line): Figma, YouTube,
+  Vimeo, Loom, Miro, Google Docs, Sheets, Slides, Forms and Drive, Canva,
+  Spotify, Typeform, CodeSandbox and CodePen render inside the page. A link
+  outside that list becomes a card showing the address, and the Notion import
+  brings its embeds in already like this
+- **Page hierarchy**: unlimited subpages, a tree sidebar, breadcrumbs, moving
+  documents, and a cascading trash with undo
+- **Format-agnostic import** from the slash menu: `.md` files inserted at the
+  cursor, or **an entire Notion export zip** turned into a page tree (images,
+  internal links, callouts and CSV databases all converted)
+- **Page covers**, Notion-style: *Add cover* on hovering the title, a gallery of
+  colours and gradients, upload, link, or an **Unsplash** search (crediting the
+  photographer), drag to reposition, and remove. The cover shows on the public
+  link too
+- **Export** to Markdown and HTML
+- **Sharing**: email invitations with Can view / Can comment / Can edit, plus a
+  revocable read-only public link
+- **Organisations and teamspaces**: documents are born private; the sidebar has
+  Private / Organisation / Teamspaces sections; teamspaces can be open or
+  closed; a person can belong to several organisations and switch between them;
+  external guests carry their own badge
+- **Comments**: threads anchored to blocks, replies, resolve and reopen, and a
+  dedicated commenter role
+- **Version history**: throttled automatic snapshots, preview and restore
+- **Search**: `Ctrl+K` / `Alt+K` open the command palette (full-text through
+  MySQL's `FULLTEXT` index, recents, and quick actions), always filtered by
+  permission on the server. With an `OPENAI_API_KEY`, semantic search joins in:
+  every document becomes embedded chunks in `document_chunks`, and both the
+  palette and *Ask* blend the two rankings. With no key, or if OpenAI is down,
+  search falls back to `FULLTEXT` alone
+- **Real-time collaboration**: Yjs over WebSocket, named cursors, a presence
+  indicator, write access authorised at the handshake, and an automatic fallback
+  to solo editing
+- **Offline first**: the open document lives in the browser (Yjs in IndexedDB),
+  stays editable with no connection and syncs on its own when the network is
+  back; a service worker keeps the app shell and the pages you already visited,
+  and falls back to its own screen when a page was never loaded
+- **AI in the editor** (optional, switched on by a key in `.env`): `/` opens
+  *Ask AI* — write about a topic, continue the text, summarise the page, list
+  next steps. With text selected, the formatting toolbar offers improve writing,
+  fix spelling, shorten, expand, simplify, change tone, translate and explain.
+  The answer arrives writing into the document, with accept or undo before it
+  counts
+- **Two themes** (light/dark/system, AA contrast verified) and **two languages**
+  (pt-BR and en-US)
 
 ## Stack
 
-| Camada | Tecnologia |
+| Layer | Technology |
 |---|---|
 | Framework | Next.js 16 (App Router) · React 19 · TypeScript |
-| Editor | BlockNote 0.54 sobre ProseMirror/Yjs |
-| Estilo | Tailwind CSS v4 + design system Bonsai (tokens semânticos, Averta, ícones próprios) |
-| Banco | Drizzle ORM · MySQL 8 / Aurora MySQL (driver `mysql2`, `DATABASE_URL`) |
-| Auth | better-auth (email e senha, entrar com o Google, chave de acesso; SSO opcional via OAuth2/OIDC, restrição por domínio de email) |
-| Arquivos | API S3 (`@aws-sdk/client-s3`) — emulador s3rver em dev |
-| Realtime | Servidor WebSocket próprio (`scripts/dev-realtime.mjs`) falando o protocolo y-websocket |
-| Offline | `y-indexeddb` for the document, a dedicated IndexedDB for the outbox, module service worker in `public/sw.js` |
-| IA | `@blocknote/xl-ai` no editor e AI SDK no servidor (Anthropic ou OpenAI) |
+| Editor | BlockNote 0.54 on ProseMirror/Yjs |
+| Styling | Tailwind CSS v4 · shadcn/ui · semantic tokens · Lucide icons |
+| Database | Drizzle ORM · MySQL 8 / Aurora MySQL (`mysql2` driver, `DATABASE_URL`) |
+| Auth | better-auth (email and password; optional Google and optional company SSO over OAuth2/OIDC, with email-domain restriction) |
+| Files | S3 API (`@aws-sdk/client-s3`) — s3rver emulator in development |
+| Real-time | A WebSocket server of its own (`scripts/dev-realtime.mjs`) speaking the y-websocket protocol |
+| Offline | `y-indexeddb` for the document, a dedicated IndexedDB for the outbox, a module service worker in `public/sw.js` |
+| AI | `@blocknote/xl-ai` in the editor, the AI SDK on the server (Anthropic or OpenAI) |
 
-## Rodando localmente
+## Running locally
 
 ```bash
 pnpm install
-cp .env.example .env.local   # aponte DATABASE_URL para um MySQL 8 seu
+cp .env.example .env.local   # point DATABASE_URL at a MySQL 8 of your own
 pnpm dev
 ```
 
-`pnpm dev` sobe três processos juntos: o Next em `http://localhost:3000`, o emulador S3 na `4568` e o servidor de colaboração na `1234`. As migrações de `drizzle/mysql` rodam no boot do app. Crie uma conta em `/signup` (sem verificação de email em dev) e pronto.
+`pnpm dev` starts three processes together: Next on `http://localhost:3000`, the
+S3 emulator on `4568`, and the collaboration server on `1234`. The migrations in
+`drizzle/mysql` run when the app boots. Create an account at `/signup` — there is
+no email verification in development — and you are in.
 
-
-## Testes
+## Tests
 
 ```bash
-pnpm test        # unitários (vitest)
-pnpm test:e2e    # Playwright, em sandbox própria (não interfere no dev server)
+pnpm test        # unit (vitest)
+pnpm test:e2e    # Playwright, in its own sandbox (does not disturb the dev server)
 ```
 
-Os testes precisam de MySQL de verdade — não há mais SQLite em memória. Cada worker do vitest usa o seu próprio database `<LEAF_TEST_DATABASE_URL>_<VITEST_POOL_ID>` (`leaf_test_1` … `leaf_test_6`, com `maxWorkers: 6`), truncado entre suítes; o schema é aplicado pelas migrações no primeiro uso.
+The tests need a real MySQL — there is no in-memory SQLite any more. Each vitest
+worker uses its own database `<LEAF_TEST_DATABASE_URL>_<VITEST_POOL_ID>`
+(`leaf_test_1` … `leaf_test_6`, with `maxWorkers: 6`), truncated between suites;
+the schema is applied by the migrations on first use.
 
-A suíte E2E sobe quatro ambientes isolados: o app padrão na porta 3100 (banco `leaf_e2e`), um com realtime ligado na 3200 / ws 1235 (banco `leaf_e2e_realtime`), um com `LEAF_ALLOWED_EMAIL_DOMAINS=example.com` na 3300 (projeto `restricted`) e um com o SSO ligado em credenciais de mentira na 3400 (projeto `sso`). Os dois primeiros derrubam as tabelas do respectivo banco e aplicam as migrações antes de subir o servidor; os outros dois reaproveitam o `leaf_e2e` já preparado (o usuário `leaf` só tem grant nos bancos existentes) e por isso não preparam nada. O `DATABASE_URL` é injetado no processo filho, então o `.env.local` do dev nunca é usado pela sandbox.
+The E2E suite brings up four isolated environments: the default app on port 3100
+(database `leaf_e2e`), one with real-time on 3200 / ws 1235 (database
+`leaf_e2e_realtime`), one with `LEAF_ALLOWED_EMAIL_DOMAINS` set on 3300 (project
+`restricted`), and one with SSO wired to fake credentials on 3400 (project
+`sso`). The first two drop the tables of their database and apply the migrations
+before starting the server; the other two reuse the already-prepared `leaf_e2e`
+and so prepare nothing. `DATABASE_URL` is injected into the child process, so the
+dev `.env.local` is never used by the sandbox.
 
-A E2E roda com um worker só (`E2E_WORKERS` permite mudar). Com o banco a ~150 ms de distância, cada caso leva perto de 20 s e a suíte inteira passa de 15 minutos — para rodar em pedaços, faça o build uma vez (`LEAF_DIST_DIR=.next-e2e pnpm exec next build`) e depois `pnpm exec playwright test --project=<projeto> <specs>`.
+E2E runs with a single worker (`E2E_WORKERS` changes that). With the database
+~150 ms away, each case takes close to 20 s and the whole suite runs past 15
+minutes. To run it in pieces, build once
+(`LEAF_DIST_DIR=.next-e2e pnpm exec next build`) and then
+`pnpm exec playwright test --project=<project> <specs>`.
 
 ## Offline
 
-Leaf opens and edits with no network. Three independent layers, and none of them needs to be online to work:
+Leaf opens and edits with no network. Three independent layers, and none of them
+needs to be online to work:
 
-**The document.** Every open document becomes a `Y.Doc` persisted to IndexedDB by `y-indexeddb` — including when realtime is off, in which case the editor runs in collaboration mode against a local document with no provider. Closing the tab, losing the network and coming back loses nothing: the state is read from the browser's disk before any request.
+**The document.** Every open document becomes a `Y.Doc` persisted to IndexedDB by
+`y-indexeddb` — including when real-time is off, in which case the editor runs in
+collaboration mode against a local document with no provider. Closing the tab,
+losing the network and coming back loses nothing: the state is read from the
+browser's disk before any request.
 
-**The way back to the server.** While the WebSocket is connected, the collaboration server is still what writes to MySQL. When it is not (realtime off, server down, or you with no network), every change goes into an outbox in IndexedDB (`leaf-offline`, key `outbox:<id>`) *before* the server is tried. The outbox is drained when the network returns, when the app opens and after every save; a document that already has a live collaboration session is dropped from the outbox instead of sent, because Yjs already carried those edits.
+**The way back to the server.** While the WebSocket is connected, the
+collaboration server is still what writes to MySQL. When it is not (real-time
+off, server down, or you with no network), every change goes into an outbox in
+IndexedDB (`leaf-offline`, key `outbox:<id>`) *before* the server is tried. The
+outbox is drained when the network returns, when the app opens and after every
+save; a document that already has a live collaboration session is dropped from
+the outbox instead of sent, because Yjs already carried those edits.
 
-**The shell.** The service worker (`public/sw.js`, registered as a module) keeps the build and the fonts cache-first, and pages and navigation payloads network-first with a cache fallback. Nothing under `/api/` is cached: auth and freshness always go over the network. A page that was never loaded, with no network, falls back to `/offline`.
+**The shell.** The service worker (`public/sw.js`, registered as a module) keeps
+the build and the fonts cache-first, and pages and navigation payloads
+network-first with a cache fallback. Nothing under `/api/` is cached: auth and
+freshness always go over the network. A page that was never loaded, with no
+network, falls back to `/offline`.
 
-Navigating from the sidebar is not a browser navigation — Next only fetches the payload, so the page HTML would never enter the cache. That is why the client asks the service worker to *warm* the open page (`leaf:warm-page`), on the first visit and again when the tab is hidden. It is what makes a refresh with no network still open the document instead of the offline screen.
+Navigating from the sidebar is not a browser navigation — Next only fetches the
+payload, so the page HTML would never enter the cache. That is why the client
+asks the service worker to *warm* the open page (`leaf:warm-page`), on the first
+visit and again when the tab is hidden. It is what makes a refresh with no
+network still open the document instead of the offline screen.
 
-### Instalação como app (desktop, Android e iPhone)
+### Installing as an app
 
-O Leaf é instalável no desktop, no Android e no iPhone: `public/manifest.webmanifest` (id, escopo, ícones PNG 192/512 e um maskable de sangria total em `public/icon-maskable.svg`) mais o `apple-touch-icon.png` e as metatags de web app no `src/app/layout.tsx`. Os ícones PNG são gerados uma vez a partir dos SVGs de `public/`; ao mudar o logo, regenere os quatro.
-
-Quem decide o que oferecer é `installOfferFor` (`src/lib/pwa/install.ts`), com quatro respostas:
-
-| Resposta | Onde | O que acontece |
-|---|---|---|
-| `prompt` | Chrome e Edge, no desktop e no Android | chama o `beforeinstallprompt` que o navegador entregou |
-| `ios-safari` | Safari do iPhone e do iPad | abre a folha ensinando Compartilhar › Adicionar à Tela de Início, porque no iOS o site não se instala sozinho |
-| `ios-browser` | Chrome, Firefox e afins no iPhone | manda abrir no Safari, o único que adiciona à tela de início no iOS |
-| `none` | já instalado, ou navegador sem caminho nenhum | não oferece nada |
-
-A oferta aparece em dois lugares: o item **Instalar o Leaf** no menu da pessoa e em `/preferences`, e uma faixa no topo só no celular (`InstallBanner`, escondida a partir de `tablet:`). Dispensar a faixa é definitivo e fica guardado no aparelho (`leaf:install-banner-dismissed` no `localStorage`); o item do menu continua lá para quem mudar de ideia. O `beforeinstallprompt` é capturado no módulo, não no componente, porque no celular o menu vive dentro do Sheet e só monta muito depois de o navegador disparar o evento.
+Leaf installs on desktop Chrome and Edge, and on Android and iPhone:
+`public/manifest.webmanifest` (id, scope, PNG icons at 192/512 and a full-bleed
+maskable one in `public/icon-maskable.svg`) plus `apple-touch-icon.png` and the
+web-app meta tags in `src/app/layout.tsx`. The account menu gains **Install
+Leaf** when a browser hands over `beforeinstallprompt`; once installed (display
+standalone) the item disappears. On iPhone the only path is Safari's Share
+sheet, and the app says so. The PNG icons are generated once from the SVGs in
+`public/` — when the logo changes, regenerate all four.
 
 ### Why the Yjs state became a table
 
-`document_realtime_state` holds the `Y.Doc` binary and an `identity`. Without it, every time a WebSocket room is recreated the server would build a fresh `Y.Doc` from the JSON — with different item IDs — and a client holding the old document in IndexedDB would add the two together on reconnect, **duplicating the content**. With the state persisted, the document identity never changes, and the merge is what Yjs promises.
+`document_realtime_state` holds the `Y.Doc` binary and an `identity`. Without it,
+every time a WebSocket room is recreated the server would build a fresh `Y.Doc`
+from the JSON — with different item IDs — and a client holding the old document
+in IndexedDB would add the two together on reconnect, **duplicating the
+content**. With the state persisted, the document identity never changes, and the
+merge is what Yjs promises.
 
-The `identity` is the safety belt: before connecting, the client asks `GET /api/documents/:id/snapshot` and compares it with the one it stored. If it changed (the state was lost and the room was reseeded), the local copy is discarded before the merge instead of duplicating the document. The `content` column stays the JSON projection that search, export and history read.
+The `identity` is the safety belt: before connecting, the client asks
+`GET /api/documents/:id/snapshot` and compares it with the one it stored. If it
+changed (the state was lost and the room was reseeded), the local copy is
+discarded before the merge instead of duplicating the document. The `content`
+column stays the JSON projection that search, export and history read.
 
-The two representations are tie-broken by date: if `documents.updated_at` is newer than `document_realtime_state.updated_at` — which only happens when someone saved through the solo path, with no WebSocket — the room is reseeded from the JSON with a new identity, and whoever holds a local copy discards it. That is why the server writes the state *after* writing the content: the other order would rotate the identity on every save, and everyone would lose offline for no reason. For the same reason, when the client has to seed the document on its own (no WebSocket but with network), it tears down the collaboration connection for that session: a document seeded in the browser must not later join the room's, or the content shows up twice.
+The two representations are tie-broken by date: if `documents.updated_at` is
+newer than `document_realtime_state.updated_at` — which only happens when
+someone saved through the solo path, with no WebSocket — the room is reseeded
+from the JSON with a new identity, and whoever holds a local copy discards it.
+That is why the server writes the state *after* writing the content: the other
+order would rotate the identity on every save, and everyone would lose offline
+for no reason. For the same reason, when the client has to seed the document on
+its own (no WebSocket but with network), it tears down the collaboration
+connection for that session: a document seeded in the browser must not later
+join the room's, or the content shows up twice.
 
 ### What still does not work offline
 
-- Creating, renaming, moving and deleting a document are server actions and need the network.
+- Creating, renaming, moving and deleting a document are server actions and need
+  the network.
 - Image upload needs the network — the block stays empty until the next send.
 - Comments and version history are not cached.
-- The sidebar and the document **title** offline are the ones from the last page warm-up, not live data. The document body comes from the local Yjs and is always right; the title may be stale.
-- `navigator.onLine` lies (captive portal, wi-fi with no way out). That is why nothing depends on the `online` event alone: both the outbox and the collaboration reconnect retry every 5s while something is pending, and the request that fails is the probe.
+- The sidebar and the document **title** offline are the ones from the last page
+  warm-up, not live data. The document body comes from the local Yjs and is
+  always right; the title may be stale.
+- `navigator.onLine` lies (captive portal, wi-fi with no way out). That is why
+  nothing depends on the `online` event alone: both the outbox and the
+  collaboration reconnect retry every 5s while something is pending, and the
+  request that fails is the probe.
 
-## IA
+## AI
 
-A IA do editor nasce **desligada** e liga sozinha quando existe uma chave no ambiente — não há flag separada. Cada pessoa põe a **sua** chave no `.env.local`, do mesmo jeito que já faz com o banco:
+The editor's AI is born **off** and switches itself on when a key exists in the
+environment — there is no separate flag. Each person puts **their own** key in
+`.env.local`, the same way they already do with the database:
 
 ```bash
 ANTHROPIC_API_KEY=sk-ant-...
 ```
 
-Só isso já basta: sem `LEAF_AI_MODEL`, o modelo é `claude-sonnet-5`. O resto é opcional:
+That alone is enough: with no `LEAF_AI_MODEL`, the model is `claude-sonnet-5`.
+The rest is optional:
 
-| Variável | Para quê |
+| Variable | What for |
 |---|---|
-| `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` | A chave. A presença de uma delas é o que liga a IA |
-| `LEAF_AI_PROVIDER` | `anthropic` ou `openai`, quando as duas chaves existem no mesmo `.env` |
-| `LEAF_AI_MODEL` | Troca o modelo. Obrigatório na OpenAI, que não tem padrão aqui |
-| `LEAF_AI_BASE_URL` | Aponta para um gateway compatível em vez da API do provedor |
-| `LEAF_AI_MAX_OUTPUT_TOKENS` | Teto de saída por resposta (padrão 8192) |
+| `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` | The key. The presence of one of them is what switches the AI on |
+| `LEAF_AI_PROVIDER` | `anthropic` or `openai`, when both keys live in the same `.env` |
+| `LEAF_AI_MODEL` | Changes the model. Required on OpenAI, which has no default here |
+| `LEAF_AI_BASE_URL` | Points at a compatible gateway instead of the provider's API |
+| `LEAF_AI_MAX_OUTPUT_TOKENS` | Output ceiling per answer (default 8192) |
 
-Quem não põe chave nenhuma continua com o editor de sempre: sem item de IA no `/`, sem botão na barra de formatação, sem rota respondendo.
+Anyone who sets no key at all keeps the editor they always had: no AI item in
+`/`, no button on the formatting toolbar, no route answering.
 
-**A chave nunca vai para o navegador.** O editor fala com `POST /api/ai`, e é o servidor que chama o provedor. A rota exige sessão, exige permissão de edição no documento que veio no corpo do pedido, e limita 20 chamadas por minuto por pessoa; quem só pode ver ou comentar recebe 403 e não vê a IA na tela.
+**The key never reaches the browser.** The editor talks to `POST /api/ai`, and it
+is the server that calls the provider. The route requires a session, requires
+edit permission on the document sent in the request body, and caps 20 calls per
+minute per person; anyone who can only view or comment gets a 403 and never sees
+the AI on screen.
 
-O que a IA escreve entra como sugestão no documento aberto — em colaboração, num fork do `Y.Doc`, então ninguém mais vê o rascunho antes da hora. Aceitar aplica, desfazer descarta, e o histórico de versões continua sendo a rede de proteção.
+What the AI writes enters as a suggestion in the open document — in
+collaboration, on a fork of the `Y.Doc`, so nobody else sees the draft before its
+time. Accept applies it, undo discards it, and version history is still the
+safety net.
 
-## Produção
+## Configuration
 
-O app fala S3 e SQL por configuração — publicar é trocar env:
+Leaf speaks S3 and SQL through configuration — deploying is a matter of setting
+the environment:
 
-| Variável | Uso |
+| Variable | Use |
 |---|---|
-| `DATABASE_URL` | `mysql://usuario:senha@host:3306/leaf` — obrigatória; o app não sobe sem ela |
-| `DATABASE_POOL_SIZE` | tamanho do pool do `mysql2` (padrão `10`) |
-| `S3_ENDPOINT` / `S3_BUCKET` / `S3_ACCESS_KEY_ID` / `S3_SECRET_ACCESS_KEY` | storage de imagens |
-| `LEAF_REALTIME` / `LEAF_REALTIME_URL` (`wss://`) / `LEAF_REALTIME_SECRET` | colaboração em tempo real (o ws roda como processo próprio) |
-| `BETTER_AUTH_URL` / `BETTER_AUTH_SECRET` | auth |
-| `LEAF_ALLOWED_EMAIL_DOMAINS` | lista separada por vírgula (ex. `example.com`). Vazia ou ausente = sem restrição (dev e testes). Setada = só esses domínios criam conta, entram e recebem convite |
-| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | ligam o botão de entrar com o Google; sem as duas, o botão não aparece |
-| `LEAF_SSO_CLIENT_ID` / `LEAF_SSO_CLIENT_SECRET` / `LEAF_SSO_ISSUER` | ligam o SSO da empresa por OAuth2/OIDC. Sem client id ou sem issuer o provider não é registrado e a tela continua sendo o formulário de email e senha; com eles, o cadastro por senha sai da tela |
-| `LEAF_SSO_PROVIDER_ID` / `LEAF_SSO_PROVIDER_NAME` | identificador do provider (padrão `sso`, gravado na coluna `provider_id` da tabela `account` — mudar depois desliga quem já entrou) e o nome que aparece no botão |
-| `LEAF_SSO_AUTHORIZATION_URL` / `LEAF_SSO_TOKEN_URL` / `LEAF_SSO_LOGOUT_URL` | endpoints do provider. Os dois primeiros têm padrão `{issuer}/oauth2/authorize` e `{issuer}/oauth2/token`; sem o de logout, o link de trocar de conta não aparece |
-| `NOTION_CLIENT_ID` / `NOTION_CLIENT_SECRET` / `NOTION_REDIRECT_URI` | habilitam o import por link do Notion; sem elas o caminho fica desligado e o diálogo diz isso. Em produção o redirect é `https://<seu-host>/api/notion/callback` |
-| `NOTION_API_VERSION` | versão da API do Notion no cabeçalho `Notion-Version` (padrão `2025-09-03`, a primeira com *data sources*: base com mais de uma fonte de dados vira uma base do Leaf por fonte, com o nome da fonte no título; base com uma fonte só continua igual, mapeada pelo id da base) |
-| `LEAF_EMBEDDING_MODEL` / `LEAF_EMBEDDING_DIMENSIONS` / `LEAF_EMBEDDING_BASE_URL` | busca semântica (opcionais; padrão `text-embedding-3-small` em 512 dimensões, na API da OpenAI). Quem liga a busca semântica é a `OPENAI_API_KEY`; a carga inicial dos trechos é o `node scripts/backfill-index.mjs` |
-| `GITHUB_TOKEN` / `LEAF_GITHUB_ORG` / `LEAF_GITHUB_REPOS` | ligam a base de pull requests do GitHub. Sem o token ou com a lista de repos vazia a base fica desligada e a rota responde 412. `LEAF_GITHUB_ORG` serve para qualificar nome curto (`leaf` vira `<org>/leaf`); a lista aceita as duas formas, separadas por vírgula |
-| `LEAF_GITHUB_SYNC_SECRET` / `LEAF_GITHUB_SYNC_OWNER` | deixam o CronJob disparar a sincronização sem sessão: o segredo (mínimo de 16 caracteres) vai no `Authorization: Bearer` e o email diz de quem é a conta dona da base. Faltando qualquer um dos dois, só sessão de pessoa dispara a rota |
-| `UNSPLASH_ACCESS_KEY` | liga a aba Unsplash do seletor de capa; sem ela, a aba explica que a busca não está configurada. A chave fica no servidor: o navegador fala com `/api/unsplash`, que exige sessão e limita 30 buscas por minuto por pessoa. Apps novos no Unsplash começam em modo demo (50 chamadas/hora) — produção precisa pedir o upgrade no painel deles |
-| `LEAF_MCP_ENABLED` | liga o servidor MCP remoto e o authorization server OAuth 2.1 embutido (`/api/mcp`, `/api/auth/oauth2/*`, `/.well-known/*`). Ausente = ligado fora de produção e **desligado em produção**; desligado, tudo isso responde 404 e a tela de aplicativos conectados some |
-| `LEAF_MCP_WRITE` | com o MCP ligado, permite as tools de escrita (`create_document`, `update_document`). Ausente = ligado; `0`/`false`/`off` desliga a escrita por completo, mesmo para tokens com o escopo `leaf:write` |
+| `DATABASE_URL` | `mysql://user:password@host:3306/leaf` — required; the app will not boot without it |
+| `DATABASE_POOL_SIZE` | `mysql2` pool size (default `10`) |
+| `S3_ENDPOINT` / `S3_BUCKET` / `S3_ACCESS_KEY_ID` / `S3_SECRET_ACCESS_KEY` | Image storage |
+| `LEAF_REALTIME` / `LEAF_REALTIME_URL` (`wss://`) / `LEAF_REALTIME_SECRET` | Real-time collaboration (the ws runs as its own process) |
+| `BETTER_AUTH_URL` / `BETTER_AUTH_SECRET` | Auth |
+| `NEXT_PUBLIC_LEAF_SOURCE_URL` | Where **Source code** in the account menu points. Set it to your fork — the AGPL requires that whoever uses your modified Leaf can get its source |
+| `LEAF_ALLOWED_EMAIL_DOMAINS` | Comma-separated list (e.g. `example.com`). Empty or absent = no restriction (development and tests). Set = only those domains can sign up, sign in and receive invitations |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Switch on the sign-in-with-Google button; without both, the button does not appear |
+| `LEAF_SSO_CLIENT_ID` / `LEAF_SSO_CLIENT_SECRET` / `LEAF_SSO_ISSUER` | Switch on company SSO over OAuth2/OIDC. With no client id or no issuer the provider is not registered and the screen stays the email-and-password form; with them, password sign-up leaves the screen |
+| `LEAF_SSO_PROVIDER_ID` / `LEAF_SSO_PROVIDER_NAME` | The provider id (default `sso`, written to `account.provider_id` — changing it later locks out whoever already signed in) and the name shown on the button (default `SSO`) |
+| `LEAF_SSO_AUTHORIZATION_URL` / `LEAF_SSO_TOKEN_URL` / `LEAF_SSO_LOGOUT_URL` | The provider's endpoints. The first two default to `{issuer}/oauth2/authorize` and `{issuer}/oauth2/token`; without the logout one, the switch-account link does not appear |
+| `NOTION_CLIENT_ID` / `NOTION_CLIENT_SECRET` / `NOTION_REDIRECT_URI` | Switch on the Notion import by link; without them the path is off and the dialog says so. In production the redirect is `https://<your-host>/api/notion/callback` |
+| `NOTION_API_VERSION` | The Notion API version in the `Notion-Version` header (default `2025-09-03`, the first with *data sources*: a database with more than one data source becomes one Leaf database per source, with the source name in the title; a database with a single source stays as it was, mapped by the database id) |
+| `LEAF_EMBEDDING_MODEL` / `LEAF_EMBEDDING_DIMENSIONS` / `LEAF_EMBEDDING_BASE_URL` | Semantic search (optional; defaults to `text-embedding-3-small` at 512 dimensions, on OpenAI's API). What switches semantic search on is `OPENAI_API_KEY`; the initial chunk load is `node scripts/backfill-index.mjs` |
+| `GITHUB_TOKEN` / `LEAF_GITHUB_ORG` / `LEAF_GITHUB_REPOS` | Switch on the GitHub pull requests database. Without the token, or with an empty repo list, the database is off and the route answers 412. `LEAF_GITHUB_ORG` qualifies a short name (`leaf` becomes `<org>/leaf`); the list accepts both forms, comma-separated |
+| `LEAF_GITHUB_SYNC_SECRET` / `LEAF_GITHUB_SYNC_OWNER` | Let a scheduled job trigger the sync with no session: the secret (16 characters minimum) goes in `Authorization: Bearer` and the email says whose account owns the database. Missing either one, only a person's session can trigger the route |
+| `UNSPLASH_ACCESS_KEY` | Switches on the Unsplash tab in the cover picker; without it, the tab explains that search is not configured. The key stays on the server: the browser talks to `/api/unsplash`, which requires a session and caps 30 searches per minute per person. New Unsplash apps start in demo mode (50 calls/hour) — production needs the upgrade request in their dashboard |
+| `LEAF_MCP_ENABLED` | Switches on the remote MCP server and the embedded OAuth 2.1 authorization server (`/api/mcp`, `/api/auth/oauth2/*`, `/.well-known/*`). Absent = on outside production and **off in production**; off, all of that answers 404 and the connected-apps screen disappears |
+| `LEAF_MCP_WRITE` | With MCP on, allows the write tools. Absent = on; `0`/`false`/`off` disables writing entirely, even for tokens holding the `leaf:write` scope |
 
-**Acesso restrito**: com `LEAF_ALLOWED_EMAIL_DOMAINS` setada, a validação acontece
-no servidor em quatro pontos — hook `before` do better-auth em `/sign-up/email` e
-`/sign-in/email`, `databaseHooks.user.create.before` (cobre qualquer caminho de
-criação de conta, inclusive OAuth) e `databaseHooks.session.create.before` (cobre
-qualquer caminho de login). Os convites de documento e de organização usam a mesma
-lista.
+`deploy/README.md` has the deployment shapes; `docker-compose.yml` brings the
+whole thing up locally in one command.
 
-**Importar do Notion**: o Leaf é uma *public connection* do Notion, com
-OAuth por pessoa — cada uma conecta a própria conta e importa só o que já enxerga
-lá. Três caminhos usam a mesma conexão: **Importar do Notion** na seção Privado da
-barra lateral (e na paleta ⌘K) traz para o Privado da pessoa tudo que ela marcou
-na tela de consentimento do Notion, pulando o que outra conta da organização já
-trouxe e avisando quantas páginas ficaram de fora; **Importar do Notion** no menu
-`/` do editor traz uma página e a árvore dela como subpágina do documento aberto;
-e **Importar workspace do Notion**, na página da organização, só para dono ou
-admin, traz tudo para a organização ou um teamspace, com aviso e confirmação
-quando outra conta já importou (rodar de novo por outra conta duplica o acervo,
-porque o mapa Notion→Leaf é por pessoa). Depois do login no Notion a pessoa volta
-para onde estava (`return` relativo, validado). A conexão se cria em
-`https://app.notion.com/developers/connections`, com
-escopo de instalação **"selected workspaces only"** (escolha que não se muda
-depois) e o redirect acima. As capacidades a marcar são **ler conteúdo**, **ler
-comentários** (senão `GET /v1/comments` responde 403 e as threads não vêm) e
-**ler informação de usuário com email** (é o que casa o autor do comentário com a
-conta do Leaf). O token de cada pessoa fica em `notion_connections`.
+**Restricted access**: with `LEAF_ALLOWED_EMAIL_DOMAINS` set, validation happens
+on the server at four points — better-auth's `before` hook on `/sign-up/email`
+and `/sign-in/email`, `databaseHooks.user.create.before` (covering any account
+creation path, OAuth included) and `databaseHooks.session.create.before`
+(covering any sign-in path). Document and organisation invitations use the same
+list.
 
-**Base de pull requests do GitHub**: é a versão nativa da coleção espelhada que
-o Kanban tinha no Notion — as *collections* do GitHub não saem pela API e ficaram
-de fora do import, então esta base olha só para frente, sem reconstruir histórico.
-`POST /api/sync/github` cria (ou atualiza) uma base `kind database` chamada
-*Pull requests do GitHub*, com uma linha `kind row` por PR e o esquema fixo
-repositório, número, estado, autor, atualizado em e URL. As linhas são de máquina:
-qualquer edição na tela é sobrescrita na próxima passada.
+**Importing from Notion**: Leaf is a Notion *public connection*, with OAuth per
+person — each one connects their own account and imports only what they can
+already see there. Three paths use the same connection: **Import from Notion** in
+the sidebar's Private section (and in the ⌘K palette) brings into that person's
+Private everything they ticked on Notion's consent screen, skipping what another
+account in the organisation already brought and reporting how many pages were
+left out; **Import from Notion** in the editor's `/` menu brings one page and its
+tree in as a subpage of the open document; and **Import Notion workspace**, on
+the organisation page and only for an owner or admin, brings everything into the
+organisation or a teamspace, warning and confirming when another account already
+imported (running it again from another account duplicates the collection,
+because the Notion→Leaf map is per person). After signing in to Notion the person
+returns where they were (a relative, validated `return`). The connection is
+created at `https://app.notion.com/developers/connections`, with the installation
+scope **"selected workspaces only"** (a choice that cannot be changed later) and
+the redirect above. The capabilities to tick are **read content**, **read
+comments** (otherwise `GET /v1/comments` answers 403 and threads do not come
+through) and **read user information including email** (that is what matches a
+comment's author to their Leaf account). Each person's token lives in
+`notion_connections`.
 
-O motor espelha o de `src/lib/notion/sync.ts` — upsert idempotente por id externo
-numa tabela de mapeamento própria (`github_documents`, chaveada por
-`user_id` + `github_id`), pulando o que não mudou pelo `updated_at` do PR. Como a
-listagem vem ordenada por `updated` decrescente, cada repositório guarda um cursor
-(`repo:<owner>/<nome>`) com o topo da última passada **completa** e para de paginar
-ao cruzá-lo; passada interrompida não move o cursor, então a seguinte recomeça do
-topo e as linhas já em dia saem baratas. O corpo da linha fica vazio de propósito:
-a descrição do PR não entra nesta versão.
+**GitHub pull requests database**: `POST /api/sync/github` creates (or updates) a
+`kind database` called *GitHub pull requests*, with one `kind row` per PR and a
+fixed schema of repository, number, state, author, updated at, and URL. The rows
+are machine-owned: any edit on screen is overwritten on the next pass.
 
-A rota aceita dois disparos. Com sessão, a pessoa sincroniza para o próprio espaço
-(o corpo aceita `destination`, como as rotas de import, e `force` para reescrever
-tudo). Com `Authorization: Bearer $LEAF_GITHUB_SYNC_SECRET`, a base é a da conta em
-`LEAF_GITHUB_SYNC_OWNER` — é assim que o CronJob de `deploy/github-sync-cronjob.yaml`
-roda de 15 em 15 minutos, batendo no serviço interno `LEAF_INTERNAL_SERVICE`.
-O manifesto não entra no pipeline de deploy (que só faz `kubectl set image`); é um
-`kubectl apply -f` de uma vez só.
+The engine mirrors `src/lib/notion/sync.ts` — an idempotent upsert by external id
+in a mapping table of its own (`github_documents`, keyed by `user_id` +
+`github_id`), skipping whatever has not changed by the PR's `updated_at`. Since
+the listing comes ordered by `updated` descending, each repository keeps a cursor
+(`repo:<owner>/<name>`) with the top of the last **complete** pass and stops
+paginating when it crosses it; an interrupted pass does not move the cursor, so
+the next one restarts from the top and the rows already up to date come cheap.
+The row body is left empty on purpose: the PR description is not part of this
+version.
 
-**Login por SSO**: com as `LEAF_SSO_*` preenchidas, o Leaf vira um client
-OAuth2/OIDC do provedor da empresa (escopos `openid profile email`, redirect
-`https://<seu-host>/api/auth/callback/<provider id>` e o equivalente em
-`http://localhost:3000`). O provider é registrado pelo plugin `genericOAuth` do
-better-auth com os endpoints explícitos `GET {issuer}/oauth2/authorize` e
-`POST {issuer}/oauth2/token` — provedor sem documento de discovery é o caso previsto, o
-`token` autentica o client por `client_secret_post` em corpo
-`x-www-form-urlencoded` e responde `access_token` + `id_token` sem
-`refresh_token` nem endpoint `userinfo`. A identidade sai das claims do
-`id_token` (`sub` vira o id externo da conta, `email` vira o email; como o IdP
-não manda `name`, o nome nasce da parte local do email). Quem escolhe o método
-de autenticação é a tela do próprio provedor, não o Leaf.
+The route accepts two triggers. With a session, the person syncs into their own
+space (the body accepts `destination`, like the import routes, and `force` to
+rewrite everything). With `Authorization: Bearer $LEAF_GITHUB_SYNC_SECRET`, the
+database is the one owned by the account in `LEAF_GITHUB_SYNC_OWNER` — that is
+how a scheduled job can run it unattended.
+
+**SSO sign-in**: with the `LEAF_SSO_*` variables filled in, Leaf becomes an
+OAuth2/OIDC client of the company's provider (scopes `openid profile email`,
+redirect `https://<your-host>/api/auth/callback/<provider id>` and the equivalent
+on `http://localhost:3000`). The provider is registered by better-auth's
+`genericOAuth` plugin with explicit endpoints `GET {issuer}/oauth2/authorize` and
+`POST {issuer}/oauth2/token` — a provider with no discovery document is the
+anticipated case. `token` authenticates the client with `client_secret_post` in
+an `x-www-form-urlencoded` body and answers `access_token` + `id_token` with no
+`refresh_token` and no `userinfo` endpoint. Identity comes from the `id_token`
+claims (`sub` becomes the account's external id, `email` becomes the email; since
+the IdP does not send `name`, the name is born from the local part of the email).
+Which authentication method to offer is the provider's screen to decide, not
+Leaf's.
 
 ## MCP
 
-O Leaf expõe um servidor [MCP](https://modelcontextprotocol.io) remoto em
-`${BETTER_AUTH_URL}/api/mcp` (transporte Streamable HTTP, stateless) protegido
-por OAuth 2.1 — e o próprio Leaf é o authorization server, via o plugin
-`@better-auth/oauth-provider` mais o plugin `jwt` do better-auth. Nenhum serviço
-externo participa: qualquer instalação do Leaf tem o MCP funcionando só com o
-que vem neste repositório e a flag `LEAF_MCP_ENABLED`.
+Leaf exposes a remote [MCP](https://modelcontextprotocol.io) server at
+`${BETTER_AUTH_URL}/api/mcp` (Streamable HTTP transport, stateless) protected by
+OAuth 2.1 — and Leaf itself is the authorization server, through the
+`@better-auth/oauth-provider` plugin plus better-auth's `jwt` plugin. No external
+service takes part: any Leaf installation has MCP working with what comes in this
+repository and the `LEAF_MCP_ENABLED` flag.
 
-Como funciona, em ordem: o cliente MCP recebe `401` com
-`WWW-Authenticate: Bearer resource_metadata=...`, lê
-`/.well-known/oauth-protected-resource` e `/.well-known/oauth-authorization-server`,
-registra-se sozinho em `/api/auth/oauth2/register` (registro dinâmico, sempre
-client **público** com PKCE S256; redirect só `https`, ou `http` em
-`localhost`/`127.0.0.1`/`[::1]` para clientes de linha de comando), manda a
-pessoa para o login do Leaf e para a tela de consentimento em `/oauth/consent`,
-e troca o código por um access token JWT de 15 minutos (`aud` =
-`${BETTER_AUTH_URL}/api/mcp`, assinado com a chave EdDSA guardada na tabela
-`jwks`) mais um refresh token rotativo. Cada chamada de tool roda em nome da
-pessoa que autorizou, com a mesma ACL da interface (`src/lib/authz.ts`): quem
-não enxerga um documento no Leaf também não enxerga pelo MCP.
+How it works, in order: the MCP client gets a `401` with
+`WWW-Authenticate: Bearer resource_metadata=...`, reads
+`/.well-known/oauth-protected-resource` and
+`/.well-known/oauth-authorization-server`, registers itself at
+`/api/auth/oauth2/register` (dynamic registration, always a **public** client
+with PKCE S256; redirects only `https`, or `http` on
+`localhost`/`127.0.0.1`/`[::1]` for command-line clients), sends the person to
+Leaf's sign-in and then to the consent screen at `/oauth/consent`, and trades the
+code for a 15-minute JWT access token (`aud` = `${BETTER_AUTH_URL}/api/mcp`,
+signed with the EdDSA key kept in the `jwks` table) plus a rotating refresh
+token. Every tool call runs on behalf of the person who authorised it, under the
+same ACL as the interface (`src/lib/authz.ts`): whoever cannot see a document in
+Leaf cannot see it through MCP either.
 
-Escopos: `leaf:read` (busca, leitura de documentos, bases, comentários e
-organizações), `leaf:write` (`create_document`, `update_document`; sem o escopo
-as tools nem são registradas) e `offline_access` (refresh token). A pessoa vê e
-revoga os aplicativos autorizados em **Aplicativos conectados**, no menu da
-conta (`/connected-apps`); revogar apaga o consentimento e invalida os refresh
-tokens daquele cliente.
+Scopes: `leaf:read` (search, reading documents, databases, comments and
+organisations), `leaf:write` (the write tools; without the scope they are not
+even registered) and `offline_access` (refresh token). People see and revoke
+authorised apps under **Connected apps** in the account menu
+(`/connected-apps`); revoking deletes the consent and invalidates that client's
+refresh tokens.
 
-Tools de leitura: `search_documents`, `get_document`, `list_documents`,
-`list_organizations`, `list_teamspaces`, `list_members` (e-mail só pra quem
-administra), `whoami`, `get_database`, `query_database` (filtro, busca e
-ordenação por nome de propriedade, valores em texto e crus) e `list_comments`.
-Comentários e anexos (escopo `leaf:write`): `create_comment` (abre thread ou
-responde com `replyTo`), `resolve_comment` (autor ou editor) e `upload_file`
-(imagem, PDF, texto, markdown, CSV e JSON, até 500 kB; a URL devolvida serve
-numa página ou numa coluna de arquivo de linha).
-Tools de escrita (escopo `leaf:write`): `create_document` (com ícone e capa),
-`update_document` (corpo em append/replace, título, ícone, capa e valores de
-propriedade quando o documento é linha; a escrita de corpo recusa se a página
-foi editada nos últimos 15 s, provavelmente há uma sala de colaboração aberta,
-e usa guard otimista no `updated_at`), `move_document` (pra outra página, pra um
-teamspace, pra raiz da organização ou de volta pro Privado, com a subárvore),
-`duplicate_document`, `trash_document` e `restore_document` (só quem é dono),
-`upload_image`, e as de base de dados: `create_database`,
-`create_database_row`, `update_database_row`, `delete_database_row` (vai pra
-lixeira), `add_database_property`, `update_database_property`,
-`delete_database_property`, `create_database_view` e `update_database_view`.
-Toda referência a propriedade aceita nome ou id; opção de seleção e pessoa
-aceitam nome. Lixeira sim, apagar pra sempre não; compartilhar, link público e
-membros continuam fora. Limites: body até 1 MB, 60 chamadas/min por pessoa, até
-50 resultados por chamada, markdown até 400 mil caracteres.
+Read tools: `search_documents`, `get_document`, `list_documents`,
+`list_organizations`, `list_teamspaces`, `list_members` (emails only for
+administrators), `whoami`, `get_database`, `query_database` (filter, search and
+ordering by property name, values in text and raw) and `list_comments`.
 
-Como conectar (troque `https://leaf.exemplo.org` pela `BETTER_AUTH_URL` da sua
-instalação):
+Comments and attachments (`leaf:write`): `create_comment` (opens a thread, or
+replies with `replyTo`), `resolve_comment` (author or editor) and `upload_file`
+(image, PDF, text, markdown, CSV and JSON, up to 500 kB; the returned URL works
+in a page or in a row's file column).
 
-- **Claude (web e desktop)**: Configurações → Conectores → Adicionar conector
-  personalizado → URL `https://leaf.exemplo.org/api/mcp`. O Claude registra o
-  client e abre a tela de login e consentimento do Leaf.
-- **Claude Code**: `claude mcp add --transport http leaf https://leaf.exemplo.org/api/mcp`
-  e depois `/mcp` dentro do Claude Code para autenticar (o callback é em
-  `http://localhost`, por isso o loopback fica liberado no registro).
-- **Cursor**: em `.cursor/mcp.json` (ou nas configurações de MCP),
-  `{ "mcpServers": { "leaf": { "url": "https://leaf.exemplo.org/api/mcp" } } }`;
-  o Cursor abre o fluxo OAuth na primeira chamada.
-- **Inspector**: `npx @modelcontextprotocol/inspector` → transporte Streamable
-  HTTP → URL acima → Connect. Para testar localmente use
-  `BETTER_AUTH_URL=http://localhost:3000` e o `pnpm dev`.
+Write tools (`leaf:write`): `create_document` (with icon and cover),
+`update_document` (body in append/replace, title, icon, cover and property values
+when the document is a row; a body write refuses if the page was edited in the
+last 15 s, since a collaboration room is probably open, and uses an optimistic
+guard on `updated_at`), `move_document` (to another page, to a teamspace, to the
+organisation root or back to Private, with the subtree), `duplicate_document`,
+`trash_document` and `restore_document` (owner only), `upload_image`, and the
+database ones: `create_database`, `create_database_row`, `update_database_row`,
+`delete_database_row` (goes to the trash), `add_database_property`,
+`update_database_property`, `delete_database_property`, `create_database_view`
+and `update_database_view`.
 
-**Banco**: qualquer MySQL 8 serve, com usuário dedicado. As migrações de `drizzle/mysql` rodam no boot do app; o `next build` **não** toca no banco. As sete migrações antigas de SQLite ficaram arquivadas em `drizzle/sqlite-legacy/` e não são mais executadas.
+Every property reference accepts a name or an id; select options and people
+accept a name. Trash yes, permanent delete no; sharing, public links and members
+stay out. Limits: body up to 1 MB, 60 calls/min per person, up to 50 results per
+call, markdown up to 400 thousand characters.
 
-## Qualidade
+To connect (swap `https://leaf.example.org` for your installation's
+`BETTER_AUTH_URL`):
 
-Construído em 12 ondas com fechamento validado, mais o port para MySQL, a onda de autenticação restrita e a do login por SSO: **274 testes unitários**, **52 cenários E2E** (desktop, mobile, colaboração em dois navegadores, domínio restrito e SSO), build de produção verde e design review do Bonsai com bloqueantes zerados nos dois temas.
+- **Claude (web and desktop)**: Settings → Connectors → Add custom connector →
+  URL `https://leaf.example.org/api/mcp`. Claude registers the client and opens
+  Leaf's sign-in and consent screens.
+- **Claude Code**:
+  `claude mcp add --transport http leaf https://leaf.example.org/api/mcp`, then
+  `/mcp` inside Claude Code to authenticate (the callback is on
+  `http://localhost`, which is why loopback is allowed at registration).
+- **Cursor**: in `.cursor/mcp.json` (or the MCP settings),
+  `{ "mcpServers": { "leaf": { "url": "https://leaf.example.org/api/mcp" } } }`;
+  Cursor opens the OAuth flow on the first call.
+- **Inspector**: `npx @modelcontextprotocol/inspector` → Streamable HTTP
+  transport → the URL above → Connect. To test locally use
+  `BETTER_AUTH_URL=http://localhost:3000` and `pnpm dev`.
 
-## Licença
+## Database
 
-MIT — veja [LICENSE](LICENSE).
+Any MySQL 8 will do, with a dedicated user. The migrations in `drizzle/mysql` run
+when the app boots; `next build` does **not** touch the database. The seven old
+SQLite migrations are archived in `drizzle/sqlite-legacy/` and are no longer run.
 
----
+## Contributing
 
-Feito com o [Bonsai Design System](https://designsystem.arvore.dev) · Árvore Educação
+Leaf is built for Árvore first, and reviews happen when there is time — but
+contributions are welcome. [CONTRIBUTING.md](CONTRIBUTING.md) has the house
+rules, the DCO sign-off and what to run before opening a pull request. Everyone
+taking part is expected to follow the
+[code of conduct](CODE_OF_CONDUCT.md).
+
+Found a security problem? Do not open an issue — [SECURITY.md](SECURITY.md) has
+the private channels.
+
+## Licence
+
+[AGPL-3.0](LICENSE).
+
+In short: you can run, study, modify and redistribute Leaf. If you run a modified
+Leaf as a network service, the people using it are entitled to that modified
+source — point `NEXT_PUBLIC_LEAF_SOURCE_URL` at your fork and the account menu
+does it for you.
+
+Copyright © 2026 Árvore Educação.
