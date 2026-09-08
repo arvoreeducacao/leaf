@@ -1163,7 +1163,7 @@
     "iosStepShare": "Tap Share, on the bottom bar",
     "iosStepAdd": "Pick \"Add to Home Screen\"",
     "iosStepConfirm": "Tap Add, on the top corner",
-    "iosBrowserBody": "Open leaf.arvore.com.br in Safari and tap Share to add Leaf to your Home Screen. The other iPhone browsers cannot do it."
+    "iosBrowserBody": "Open {host} in Safari and tap Share to add Leaf to your Home Screen. The other iPhone browsers cannot do it."
   },
   "join": {
     "heading": "You've been invited to join {org}",

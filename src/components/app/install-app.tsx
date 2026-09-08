@@ -23,6 +23,10 @@ const closedGuide: GuideState = { open: false, safari: false }
 let guideState: GuideState = closedGuide
 const guideListeners = new Set<() => void>()
 
+function currentHost(): string {
+  return typeof window === 'undefined' ? '' : window.location.host
+}
+
 function notifyGuide() {
   for (const listener of guideListeners) {
     listener()
@@ -111,7 +115,9 @@ export function InstallGuide() {
             </li>
           </ol>
         ) : (
-          <p className="px-5 pt-5 text-content-subtle text-sm">{t('iosBrowserBody')}</p>
+          <p className="px-5 pt-5 text-content-subtle text-sm">
+            {t('iosBrowserBody', { host: currentHost() })}
+          </p>
         )}
       </SheetContent>
     </Sheet>

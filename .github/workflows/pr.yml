@@ -9,9 +9,12 @@ concurrency:
   group: pr-${{ github.head_ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   typecheck:
-    runs-on: arc-deploy-set
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
