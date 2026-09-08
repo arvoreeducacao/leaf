@@ -10,6 +10,7 @@ import { toast } from 'sonner'
 import {
   ArrowRightIcon,
   DownloadIcon,
+  FileCodeIcon,
   GlobeIcon,
   MoonFirstQuarterIcon,
   MoonIcon,
@@ -20,6 +21,7 @@ import {
   UserIcon,
 } from '@/components/icons'
 import { SlidersIcon } from '@/components/icons/outline'
+import { sourceUrl } from '@/lib/source-url'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -180,6 +182,12 @@ export function UserMenu({
             </Link>
           </DropdownMenuItem>
         ) : null}
+        <DropdownMenuItem asChild>
+          <a href={sourceUrl()} rel="noreferrer" target="_blank">
+            <FileCodeIcon aria-hidden="true" />
+            {t('sourceCode')}
+          </a>
+        </DropdownMenuItem>
         {installOffer !== 'none' ? (
           <DropdownMenuItem data-testid="install-app" onSelect={() => void runInstall()}>
             <DownloadIcon aria-hidden="true" />

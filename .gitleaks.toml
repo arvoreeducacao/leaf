@@ -1,0 +1,7 @@
+[extend]
+useDefault = true
+
+[[rules]]
+id = "generic-api-key"
+[rules.allowlist]
+paths = ['''.*\.test\.tsx?$''', '''^e2e/.*''', '''^scripts/e2e-.*''']
