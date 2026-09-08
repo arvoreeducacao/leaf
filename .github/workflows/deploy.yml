@@ -23,9 +23,8 @@ jobs:
       - name: Configure AWS Production Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-region: us-east-1
-          role-to-assume: arn:aws:iam::AWS_ACCOUNT_ID:role/ECR_PUSH_ROLE
-          mask-aws-account-id: false
+          aws-region: ${{ vars.AWS_REGION }}
+          role-to-assume: ${{ secrets.AWS_ECR_PUSH_ROLE }}
 
       - name: Login to ECR
         id: login_ecr
@@ -37,8 +36,8 @@ jobs:
       - name: Build and push Leaf
         uses: docker/build-push-action@v6
         env:
-          ECR_REGISTRY: AWS_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com
-          ECR_REPOSITORY: leaf
+          ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}
+          ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
           IMAGE_TAG: ${{ github.sha }}
         with:
           context: .
@@ -64,25 +63,25 @@ jobs:
       - name: Configure AWS
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::AWS_ACCOUNT_ID:role/ECR_PUSH_ROLE
-          aws-region: us-east-1
-          mask-aws-account-id: false
+          role-to-assume: ${{ secrets.AWS_ECR_PUSH_ROLE }}
+          aws-region: ${{ vars.AWS_REGION }}
 
       - name: Assume EKS role
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::AWS_ACCOUNT_ID:role/EKS_RBAC_ROLE
-          aws-region: us-east-1
+          role-to-assume: ${{ secrets.AWS_EKS_ROLE }}
+          aws-region: ${{ vars.AWS_REGION }}
           role-duration-seconds: 1800
           role-chaining: true
-          mask-aws-account-id: false
 
       - name: Setup EKS on PRD
-        run: aws eks update-kubeconfig --name EKS_CLUSTER --region us-east-1 && kubectl config set-context --current --namespace=leaf
+        run: |
+          aws eks update-kubeconfig --name "${{ vars.EKS_CLUSTER }}" --region "${{ vars.AWS_REGION }}"
+          kubectl config set-context --current --namespace="${{ vars.K8S_NAMESPACE }}"
 
       - name: Deploy new image
         run: |
-          IMAGE=AWS_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/leaf:${{ github.sha }}
+          IMAGE="${{ secrets.ECR_REGISTRY }}/${{ vars.ECR_REPOSITORY }}:${{ github.sha }}"
           kubectl set image deployment/leaf-web web=$IMAGE
           kubectl set image deployment/leaf-realtime realtime=$IMAGE
 
