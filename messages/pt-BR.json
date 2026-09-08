@@ -1139,7 +1139,9 @@
     "reconnecting": "Reconectando. Suas mudanças estão salvas aqui",
     "someone": "Alguém",
     "you": "{name} (você)",
-    "peopleHere": "{count, plural, one {# pessoa neste documento} other {# pessoas neste documento}}"
+    "peopleHere": "{count, plural, one {# pessoa neste documento} other {# pessoas neste documento}}",
+    "lost": "Sem colaboração ao vivo",
+    "retry": "Tentar de novo"
   },
   "offline": {
     "banner": "Sem conexão",

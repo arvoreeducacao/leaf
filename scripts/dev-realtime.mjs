@@ -91,23 +91,38 @@ async function callApp(path, body, cookie) {
 }
 
 async function authorize(documentId, cookie) {
+  let response
+
   try {
-    const response = await callApp('/api/realtime/authz', { documentId }, cookie)
+    response = await callApp('/api/realtime/authz', { documentId }, cookie)
+  } catch (error) {
+    log('could not reach the app to authorize', documentId, error.message)
 
-    if (!response.ok) {
-      return null
-    }
+    return { status: 'unavailable' }
+  }
 
+  if (response.status === 401 || response.status === 403) {
+    return { status: 'denied' }
+  }
+
+  if (!response.ok) {
+    log('authorize answered', response.status, 'for', documentId)
+
+    return { status: 'unavailable' }
+  }
+
+  try {
     const payload = await response.json()
 
     return {
+      status: 'ok',
       canWrite: payload.canWrite === true,
       userId: typeof payload.user?.id === 'string' ? payload.user.id : null,
     }
   } catch (error) {
-    log('failed to authorize', documentId, error.message)
+    log('authorize sent something unreadable for', documentId, error.message)
 
-    return null
+    return { status: 'unavailable' }
   }
 }
 
@@ -517,7 +532,11 @@ async function admit(request) {
 
   const access = await authorize(documentId, request.headers.cookie)
 
-  if (!access) {
+  if (access.status === 'unavailable') {
+    return { closeCode: closeUnavailable }
+  }
+
+  if (access.status === 'denied') {
     return { closeCode: closeForbidden }
   }
 
@@ -559,6 +578,12 @@ server.on('upgrade', async (request, socket, head) => {
 
   wss.handleUpgrade(request, socket, head, (connection) => {
     if (decision.closeCode) {
+      log(
+        'refused',
+        decision.closeCode,
+        closeReasons[decision.closeCode],
+        request.url,
+      )
       connection.close(decision.closeCode, closeReasons[decision.closeCode])
 
       return

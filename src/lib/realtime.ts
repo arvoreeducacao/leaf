@@ -33,3 +33,10 @@ export const realtimeCloseCodes = {
   unreadable: 4409,
   unavailable: 4500,
 } as const satisfies Record<string, RealtimeCloseCode>
+
+export const realtimeGivesUpFrom = 4400
+export const realtimeGivesUpUntil = 4500
+
+export function realtimeCloseIsFinal(code: number) {
+  return code >= realtimeGivesUpFrom && code < realtimeGivesUpUntil
+}
