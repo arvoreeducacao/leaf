@@ -17,6 +17,7 @@ import {
   addDays,
   dayWidthOf,
   daysBetween,
+  filledDaysOf,
   localIsoDate,
   timelineColumnsOf,
   timelineSpanOf,
@@ -130,6 +131,7 @@ export function TimelineView({
   const rendered = useRef(toIsoDate(Date.now()))
   const [today, setToday] = useState(rendered.current)
   const track = useRef<HTMLDivElement>(null)
+  const [trackWidth, setTrackWidth] = useState(0)
   const dayWidth = dayWidthOf[scale]
   const [absencesSource, setAbsencesSource] = useState<AbsencesSource | null>(
     null,
@@ -208,9 +210,17 @@ export function TimelineView({
       .filter((lane) => lane.bars.length > 0)
   }, [groups, span.bars])
 
+  const days = useMemo(
+    () => filledDaysOf(span.from, span.days, scale, dayWidth, trackWidth),
+    [dayWidth, scale, span.days, span.from, trackWidth],
+  )
+  const grid = useMemo(
+    () => ({ from: span.from, to: addDays(span.from, days - 1) }),
+    [days, span.from],
+  )
   const columns = useMemo(
-    () => timelineColumnsOf(span.from, span.days, scale),
-    [scale, span.days, span.from],
+    () => timelineColumnsOf(span.from, days, scale),
+    [days, scale, span.from],
   )
 
   const firstDay = span.bars.reduce(
@@ -227,6 +237,31 @@ export function TimelineView({
 
     element.scrollLeft = Math.max(0, (firstDay - 1) * dayWidth)
   }, [dayWidth, firstDay])
+
+  useEffect(() => {
+    const element = track.current
+
+    if (!element) {
+      return
+    }
+
+    function measure() {
+      const node = track.current
+
+      if (!node) {
+        return
+      }
+
+      setTrackWidth(node.clientWidth)
+    }
+
+    measure()
+
+    const observer = new ResizeObserver(measure)
+    observer.observe(element)
+
+    return () => observer.disconnect()
+  }, [])
 
   const monthFormat = new Intl.DateTimeFormat(locale, {
     month: 'short',
@@ -310,7 +345,7 @@ export function TimelineView({
     heads.push({ label, days: column.days })
   }
 
-  const todayOffset = todayOffsetOf(span, today)
+  const todayOffset = todayOffsetOf(grid, today)
   const absenceColumns = absencesSource?.snapshot
     ? absenceColumnsOf(absencesSource.snapshot.properties)
     : null
@@ -320,7 +355,7 @@ export function TimelineView({
           absencesSource.snapshot.rows,
           absenceColumns,
           absencesSource.snapshot.people,
-          span,
+          grid,
         ),
         dayWidth,
       )
@@ -431,7 +466,7 @@ export function TimelineView({
         </div>
 
         <div className="min-w-0 flex-1 overflow-x-auto" ref={track}>
-          <div className="relative" style={{ width: span.days * dayWidth }}>
+          <div className="relative" style={{ width: days * dayWidth }}>
             <div className="flex h-6 border-line-divider border-b">
               {heads.map((head, index) => (
                 <span
