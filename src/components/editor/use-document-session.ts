@@ -14,6 +14,7 @@ import type { ServerSnapshot } from '@/lib/offline/local-document'
 import { dropQueuedDocument, readQueuedDocument } from '@/lib/offline/outbox'
 import { offlineStore } from '@/lib/offline/store'
 import {
+  realtimeConnectionFrom,
   realtimeFragmentName,
   realtimeRoomName,
   realtimeSyncTimeoutMs,
@@ -155,6 +156,7 @@ export function useDocumentSession({
     let pendingRetry: (() => void) | null = null
     let retryTimer = 0
     let stopReconnectRequests = () => {}
+    let soloed = false
 
     function runPendingRetry() {
       const retry = pendingRetry
@@ -234,6 +236,25 @@ export function useDocumentSession({
       let opened = false
       let online = false
 
+      function refreshConnection() {
+        if (disposed || !opened) {
+          return
+        }
+
+        const next = realtimeConnectionFrom({
+          online: navigator.onLine,
+          connected: socket.wsconnected,
+          synced: socket.synced,
+          stillTrying: socket.shouldConnect,
+        })
+
+        if (soloed && next === 'reconnecting') {
+          return
+        }
+
+        setConnection(next)
+      }
+
       syncTimeout = window.setTimeout(() => {
         if (opened || disposed) {
           return
@@ -256,13 +277,14 @@ export function useDocumentSession({
         })
 
         window.clearTimeout(syncTimeout)
-        setConnection('connected')
+        soloed = false
 
         if (!opened) {
           opened = true
           openLocally(socket)
         }
 
+        refreshConnection()
         publishPeers(true)
       })
 
@@ -271,12 +293,9 @@ export function useDocumentSession({
 
         if (!online) {
           unmarkLive(documentId)
-
-          if (opened) {
-            setConnection(navigator.onLine ? 'reconnecting' : 'offline')
-          }
         }
 
+        refreshConnection()
         publishPeers(online)
       })
 
@@ -286,7 +305,7 @@ export function useDocumentSession({
         }
 
         unmarkLive(documentId)
-        setConnection('lost')
+        refreshConnection()
         publishPeers(false)
       })
 
@@ -367,6 +386,7 @@ export function useDocumentSession({
         return
       }
 
+      soloed = true
       setConnection(
         snapshot === null && !navigator.onLine ? 'offline' : 'solo',
       )
