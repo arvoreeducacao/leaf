@@ -6,6 +6,7 @@ import {
   baselinePropertiesOf,
   datePropertyOf,
   daysBetween,
+  filledDaysOf,
   localIsoDate,
   monthGridOf,
   endOfMonth,
@@ -193,6 +194,19 @@ describe('the timeline by week and by month', () => {
       ['2026-10-01', 31],
     ])
     expect(timelineColumnsOf('2026-09-01', 3, 'day')).toHaveLength(3)
+  })
+
+  it('grows the grid by whole columns until it fills the track', () => {
+    expect(filledDaysOf('2026-08-31', 35, 'week', 16, 400)).toBe(35)
+    expect(filledDaysOf('2026-08-31', 35, 'week', 16, 1451)).toBe(91)
+    expect(filledDaysOf('2026-08-31', 35, 'week', 16, 1451) % 7).toBe(0)
+    expect(filledDaysOf('2026-09-01', 30, 'month', 5, 400)).toBe(91)
+    expect(
+      timelineColumnsOf('2026-09-01', filledDaysOf('2026-09-01', 30, 'month', 5, 400), 'month')
+        .map((column) => column.start),
+    ).toEqual(['2026-09-01', '2026-10-01', '2026-11-01'])
+    expect(filledDaysOf('2026-09-01', 30, 'day', 32, 1451)).toBe(46)
+    expect(filledDaysOf('2026-09-01', 30, 'day', 32, 0)).toBe(30)
   })
 
   it('places today only when it falls inside the span', () => {

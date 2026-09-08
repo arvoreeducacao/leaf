@@ -132,6 +132,25 @@ function nextColumnStart(start: string, scale: TimelineScale): string {
   return addMonths(startOfMonth(start), 1)
 }
 
+export function filledDaysOf(
+  from: string,
+  days: number,
+  scale: TimelineScale,
+  dayWidth: number,
+  width: number,
+): number {
+  const needed = Math.ceil(width / dayWidth)
+  let total = days
+
+  while (total < needed) {
+    const start = addDays(from, total)
+
+    total += daysBetween(start, nextColumnStart(start, scale))
+  }
+
+  return total
+}
+
 export function timelineColumnsOf(
   from: string,
   days: number,
