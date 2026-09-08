@@ -59,14 +59,20 @@ describe('dynamic client registration', () => {
     ).toMatchObject({ ok: false, error: 'invalid_redirect_uri' })
   })
 
-  it('refuses a confidential client or one carrying a client_secret', () => {
-    expect(
-      validateDynamicClientRegistration({
-        ...base,
-        token_endpoint_auth_method: 'client_secret_basic',
-      }),
-    ).toMatchObject({ ok: false, error: 'invalid_client_metadata' })
+  it('registers a client that asked for a secret as a public one', () => {
+    const decision = validateDynamicClientRegistration({
+      ...base,
+      token_endpoint_auth_method: 'client_secret_post',
+    })
 
+    expect(decision.ok).toBe(true)
+
+    if (decision.ok) {
+      expect(decision.body.token_endpoint_auth_method).toBe('none')
+    }
+  })
+
+  it('refuses a client carrying its own client_secret', () => {
     expect(
       validateDynamicClientRegistration({ ...base, client_secret: 'segredo' }),
     ).toMatchObject({ ok: false, error: 'invalid_client_metadata' })

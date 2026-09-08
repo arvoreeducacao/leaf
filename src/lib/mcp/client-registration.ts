@@ -37,15 +37,6 @@ function classifyRedirectUri(value: unknown): 'https' | 'loopback' | 'invalid' {
 export function validateDynamicClientRegistration(
   body: RegistrationBody,
 ): RegistrationDecision {
-  const authMethod = body.token_endpoint_auth_method
-
-  if (authMethod !== undefined && authMethod !== 'none') {
-    return reject(
-      'invalid_client_metadata',
-      'only public clients (token_endpoint_auth_method "none") can register',
-    )
-  }
-
   if ('client_secret' in body) {
     return reject(
       'invalid_client_metadata',

@@ -1,4 +1,4 @@
-import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeAll, describe, expect, it, vi } from 'vitest'
 
 vi.mock('@/db', async () => {
   const { createTestDb } = await import('@/db/testing')
@@ -14,13 +14,11 @@ let handler: (request: Request) => Promise<Response>
 beforeAll(async () => {
   vi.stubEnv('LEAF_MCP_ENABLED', '1')
 
+  await resetDatabase()
+
   const { auth } = await import('@/lib/auth')
 
   handler = auth.handler
-})
-
-beforeEach(async () => {
-  await resetDatabase()
 })
 
 function register(body: Record<string, unknown>) {
@@ -64,19 +62,23 @@ describe('dynamic registration through better-auth', () => {
     expect(body.error).toBe('invalid_redirect_uri')
   })
 
-  it('recusa client confidencial', async () => {
+  it('registers a client that asked for a secret as a public one, without a secret', async () => {
     const response = await register({
       ...publicClient,
-      token_endpoint_auth_method: 'client_secret_basic',
+      token_endpoint_auth_method: 'client_secret_post',
     })
     const body = (await response.json()) as Record<string, unknown>
 
-    expect(response.status).toBe(400)
-    expect(body.error).toBe('invalid_client_metadata')
+    expect(response.status).toBe(201)
+    expect(body.client_secret).toBeUndefined()
+    expect(body.token_endpoint_auth_method).toBe('none')
   })
 
-  it('publishes the authorization server document with PKCE S256 and dynamic registration', async () => {
-    const response = await handler(
+  it('publishes the authorization server document with PKCE S256, dynamic registration and public clients only', async () => {
+    const { authorizationServerMetadataResponse } = await import(
+      '@/lib/mcp/discovery'
+    )
+    const response = await authorizationServerMetadataResponse(
       new Request(`${authIssuer()}/.well-known/oauth-authorization-server`),
     )
     const body = (await response.json()) as Record<string, unknown>
@@ -86,6 +88,6 @@ describe('dynamic registration through better-auth', () => {
     expect(body.registration_endpoint).toBe(`${authIssuer()}/api/auth/oauth2/register`)
     expect(body.code_challenge_methods_supported).toEqual(['S256'])
     expect(body.scopes_supported).toEqual(['leaf:read', 'leaf:write', 'offline_access'])
-    expect(body.token_endpoint_auth_methods_supported).toContain('none')
+    expect(body.token_endpoint_auth_methods_supported).toEqual(['none'])
   })
 })

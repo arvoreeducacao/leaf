@@ -46,10 +46,10 @@ export async function authorizationServerMetadataResponse(request: Request) {
     return mcpNotFound()
   }
 
-  const headers = new Headers(response.headers)
+  const metadata = (await response.json()) as Record<string, unknown>
 
-  headers.set('Cache-Control', 'no-store')
-  headers.set('Access-Control-Allow-Origin', '*')
-
-  return new Response(response.body, { status: 200, headers })
+  return Response.json(
+    { ...metadata, token_endpoint_auth_methods_supported: ['none'] },
+    { headers: { ...noStore, 'Access-Control-Allow-Origin': '*' } },
+  )
 }
