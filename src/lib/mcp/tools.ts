@@ -39,6 +39,7 @@ import {
   listOrganizationPeople,
 } from '@/lib/organizations'
 import { isDocumentIdShaped } from '@/lib/realtime'
+import { writeBlocksToLiveRoom } from '@/lib/realtime-room'
 import { searchDocumentsHybrid } from '@/lib/search-hybrid'
 import { scheduleSearchIndexReconcile } from '@/lib/search-index'
 import {
@@ -768,42 +769,59 @@ export async function updateDocumentTool(
   }
 
   let written = false
+  let via: 'realtime' | 'database' | null = null
 
   if (hasBody) {
     if (document.kind === 'database') {
       throw new McpToolError('invalid_argument', 'databases have no body to edit')
     }
 
-    if (now.getTime() - document.updatedAt.getTime() < MCP_LIVE_EDIT_WINDOW_MS) {
-      throw new McpToolError(
-        'document_busy',
-        'document was edited moments ago; retry in a few seconds',
-      )
-    }
-
     const mode = args.mode ?? 'append'
     const incoming = await blocksOf(args, true)
-    const blocks =
-      mode === 'append'
-        ? [...parseContentBlocks(document.content), ...incoming]
-        : incoming
-
-    const outcome = await persistDocumentContentIfUnchanged(
+    const live = await writeBlocksToLiveRoom(
       id,
-      JSON.stringify(blocks),
+      incoming,
+      mode,
       context.session.user.id,
-      document.updatedAt,
     )
 
-    if (outcome === 'conflict') {
-      throw new McpToolError('conflict', 'document changed while writing; retry')
-    }
+    if (live === 'applied') {
+      written = true
+      via = 'realtime'
+    } else {
+      if (
+        live !== 'no-room' &&
+        now.getTime() - document.updatedAt.getTime() < MCP_LIVE_EDIT_WINDOW_MS
+      ) {
+        throw new McpToolError(
+          'document_busy',
+          'document was edited moments ago and its live session could not be reached; retry in a few seconds',
+        )
+      }
 
-    if (outcome === 'missing') {
-      throw new McpToolError('not_found', 'document not found')
-    }
+      const blocks =
+        mode === 'append'
+          ? [...parseContentBlocks(document.content), ...incoming]
+          : incoming
 
-    written = outcome === 'written'
+      const outcome = await persistDocumentContentIfUnchanged(
+        id,
+        JSON.stringify(blocks),
+        context.session.user.id,
+        document.updatedAt,
+      )
+
+      if (outcome === 'conflict') {
+        throw new McpToolError('conflict', 'document changed while writing; retry')
+      }
+
+      if (outcome === 'missing') {
+        throw new McpToolError('not_found', 'document not found')
+      }
+
+      written = outcome === 'written'
+      via = 'database'
+    }
   }
 
   if (Object.keys(changes).length > 0) {
@@ -828,6 +846,7 @@ export async function updateDocumentTool(
   return {
     id,
     mode: hasBody ? (args.mode ?? 'append') : null,
+    via,
     written,
     updated: Object.keys(changes).filter((key) => key !== 'coverCredit'),
     url: documentUrl(id),

@@ -55,6 +55,7 @@ the environment:
 | `DATABASE_POOL_SIZE` | `mysql2` pool size (default `10`) |
 | `S3_ENDPOINT` / `S3_BUCKET` / `S3_ACCESS_KEY_ID` / `S3_SECRET_ACCESS_KEY` | Image storage |
 | `LEAF_REALTIME` / `LEAF_REALTIME_URL` (`wss://`) / `LEAF_REALTIME_SECRET` | Real-time collaboration (the ws runs as its own process) |
+| `LEAF_REALTIME_SERVER_URL` | Internal HTTP address of the collaboration process, used by the app to write into open rooms (default: `LEAF_REALTIME_URL` with `ws`/`wss` turned into `http`/`https`) |
 | `BETTER_AUTH_URL` / `BETTER_AUTH_SECRET` | Auth |
 | `NEXT_PUBLIC_LEAF_SOURCE_URL` | Where **Source code** in the account menu points. Set it to your fork — the AGPL requires that whoever uses your modified Leaf can get its source |
 | `LEAF_ALLOWED_EMAIL_DOMAINS` | Comma-separated list (e.g. `example.com`). Empty or absent = no restriction (development and tests). Set = only those domains can sign up, sign in and receive invitations |

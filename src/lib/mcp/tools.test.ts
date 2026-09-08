@@ -21,6 +21,19 @@ vi.mock('@/lib/storage', () => ({
   },
 }))
 
+const liveRoom = vi.hoisted(() => ({
+  result: 'no-room' as 'applied' | 'no-room' | 'unreachable' | 'disabled',
+  calls: [] as Array<ReadonlyArray<unknown>>,
+}))
+
+vi.mock('@/lib/realtime-room', () => ({
+  writeBlocksToLiveRoom: vi.fn(async (...args: ReadonlyArray<unknown>) => {
+    liveRoom.calls.push(args)
+
+    return liveRoom.result
+  }),
+}))
+
 import { eq } from 'drizzle-orm'
 
 import { db } from '@/db'
@@ -79,6 +92,7 @@ function paragraph(text: string) {
 const longAgo = new Date(Date.now() - 60_000)
 
 beforeEach(async () => {
+    liveRoom.result = 'no-room'
   await resetDatabase()
 
   await db.insert(user).values(
@@ -417,16 +431,62 @@ describe('update_document', () => {
     expect(updated?.content).toContain('Só isto.')
   })
 
-  it('refuses to write if the page was edited less than 15 s ago', async () => {
+  it('refuses to write if the page was edited less than 15 s ago and its live session is out of reach', async () => {
     await db
       .update(documents)
       .set({ updatedAt: new Date() })
       .where(eq(documents.id, 'doc-private'))
 
-    await expectToolError(
-      updateDocumentTool(contextFor(owner), { documentId: 'doc-private', markdown: 'x' }),
-      'document_busy',
-    )
+    for (const result of ['unreachable', 'disabled'] as const) {
+      liveRoom.result = result
+
+      await expectToolError(
+        updateDocumentTool(contextFor(owner), { documentId: 'doc-private', markdown: 'x' }),
+        'document_busy',
+      )
+    }
+  })
+
+  it('writes through the live session when someone has the page open', async () => {
+    liveRoom.result = 'applied'
+    liveRoom.calls.length = 0
+
+    const result = await updateDocumentTool(contextFor(owner), {
+      documentId: 'doc-private',
+      markdown: 'Ao vivo.',
+      mode: 'replace',
+    })
+
+    expect(result.via).toBe('realtime')
+    expect(result.written).toBe(true)
+    expect(liveRoom.calls.at(-1)?.[0]).toBe('doc-private')
+    expect(liveRoom.calls.at(-1)?.[2]).toBe('replace')
+    expect(liveRoom.calls.at(-1)?.[3]).toBe(owner.id)
+
+    const untouched = await db.query.documents.findFirst({ where: eq(documents.id, 'doc-private') })
+
+    expect(untouched?.content).toContain('Segredo')
+  })
+
+  it('writes to the database when nobody has the page open, even right after an edit', async () => {
+    await db
+      .update(documents)
+      .set({ updatedAt: new Date() })
+      .where(eq(documents.id, 'doc-private'))
+    liveRoom.result = 'no-room'
+
+    const result = await updateDocumentTool(contextFor(owner), {
+      documentId: 'doc-private',
+      markdown: 'Sem sala.',
+      mode: 'replace',
+    })
+
+    expect(result.via).toBe('database')
+
+    const updated = await db.query.documents.findFirst({ where: eq(documents.id, 'doc-private') })
+
+    expect(updated?.content).toContain('Sem sala.')
+    expect(updated?.content).not.toContain('Segredo')
   })
 
   it('edits no databases, and nothing without the write scope', async () => {

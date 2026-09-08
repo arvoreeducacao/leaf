@@ -66,6 +66,21 @@ its own (no WebSocket but with network), it tears down the collaboration
 connection for that session: a document seeded in the browser must not later
 join the room's, or the content shows up twice.
 
+### Writes that do not come from an editor
+
+The MCP (`update_document`) and any other server-side body write have to reach
+the room while it is open, or the room would save its own state over them a few
+seconds later. So `writeBlocksToLiveRoom` (`src/lib/realtime-room.ts`) asks the
+collaboration server for the live state (`GET /rooms/doc:<id>`, guarded by
+`LEAF_REALTIME_SECRET`), computes the Yjs delta with the Leaf schema (append or
+replace) and posts it back (`POST /rooms/doc:<id>/update`); the room broadcasts
+it to everyone connected and persists it through the usual path, identity
+preserved. When there is no room, the write goes straight to `documents.content`
+and the next room reseeds from it. When the collaboration server cannot be
+reached, a write on a page edited in the last 15 s is refused rather than
+risked. The app finds the server through `LEAF_REALTIME_SERVER_URL`, or by
+turning `LEAF_REALTIME_URL` from `ws`/`wss` into `http`/`https`.
+
 ### What still does not work offline
 
 - Creating, renaming, moving and deleting a document are server actions and need

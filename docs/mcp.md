@@ -40,9 +40,11 @@ in a page or in a row's file column).
 
 Write tools (`leaf:write`): `create_document` (with icon and cover),
 `update_document` (body in append/replace, title, icon, cover and property values
-when the document is a row; a body write refuses if the page was edited in the
-last 15 s, since a collaboration room is probably open, and uses an optimistic
-guard on `updated_at`), `move_document` (to another page, to a teamspace, to the
+when the document is a row; a body write goes through the open collaboration
+room when there is one, so it shows up at once for whoever has the page open,
+falls back to the database when nobody does, and refuses if the page was edited
+in the last 15 s while the collaboration server is out of reach, with an
+optimistic guard on `updated_at`; see `docs/offline.md`), `move_document` (to another page, to a teamspace, to the
 organisation root or back to Private, with the subtree), `duplicate_document`,
 `trash_document` and `restore_document` (owner only), `upload_image`, and the
 database ones: `create_database`, `create_database_row`, `update_database_row`,

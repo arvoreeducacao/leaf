@@ -413,7 +413,7 @@ export function createLeafMcpServer(context: McpToolContext) {
       {
         title: 'Update document',
         description:
-          'Change a document you can edit: append markdown or an HTML page to its body or replace the body (send one of the two, never both), rename it, set or remove its icon and cover, and on a database row set property values by name. Body writes are refused while someone is editing the page live; retry a few seconds later.',
+          'Change a document you can edit: append markdown or an HTML page to its body or replace the body (send one of the two, never both), rename it, set or remove its icon and cover, and on a database row set property values by name. While someone has the page open, the body is written through their live session and shows up on their screen at once; if that session cannot be reached moments after an edit, the write is refused so nothing is lost, and you retry a few seconds later.',
         inputSchema: {
           documentId: documentIdSchema,
           markdown: markdownSchema,
