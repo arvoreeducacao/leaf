@@ -3,8 +3,10 @@
 import { useCallback, useEffect, useState, useSyncExternalStore } from 'react'
 
 import {
-  canOfferInstall,
-  isDesktopBrowser,
+  type InstallOffer,
+  installOfferFor,
+  isIosDevice,
+  isIosSafari,
   isStandaloneDisplay,
 } from '@/lib/pwa/install'
 
@@ -55,16 +57,21 @@ function serverSnapshot() {
 
 export function useInstallPrompt() {
   const promptReady = useSyncExternalStore(subscribe, promptReadySnapshot, serverSnapshot)
-  const [environment, setEnvironment] = useState({ standalone: true, desktop: false })
+  const [environment, setEnvironment] = useState({
+    standalone: true,
+    ios: false,
+    iosSafari: false,
+  })
 
   useEffect(() => {
     setEnvironment({
       standalone: isStandaloneDisplay(window),
-      desktop: isDesktopBrowser(navigator.userAgent, navigator.maxTouchPoints),
+      ios: isIosDevice(navigator.userAgent, navigator.maxTouchPoints),
+      iosSafari: isIosSafari(navigator.userAgent, navigator.maxTouchPoints),
     })
   }, [])
 
-  const installable = canOfferInstall({ ...environment, promptReady })
+  const offer: InstallOffer = installOfferFor({ ...environment, promptReady })
 
   const install = useCallback(async (): Promise<InstallOutcome> => {
     const pending = deferredPrompt
@@ -84,5 +91,5 @@ export function useInstallPrompt() {
     return outcome
   }, [])
 
-  return { installable, install }
+  return { offer, install }
 }

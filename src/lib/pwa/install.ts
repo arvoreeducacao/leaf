@@ -1,18 +1,30 @@
+export type InstallOffer = 'prompt' | 'ios-safari' | 'ios-browser' | 'none'
+
 type InstallSignals = Readonly<{
   standalone: boolean
   promptReady: boolean
-  desktop: boolean
+  ios: boolean
+  iosSafari: boolean
 }>
 
-const mobileDevice = /Android|iP(?:hone|ad|od)|Mobile|webOS|BlackBerry|Windows Phone/i
+const iosDevice = /iP(?:hone|ad|od)/
 const ipadOsDesktopUserAgent = /Macintosh/
+const safariEngine = /Safari\//
+const otherIosBrowsers = /CriOS|FxiOS|EdgiOS|OPiOS|OPT\/|YaBrowser|DuckDuckGo/
 
-export function isDesktopBrowser(userAgent: string, maxTouchPoints = 0) {
-  if (mobileDevice.test(userAgent)) {
-    return false
-  }
+export function isIosDevice(userAgent: string, maxTouchPoints = 0) {
+  return (
+    iosDevice.test(userAgent) ||
+    (ipadOsDesktopUserAgent.test(userAgent) && maxTouchPoints > 1)
+  )
+}
 
-  return !(ipadOsDesktopUserAgent.test(userAgent) && maxTouchPoints > 1)
+export function isIosSafari(userAgent: string, maxTouchPoints = 0) {
+  return (
+    isIosDevice(userAgent, maxTouchPoints) &&
+    safariEngine.test(userAgent) &&
+    !otherIosBrowsers.test(userAgent)
+  )
 }
 
 export function isStandaloneDisplay(target: Window) {
@@ -27,6 +39,27 @@ export function isStandaloneDisplay(target: Window) {
   )
 }
 
-export function canOfferInstall({ standalone, promptReady, desktop }: InstallSignals) {
-  return desktop && !standalone && promptReady
+export function installOfferFor({
+  standalone,
+  promptReady,
+  ios,
+  iosSafari,
+}: InstallSignals): InstallOffer {
+  if (standalone) {
+    return 'none'
+  }
+
+  if (promptReady) {
+    return 'prompt'
+  }
+
+  if (iosSafari) {
+    return 'ios-safari'
+  }
+
+  if (ios) {
+    return 'ios-browser'
+  }
+
+  return 'none'
 }

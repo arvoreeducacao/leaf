@@ -20,7 +20,7 @@ import {
 } from '@/components/ui/select'
 import { locales } from '@/i18n/config'
 import { setUserLocale } from '@/i18n/locale-action'
-import { useInstallPrompt } from '@/shared/hooks/use-install-prompt'
+import { useInstallAction } from '@/components/app/install-app'
 
 type Props = Readonly<{ locale: string }>
 
@@ -41,7 +41,7 @@ export function PreferencesPanel({ locale }: Props) {
   const t = useTranslations('settings')
   const router = useRouter()
   const { theme, setTheme } = useTheme()
-  const { installable, install } = useInstallPrompt()
+  const { offer: installOffer, act: runInstall } = useInstallAction()
   const [mounted, setMounted] = useState(false)
   const [switching, startSwitching] = useTransition()
   const themeId = useId()
@@ -126,13 +126,13 @@ export function PreferencesPanel({ locale }: Props) {
         </span>
       </SettingsSection>
 
-      {mounted && installable ? (
+      {mounted && installOffer !== 'none' ? (
         <SettingsSection title={t('sectionApp')}>
           <SettingsRow
             control={
               <Button
                 data-testid="install-app-preferences"
-                onClick={() => void install()}
+                onClick={() => void runInstall()}
                 type="button"
                 variant="secondary"
               >

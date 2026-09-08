@@ -37,7 +37,7 @@ import { locales } from '@/i18n/config'
 import { setUserLocale } from '@/i18n/locale-action'
 import { authClient } from '@/lib/auth-client'
 import { wipeOfflineData } from '@/lib/offline/wipe'
-import { useInstallPrompt } from '@/shared/hooks/use-install-prompt'
+import { useInstallAction } from '@/components/app/install-app'
 import { cn } from '@/shared/utils'
 
 type Props = Readonly<{
@@ -75,7 +75,7 @@ export function UserMenu({
   const tNav = useTranslations('nav')
   const router = useRouter()
   const { theme, setTheme } = useTheme()
-  const { installable, install } = useInstallPrompt()
+  const { offer: installOffer, act: runInstall } = useInstallAction()
   const [mounted, setMounted] = useState(false)
   const [pending, setPending] = useState(false)
   const [switching, startSwitching] = useTransition()
@@ -180,8 +180,8 @@ export function UserMenu({
             </Link>
           </DropdownMenuItem>
         ) : null}
-        {installable ? (
-          <DropdownMenuItem data-testid="install-app" onSelect={() => void install()}>
+        {installOffer !== 'none' ? (
+          <DropdownMenuItem data-testid="install-app" onSelect={() => void runInstall()}>
             <DownloadIcon aria-hidden="true" />
             {t('installApp')}
           </DropdownMenuItem>
