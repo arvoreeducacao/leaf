@@ -61,7 +61,7 @@ const SeatCounter: React.FC<{ startFrame: number }> = ({ startFrame }) => {
     interpolate(frame, [startFrame + 10, startFrame + 70], [12, 2400], {
       extrapolateLeft: "clamp",
       extrapolateRight: "clamp",
-      easing: (t) => 1 - Math.pow(1 - t, 3),
+      easing: (t: number) => 1 - Math.pow(1 - t, 3),
     }),
   );
   return (
