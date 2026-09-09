@@ -19,10 +19,9 @@ on your MySQL, in your cloud, under a licence that keeps it that way.
 
 <br>
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/media/editor-dark.png">
-  <img src="docs/media/editor-light.png" alt="A Leaf document open in the editor: a page icon, headings, checklists and a quote, with the page tree in the sidebar" width="860">
-</picture>
+<a href="docs/media/leaf-intro.mp4">
+  <img src="docs/media/leaf-intro.gif" alt="Leaf in 30 seconds: the editor with live cursors, a Notion import, writing offline, sharing with roles and guests" width="860">
+</a>
 
 <br><br>
 
