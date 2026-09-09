@@ -13,6 +13,8 @@ import {
   databaseProperties,
   documents,
   notionDocuments,
+  organizationMembers,
+  organizations,
   user,
 } from '@/db/schema'
 import { resetDatabase } from '@/db/testing'
@@ -71,6 +73,7 @@ type World = {
   rootIcon: { name: string; color: string } | null
   rootCover: { file?: { url: string }; external?: { url: string } } | null
   abortOnRows?: AbortController
+  userLookupFails?: boolean
 }
 
 function makeWorld(): World {
@@ -100,6 +103,7 @@ function norm(id: string): string {
 
 const schema = {
           Name: { name: 'Name', type: 'title' },
+          Responsável: { name: 'Responsável', type: 'people' },
           'Prints & Anexos': { name: 'Prints & Anexos', type: 'files' },
           Relacionada: { name: 'Relacionada', type: 'relation' },
           Status: {
@@ -164,6 +168,16 @@ function makeClient(world: World): NotionClient {
       last_edited_time: world.editedAt[rowTwoId],
       properties: {
         ...title('Second task'),
+        Responsável: {
+          people: [
+            {
+              id: 'notion-owner',
+              name: 'Owner',
+              person: { email: 'owner@example.com' },
+            },
+          ],
+          type: 'people',
+        },
         Status: { status: { name: 'Open' }, type: 'status' },
       },
     }),
@@ -320,7 +334,13 @@ function makeClient(world: World): NotionClient {
         parent: { block_id: 'col-1', type: 'block_id' },
       }
     },
-    user: async () => ({ id: 'u1', name: 'Someone' }),
+    user: async () => {
+      if (world.userLookupFails) {
+        throw new Error('restricted_resource')
+      }
+
+      return { id: 'u1', name: 'Someone' }
+    },
   }
 }
 
@@ -331,18 +351,19 @@ async function run(
   roots:
     | Array<{ id: string; kind: 'page' | 'database' }>
     | 'workspace' = [{ id: rootId, kind: 'page' }],
-  extra: { force?: boolean } = {},
+  extra: { force?: boolean; orgId?: string } = {},
 ) {
+  const { orgId, ...options } = extra
   const events: Array<Record<string, unknown>> = []
 
   for await (const event of syncNotion(
     makeClient(world),
     roots,
-    owner,
+    orgId ? { ...owner, orgId } : owner,
     messages,
     undefined,
     {
-      ...extra,
+      ...options,
       storeAsset: async (_bytes, _contentType, fileName) =>
         `/api/uploads/u/${fileName}`,
     },
@@ -362,6 +383,8 @@ beforeEach(async () => {
 
   await db.delete(documents)
   await db.delete(notionDocuments)
+  await db.delete(organizationMembers)
+  await db.delete(organizations)
   await db.delete(user)
   await db.insert(user).values({
     id: owner.id,
@@ -562,6 +585,35 @@ describe('resumable Notion sync', () => {
     expect(
       mappings.filter((mapping) => mapping.kind === 'row'),
     ).toHaveLength(2)
+  })
+
+  it('takes the person from the row itself when the token cannot read users', async () => {
+    const orgId = 'org-people'
+
+    await db.insert(organizations).values({ id: orgId, name: 'Árvore' })
+    await db.insert(organizationMembers).values({
+      id: 'member-owner',
+      orgId,
+      userId: owner.id,
+      role: 'owner',
+      createdAt: new Date(),
+    })
+
+    const world = makeWorld()
+    world.userLookupFails = true
+
+    await run(world, [{ id: rootId, kind: 'page' }], { orgId })
+
+    const property = await db.query.databaseProperties.findFirst({
+      where: eq(databaseProperties.name, 'Responsável'),
+    })
+    const row = await db.query.documents.findFirst({
+      where: eq(documents.title, 'Second task'),
+    })
+
+    expect(parseValues(row?.properties ?? null)[property?.id ?? '']).toEqual([
+      owner.id,
+    ])
   })
 
   it('imports the tree, resolves links and snapshots relations', async () => {
