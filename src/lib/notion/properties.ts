@@ -221,16 +221,28 @@ async function personLabels(
   const labels: Array<string> = []
 
   for (const person of value) {
-    const id = (person as { id?: unknown })?.id
+    const entry = person as {
+      id?: unknown
+      name?: unknown
+      person?: { email?: unknown }
+    }
+    const email = entry.person?.email
 
-    if (typeof id !== 'string') {
+    if (typeof email === 'string' && email.length > 0) {
+      labels.push(email)
       continue
     }
 
-    const label = await resolver.personLabel(id)
+    const label =
+      typeof entry.id === 'string' ? await resolver.personLabel(entry.id) : null
 
     if (label) {
       labels.push(label)
+      continue
+    }
+
+    if (typeof entry.name === 'string' && entry.name.trim().length > 0) {
+      labels.push(entry.name.trim())
     }
   }
 
