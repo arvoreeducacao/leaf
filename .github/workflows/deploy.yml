@@ -11,7 +11,7 @@ concurrency:
 
 jobs:
   build-and-push:
-    runs-on: arc-deploy-set
+    runs-on: ubuntu-latest
     permissions:
       id-token: write
       contents: read
