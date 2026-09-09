@@ -1,0 +1,18 @@
+{
+  "name": "leaf-intro",
+  "private": true,
+  "scripts": {
+    "studio": "remotion studio",
+    "render": "remotion render LeafIntro out/leaf-intro.mp4"
+  },
+  "dependencies": {
+    "@remotion/cli": "^4.0.522",
+    "@remotion/google-fonts": "^4.0.522",
+    "@remotion/transitions": "^4.0.522",
+    "@types/react": "^19.2.18",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "remotion": "^4.0.522",
+    "typescript": "^7.0.2"
+  }
+}
