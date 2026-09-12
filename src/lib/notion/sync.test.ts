@@ -1038,6 +1038,54 @@ describe('resumable Notion sync', () => {
     expect(all).toHaveLength(5)
   })
 
+  it('keeps values of columns Notion does not know when a row changes', async () => {
+    const world = makeWorld()
+
+    await run(world)
+
+    const database = await db.query.documents.findFirst({
+      where: eq(documents.title, 'Tasks'),
+    })
+    const row = await db.query.documents.findFirst({
+      where: eq(documents.title, 'First task'),
+    })
+    const status = await db.query.databaseProperties.findFirst({
+      where: eq(databaseProperties.name, 'Status'),
+    })
+
+    await db.insert(databaseProperties).values({
+      id: 'prop-grupo',
+      databaseId: database?.id as string,
+      name: 'Grupo',
+      type: 'select',
+      options: JSON.stringify([{ color: 'blue', id: 'grupo-1', name: 'Grupo 1' }]),
+      position: 90,
+      createdAt: new Date(),
+    })
+
+    await db
+      .update(documents)
+      .set({
+        properties: JSON.stringify({
+          ...parseValues(row?.properties ?? null),
+          'prop-grupo': 'grupo-1',
+        }),
+      })
+      .where(eq(documents.id, row?.id as string))
+
+    world.editedAt[rowOneId] = '2026-03-01T00:00:00.000Z'
+
+    await run(world)
+
+    const again = await db.query.documents.findFirst({
+      where: eq(documents.id, row?.id as string),
+    })
+    const values = parseValues(again?.properties ?? null)
+
+    expect(values['prop-grupo']).toBe('grupo-1')
+    expect(values[status?.id ?? '']).toBe('opt-done')
+  })
+
   it('leaves no document behind when a page cannot be read', async () => {
     const world = makeWorld()
 
