@@ -18,6 +18,7 @@ import {
   MAX_PROPERTY_NAME,
   type PropertyValue,
   parseOptions,
+  parseValues,
   serializeOptions,
   serializeValues,
 } from '@/lib/database/values'
@@ -495,6 +496,25 @@ export async function* syncNotion(
     })
 
     return { created: true, documentId }
+  }
+
+  async function valuesOutsideNotion(
+    documentId: string,
+    notionPropertyIds: ReadonlyArray<string>,
+  ): Promise<Record<string, PropertyValue>> {
+    const rows = await db
+      .select({ properties: documents.properties })
+      .from(documents)
+      .where(eq(documents.id, documentId))
+
+    const stored = parseValues(rows[0]?.properties ?? null)
+    const fromNotion = new Set(notionPropertyIds)
+
+    return Object.fromEntries(
+      Object.entries(stored).filter(
+        ([propertyId]) => !fromNotion.has(propertyId),
+      ),
+    )
   }
 
   const databaseContexts = new Map<string, DatabaseContext>()
@@ -1123,7 +1143,12 @@ export async function* syncNotion(
             touchedDocIds.add(rowDoc.documentId)
             touchedDatabaseIds.add(documentId)
 
-            const values: Record<string, PropertyValue> = {}
+            const values: Record<string, PropertyValue> = rowDoc.created
+              ? {}
+              : await valuesOutsideNotion(
+                  rowDoc.documentId,
+                  context.propertyIds,
+                )
 
             for (const [index, property] of context.properties.entries()) {
               const raw = await importedValue(
