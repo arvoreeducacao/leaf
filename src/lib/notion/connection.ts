@@ -44,6 +44,25 @@ export function notionOAuthConfig(): NotionOAuthConfig | null {
   return { clientId, clientSecret, redirectUri: appUrl }
 }
 
+export function notionAppOrigin(config: NotionOAuthConfig): string {
+  try {
+    return new URL(config.redirectUri).origin
+  } catch {
+    return config.redirectUri
+  }
+}
+
+export function notionReturnUrl(
+  origin: string,
+  returnPath: string | null,
+  status: 'connected' | 'failed',
+): string {
+  const url = new URL(returnPath ?? '/', origin)
+  url.searchParams.set('notion', status)
+
+  return url.toString()
+}
+
 export function notionAuthorizeUrl(
   config: NotionOAuthConfig,
   state: string,
