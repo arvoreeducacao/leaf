@@ -2,10 +2,13 @@ import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 
 import { getSession } from '@/lib/auth'
+import type { NotionOAuthConfig } from '@/lib/notion/connection'
 import {
   exchangeNotionCode,
+  notionAppOrigin,
   notionOAuthConfig,
   notionReturnCookie,
+  notionReturnUrl,
   notionStateCookie,
   safeReturnPath,
   saveNotionConnection,
@@ -14,14 +17,13 @@ import {
 export const runtime = 'nodejs'
 
 function back(
-  request: Request,
+  config: NotionOAuthConfig,
   returnPath: string | null,
   status: 'connected' | 'failed',
 ) {
-  const url = new URL(returnPath ?? '/', request.url)
-  url.searchParams.set('notion', status)
-
-  return NextResponse.redirect(url)
+  return NextResponse.redirect(
+    notionReturnUrl(notionAppOrigin(config), returnPath, status),
+  )
 }
 
 export async function GET(request: Request) {
@@ -48,14 +50,14 @@ export async function GET(request: Request) {
   store.delete(notionReturnCookie)
 
   if (!code || !state || !expected || state !== expected) {
-    return back(request, returnPath, 'failed')
+    return back(config, returnPath, 'failed')
   }
 
   const token = await exchangeNotionCode(config, code)
 
   if (!token || !(await saveNotionConnection(session.user.id, token))) {
-    return back(request, returnPath, 'failed')
+    return back(config, returnPath, 'failed')
   }
 
-  return back(request, returnPath, 'connected')
+  return back(config, returnPath, 'connected')
 }
