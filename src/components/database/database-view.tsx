@@ -56,12 +56,12 @@ import {
   applySearch,
   applySorts,
   boardPropertyOf,
+  chosenGroupPropertyOf,
   colorPropertyOf,
   groupRows,
   parseViewConfig,
   peoplePropertyOf,
   serializeViewConfig,
-  timelineGroupPropertyOf,
   visibleProperties,
 } from '@/lib/database/views'
 import type { DatabaseSnapshot } from '@/lib/databases'
@@ -709,8 +709,8 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
       return boardPropertyOf(properties, config)
     }
 
-    if (activeView?.type === 'timeline') {
-      return timelineGroupPropertyOf(properties, config)
+    if (activeView?.type === 'timeline' || activeView?.type === 'table') {
+      return chosenGroupPropertyOf(properties, config)
     }
 
     return null
@@ -1033,6 +1033,8 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
         <TableView
           canEdit={canEdit}
           compact={compact}
+          groupProperty={resolvedGroupProperty}
+          groups={resolvedGroupProperty ? groups : null}
           handlers={handlers}
           people={snapshot.people}
           properties={shown}

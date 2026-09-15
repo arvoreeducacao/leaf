@@ -797,7 +797,7 @@ function propertyMatching<T extends PropertyLike>(
   )
 }
 
-export function timelineGroupPropertyOf<T extends PropertyLike>(
+export function chosenGroupPropertyOf<T extends PropertyLike>(
   properties: ReadonlyArray<T>,
   config: ViewConfig,
 ): T | null {

@@ -20,7 +20,7 @@ import {
   parseViewConfig,
   peoplePropertyOf,
   serializeViewConfig,
-  timelineGroupPropertyOf,
+  chosenGroupPropertyOf,
   visibleProperties,
 } from './views'
 
@@ -724,15 +724,15 @@ describe('a filter that holds more than one option', () => {
 
 describe('the timeline lanes', () => {
   it('groups only when the person chose a property that groups', () => {
-    expect(timelineGroupPropertyOf(properties, emptyViewConfig)).toBeNull()
+    expect(chosenGroupPropertyOf(properties, emptyViewConfig)).toBeNull()
     expect(
-      timelineGroupPropertyOf(properties, {
+      chosenGroupPropertyOf(properties, {
         ...emptyViewConfig,
         groupByPropertyId: 'points',
       }),
     ).toBeNull()
     expect(
-      timelineGroupPropertyOf(properties, {
+      chosenGroupPropertyOf(properties, {
         ...emptyViewConfig,
         groupByPropertyId: 'status',
       })?.id,
