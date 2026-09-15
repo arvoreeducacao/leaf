@@ -176,6 +176,13 @@
       "when": 1788652940559,
       "tag": "0024_database_files_property",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "5",
+      "when": 1788739340559,
+      "tag": "0025_table_group_by_reset",
+      "breakpoints": true
     }
   ]
 }

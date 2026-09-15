@@ -636,7 +636,9 @@ export function ViewSettings({
           </DropdownMenuSub>
         ) : null}
 
-        {view.type === 'board' || view.type === 'timeline' ? (
+        {view.type === 'board' ||
+        view.type === 'timeline' ||
+        view.type === 'table' ? (
           <DropdownMenuSub>
             <DropdownMenuSubTrigger>
               <GroupIcon aria-hidden="true" className="size-5" />
