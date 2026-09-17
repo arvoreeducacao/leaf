@@ -4,6 +4,7 @@ import { and, eq, inArray, isNull } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
 import { getTranslations } from 'next-intl/server'
 import { revalidatePath } from 'next/cache'
+import { after } from 'next/server'
 import { redirect } from 'next/navigation'
 
 import { db } from '@/db'
@@ -23,6 +24,7 @@ import {
   nextFavoritePosition,
 } from '@/lib/favorites'
 import { persistDocumentContent } from '@/lib/document-content'
+import { retitleLinksToDocument } from '@/lib/document-link-propagation'
 import {
   type CoverCredit,
   clampCoverPosition,
@@ -77,6 +79,47 @@ export async function createDocument() {
   redirect(`/doc/${id}`)
 }
 
+export async function createChildDocument(
+  parentId: string,
+): Promise<
+  { ok: true; id: string; title: string } | { ok: false; error: string }
+> {
+  const session = await requireSession()
+
+  if (!canEdit(await getDocumentAccess(parentId, session))) {
+    return notAllowedResult()
+  }
+
+  const parent = await db.query.documents.findFirst({
+    where: and(eq(documents.id, parentId), isNull(documents.deletedAt)),
+  })
+
+  if (!parent) {
+    return notAllowedResult()
+  }
+
+  const id = nanoid(12)
+  const now = new Date()
+  const title = (await getTranslations('document'))('untitled')
+
+  await db.insert(documents).values({
+    id,
+    ownerId: parent.ownerId,
+    parentId: parent.id,
+    orgId: parent.orgId,
+    teamspaceId: parent.teamspaceId,
+    orgAccess: parent.orgAccess,
+    title,
+    createdAt: now,
+    updatedAt: now,
+  })
+
+  await indexDocument(id)
+  revalidatePath('/', 'layout')
+
+  return { ok: true, id, title }
+}
+
 export async function renameDocument(
   id: string,
   title: string,
@@ -89,19 +132,37 @@ export async function renameDocument(
   }
 
   const trimmed = title.trim().slice(0, 200)
+  const current = await db.query.documents.findFirst({
+    where: eq(documents.id, id),
+  })
+  const next =
+    trimmed.length > 0
+      ? trimmed
+      : (await getTranslations('document'))('untitled')
 
   await db
     .update(documents)
-    .set({
-      title:
-        trimmed.length > 0
-          ? trimmed
-          : (await getTranslations('document'))('untitled'),
-      updatedAt: new Date(),
-    })
+    .set({ title: next, updatedAt: new Date() })
     .where(eq(documents.id, id))
 
   await indexDocument(id)
+
+  if (current) {
+    const previous = current.title
+
+    after(async () => {
+      const retitled = await retitleLinksToDocument(
+        id,
+        previous,
+        next,
+        session.user.id,
+      )
+
+      if (retitled > 0) {
+        revalidatePath('/', 'layout')
+      }
+    })
+  }
 
   revalidatePath('/', 'layout')
   revalidatePath(`/doc/${id}`)

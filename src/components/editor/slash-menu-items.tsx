@@ -8,6 +8,7 @@ import {
   DatabaseIcon,
   FileUploadIcon,
   IdeaIcon,
+  PageIcon,
   ZipArchiveIcon,
 } from '@/components/icons'
 
@@ -15,6 +16,7 @@ import type {
   CalloutMenuItem,
   DatabaseMenuItem,
   EmbedMenuItem,
+  PageMenuItem,
 } from './dictionary'
 import type { LeafEditor } from './types'
 
@@ -37,7 +39,11 @@ export type ImportMenuActions = Readonly<{
 export type DatabaseMenuAction = DatabaseMenuItem &
   Readonly<{ onInsert: () => void }>
 
-export type MenuInsertion<T> = Readonly<{ after: string; item: T }>
+export type PageMenuAction = PageMenuItem & Readonly<{ onInsert: () => void }>
+
+export type MenuInsertion<T> = Readonly<{ item: T }> &
+  (Readonly<{ after: string; before?: never }>
+    | Readonly<{ before: string; after?: never }>)
 
 export function arrangeMenuItems<T extends { title: string }>(
   defaults: ReadonlyArray<T>,
@@ -47,14 +53,19 @@ export function arrangeMenuItems<T extends { title: string }>(
   const items = [...defaults]
 
   for (const insertion of insertions) {
-    const index = items.findIndex((item) => item.title === insertion.after)
+    const sibling = insertion.after ?? insertion.before
+    const index = items.findIndex((item) => item.title === sibling)
 
     if (index === -1) {
       items.push(insertion.item)
       continue
     }
 
-    items.splice(index + 1, 0, insertion.item)
+    items.splice(
+      insertion.after === undefined ? index : index + 1,
+      0,
+      insertion.item,
+    )
   }
 
   return [...items, ...tail]
@@ -68,6 +79,7 @@ export function getLeafSlashMenuItems(
   databaseItem?: DatabaseMenuAction,
   aiItems: ReadonlyArray<DefaultReactSuggestionItem> = [],
   embedItem?: EmbedMenuItem,
+  pageItem?: PageMenuAction,
 ): DefaultReactSuggestionItem[] {
   const menu = editor.dictionary.slash_menu
   const hiddenGroups = new Set([menu.video.group, menu.emoji.group])
@@ -113,6 +125,17 @@ export function getLeafSlashMenuItems(
       }
     : null
 
+  const page: DefaultReactSuggestionItem | null = pageItem
+    ? {
+        title: pageItem.title,
+        subtext: pageItem.subtext,
+        aliases: pageItem.aliases,
+        group: pageItem.group,
+        icon: <PageIcon aria-hidden="true" className="size-4" />,
+        onItemClick: pageItem.onInsert,
+      }
+    : null
+
   const archiveAction = importActions?.onArchive
   const linkAction = importActions?.onLink
   const imports: DefaultReactSuggestionItem[] =
@@ -155,6 +178,7 @@ export function getLeafSlashMenuItems(
     ...arrangeMenuItems(
       defaults,
       [
+        ...(page ? [{ before: menu.quote.title, item: page }] : []),
         { after: menu.quote.title, item: callout },
         ...(database ? [{ after: menu.table.title, item: database }] : []),
         ...(embed ? [{ after: menu.image.title, item: embed }] : []),

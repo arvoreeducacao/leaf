@@ -832,8 +832,17 @@ export async function updateDocumentTool(
 
     if (changes.title !== undefined) {
       const { indexDocument } = await import('@/lib/search-index')
+      const { retitleLinksToDocument } = await import(
+        '@/lib/document-link-propagation'
+      )
 
       await indexDocument(id)
+      await retitleLinksToDocument(
+        id,
+        document.title,
+        changes.title,
+        context.session.user.id,
+      )
     }
 
     written = true

@@ -24,6 +24,8 @@ export type DatabaseMenuItem = CalloutMenuItem
 
 export type EmbedMenuItem = CalloutMenuItem
 
+export type PageMenuItem = CalloutMenuItem
+
 const ptSlashMenu: Dictionary['slash_menu'] = {
   ...pt.slash_menu,
   heading: {

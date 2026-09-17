@@ -814,7 +814,8 @@
     "blockDuplicate": "Duplicate block",
     "blockRemove": "Delete block",
     "linkPreviewEmpty": "Empty page",
-    "linkPreviewMissing": "This page could not be opened"
+    "linkPreviewMissing": "This page could not be opened",
+    "newPageFailed": "The page could not be created"
   },
   "blocknote": {
     "placeholder": "Type / for commands",
@@ -829,7 +830,10 @@
     "databaseAliases": "database, table, board, kanban, grid",
     "embedTitle": "Embed",
     "embedSubtext": "Figma, YouTube, Google Docs, Miro and other links",
-    "embedAliases": "embed, figma, youtube, video, miro, google docs, loom, spreadsheet"
+    "embedAliases": "embed, figma, youtube, video, miro, google docs, loom, spreadsheet",
+    "pageTitle": "Page",
+    "pageSubtext": "Create a page inside this one and leave the link here",
+    "pageAliases": "page, subpage, child page, document, doc"
   },
   "embed": {
     "placeholder": "Paste a Figma, YouTube or Google Docs link...",

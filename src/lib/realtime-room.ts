@@ -105,25 +105,29 @@ export function liveRoomDelta(
   }
 }
 
-export async function writeBlocksToLiveRoom(
+export function liveRoomBlocks(state: Uint8Array): Array<PartialBlock> {
+  const doc = new Y.Doc({ gc: true })
+  const fragment = doc.getXmlFragment(realtimeFragmentName)
+
+  try {
+    Y.applyUpdate(doc, state)
+
+    const editor: LeafServerEditor = ServerBlockNoteEditor.create({
+      schema: leafServerSchema,
+    })
+
+    return editor.yXmlFragmentToBlocks(fragment) as Array<PartialBlock>
+  } finally {
+    doc.destroy()
+  }
+}
+
+async function postLiveRoomUpdate(
   documentId: string,
-  blocks: ReadonlyArray<PartialBlock>,
-  mode: LiveRoomMode,
+  delta: Uint8Array,
   authorId: string | null,
+  secret: string,
 ): Promise<LiveRoomWrite> {
-  const secret = realtimeSecret()
-
-  if (!isRealtimeEnabled() || !secret) {
-    return 'disabled'
-  }
-
-  const room = await readLiveRoom(documentId, secret)
-
-  if (room.status !== 'ok') {
-    return room.status
-  }
-
-  const delta = liveRoomDelta(room.state, blocks, mode)
   let response: Response
 
   try {
@@ -151,4 +155,63 @@ export async function writeBlocksToLiveRoom(
   }
 
   return 'applied'
+}
+
+export async function writeBlocksToLiveRoom(
+  documentId: string,
+  blocks: ReadonlyArray<PartialBlock>,
+  mode: LiveRoomMode,
+  authorId: string | null,
+): Promise<LiveRoomWrite> {
+  const secret = realtimeSecret()
+
+  if (!isRealtimeEnabled() || !secret) {
+    return 'disabled'
+  }
+
+  const room = await readLiveRoom(documentId, secret)
+
+  if (room.status !== 'ok') {
+    return room.status
+  }
+
+  return postLiveRoomUpdate(
+    documentId,
+    liveRoomDelta(room.state, blocks, mode),
+    authorId,
+    secret,
+  )
+}
+
+export async function rewriteLiveRoomBlocks(
+  documentId: string,
+  rewrite: (
+    blocks: Array<PartialBlock>,
+  ) => Readonly<{ blocks: Array<PartialBlock>; changed: boolean }>,
+  authorId: string | null,
+): Promise<LiveRoomWrite | 'untouched'> {
+  const secret = realtimeSecret()
+
+  if (!isRealtimeEnabled() || !secret) {
+    return 'disabled'
+  }
+
+  const room = await readLiveRoom(documentId, secret)
+
+  if (room.status !== 'ok') {
+    return room.status
+  }
+
+  const rewritten = rewrite(liveRoomBlocks(room.state))
+
+  if (!rewritten.changed) {
+    return 'untouched'
+  }
+
+  return postLiveRoomUpdate(
+    documentId,
+    liveRoomDelta(room.state, rewritten.blocks, 'replace'),
+    authorId,
+    secret,
+  )
 }
