@@ -29,6 +29,7 @@ import { InlineComments } from '@/components/comments/inline-comments'
 import { WarningIcon } from '@/components/icons'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { createDatabase } from '@/lib/database-actions'
+import { createChildDocument } from '@/lib/document-actions'
 import { takeSessionFlag } from '@/shared/storage'
 
 import { aiAgentName, createAiMenuTexts } from './ai-dictionary'
@@ -108,7 +109,7 @@ export default function BlockNoteEditor({
   const tDatabase = useTranslations('database')
   const tRealtime = useTranslations('realtime')
   const { resolvedTheme } = useTheme()
-  const { calloutItem, databaseItem, embedItem, dictionary } =
+  const { calloutItem, databaseItem, embedItem, pageItem, dictionary } =
     useLeafDictionary(readOnly)
   const containerRef = useRef<HTMLDivElement>(null)
   const importRef = useRef<DocumentImportHandle>(null)
@@ -229,6 +230,28 @@ export default function BlockNoteEditor({
       }
     })()
   }, [documentId, editor, handleChange, tDatabase])
+
+  const insertPage = useCallback(() => {
+    void (async () => {
+      try {
+        const result = await createChildDocument(documentId)
+
+        if (!result.ok) {
+          toast.error(result.error)
+
+          return
+        }
+
+        editor.insertInlineContent([
+          { type: 'link', href: `/doc/${result.id}`, content: result.title },
+          ' ',
+        ])
+        handleChange()
+      } catch {
+        toast.error(t('newPageFailed'))
+      }
+    })()
+  }, [documentId, editor, handleChange, t])
 
   useEffect(() => {
     if (seed === null || seedBlocks === null || seededRef.current) {
@@ -472,6 +495,7 @@ export default function BlockNoteEditor({
                   { ...databaseItem, onInsert: insertDatabase },
                   canUseAi ? leafAiSlashMenuItems(editor) : [],
                   embedItem,
+                  { ...pageItem, onInsert: insertPage },
                 ),
                 query,
               )

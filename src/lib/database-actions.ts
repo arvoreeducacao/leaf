@@ -4,6 +4,7 @@ import { and, asc, eq, inArray, isNull, sql } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
 import { getTranslations } from 'next-intl/server'
 import { revalidatePath } from 'next/cache'
+import { after } from 'next/server'
 import { redirect } from 'next/navigation'
 
 import { db } from '@/db'
@@ -19,6 +20,7 @@ import type {
   DatabaseViewType,
 } from '@/db/schema'
 import { getActiveMembership } from '@/lib/active-org'
+import { retitleLinksToDocument } from '@/lib/document-link-propagation'
 import { getSession } from '@/lib/auth'
 import { canEdit, getDocumentAccess } from '@/lib/authz'
 import {
@@ -132,7 +134,7 @@ export async function createDatabase(
 
   await db.insert(documents).values({
     id,
-    ownerId: session.user.id,
+    ownerId: parent?.ownerId ?? session.user.id,
     parentId: parent?.id ?? null,
     orgId: parent ? parent.orgId : (membership?.orgId ?? null),
     teamspaceId: parent?.teamspaceId ?? null,
@@ -712,16 +714,38 @@ export async function renameDatabaseRow(
     where: and(eq(documents.id, rowId), eq(documents.kind, 'row')),
   })
 
-  if (!row || !row.parentId || !(await canEditDatabase(row.parentId))) {
+  if (!row?.parentId) {
     return notAllowed()
   }
 
+  const session = await canEditDatabase(row.parentId)
+
+  if (!session) {
+    return notAllowed()
+  }
+
+  const next = untitledRow(title)
+
   await db
     .update(documents)
-    .set({ title: untitledRow(title), updatedAt: new Date() })
+    .set({ title: next, updatedAt: new Date() })
     .where(eq(documents.id, rowId))
 
   await indexDocument(rowId)
+
+  after(async () => {
+    const retitled = await retitleLinksToDocument(
+      rowId,
+      row.title,
+      next,
+      session.user.id,
+    )
+
+    if (retitled > 0) {
+      revalidatePath('/', 'layout')
+    }
+  })
+
   revalidatePath(`/doc/${row.parentId}`)
   revalidatePath(`/doc/${rowId}`)
 

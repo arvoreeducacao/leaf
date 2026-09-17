@@ -163,16 +163,20 @@ describe('search_documents', () => {
 })
 
 describe('get_document', () => {
-  it('renders markdown and filters children by the reader access', async () => {
+  it('renders markdown and hands over the subpages the parent lets through', async () => {
     const result = await getDocumentTool(contextFor(member), { documentId: 'doc-shared' })
 
     expect(result.access).toBe('viewer')
     expect(result.markdown).toContain('Cronograma de leitura')
-    expect(result.children).toEqual([])
+    expect(result.children.map((child) => child.id)).toEqual(['doc-child'])
 
     const asOwner = await getDocumentTool(contextFor(owner), { documentId: 'doc-shared' })
 
     expect(asOwner.children.map((child) => child.id)).toEqual(['doc-child'])
+  })
+
+  it('keeps the subpage away from whoever cannot open the parent', async () => {
+    await expectToolError(getDocumentTool(contextFor(stranger), { documentId: 'doc-child' }), 'not_found')
   })
 
   it('returns not_found for whoever has no access and for a malformed id', async () => {

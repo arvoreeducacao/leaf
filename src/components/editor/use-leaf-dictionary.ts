@@ -7,6 +7,7 @@ import type {
   CalloutMenuItem,
   DatabaseMenuItem,
   EmbedMenuItem,
+  PageMenuItem,
 } from './dictionary'
 import { createLeafDictionary, toReadOnlyDictionary } from './dictionary'
 
@@ -42,6 +43,16 @@ export function useLeafDictionary(readOnly: boolean) {
       group: dictionary.slash_menu.table.group ?? '',
     }
 
+    const pageItem: PageMenuItem = {
+      title: t('pageTitle'),
+      subtext: t('pageSubtext'),
+      aliases: t('pageAliases')
+        .split(',')
+        .map((alias) => alias.trim())
+        .filter(Boolean),
+      group: dictionary.slash_menu.paragraph.group ?? '',
+    }
+
     const embedItem: EmbedMenuItem = {
       title: t('embedTitle'),
       subtext: t('embedSubtext'),
@@ -56,6 +67,7 @@ export function useLeafDictionary(readOnly: boolean) {
       calloutItem,
       databaseItem,
       embedItem,
+      pageItem,
       dictionary: readOnly ? toReadOnlyDictionary(dictionary) : dictionary,
     }
   }, [locale, readOnly, t])

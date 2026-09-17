@@ -814,7 +814,8 @@
     "blockDuplicate": "Duplicar bloco",
     "blockRemove": "Excluir bloco",
     "linkPreviewEmpty": "Página vazia",
-    "linkPreviewMissing": "Não foi possível abrir esta página"
+    "linkPreviewMissing": "Não foi possível abrir esta página",
+    "newPageFailed": "Não foi possível criar a página"
   },
   "blocknote": {
     "placeholder": "Digite / para comandos",
@@ -829,7 +830,10 @@
     "databaseAliases": "database, base de dados, tabela, banco de dados, quadro, kanban",
     "embedTitle": "Incorporar",
     "embedSubtext": "Figma, YouTube, Google Docs, Miro e outros links",
-    "embedAliases": "incorporar, embed, figma, youtube, video, miro, google docs, loom, planilha"
+    "embedAliases": "incorporar, embed, figma, youtube, video, miro, google docs, loom, planilha",
+    "pageTitle": "Página",
+    "pageSubtext": "Cria uma página dentro desta e deixa o link aqui",
+    "pageAliases": "pagina, página, page, subpágina, subpagina, documento, doc, filha"
   },
   "embed": {
     "placeholder": "Cole um link do Figma, YouTube, Google Docs...",

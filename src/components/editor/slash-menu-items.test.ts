@@ -6,6 +6,7 @@ type Item = { title: string; group: string }
 
 const defaults: Array<Item> = [
   { title: 'Heading 1', group: 'Headings' },
+  { title: 'Paragraph', group: 'Basic blocks' },
   { title: 'Quote', group: 'Basic blocks' },
   { title: 'List', group: 'Basic blocks' },
   { title: 'Table', group: 'Advanced' },
@@ -13,6 +14,7 @@ const defaults: Array<Item> = [
 ]
 
 const callout: Item = { title: 'Callout', group: 'Basic blocks' }
+const page: Item = { title: 'Page', group: 'Basic blocks' }
 const database: Item = { title: 'Database', group: 'Advanced' }
 const importItem: Item = { title: 'Import .md', group: 'Import' }
 
@@ -29,6 +31,7 @@ describe('slash menu order', () => {
     const items = arrangeMenuItems(
       defaults,
       [
+        { before: 'Quote', item: page },
         { after: 'Quote', item: callout },
         { after: 'Table', item: database },
       ],
@@ -37,6 +40,8 @@ describe('slash menu order', () => {
 
     expect(items.map((item) => item.title)).toEqual([
       'Heading 1',
+      'Paragraph',
+      'Page',
       'Quote',
       'Callout',
       'List',
@@ -51,6 +56,7 @@ describe('slash menu order', () => {
     const items = arrangeMenuItems(
       defaults,
       [
+        { before: 'Quote', item: page },
         { after: 'Quote', item: callout },
         { after: 'Table', item: database },
       ],
@@ -61,6 +67,20 @@ describe('slash menu order', () => {
 
     expect(runs).toEqual(new Array(...new Set(runs)))
     expect(runs).toEqual(['Headings', 'Basic blocks', 'Advanced', 'Import'])
+  })
+
+  it('opens the group with the item asked to come before its first sibling', () => {
+    const items = arrangeMenuItems(defaults, [{ before: 'Quote', item: page }], [])
+
+    expect(items.map((item) => item.title)).toEqual([
+      'Heading 1',
+      'Paragraph',
+      'Page',
+      'Quote',
+      'List',
+      'Table',
+      'Image',
+    ])
   })
 
   it('drops at the end the item whose sibling is no longer in the menu', () => {

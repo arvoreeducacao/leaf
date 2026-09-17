@@ -78,28 +78,28 @@ export async function getTeamspaceGrant(
   return orgMembership ? 'viewer' : null
 }
 
-export const getDocumentAccess = cache(async function resolveDocumentAccess(
+export const maxInheritedDepth = 20
+
+function strongestAccess(
+  left: AccessLevel | null,
+  right: AccessLevel | null,
+): AccessLevel | null {
+  if (left === null) {
+    return right
+  }
+
+  if (right === null) {
+    return left
+  }
+
+  return levelRank[left] >= levelRank[right] ? left : right
+}
+
+async function grantedAccess(
   docId: string,
-  session: SessionLike,
+  document: Document,
+  session: NonNullable<SessionLike>,
 ): Promise<AccessLevel | null> {
-  const document = await getDocument(docId)
-
-  if (!document || document.deletedAt !== null) {
-    return null
-  }
-
-  if (!session) {
-    return null
-  }
-
-  if (document.ownerId === session.user.id) {
-    return 'owner'
-  }
-
-  if (document.kind === 'row' && document.parentId) {
-    return getDocumentAccess(document.parentId, session)
-  }
-
   const share = await db.query.documentShares.findFirst({
     where: and(
       eq(documentShares.documentId, docId),
@@ -133,6 +133,62 @@ export const getDocumentAccess = cache(async function resolveDocumentAccess(
   }
 
   return document.orgAccess
+}
+
+async function inheritsFromParent(
+  document: Document,
+  depth: number,
+): Promise<boolean> {
+  if (!document.parentId || depth >= maxInheritedDepth) {
+    return false
+  }
+
+  if (document.kind === 'row') {
+    return true
+  }
+
+  const parent = await getDocument(document.parentId)
+
+  return parent !== null && parent.ownerId === document.ownerId
+}
+
+async function accessWithin(
+  docId: string,
+  session: SessionLike,
+  depth: number,
+): Promise<AccessLevel | null> {
+  const document = await getDocument(docId)
+
+  if (!document || document.deletedAt !== null) {
+    return null
+  }
+
+  if (!session) {
+    return null
+  }
+
+  if (document.ownerId === session.user.id) {
+    return 'owner'
+  }
+
+  const granted = await grantedAccess(docId, document, session)
+  const parentId = document.parentId
+
+  if (!parentId || !(await inheritsFromParent(document, depth))) {
+    return granted
+  }
+
+  return strongestAccess(
+    granted,
+    await accessWithin(parentId, session, depth + 1),
+  )
+}
+
+export const getDocumentAccess = cache(async function resolveDocumentAccess(
+  docId: string,
+  session: SessionLike,
+): Promise<AccessLevel | null> {
+  return accessWithin(docId, session, 0)
 })
 
 export async function getTrashedDocumentAccess(

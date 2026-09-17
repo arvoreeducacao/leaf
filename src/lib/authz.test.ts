@@ -220,6 +220,56 @@ beforeEach(async () => {
     },
   ])
 
+  await db.insert(documents).values([
+    {
+      id: 'doc-child',
+      ownerId: owner.id,
+      parentId: 'doc-live',
+      title: 'Child of the live document',
+      content: null,
+      publicToken: null,
+      createdAt: now,
+      updatedAt: now,
+      deletedAt: null,
+    },
+    {
+      id: 'doc-child-of-private',
+      ownerId: owner.id,
+      parentId: 'doc-private',
+      title: 'Child of the private document',
+      content: null,
+      publicToken: null,
+      createdAt: now,
+      updatedAt: now,
+      deletedAt: null,
+    },
+  ])
+
+  await db.insert(documents).values([
+    {
+      id: 'doc-grandchild',
+      ownerId: owner.id,
+      parentId: 'doc-child',
+      title: 'Grandchild of the live document',
+      content: null,
+      publicToken: null,
+      createdAt: now,
+      updatedAt: now,
+      deletedAt: null,
+    },
+    {
+      id: 'doc-child-alien',
+      ownerId: stranger.id,
+      parentId: 'doc-live',
+      title: 'Child that belongs to somebody else',
+      content: null,
+      publicToken: null,
+      createdAt: now,
+      updatedAt: now,
+      deletedAt: null,
+    },
+  ])
+
   await db.insert(documentShares).values([
     {
       id: 'share-editor',
@@ -328,6 +378,66 @@ describe('getDocumentAccess', () => {
     await expect(
       getDocumentAccess('doc-private', sessionFor(editor)),
     ).resolves.toBeNull()
+  })
+
+  it('hands the subpage the access its parent gives', async () => {
+    await expect(
+      getDocumentAccess('doc-child', sessionFor(editor)),
+    ).resolves.toBe('editor')
+    await expect(
+      getDocumentAccess('doc-child', sessionFor(viewer)),
+    ).resolves.toBe('viewer')
+  })
+
+  it('carries the access down the whole branch', async () => {
+    await expect(
+      getDocumentAccess('doc-grandchild', sessionFor(editor)),
+    ).resolves.toBe('editor')
+  })
+
+  it('denies the subpage of a document nobody was invited to', async () => {
+    await expect(
+      getDocumentAccess('doc-child-of-private', sessionFor(editor)),
+    ).resolves.toBeNull()
+  })
+
+  it('keeps the invite of the subpage when the parent gives less', async () => {
+    await db.insert(documentShares).values({
+      id: 'share-child-editor',
+      documentId: 'doc-child',
+      granteeEmail: viewer.email,
+      role: 'editor',
+      createdAt: new Date(),
+    })
+
+    await expect(
+      getDocumentAccess('doc-child', sessionFor(viewer)),
+    ).resolves.toBe('editor')
+  })
+
+  it('denies the subpage to whoever the parent denies', async () => {
+    await expect(
+      getDocumentAccess('doc-child', sessionFor(stranger)),
+    ).resolves.toBeNull()
+  })
+
+  it('stops the inheritance where the branch changes hands', async () => {
+    await expect(
+      getDocumentAccess('doc-child-alien', sessionFor(editor)),
+    ).resolves.toBeNull()
+    await expect(
+      getDocumentAccess('doc-child-alien', sessionFor(owner)),
+    ).resolves.toBeNull()
+  })
+
+  it('never lets somebody own a page through the branch above it', async () => {
+    const levels = await Promise.all([
+      getDocumentAccess('doc-child', sessionFor(editor)),
+      getDocumentAccess('doc-grandchild', sessionFor(editor)),
+      getDocumentAccess('doc-child-alien', sessionFor(owner)),
+    ])
+
+    expect(levels.includes('owner')).toBe(false)
   })
 })
 
