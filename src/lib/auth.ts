@@ -20,6 +20,7 @@ import {
   authIssuer,
   isMcpEnabled,
   mcpAccessTokenTtlSeconds,
+  mcpRefreshTokenReuseIntervalSeconds,
   mcpResourceUrl,
   mcpScopes,
 } from '@/lib/mcp-config'
@@ -172,6 +173,7 @@ function mcpAuthorizationServerPlugins() {
       allowUnauthenticatedClientRegistration: true,
       clientRegistrationDefaultScopes: [...mcpScopes],
       accessTokenExpiresIn: mcpAccessTokenTtlSeconds,
+      refreshTokenReuseInterval: mcpRefreshTokenReuseIntervalSeconds,
       resources: [
         {
           identifier: resource,
