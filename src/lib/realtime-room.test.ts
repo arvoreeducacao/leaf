@@ -2,7 +2,7 @@ import { createServer } from 'node:http'
 import type { Server } from 'node:http'
 import type { AddressInfo } from 'node:net'
 
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import * as Y from 'yjs'
 
 import { realtimeFragmentName, realtimeSecretHeader } from './realtime'
@@ -10,7 +10,11 @@ import {
   contentFromRealtimeState,
   seedUpdateFromContent,
 } from './realtime-document'
-import { liveRoomDelta, writeBlocksToLiveRoom } from './realtime-room'
+import {
+  liveRoomDelta,
+  resetWrongRoomAddressReports,
+  writeBlocksToLiveRoom,
+} from './realtime-room'
 
 const sample = JSON.stringify([
   {
@@ -244,6 +248,63 @@ describe('writeBlocksToLiveRoom', () => {
     expect(
       await writeBlocksToLiveRoom('abc', [paragraph('x')], 'append', null),
     ).toBe('unreachable')
+  })
+
+  it('says misconfigured when the address answers something that is not a room', async () => {
+    resetWrongRoomAddressReports()
+
+    const complain = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    server = createServer((_request, response) => {
+      response.writeHead(200, { 'content-type': 'text/plain' })
+      response.end('leaf realtime')
+    })
+
+    await new Promise<void>((resolve) => server?.listen(0, '127.0.0.1', resolve))
+
+    const port = (server.address() as AddressInfo).port
+
+    process.env.LEAF_REALTIME = 'on'
+    process.env.LEAF_REALTIME_SECRET = secret
+    process.env.LEAF_REALTIME_SERVER_URL = `http://127.0.0.1:${port}/realtime`
+
+    expect(
+      await writeBlocksToLiveRoom('abc', [paragraph('x')], 'append', null),
+    ).toBe('misconfigured')
+    expect(complain).toHaveBeenCalledTimes(1)
+    expect(complain.mock.calls[0]?.[0]).toContain('LEAF_REALTIME_SERVER_URL')
+
+    await writeBlocksToLiveRoom('outro', [paragraph('x')], 'append', null)
+
+    expect(complain).toHaveBeenCalledTimes(1)
+
+    complain.mockRestore()
+  })
+
+  it('does not take a stranger 404 for a room that is closed', async () => {
+    resetWrongRoomAddressReports()
+
+    const complain = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    server = createServer((_request, response) => {
+      response.writeHead(404, { 'content-type': 'text/html' })
+      response.end('<!DOCTYPE html><title>404</title>')
+    })
+
+    await new Promise<void>((resolve) => server?.listen(0, '127.0.0.1', resolve))
+
+    const port = (server.address() as AddressInfo).port
+
+    process.env.LEAF_REALTIME = 'on'
+    process.env.LEAF_REALTIME_SECRET = secret
+    process.env.LEAF_REALTIME_SERVER_URL = `http://127.0.0.1:${port}`
+
+    expect(
+      await writeBlocksToLiveRoom('abc', [paragraph('x')], 'append', null),
+    ).toBe('misconfigured')
+    expect(complain).toHaveBeenCalledTimes(1)
+
+    complain.mockRestore()
   })
 
   it('says disabled when realtime is off', async () => {

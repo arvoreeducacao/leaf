@@ -17,12 +17,18 @@ import {
 
 export type LiveRoomMode = 'append' | 'replace'
 
-export type LiveRoomWrite = 'applied' | 'no-room' | 'unreachable' | 'disabled'
+export type LiveRoomWrite =
+  | 'applied'
+  | 'no-room'
+  | 'unreachable'
+  | 'misconfigured'
+  | 'disabled'
 
 type LiveRoomState =
   | Readonly<{ status: 'ok'; state: Uint8Array }>
   | Readonly<{ status: 'no-room' }>
   | Readonly<{ status: 'unreachable' }>
+  | Readonly<{ status: 'misconfigured' }>
 
 type LeafServerEditor = ServerBlockNoteEditor<
   typeof leafServerSchema.blockSchema,
@@ -38,14 +44,35 @@ function roomUrl(documentId: string, suffix = '') {
   return `${realtimeServerUrl()}/rooms/${room}${suffix}`
 }
 
+const reportedWrongAddresses = new Set<string>()
+
+function reportWrongRoomAddress(url: string) {
+  const origin = new URL(url).origin
+
+  if (reportedWrongAddresses.has(origin)) {
+    return
+  }
+
+  reportedWrongAddresses.add(origin)
+
+  console.error(
+    `[leaf] ${url} did not answer as the collaboration server's room API. Writes into open documents are being dropped. Set LEAF_REALTIME_SERVER_URL to its internal address.`,
+  )
+}
+
+export function resetWrongRoomAddressReports() {
+  reportedWrongAddresses.clear()
+}
+
 async function readLiveRoom(
   documentId: string,
   secret: string,
 ): Promise<LiveRoomState> {
+  const url = roomUrl(documentId)
   let response: Response
 
   try {
-    response = await fetch(roomUrl(documentId), {
+    response = await fetch(url, {
       headers: { [realtimeSecretHeader]: secret },
       cache: 'no-store',
     })
@@ -53,20 +80,29 @@ async function readLiveRoom(
     return { status: 'unreachable' }
   }
 
-  if (response.status === 404) {
-    return { status: 'no-room' }
-  }
-
-  if (!response.ok) {
+  if (!response.ok && response.status !== 404) {
     return { status: 'unreachable' }
   }
 
   const payload = (await response.json().catch(() => null)) as {
+    status?: unknown
     state?: unknown
   } | null
 
+  if (response.status === 404) {
+    if (payload && typeof payload.status === 'string') {
+      return { status: 'no-room' }
+    }
+
+    reportWrongRoomAddress(url)
+
+    return { status: 'misconfigured' }
+  }
+
   if (!payload || typeof payload.state !== 'string') {
-    return { status: 'unreachable' }
+    reportWrongRoomAddress(url)
+
+    return { status: 'misconfigured' }
   }
 
   return {
