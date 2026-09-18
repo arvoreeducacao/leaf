@@ -7,6 +7,8 @@ export const mcpWriteScope: McpScope = 'leaf:write'
 
 export const mcpAccessTokenTtlSeconds = 15 * 60
 
+export const mcpRefreshTokenReuseIntervalSeconds = mcpAccessTokenTtlSeconds
+
 function normalize(value: string | undefined) {
   return value?.trim().toLowerCase() ?? ''
 }
