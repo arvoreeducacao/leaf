@@ -21,6 +21,7 @@ import {
   isMcpEnabled,
   mcpAccessTokenTtlSeconds,
   mcpRefreshTokenReuseIntervalSeconds,
+  mcpRefreshTokenTtlSeconds,
   mcpResourceUrl,
   mcpScopes,
 } from '@/lib/mcp-config'
@@ -174,6 +175,7 @@ function mcpAuthorizationServerPlugins() {
       clientRegistrationDefaultScopes: [...mcpScopes],
       accessTokenExpiresIn: mcpAccessTokenTtlSeconds,
       refreshTokenReuseInterval: mcpRefreshTokenReuseIntervalSeconds,
+      refreshTokenExpiresIn: mcpRefreshTokenTtlSeconds,
       resources: [
         {
           identifier: resource,

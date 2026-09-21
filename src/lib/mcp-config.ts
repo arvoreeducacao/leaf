@@ -9,6 +9,8 @@ export const mcpAccessTokenTtlSeconds = 15 * 60
 
 export const mcpRefreshTokenReuseIntervalSeconds = mcpAccessTokenTtlSeconds
 
+export const mcpRefreshTokenTtlSeconds = 365 * 24 * 60 * 60
+
 function normalize(value: string | undefined) {
   return value?.trim().toLowerCase() ?? ''
 }

@@ -4,7 +4,10 @@ import {
   authIssuer,
   isMcpEnabled,
   isMcpWriteEnabled,
+  mcpAccessTokenTtlSeconds,
   mcpAllowedHosts,
+  mcpRefreshTokenReuseIntervalSeconds,
+  mcpRefreshTokenTtlSeconds,
   mcpResourceUrl,
   protectedResourceMetadataUrl,
 } from '@/lib/mcp-config'
@@ -41,6 +44,14 @@ describe('flags do MCP', () => {
     vi.stubEnv('LEAF_MCP_WRITE', '1')
     vi.stubEnv('LEAF_MCP_ENABLED', '0')
     expect(isMcpWriteEnabled()).toBe(false)
+  })
+})
+
+describe('vida dos tokens do MCP', () => {
+  it('the access token is short and the refresh token survives a year idle', () => {
+    expect(mcpAccessTokenTtlSeconds).toBe(15 * 60)
+    expect(mcpRefreshTokenReuseIntervalSeconds).toBe(mcpAccessTokenTtlSeconds)
+    expect(mcpRefreshTokenTtlSeconds).toBe(365 * 24 * 60 * 60)
   })
 })
 
