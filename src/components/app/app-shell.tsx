@@ -14,6 +14,7 @@ import { DocumentList } from '@/components/app/document-list'
 import { DocumentTree } from '@/components/app/document-tree'
 import { InstallBanner, InstallGuide } from '@/components/app/install-app'
 import { NewDocumentButton } from '@/components/app/new-document-button'
+import { NotificationsButton } from '@/components/app/notifications-button'
 import { NotionImportButton } from '@/components/app/notion-import-button'
 import { NotionImportHost } from '@/components/app/notion-import-host'
 import { NewItemMenu } from '@/components/app/new-item-menu'
@@ -70,6 +71,7 @@ type Props = Readonly<{
   shared: Array<DocumentSummary>
   trashed: Array<DocumentSummary>
   sidebarLayout: SidebarLayout
+  unreadNotifications: number
   children: React.ReactNode
 }>
 
@@ -90,6 +92,7 @@ function NavContent({
   locale,
   connectedAppsEnabled,
   layout,
+  unreadNotifications,
   onMoveSection,
   onToggleSection,
   onNavigate,
@@ -111,6 +114,7 @@ function NavContent({
   locale: string
   connectedAppsEnabled: boolean
   layout: SidebarLayout
+  unreadNotifications: number
   onMoveSection: (id: SidebarSectionId, toIndex: number) => void
   onToggleSection: (id: SidebarSectionId) => void
   onNavigate?: () => void
@@ -235,6 +239,10 @@ function NavContent({
           <HomeIcon aria-hidden="true" className={sidebarIcon} />
           <span className="min-w-0 flex-1 truncate">{t('home')}</span>
         </Link>
+        <NotificationsButton
+          initialUnread={unreadNotifications}
+          onNavigate={onNavigate}
+        />
       </div>
 
       <nav
@@ -311,6 +319,7 @@ export function AppShell({
   shared,
   trashed,
   sidebarLayout,
+  unreadNotifications,
   children,
 }: Props) {
   const t = useTranslations('nav')
@@ -417,6 +426,7 @@ export function AppShell({
               </Tooltip>
             }
             layout={layout}
+            unreadNotifications={unreadNotifications}
             locale={locale}
             hiddenOrganizationDocuments={hiddenOrganizationDocuments}
             hiddenOwnedDocuments={hiddenOwnedDocuments}
@@ -500,6 +510,7 @@ export function AppShell({
               connectedAppsEnabled={connectedAppsEnabled}
             activeOrgId={activeOrgId}
             layout={layout}
+            unreadNotifications={unreadNotifications}
             locale={locale}
             onMoveSection={moveSectionTo}
             onNavigate={() => setMobileOpen(false)}

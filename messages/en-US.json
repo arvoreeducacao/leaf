@@ -820,7 +820,9 @@
     "blockRemove": "Delete block",
     "linkPreviewEmpty": "Empty page",
     "linkPreviewMissing": "This page could not be opened",
-    "newPageFailed": "The page could not be created"
+    "newPageFailed": "The page could not be created",
+    "mentionGroup": "People",
+    "mentionNoAccess": "No access to this page, won't be notified"
   },
   "blocknote": {
     "placeholder": "Type / for commands",
@@ -1274,5 +1276,16 @@
     "byOthersWarningDated": "This workspace was already imported by another account on {date}: {count, plural, one {# page} other {# pages}}. Running it again from this account duplicates everything already in Leaf.",
     "acknowledge": "I understand, import anyway",
     "start": "Import everything"
+  },
+  "notifications": {
+    "open": "Notifications",
+    "title": "Notifications",
+    "unread": "{count, plural, one {# new notification} other {# new notifications}}",
+    "empty": "Nothing here yet",
+    "emptyHint": "When someone mentions you with @ on a page, it shows up here.",
+    "mentioned": "{actor} mentioned you in",
+    "someone": "Someone",
+    "loadFailed": "Could not load notifications. Try again.",
+    "slackMention": "{actor} mentioned you in {link}"
   }
 }

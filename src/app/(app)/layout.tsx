@@ -23,6 +23,7 @@ import {
 } from '@/lib/organizations'
 import { listFavoriteDocuments } from '@/lib/favorites'
 import { RECENT_DOCUMENTS_LIMIT } from '@/lib/recent-documents'
+import { countUnreadNotifications } from '@/lib/notifications'
 import { readSidebarLayout } from '@/lib/sidebar-layout-store'
 import { readSidebarPreferences } from '@/lib/sidebar-preferences'
 import type { TeamspaceSection } from '@/lib/teamspaces'
@@ -56,6 +57,7 @@ export default async function AppLayout({
     favorites,
     sidebarLayout,
     recents,
+    unreadNotifications,
   ] = await Promise.all([
     listPrivateDocuments(session.user.id),
     listSharedDocuments(session.user.email),
@@ -69,6 +71,7 @@ export default async function AppLayout({
       { userId: session.user.id, email: session.user.email },
       RECENT_DOCUMENTS_LIMIT,
     ),
+    countUnreadNotifications(session.user.id),
   ])
 
   const visibleTeamspaces = membership
@@ -127,6 +130,7 @@ export default async function AppLayout({
         sidebarLayout={sidebarLayout}
         teamspaces={teamspaceSections}
         trashed={trashed}
+        unreadNotifications={unreadNotifications}
         user={{
           id: session.user.id,
           name: session.user.name,

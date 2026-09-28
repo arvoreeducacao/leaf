@@ -72,6 +72,7 @@ the environment:
 | `LEAF_ICON_PACK_URL` | Switches on an extra tab in the page icon picker, filled from an icon pack manifest. Either an `https://` address or a path inside the uploads storage (`/api/uploads/<key>`); without it, the tab does not appear. The server reads the manifest (up to 5 MB, cached for 10 minutes) and the browser gets it from `/api/icon-pack`, which requires a session. Manifest shape: `{"name": "...", "colors": [{"id": "gray", "label": "Gray", "swatch": "#91918e"}], "icons": [{"name": "attachment", "tags": ["clip"], "files": {"gray": "/api/uploads/icon-packs/<pack>/attachment_gray.svg"}}]}`. Each file must be an `https://` image or an `/api/uploads/` path; picking an icon stores that address on the page |
 | `LEAF_MCP_ENABLED` | Switches on the remote MCP server and the embedded OAuth 2.1 authorization server (`/api/mcp`, `/api/auth/oauth2/*`, `/.well-known/*`). Absent = on outside production and **off in production**; off, all of that answers 404 and the connected-apps screen disappears |
 | `LEAF_MCP_WRITE` | With MCP on, allows the write tools. Absent = on; `0`/`false`/`off` disables writing entirely, even for tokens holding the `leaf:write` scope |
+| `LEAF_SLACK_MENTION_DMS` | With `SLACK_BOT_TOKEN` set, `1`/`true`/`on` also sends a Slack direct message with the page link to whoever is mentioned with `@`. Absent = off; the in-app notification inbox works either way. The bot needs the `chat:write` and `users:read.email` scopes, since the person is found in Slack by their Leaf email |
 
 `deploy/README.md` has the deployment shapes; `docker-compose.yml` brings the
 whole thing up locally in one command.
@@ -124,6 +125,15 @@ space (the body accepts `destination`, like the import routes, and `force` to
 rewrite everything). With `Authorization: Bearer $LEAF_GITHUB_SYNC_SECRET`, the
 database is the one owned by the account in `LEAF_GITHUB_SYNC_OWNER` — that is
 how a scheduled job can run it unattended.
+
+**Mentions and notifications**: typing `@` in the editor lists the people of the
+page's organisation (the document's, or the active one for a private page) and
+inserts a mention chip. When a save adds a mention, the mentioned person gets a
+notification in the sidebar inbox, once per mention: saving the same content
+again, undo and redo do not notify twice, and nobody is notified for mentioning
+themselves, for a template, or for a page they cannot open. With
+`LEAF_SLACK_MENTION_DMS` on, the same notification also goes out as a Slack direct
+message; people Slack does not know by email are skipped silently.
 
 **SSO sign-in**: with the `LEAF_SSO_*` variables filled in, Leaf becomes an
 OAuth2/OIDC client of the company's provider (scopes `openid profile email`,

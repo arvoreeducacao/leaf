@@ -190,6 +190,13 @@
       "when": 1790613765462,
       "tag": "0026_document_visits",
       "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "5",
+      "when": 1790615223330,
+      "tag": "0027_notifications",
+      "breakpoints": true
     }
   ]
 }

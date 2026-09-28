@@ -63,6 +63,7 @@ export {
   FileUp as FileUploadIcon,
   Baseline as FontdefaultIcon,
   Smile as HappyIcon,
+  Bell as NotificationIcon,
   ListTree as HierarchyIcon,
   Lightbulb as IdeaIcon,
   KeyRound as KeyholeIcon,

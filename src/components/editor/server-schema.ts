@@ -1,13 +1,16 @@
 import {
   BlockNoteSchema,
   createBlockSpec,
+  createInlineContentSpec,
   defaultBlockSpecs,
+  defaultInlineContentSpecs,
 } from '@blocknote/core'
 import { withMultiColumn } from '@blocknote/xl-multi-column'
 
 import { calloutConfig } from './callout-config'
 import { databaseConfig } from './database-config'
 import { embedConfig } from './embed-config'
+import { mentionClassName, mentionConfig, mentionLabel } from './mention-config'
 
 const createServerCalloutBlock = createBlockSpec(calloutConfig, {
   render: () => {
@@ -67,6 +70,18 @@ const createServerEmbedBlock = createBlockSpec(embedConfig, {
   },
 })
 
+const serverMentionInlineContent = createInlineContentSpec(mentionConfig, {
+  render: (inlineContent) => {
+    const dom = document.createElement('span')
+
+    dom.className = mentionClassName
+    dom.setAttribute('data-user-id', inlineContent.props.userId)
+    dom.textContent = mentionLabel(inlineContent.props.name)
+
+    return { dom }
+  },
+})
+
 export const leafServerSchema = withMultiColumn(
   BlockNoteSchema.create({
     blockSpecs: {
@@ -74,6 +89,10 @@ export const leafServerSchema = withMultiColumn(
       callout: createServerCalloutBlock(),
       database: createServerDatabaseBlock(),
       embed: createServerEmbedBlock(),
+    },
+    inlineContentSpecs: {
+      ...defaultInlineContentSpecs,
+      mention: serverMentionInlineContent,
     },
   }),
 )

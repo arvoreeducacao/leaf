@@ -15,16 +15,17 @@ export default function OpengraphImage() {
           width: '100%',
           height: '100%',
           display: 'flex',
+          flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          gap: 48,
+          gap: 24,
           background: '#2383e2',
         }}
       >
-        <svg width="220" height="220" viewBox="0 0 24 24">
+        <svg width="200" height="200" viewBox="0 0 24 24">
           <path fill="#ffffff" d={leafPath} />
         </svg>
-        <div style={{ color: '#ffffff', fontSize: 180, fontWeight: 700 }}>
+        <div style={{ color: '#ffffff', fontSize: 96 }}>
           Leaf
         </div>
       </div>

@@ -487,6 +487,40 @@ export const comments = mysqlTable(
   ],
 )
 
+export const notifications = mysqlTable(
+  'notifications',
+  {
+    id: varchar('id', { length: APP_ID }).primaryKey(),
+    recipientId: varchar('recipient_id', { length: AUTH_ID })
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    actorId: varchar('actor_id', { length: AUTH_ID }).references(
+      () => user.id,
+      { onDelete: 'set null' },
+    ),
+    documentId: varchar('document_id', { length: APP_ID })
+      .notNull()
+      .references(() => documents.id, { onDelete: 'cascade' }),
+    kind: mysqlEnum('kind', ['mention']).notNull().default('mention'),
+    sourceKey: varchar('source_key', { length: 64 }).notNull(),
+    readAt: datetime('read_at', { mode: 'date', fsp: 3 }),
+    createdAt: datetime('created_at', { mode: 'date', fsp: 3 }).notNull(),
+  },
+  (table) => [
+    uniqueIndex('notifications_recipient_document_source_idx').on(
+      table.recipientId,
+      table.documentId,
+      table.sourceKey,
+    ),
+    index('notifications_recipient_created_at_idx').on(
+      table.recipientId,
+      table.createdAt,
+    ),
+    index('notifications_document_id_idx').on(table.documentId),
+    index('notifications_actor_id_idx').on(table.actorId),
+  ],
+)
+
 export const notionDocuments = mysqlTable(
   'notion_documents',
   {
@@ -662,6 +696,7 @@ export type DocumentVersion = typeof documentVersions.$inferSelect
 export type Comment = typeof comments.$inferSelect
 export type CommentOrigin = Comment['origin']
 export type SlackThread = typeof slackThreads.$inferSelect
+export type Notification = typeof notifications.$inferSelect
 export type NotionConnection = typeof notionConnections.$inferSelect
 
 const OAUTH_CLIENT_ID = 64

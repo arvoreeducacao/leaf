@@ -36,6 +36,7 @@ export type SlackClient = Readonly<{
   removeReaction(input: ReactionInput): Promise<boolean>
   channelInfo(channelId: string): Promise<SlackChannel | null>
   personInfo(userId: string): Promise<SlackPerson | null>
+  userIdByEmail(email: string): Promise<string | null>
 }>
 
 export type SlackClientOptions = Readonly<{
@@ -184,6 +185,12 @@ export function createSlackClient(
           asString(profile?.image_72) ?? asString(profile?.image_192) ?? null,
         name,
       }
+    },
+
+    async userIdByEmail(email) {
+      const body = await post('users.lookupByEmail', { email })
+
+      return asString(asRecord(body?.user)?.id)
     },
   }
 }

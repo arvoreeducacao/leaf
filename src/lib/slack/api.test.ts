@@ -130,4 +130,28 @@ describe('createSlackClient', () => {
       name: 'Carol Uehara',
     })
   })
+
+  it('finds the Slack person behind an email', async () => {
+    const { calls, fetcher } = recordingFetch({ ok: true, user: { id: 'U7' } })
+
+    const id = await createSlackClient('xoxb-teste', {
+      fetch: fetcher,
+    }).userIdByEmail('ana@example.com')
+
+    expect(id).toBe('U7')
+    expect(calls[0].url).toBe('https://slack.com/api/users.lookupByEmail')
+    expect(new URLSearchParams(calls[0].body).get('email')).toBe(
+      'ana@example.com',
+    )
+  })
+
+  it('gives up on the email lookup when Slack refuses it', async () => {
+    const { fetcher } = recordingFetch({ ok: false, error: 'missing_scope' })
+
+    await expect(
+      createSlackClient('xoxb-teste', { fetch: fetcher }).userIdByEmail(
+        'ana@example.com',
+      ),
+    ).resolves.toBeNull()
+  })
 })
