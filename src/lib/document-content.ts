@@ -4,6 +4,7 @@ import { db } from '@/db'
 import { documents } from '@/db/schema'
 import { recordDocumentVersion } from '@/lib/document-versions'
 import { sanitizeBlocks } from '@/lib/markdown/sanitize'
+import { notifyAddedMentions, sendMentionDms } from '@/lib/notifications'
 import { indexDocument } from '@/lib/search-index'
 
 export type PersistOutcome = 'written' | 'unchanged' | 'missing' | 'conflict'
@@ -16,9 +17,39 @@ function sanitizeContentJSON(contentJSON: string): string {
   }
 }
 
-async function finishPersist(id: string, authorId: string | null) {
+async function notifyMentions(
+  id: string,
+  authorId: string | null,
+  previousContent: string | null,
+  nextContent: string,
+) {
+  try {
+    const recipients = await notifyAddedMentions({
+      actorId: authorId,
+      documentId: id,
+      nextContent,
+      previousContent,
+    })
+
+    void sendMentionDms({
+      actorId: authorId,
+      documentId: id,
+      recipients,
+    }).catch(() => undefined)
+  } catch {
+    return
+  }
+}
+
+async function finishPersist(
+  id: string,
+  authorId: string | null,
+  previousContent: string | null,
+  nextContent: string,
+) {
   await recordDocumentVersion(id, authorId)
   await indexDocument(id)
+  await notifyMentions(id, authorId, previousContent, nextContent)
 }
 
 export async function persistDocumentContent(
@@ -45,7 +76,7 @@ export async function persistDocumentContent(
     .set({ content: safeContent, updatedAt: new Date() })
     .where(eq(documents.id, id))
 
-  await finishPersist(id, authorId)
+  await finishPersist(id, authorId, current.content, safeContent)
 
   return true
 }
@@ -88,7 +119,7 @@ export async function persistDocumentContentIfUnchanged(
     return 'conflict'
   }
 
-  await finishPersist(id, authorId)
+  await finishPersist(id, authorId, current.content, safeContent)
 
   return 'written'
 }

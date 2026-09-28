@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { parseChannelRef } from './config'
+import { isSlackMentionDmEnabled, parseChannelRef } from './config'
 
 describe('parseChannelRef', () => {
   it('accepts the channel id', () => {
@@ -33,5 +33,32 @@ describe('parseChannelRef', () => {
 
   it('rejects an empty reference', () => {
     expect(parseChannelRef('   ')).toBeNull()
+  })
+})
+
+describe('isSlackMentionDmEnabled', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs()
+  })
+
+  it('stays off unless the flag is set', () => {
+    vi.stubEnv('SLACK_BOT_TOKEN', 'xoxb-teste')
+    vi.stubEnv('LEAF_SLACK_MENTION_DMS', '')
+
+    expect(isSlackMentionDmEnabled()).toBe(false)
+  })
+
+  it('turns on with the flag and a bot token', () => {
+    vi.stubEnv('SLACK_BOT_TOKEN', 'xoxb-teste')
+    vi.stubEnv('LEAF_SLACK_MENTION_DMS', 'true')
+
+    expect(isSlackMentionDmEnabled()).toBe(true)
+  })
+
+  it('stays off without a bot token even with the flag', () => {
+    vi.stubEnv('SLACK_BOT_TOKEN', '')
+    vi.stubEnv('LEAF_SLACK_MENTION_DMS', 'true')
+
+    expect(isSlackMentionDmEnabled()).toBe(false)
   })
 })

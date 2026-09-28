@@ -26,6 +26,14 @@ export function isSlackBotConfigured(): boolean {
   return slackBotToken() !== null
 }
 
+export function isSlackMentionDmEnabled(): boolean {
+  const flag = trimmed('LEAF_SLACK_MENTION_DMS').toLowerCase()
+
+  return (
+    isSlackBotConfigured() && (flag === '1' || flag === 'true' || flag === 'on')
+  )
+}
+
 export function parseChannelRef(input: string): string | null {
   const candidate = input.trim()
 
