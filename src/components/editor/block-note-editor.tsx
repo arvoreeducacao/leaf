@@ -30,6 +30,7 @@ import { WarningIcon } from '@/components/icons'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { createDatabase } from '@/lib/database-actions'
 import { createChildDocument } from '@/lib/document-actions'
+import { searchMentionablePeople } from '@/lib/notification-actions'
 import { takeSessionFlag } from '@/shared/storage'
 
 import { aiAgentName, createAiMenuTexts } from './ai-dictionary'
@@ -44,6 +45,7 @@ import type { DocumentImportHandle } from './document-import'
 import { focusDocumentTitle, onEditorFocusRequest } from './focus-bridge'
 import { LeafFormattingToolbarController } from './formatting-toolbar'
 import { LeafLinkToolbarController } from './link-toolbar'
+import { mentionMenuItems } from './mention-menu-items'
 import { renderRealtimeCursor } from './realtime-cursor'
 import {
   onSaveRetryRequest,
@@ -188,6 +190,22 @@ export default function BlockNoteEditor({
     scanDocLinks()
     schedule(JSON.stringify(blocks))
   }, [editor, scanDocLinks, schedule])
+
+  const getMentionItems = useCallback(
+    async (query: string) => {
+      try {
+        const people = await searchMentionablePeople(documentId, query)
+
+        return mentionMenuItems(editor, people, {
+          group: t('mentionGroup'),
+          noAccess: t('mentionNoAccess'),
+        })
+      } catch {
+        return []
+      }
+    },
+    [documentId, editor, t],
+  )
 
   const handleBlur = useCallback(() => {
     void flush()
@@ -502,6 +520,12 @@ export default function BlockNoteEditor({
             }
             triggerCharacter="/"
           />
+          {isEditable ? (
+            <SuggestionMenuController
+              getItems={getMentionItems}
+              triggerCharacter="@"
+            />
+          ) : null}
         </BlockNoteView>
       </BlockContextMenu>
       <InlineComments

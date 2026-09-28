@@ -1,7 +1,10 @@
+import { mentionLabel } from './mention-config'
+
 type InlineLike = Readonly<{
   type?: string
   text?: string
   content?: unknown
+  props?: Readonly<{ name?: unknown }>
 }>
 
 type BlockLike = Readonly<{
@@ -34,6 +37,10 @@ function collectInline(node: unknown, parts: Array<string>) {
 
   if (typeof inline.text === 'string') {
     parts.push(inline.text)
+  }
+
+  if (inline.type === 'mention' && typeof inline.props?.name === 'string') {
+    parts.push(mentionLabel(inline.props.name))
   }
 
   if (inline.content !== undefined) {

@@ -815,7 +815,9 @@
     "blockRemove": "Excluir bloco",
     "linkPreviewEmpty": "Página vazia",
     "linkPreviewMissing": "Não foi possível abrir esta página",
-    "newPageFailed": "Não foi possível criar a página"
+    "newPageFailed": "Não foi possível criar a página",
+    "mentionGroup": "Pessoas",
+    "mentionNoAccess": "Sem acesso a esta página, não recebe o aviso"
   },
   "blocknote": {
     "placeholder": "Digite / para comandos",
@@ -1269,5 +1271,16 @@
     "byOthersWarningDated": "Este workspace já foi importado por outra conta em {date}: {count, plural, one {# página} other {# páginas}}. Rodar de novo por esta conta duplica tudo o que já está no Leaf.",
     "acknowledge": "Entendi, importar mesmo assim",
     "start": "Importar tudo"
+  },
+  "notifications": {
+    "open": "Notificações",
+    "title": "Notificações",
+    "unread": "{count, plural, one {# aviso novo} other {# avisos novos}}",
+    "empty": "Nenhum aviso por aqui",
+    "emptyHint": "Quando alguém mencionar você com @ numa página, o aviso aparece aqui.",
+    "mentioned": "{actor} mencionou você em",
+    "someone": "Alguém",
+    "loadFailed": "Não foi possível carregar os avisos. Tente de novo.",
+    "slackMention": "{actor} mencionou você em {link}"
   }
 }

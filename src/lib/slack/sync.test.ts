@@ -69,6 +69,9 @@ function recorder(person: { name: string; image: string | null } | null = null):
 
       return true
     },
+    async userIdByEmail() {
+      return null
+    },
   }
 
   return { client, posted, reactions }
