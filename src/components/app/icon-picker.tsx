@@ -4,6 +4,7 @@ import { useTranslations } from 'next-intl'
 import { useDeferredValue, useId, useMemo, useRef, useState, useTransition } from 'react'
 import { toast } from 'sonner'
 
+import { IconPackPanel, useIconPack } from '@/components/app/icon-pack-panel'
 import { uploadEditorFile } from '@/components/editor/upload-file'
 import { SearchIcon, TrashIcon, UploadIcon } from '@/components/icons'
 import { Button } from '@/components/ui/button'
@@ -60,6 +61,7 @@ export function IconPicker({
 }: Props) {
   const t = useTranslations('icon')
   const isMobile = useIsMobile()
+  const iconPack = useIconPack(open)
   const [pending, startTransition] = useTransition()
   const [uploading, setUploading] = useState(false)
   const [query, setQuery] = useState('')
@@ -181,6 +183,9 @@ export function IconPicker({
       <div className="flex items-end justify-between gap-2">
         <TabsList className="h-10 min-w-0 flex-1 gap-4 overflow-x-auto">
           <TabsTrigger value="emoji">{t('tabEmoji')}</TabsTrigger>
+          {iconPack ? (
+            <TabsTrigger value="pack">{iconPack.name || t('tabPack')}</TabsTrigger>
+          ) : null}
           <TabsTrigger value="upload">{t('tabUpload')}</TabsTrigger>
           <TabsTrigger value="link">{t('tabLink')}</TabsTrigger>
         </TabsList>
@@ -242,6 +247,17 @@ export function IconPicker({
           )}
         </div>
       </TabsContent>
+
+      {iconPack ? (
+        <TabsContent value="pack">
+          <IconPackPanel
+            busy={busy}
+            currentIcon={currentIcon}
+            onPick={apply}
+            pack={iconPack}
+          />
+        </TabsContent>
+      ) : null}
 
       <TabsContent value="upload">
         <div className="flex flex-col items-start gap-2">
