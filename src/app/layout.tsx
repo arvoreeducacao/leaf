@@ -8,6 +8,7 @@ import { ServiceWorkerRegistration } from '@/components/app/service-worker-regis
 import { StaleBuildRecovery } from '@/components/app/stale-build-recovery'
 import { ThemeProvider } from '@/components/app/theme-provider'
 import { Toaster } from '@/components/ui/sonner'
+import { authIssuer as appBaseUrl } from '@/lib/mcp-config'
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -22,9 +23,14 @@ export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('metadata')
 
   return {
+    metadataBase: new URL(appBaseUrl()),
     title: t('title'),
     description: t('description'),
     applicationName: 'Leaf',
+    openGraph: {
+      siteName: 'Leaf',
+      type: 'website',
+    },
     manifest: '/manifest.webmanifest',
     icons: {
       icon: [
