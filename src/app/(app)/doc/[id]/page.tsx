@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { getTranslations } from 'next-intl/server'
 import { notFound, redirect } from 'next/navigation'
+import { after } from 'next/server'
 
 import type { ActiveTrailScope } from '@/components/app/active-trail-bridge'
 import { ActiveTrail } from '@/components/app/active-trail'
@@ -18,6 +19,7 @@ import { canComment, canEdit, getDocumentAccess } from '@/lib/authz'
 import { readCommentsState } from '@/lib/comments-access'
 import { relativeTimeAnchor } from '@/lib/comments-state'
 import { parseCoverCredit } from '@/lib/document-cover'
+import { recordDocumentVisit } from '@/lib/document-visits'
 import { documentIdsInContent } from '@/lib/document-links'
 import {
   getDocument,
@@ -62,6 +64,8 @@ export default async function DocumentPage({ params }: Props) {
   if (!document) {
     notFound()
   }
+
+  after(() => recordDocumentVisit(session.user.id, document.id))
 
   const [crumbs, comments, slack, teamspace, linkedDocuments] =
     await Promise.all([

@@ -593,6 +593,27 @@ export const documentFavorites = mysqlTable(
   ],
 )
 
+export const documentVisits = mysqlTable(
+  'document_visits',
+  {
+    userId: varchar('user_id', { length: AUTH_ID })
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    documentId: varchar('document_id', { length: APP_ID })
+      .notNull()
+      .references(() => documents.id, { onDelete: 'cascade' }),
+    visitedAt: datetime('visited_at', { mode: 'date', fsp: 3 }).notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.userId, table.documentId] }),
+    index('document_visits_user_visited_idx').on(
+      table.userId,
+      table.visitedAt,
+    ),
+    index('document_visits_document_id_idx').on(table.documentId),
+  ],
+)
+
 export const databaseViewDrafts = mysqlTable(
   'database_view_drafts',
   {

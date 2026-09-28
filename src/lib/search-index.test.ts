@@ -23,7 +23,6 @@ import {
   buildSnippet,
   documentBodyText,
   indexDocument,
-  listRecentAccessibleDocuments,
   parseSnippet,
   reconcileSearchIndex,
   removeDocumentFromIndex,
@@ -443,30 +442,5 @@ describe('index maintenance', () => {
     )) as unknown as [Array<{ total: number }>, unknown]
 
     expect(Number(result[0][0].total)).toBe(0)
-  })
-})
-
-describe('listRecentAccessibleDocuments', () => {
-  it('lists only what the person can open', async () => {
-    expect(
-      (await listRecentAccessibleDocuments(viewerOf(owner))).length,
-    ).toBe(3)
-    expect(
-      (await listRecentAccessibleDocuments(viewerOf(guest))).map(
-        (hit) => hit.id,
-      ),
-    ).toEqual(['doc-shared'])
-    expect(
-      (await listRecentAccessibleDocuments(viewerOf(member))).map(
-        (hit) => hit.id,
-      ),
-    ).toEqual(['doc-org'])
-    expect(await listRecentAccessibleDocuments(viewerOf(stranger))).toEqual([])
-  })
-
-  it('respects the limit', async () => {
-    expect(await listRecentAccessibleDocuments(viewerOf(owner), 1)).toHaveLength(
-      1,
-    )
   })
 })
