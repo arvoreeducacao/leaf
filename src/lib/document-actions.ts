@@ -25,6 +25,7 @@ import {
 } from '@/lib/favorites'
 import { persistDocumentContent } from '@/lib/document-content'
 import { retitleLinksToDocument } from '@/lib/document-link-propagation'
+import { duplicatePlacement } from '@/lib/duplicate-placement'
 import {
   type CoverCredit,
   clampCoverPosition,
@@ -333,7 +334,7 @@ export async function duplicateDocument(
   const session = await requireSession()
   const access = await getDocumentAccess(id, session)
 
-  if (access !== 'owner') {
+  if (!access) {
     return notAllowedResult()
   }
 
@@ -345,19 +346,25 @@ export async function duplicateDocument(
     return { ok: false, error: (await errorMessages())('documentNotFound') }
   }
 
+  const placement = duplicatePlacement(source, access)
+
+  if (!placement) {
+    return notAllowedResult()
+  }
+
   const copyId = nanoid(12)
   const now = new Date()
 
   await db.insert(documents).values({
     id: copyId,
     ownerId: session.user.id,
-    parentId: source.parentId,
-    orgId: source.orgId,
-    teamspaceId: source.teamspaceId,
+    ...placement,
     kind: source.kind,
     title: (await getTranslations('document'))('copyTitle', {
       title: source.title,
     }).slice(0, 200),
+    icon: source.icon,
+    cover: source.cover,
     content: source.content,
     properties: source.properties,
     createdAt: now,
