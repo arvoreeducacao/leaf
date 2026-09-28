@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState } from 'react'
 
+import { useActiveTrail } from '@/components/app/active-trail-bridge'
 import { DocumentIcon } from '@/components/app/document-icon'
 import { DocumentRowMenu } from '@/components/app/document-row-menu'
 import {
@@ -14,7 +15,9 @@ import {
   sidebarRowActive,
 } from '@/components/app/sidebar-styles'
 import { EllipsisIcon } from '@/components/icons/outline'
+import type { TrailNode } from '@/lib/document-trail'
 import type { DocumentSummary } from '@/lib/documents'
+import { promoteVisitedDocuments, rememberVisit } from '@/lib/recent-documents'
 import { cn } from '@/shared/utils'
 
 const collapsedCount = 5
@@ -26,13 +29,33 @@ type Props = Readonly<{
 }>
 
 export function RecentDocuments({
-  documents,
+  documents: serverDocuments,
   hasOrganization,
   onNavigate,
 }: Props) {
   const t = useTranslations('nav')
   const pathname = usePathname()
+  const trail = useActiveTrail()
   const [expanded, setExpanded] = useState(false)
+  const [visited, setVisited] = useState<Array<TrailNode>>([])
+  const [baseline, setBaseline] = useState(serverDocuments)
+
+  if (baseline !== serverDocuments) {
+    setBaseline(serverDocuments)
+    setVisited([])
+  }
+
+  const current = trail?.nodes.at(-1)
+
+  if (
+    current &&
+    current.id === trail?.documentId &&
+    visited[0]?.id !== current.id
+  ) {
+    setVisited(rememberVisit(visited, current))
+  }
+
+  const documents = promoteVisitedDocuments(serverDocuments, visited)
 
   if (documents.length === 0) {
     return <p className={sidebarEmpty}>{t('emptyRecents')}</p>

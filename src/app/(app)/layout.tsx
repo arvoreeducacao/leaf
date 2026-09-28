@@ -15,19 +15,18 @@ import {
   listPrivateDocuments,
   listSharedDocuments,
   listTrashedDocuments,
-  pickRecentDocuments,
 } from '@/lib/documents'
+import { listVisitedDocuments } from '@/lib/document-visits'
 import {
   acceptPendingInvites,
   listOrganizationDocuments,
 } from '@/lib/organizations'
 import { listFavoriteDocuments } from '@/lib/favorites'
+import { RECENT_DOCUMENTS_LIMIT } from '@/lib/recent-documents'
 import { readSidebarLayout } from '@/lib/sidebar-layout-store'
 import { readSidebarPreferences } from '@/lib/sidebar-preferences'
 import type { TeamspaceSection } from '@/lib/teamspaces'
 import { listTeamspaceDocuments, listVisibleTeamspaces } from '@/lib/teamspaces'
-
-const recentLimit = 15
 
 export default async function AppLayout({
   children,
@@ -56,6 +55,7 @@ export default async function AppLayout({
     organizationDocuments,
     favorites,
     sidebarLayout,
+    recents,
   ] = await Promise.all([
     listPrivateDocuments(session.user.id),
     listSharedDocuments(session.user.email),
@@ -65,6 +65,10 @@ export default async function AppLayout({
       : Promise.resolve([]),
     listFavoriteDocuments(session.user.id),
     readSidebarLayout(session.user.id),
+    listVisitedDocuments(
+      { userId: session.user.id, email: session.user.email },
+      RECENT_DOCUMENTS_LIMIT,
+    ),
   ])
 
   const visibleTeamspaces = membership
@@ -94,11 +98,6 @@ export default async function AppLayout({
   const ownedTree = capDocumentTree(buildDocumentTree(privateDocuments))
   const organizationTree = capDocumentTree(
     buildDocumentTree(organizationDocuments),
-  )
-
-  const recents = pickRecentDocuments(
-    [privateDocuments, organizationDocuments, shared, ...teamspaceDocuments],
-    recentLimit,
   )
 
   const locale = await getLocale()

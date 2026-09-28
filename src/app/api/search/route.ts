@@ -1,8 +1,9 @@
 import { getSession } from '@/lib/auth'
+import { listVisitedDocuments } from '@/lib/document-visits'
 import { searchDocumentsHybrid } from '@/lib/search-hybrid'
 import type { WorkspaceSearchResult } from '@/lib/search-index'
 import {
-  listRecentAccessibleDocuments,
+  MAX_RECENT_RESULTS,
   scheduleSearchIndexReconcile,
 } from '@/lib/search-index'
 
@@ -29,8 +30,15 @@ export async function GET(request: Request) {
   scheduleSearchIndexReconcile()
 
   if (term.length === 0) {
+    const visited = await listVisitedDocuments(viewer, MAX_RECENT_RESULTS)
+
     return json({
-      documents: await listRecentAccessibleDocuments(viewer),
+      documents: visited.map((document) => ({
+        id: document.id,
+        title: document.title,
+        icon: document.icon,
+        segments: [],
+      })),
       recent: true,
     })
   }

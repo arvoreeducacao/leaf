@@ -183,6 +183,13 @@
       "when": 1788739340559,
       "tag": "0025_table_group_by_reset",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "5",
+      "when": 1790613765462,
+      "tag": "0026_document_visits",
+      "breakpoints": true
     }
   ]
 }

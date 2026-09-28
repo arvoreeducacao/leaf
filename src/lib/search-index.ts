@@ -456,27 +456,3 @@ export async function searchAccessibleDocumentBodies(
     body: row.body ?? '',
   }))
 }
-
-export async function listRecentAccessibleDocuments(
-  viewer: ViewerKeys,
-  limit: number = MAX_RECENT_RESULTS,
-): Promise<Array<SearchHit>> {
-  const rows = await selectRows<
-    Readonly<{ id: string; title: string; icon: string | null }>
-  >(sql`
-    select d.id as id, d.title as title, d.icon as icon
-    from documents d
-    where d.deleted_at is null
-      and d.kind <> 'template'
-      and ${accessCondition(viewer)}
-    order by d.updated_at desc
-    limit ${limit}
-  `)
-
-  return rows.map((row) => ({
-    id: row.id,
-    title: row.title,
-    icon: row.icon,
-    segments: [],
-  }))
-}
