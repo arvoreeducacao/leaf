@@ -220,14 +220,15 @@ export function useDocumentActions({
     onSelect: handleCopyLink,
   })
 
+  entries.push({
+    key: 'duplicate',
+    label: t('duplicate'),
+    icon: PagesIcon,
+    onSelect: handleDuplicate,
+    disabled: pending,
+  })
+
   if (isOwner) {
-    entries.push({
-      key: 'duplicate',
-      label: t('duplicate'),
-      icon: PagesIcon,
-      onSelect: handleDuplicate,
-      disabled: pending,
-    })
     entries.push({
       key: 'move-to-page',
       label: t('moveToPage'),
