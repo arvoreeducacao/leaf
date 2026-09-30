@@ -882,6 +882,8 @@
     "appBody": "We couldn't load this part of Leaf",
     "documentNotFoundTitle": "Document not found",
     "documentNotFoundBody": "It doesn't exist, it's in the trash, or you don't have access to it",
+    "documentForbiddenTitle": "You don't have access to this document",
+    "documentForbiddenBody": "It exists, but it hasn't been shared with you. Ask whoever created the page to give you access.",
     "pageNotFoundTitle": "Page not found",
     "pageNotFoundBody": "The document doesn't exist or you don't have access to it",
     "notAllowed": "You don't have permission for this action.",
