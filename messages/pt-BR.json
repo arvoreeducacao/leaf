@@ -882,6 +882,8 @@
     "appBody": "Não conseguimos carregar esta parte do Leaf",
     "documentNotFoundTitle": "Documento não encontrado",
     "documentNotFoundBody": "Ele não existe, está na lixeira ou você não tem acesso a ele",
+    "documentForbiddenTitle": "Você não tem acesso a este documento",
+    "documentForbiddenBody": "Ele existe, mas não foi compartilhado com você. Peça a quem criou a página para liberar o acesso.",
     "pageNotFoundTitle": "Página não encontrada",
     "pageNotFoundBody": "O documento não existe ou você não tem acesso a ele",
     "notAllowed": "Você não tem permissão para esta ação.",

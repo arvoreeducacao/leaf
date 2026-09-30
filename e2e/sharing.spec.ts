@@ -10,6 +10,39 @@ import {
 } from './helpers'
 
 test.describe('sharing', () => {
+  test('a signed-in person without access sees a permission notice', async ({
+    browser,
+  }) => {
+    const owner = await browser.newContext()
+    const stranger = await browser.newContext()
+    const ownerPage = await owner.newPage()
+    const strangerPage = await stranger.newPage()
+
+    await signUp(strangerPage, uniqueEmail('stranger'), 'Stranger')
+    await signUp(ownerPage, uniqueEmail('owner'), 'Owner')
+    await ownerPage.getByRole('button', { name: 'Novo documento' }).first().click()
+    await ownerPage.waitForURL(/\/doc\/[\w-]+$/)
+    const id = ownerPage.url().split('/doc/')[1]
+
+    await strangerPage.goto(`/doc/${id}`)
+    await expect(
+      strangerPage.getByRole('heading', {
+        name: 'Você não tem acesso a este documento',
+      }),
+    ).toBeVisible()
+    await strangerPage.screenshot({
+      path: process.env.ACCESS_DENIED_SHOT ?? 'test-results/access-denied.png',
+    })
+
+    await strangerPage.goto('/doc/does-not-exist')
+    await expect(
+      strangerPage.getByRole('heading', { name: 'Documento não encontrado' }),
+    ).toBeVisible()
+
+    await owner.close()
+    await stranger.close()
+  })
+
   test('the guest sees it as a viewer and then can edit', async ({
     browser,
   }) => {

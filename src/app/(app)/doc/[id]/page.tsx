@@ -5,6 +5,7 @@ import { after } from 'next/server'
 
 import type { ActiveTrailScope } from '@/components/app/active-trail-bridge'
 import { ActiveTrail } from '@/components/app/active-trail'
+import { DocumentAccessDenied } from '@/components/app/document-access-denied'
 import { DocumentBreadcrumb } from '@/components/app/document-breadcrumb'
 import { DocumentCover } from '@/components/app/document-cover'
 import { DocumentHeader } from '@/components/app/document-header'
@@ -37,11 +38,18 @@ type Props = Readonly<{ params: Promise<{ id: string }> }>
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params
-  const document = await getDocument(id)
+  const session = await getSession()
+  const [document, access] = await Promise.all([
+    getDocument(id),
+    getDocumentAccess(id, session),
+  ])
   const t = await getTranslations('metadata')
 
   return {
-    title: document ? t('document', { title: document.title }) : t('title'),
+    title:
+      document && access
+        ? t('document', { title: document.title })
+        : t('title'),
   }
 }
 
@@ -53,16 +61,17 @@ export default async function DocumentPage({ params }: Props) {
     redirect('/login')
   }
 
-  const access = await getDocumentAccess(id, session)
+  const [access, document] = await Promise.all([
+    getDocumentAccess(id, session),
+    getDocument(id),
+  ])
 
-  if (!access) {
+  if (!document || document.deletedAt !== null) {
     notFound()
   }
 
-  const document = await getDocument(id)
-
-  if (!document) {
-    notFound()
+  if (!access) {
+    return <DocumentAccessDenied />
   }
 
   after(() => recordDocumentVisit(session.user.id, document.id))
