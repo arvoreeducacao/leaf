@@ -469,6 +469,9 @@
     "noPerson": "No assignee",
     "noPeople": "Nobody in this organization",
     "searchPeople": "Search people",
+    "selectManyPeople": "Select as many as you like",
+    "noPeopleFound": "Nobody with that name",
+    "removePerson": "Remove {name}",
     "personNeedsOrganization": "Person only works in a database inside an organization.",
     "statusGroup": {
       "todo": "To do",

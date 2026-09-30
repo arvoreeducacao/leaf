@@ -469,6 +469,9 @@
     "noPerson": "Sem responsável",
     "noPeople": "Ninguém nesta organização",
     "searchPeople": "Buscar pessoa",
+    "selectManyPeople": "Selecione quantas quiser",
+    "noPeopleFound": "Ninguém com esse nome",
+    "removePerson": "Remover {name}",
     "personNeedsOrganization": "Pessoa só funciona em base dentro de uma organização.",
     "statusGroup": {
       "todo": "A fazer",
