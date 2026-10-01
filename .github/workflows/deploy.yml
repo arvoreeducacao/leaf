@@ -21,7 +21,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Configure AWS Production Credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v6
         with:
           aws-region: ${{ vars.AWS_REGION }}
           role-to-assume: ${{ secrets.AWS_ECR_PUSH_ROLE }}
@@ -61,13 +61,13 @@ jobs:
 
     steps:
       - name: Configure AWS
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: ${{ secrets.AWS_ECR_PUSH_ROLE }}
           aws-region: ${{ vars.AWS_REGION }}
 
       - name: Assume EKS role
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: ${{ secrets.AWS_EKS_ROLE }}
           aws-region: ${{ vars.AWS_REGION }}
