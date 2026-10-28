@@ -2,6 +2,7 @@ import { and, eq } from 'drizzle-orm'
 
 import { db } from '@/db'
 import { documents } from '@/db/schema'
+import { indexDocumentLinks } from '@/lib/document-link-index'
 import { recordDocumentVersion } from '@/lib/document-versions'
 import { sanitizeBlocks } from '@/lib/markdown/sanitize'
 import { notifyAddedMentions, sendMentionDms } from '@/lib/notifications'
@@ -41,6 +42,14 @@ async function notifyMentions(
   }
 }
 
+async function indexLinks(id: string) {
+  try {
+    await indexDocumentLinks(id)
+  } catch {
+    return
+  }
+}
+
 async function finishPersist(
   id: string,
   authorId: string | null,
@@ -49,6 +58,7 @@ async function finishPersist(
 ) {
   await recordDocumentVersion(id, authorId)
   await indexDocument(id)
+  await indexLinks(id)
   await notifyMentions(id, authorId, previousContent, nextContent)
 }
 

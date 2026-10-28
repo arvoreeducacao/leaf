@@ -648,6 +648,30 @@ export const documentVisits = mysqlTable(
   ],
 )
 
+export const documentLinks = mysqlTable(
+  'document_links',
+  {
+    sourceId: varchar('source_id', { length: APP_ID })
+      .notNull()
+      .references(() => documents.id, { onDelete: 'cascade' }),
+    targetId: varchar('target_id', { length: APP_ID })
+      .notNull()
+      .references(() => documents.id, { onDelete: 'cascade' }),
+    context: varchar('context', { length: 255 }).notNull().default(''),
+  },
+  (table) => [
+    primaryKey({ columns: [table.sourceId, table.targetId] }),
+    index('document_links_target_id_idx').on(table.targetId),
+  ],
+)
+
+export const documentLinkScans = mysqlTable('document_link_scans', {
+  documentId: varchar('document_id', { length: APP_ID })
+    .primaryKey()
+    .references(() => documents.id, { onDelete: 'cascade' }),
+  scannedAt: datetime('scanned_at', { mode: 'date', fsp: 3 }).notNull(),
+})
+
 export const databaseViewDrafts = mysqlTable(
   'database_view_drafts',
   {
