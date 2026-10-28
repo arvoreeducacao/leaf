@@ -12,6 +12,7 @@ import {
   canWrite,
   createDocumentTool,
   getDatabaseTool,
+  getDocumentLinksTool,
   getDocumentTool,
   listCommentsTool,
   listDocumentsTool,
@@ -254,6 +255,20 @@ export function createLeafMcpServer(context: McpToolContext) {
     },
     (args) =>
       run(context, 'get_document', args, () => getDocumentTool(context, args)),
+  )
+
+  server.registerTool(
+    'get_document_links',
+    {
+      title: 'Get document links',
+      description: `List the Leaf documents that link to a document (incoming) and the ones it links to (outgoing), with the sentence around each link. relation tells a citation apart from a link to a subpage or to the parent page. Only documents you can access are listed. ${dataNotice}`,
+      inputSchema: { documentId: documentIdSchema },
+      annotations: { readOnlyHint: true },
+    },
+    (args) =>
+      run(context, 'get_document_links', args, () =>
+        getDocumentLinksTool(context, args),
+      ),
   )
 
   server.registerTool(

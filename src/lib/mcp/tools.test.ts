@@ -547,6 +547,7 @@ describe('servidor MCP', () => {
     expect(readNames).toEqual([
       'get_database',
       'get_document',
+      'get_document_links',
       'list_comments',
       'list_documents',
       'list_members',
