@@ -10,6 +10,7 @@ import {
   TeamIcon,
   TrashIcon,
 } from '@/components/icons'
+import { TeamspaceIcon } from '@/components/icons/topbar'
 import { ConfirmDisablePublicLink } from '@/components/sharing/confirm-disable-public-link'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -228,6 +229,51 @@ export function SharePanel({ documentId, canManage }: Props) {
       <span aria-live="polite" className="sr-only">
         {status}
       </span>
+
+      {state.teamspace ? (
+        <>
+          <section
+            className="flex flex-col gap-3"
+            data-testid="share-teamspace"
+          >
+            <h3 className="font-medium text-caption text-content-subtle">
+              {t('teamspaceSection')}
+            </h3>
+
+            <ul className="flex flex-col gap-2">
+              <li className="flex min-w-0 items-center gap-2 py-1">
+                <TeamspaceIcon
+                  aria-hidden="true"
+                  className="size-4 shrink-0 text-content-muted"
+                />
+                <span className="min-w-0 flex-1 truncate text-body-small text-content-strong">
+                  {t('teamspaceMembers', { name: state.teamspace.name })}
+                </span>
+                <Badge variant="info">{roleLabels.editor}</Badge>
+              </li>
+
+              {state.teamspace.open && state.teamspace.orgName ? (
+                <li className="flex min-w-0 items-center gap-2 py-1">
+                  <TeamIcon
+                    aria-hidden="true"
+                    className="size-4 shrink-0 text-content-muted"
+                  />
+                  <span className="min-w-0 flex-1 truncate text-body-small text-content-strong">
+                    {t('orgEveryone', { name: state.teamspace.orgName })}
+                  </span>
+                  <Badge variant="info">{roleLabels.viewer}</Badge>
+                </li>
+              ) : null}
+            </ul>
+
+            <p className="text-body-small text-content">
+              {t('teamspaceHelp')}
+            </p>
+          </section>
+
+          <Separator />
+        </>
+      ) : null}
 
       {state.orgName ? (
         <section className="flex flex-col gap-3">

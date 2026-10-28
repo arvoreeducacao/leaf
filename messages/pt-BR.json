@@ -694,6 +694,9 @@
     "orgNone": "Sem acesso",
     "orgHelp": "Quem faz parte da organização vê este documento na seção Organização",
     "orgAccessUpdated": "Acesso da organização atualizado",
+    "teamspaceSection": "Teamspace",
+    "teamspaceMembers": "Membros de {name}",
+    "teamspaceHelp": "O acesso que vem do teamspace continua valendo, mesmo com \"Sem acesso\" em Organização. Para restringir, tire o documento do teamspace",
     "peopleSection": "Pessoas",
     "externalGuest": "Convidado externo",
     "externalGuestHint": "Este email não faz parte da organização e só vê este documento"
