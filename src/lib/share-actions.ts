@@ -22,6 +22,13 @@ import {
   isMemberOf,
   listOrganizationEmails,
 } from '@/lib/organizations'
+import { getTeamspace } from '@/lib/teamspaces'
+
+export type ShareTeamspace = Readonly<{
+  name: string
+  open: boolean
+  orgName: string | null
+}>
 
 export type SharePerson = Readonly<{
   id: string
@@ -41,6 +48,7 @@ export type ShareState = Readonly<{
   publicToken: string | null
   orgName: string | null
   orgAccess: OrgAccess | null
+  teamspace: ShareTeamspace | null
 }>
 
 export type ShareResult =
@@ -72,6 +80,35 @@ function isShareRole(value: string): value is ShareRole {
   return value === 'viewer' || value === 'commenter' || value === 'editor'
 }
 
+async function readTeamspace(
+  teamspaceId: string | null,
+  role: AccessLevel,
+  userId: string,
+): Promise<ShareTeamspace | null> {
+  if (!teamspaceId) {
+    return null
+  }
+
+  const teamspace = await getTeamspace(teamspaceId)
+
+  if (
+    !teamspace ||
+    (role !== 'owner' && !(await isMemberOf(teamspace.orgId, userId)))
+  ) {
+    return null
+  }
+
+  const organization = await db.query.organizations.findFirst({
+    where: eq(organizations.id, teamspace.orgId),
+  })
+
+  return {
+    name: teamspace.name,
+    open: teamspace.access === 'open',
+    orgName: organization?.name ?? null,
+  }
+}
+
 async function readState(
   documentId: string,
   role: AccessLevel,
@@ -82,6 +119,7 @@ async function readState(
       publicToken: documents.publicToken,
       orgId: documents.orgId,
       orgAccess: documents.orgAccess,
+      teamspaceId: documents.teamspaceId,
       ownerEmail: user.email,
       ownerName: user.name,
     })
@@ -140,6 +178,7 @@ async function readState(
       publicToken: role === 'owner' ? row.publicToken : null,
       orgName: organization?.name ?? null,
       orgAccess: organization ? row.orgAccess : null,
+      teamspace: await readTeamspace(row.teamspaceId, role, userId),
     },
   }
 }

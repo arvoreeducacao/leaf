@@ -694,6 +694,9 @@
     "orgNone": "No access",
     "orgHelp": "People in the organization see this document under the Organization section",
     "orgAccessUpdated": "Organization access updated",
+    "teamspaceSection": "Teamspace",
+    "teamspaceMembers": "Members of {name}",
+    "teamspaceHelp": "Access that comes from the teamspace still applies, even with \"No access\" under Organization. To restrict it, move the document out of the teamspace",
     "peopleSection": "People",
     "externalGuest": "External guest",
     "externalGuestHint": "This email isn't part of the organization and only sees this document"
