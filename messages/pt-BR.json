@@ -168,7 +168,8 @@
     "filterLabel": "Filtrar documentos por título",
     "filterEmpty": "Nenhum documento com esse nome",
     "favoritesSection": "Favoritos",
-    "emptyFavorites": "Nada favoritado ainda. Use a estrela no topo de uma página para deixá-la aqui."
+    "emptyFavorites": "Nada favoritado ainda. Use a estrela no topo de uma página para deixá-la aqui.",
+    "graph": "Grafo"
   },
   "palette": {
     "title": "Busca e comandos",
@@ -195,7 +196,8 @@
     "askEmpty": "Não achei nada sobre isso nos documentos que você pode ver.",
     "askError": "Não deu para responder agora.",
     "askBack": "Voltar para a busca",
-    "actionNotionImport": "Importar do Notion"
+    "actionNotionImport": "Importar do Notion",
+    "actionGraph": "Ver grafo da organização"
   },
   "ai": {
     "orbLabel": "Perguntar à IA",
@@ -643,7 +645,34 @@
     "emptyStepCopy": "Copie o link de uma página pelo botão de link no topo dela.",
     "emptyStepPaste": "Cole o link no texto desta página.",
     "failed": "Não foi possível carregar as ligações",
-    "graphLabel": "Grafo das ligações desta página"
+    "graphLabel": "Grafo das ligações desta página",
+    "openInGraph": "Abrir no grafo"
+  },
+  "graph": {
+    "title": "Grafo",
+    "canvasLabel": "Grafo de ligações entre as páginas",
+    "search": "Buscar página no grafo",
+    "notFound": "Nenhuma página com esse nome no grafo",
+    "teamspaces": "Teamspaces",
+    "others": "Outros",
+    "subpages": "Links de subpágina",
+    "loose": "Páginas sem ligação",
+    "filters": "Filtros",
+    "stats": "{pages, plural, one {# página} other {# páginas}} · {links, plural, one {# ligação} other {# ligações}}",
+    "incoming": "{count, plural, =0 {Ninguém aponta para cá} one {# aponta para cá} other {# apontam para cá}}",
+    "outgoing": "{count, plural, =0 {Nenhum link para fora} one {# link para fora} other {# links para fora}}",
+    "openPage": "Abrir página",
+    "neighbors": "Só as vizinhas",
+    "neighborsOf": "Só as vizinhas de <b>{title}</b>",
+    "hops": "{count, plural, one {# salto} other {# saltos}}",
+    "wholeGraph": "Voltar ao grafo inteiro",
+    "zoomIn": "Aproximar",
+    "zoomOut": "Afastar",
+    "fit": "Mostrar tudo",
+    "loading": "Montando o grafo",
+    "failed": "Não foi possível carregar o grafo",
+    "empty": "Suas páginas ainda não se ligam",
+    "emptyHint": "O grafo mostra os links entre páginas. Cole o link de uma página em outra e a ligação aparece aqui."
   },
   "move": {
     "title": "Mover para outra página",

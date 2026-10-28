@@ -156,6 +156,21 @@ export function LinksPanel({ documentId, title }: Props) {
     </div>
   )
 
+  const footer = (
+    <div className="shrink-0 border-t border-line px-5 py-3">
+      <Button asChild className="w-full" size="sm" variant="outline">
+        <Link
+          data-testid="links-open-graph"
+          href={`/grafo?pagina=${encodeURIComponent(documentId)}&saltos=1`}
+          onClick={() => setOpen(false)}
+        >
+          <GraphIcon aria-hidden="true" className="size-4" />
+          {t('openInGraph')}
+        </Link>
+      </Button>
+    </div>
+  )
+
   return (
     <>
       <Button
@@ -206,6 +221,7 @@ export function LinksPanel({ documentId, title }: Props) {
             </SheetHeader>
           )}
           {body}
+          {count !== null && count > 0 ? footer : null}
         </SheetContent>
       </Sheet>
     </>
