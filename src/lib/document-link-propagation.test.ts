@@ -41,6 +41,7 @@ vi.mock('@/lib/realtime-room', () => ({
 import { db } from '@/db'
 import { documents, user } from '@/db/schema'
 import { resetDatabase } from '@/db/testing'
+import { reconcileDocumentLinks } from '@/lib/document-link-index'
 import { retitleLinksToDocument } from '@/lib/document-link-propagation'
 
 const author = { id: 'user-author', email: 'author@example.com' }
@@ -120,6 +121,21 @@ beforeEach(async () => {
 })
 
 describe('retitleLinksToDocument', () => {
+  it('finds the linking documents through the links table once they were scanned', async () => {
+    expect(await reconcileDocumentLinks(10)).toBe(4)
+
+    const retitled = await retitleLinksToDocument(
+      'doc-target',
+      'Sem título',
+      'Cronograma de envios',
+      author.id,
+    )
+
+    expect(retitled).toBe(1)
+    expect(await contentOf('doc-parent')).toContain('Cronograma de envios')
+    expect(await contentOf('doc-trashed')).toContain('Sem título')
+  })
+
   it('writes the new title into the documents that link to it', async () => {
     const retitled = await retitleLinksToDocument(
       'doc-target',
