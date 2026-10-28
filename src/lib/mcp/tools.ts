@@ -14,6 +14,7 @@ import { personOptions } from '@/lib/database/people'
 import { parseOptions, valueOf, valueToText } from '@/lib/database/values'
 import { loadDatabase, loadRowContext } from '@/lib/databases'
 import { persistDocumentContentIfUnchanged } from '@/lib/document-content'
+import { listDocumentLinks } from '@/lib/document-link-graph'
 import {
   getDocument,
   listOwnedDocuments,
@@ -277,6 +278,21 @@ export async function getDocumentTool(
     markdown,
     ...(row ? { database: { id: row.databaseId, title: row.databaseTitle }, properties: row.values } : {}),
     children,
+  }
+}
+
+export async function getDocumentLinksTool(
+  context: McpToolContext,
+  args: Readonly<{ documentId: string }>,
+) {
+  const { document } = await requireReadable(args.documentId, context)
+  const links = await listDocumentLinks(document.id, context.session)
+
+  return {
+    id: document.id,
+    title: document.title,
+    incoming: links.incoming,
+    outgoing: links.outgoing,
   }
 }
 

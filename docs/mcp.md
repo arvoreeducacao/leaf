@@ -28,10 +28,12 @@ authorised apps under **Connected apps** in the account menu
 (`/connected-apps`); revoking deletes the consent and invalidates that client's
 refresh tokens.
 
-Read tools: `search_documents`, `get_document`, `list_documents`,
-`list_organizations`, `list_teamspaces`, `list_members` (emails only for
-administrators), `whoami`, `get_database`, `query_database` (filter, search and
-ordering by property name, values in text and raw) and `list_comments`.
+Read tools: `search_documents`, `get_document`, `get_document_links` (the
+documents that link to a document and the ones it links to, with the sentence
+around each link), `list_documents`, `list_organizations`, `list_teamspaces`,
+`list_members` (emails only for administrators), `whoami`, `get_database`,
+`query_database` (filter, search and ordering by property name, values in text
+and raw) and `list_comments`.
 
 Comments and attachments (`leaf:write`): `create_comment` (opens a thread, or
 replies with `replyTo`), `resolve_comment` (author or editor) and `upload_file`
