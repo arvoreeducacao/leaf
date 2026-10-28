@@ -32,6 +32,7 @@ import { PaletteAsk } from '@/components/app/palette-ask'
 import {
   AddIcon,
   ArchiveUploadIcon,
+  GraphIcon,
   MagicWandIcon,
   NotionIcon,
   SearchIcon,
@@ -44,7 +45,7 @@ import type { SearchHit, WorkspaceSearchResult } from '@/lib/search-index'
 import { writeSessionFlag } from '@/shared/storage'
 import { cn } from '@/shared/utils'
 
-type ActionKind = 'new' | 'organization' | 'import' | 'notion' | 'ask'
+type ActionKind = 'new' | 'graph' | 'organization' | 'import' | 'notion' | 'ask'
 
 type PaletteItem = Readonly<{
   key: string
@@ -209,6 +210,13 @@ export function CommandPalette({ hasOrganization, aiEnabled }: Props) {
         action: 'new',
         icon: <AddIcon aria-hidden="true" className={paletteIcon} />,
       },
+      {
+        key: 'action-graph',
+        label: t('actionGraph'),
+        hit: null,
+        action: 'graph',
+        icon: <GraphIcon aria-hidden="true" className={paletteIcon} />,
+      },
     ]
 
     if (hasOrganization) {
@@ -312,6 +320,13 @@ export function CommandPalette({ hasOrganization, aiEnabled }: Props) {
       if (kind === 'organization') {
         setOpen(false)
         router.push('/org')
+
+        return
+      }
+
+      if (kind === 'graph') {
+        setOpen(false)
+        router.push('/grafo')
 
         return
       }

@@ -168,7 +168,8 @@
     "filterLabel": "Filter documents by title",
     "filterEmpty": "No document with that name",
     "favoritesSection": "Favorites",
-    "emptyFavorites": "Nothing favorited yet. Use the star at the top of a page to keep it here."
+    "emptyFavorites": "Nothing favorited yet. Use the star at the top of a page to keep it here.",
+    "graph": "Graph"
   },
   "palette": {
     "title": "Search and commands",
@@ -195,7 +196,8 @@
     "askEmpty": "I found nothing about that in the documents you can see.",
     "askError": "Could not answer right now.",
     "askBack": "Back to search",
-    "actionNotionImport": "Import from Notion"
+    "actionNotionImport": "Import from Notion",
+    "actionGraph": "View the organization graph"
   },
   "ai": {
     "orbLabel": "Ask AI",
@@ -643,7 +645,34 @@
     "emptyStepCopy": "Copy a page's link with the link button at its top.",
     "emptyStepPaste": "Paste the link in this page's text.",
     "failed": "Could not load the links",
-    "graphLabel": "Graph of this page's links"
+    "graphLabel": "Graph of this page's links",
+    "openInGraph": "Open in the graph"
+  },
+  "graph": {
+    "title": "Graph",
+    "canvasLabel": "Graph of the links between pages",
+    "search": "Find a page in the graph",
+    "notFound": "No page with that name in the graph",
+    "teamspaces": "Teamspaces",
+    "others": "Others",
+    "subpages": "Subpage links",
+    "loose": "Pages without links",
+    "filters": "Filters",
+    "stats": "{pages, plural, one {# page} other {# pages}} · {links, plural, one {# link} other {# links}}",
+    "incoming": "{count, plural, =0 {No page links here} one {# page links here} other {# pages link here}}",
+    "outgoing": "{count, plural, =0 {No outgoing links} one {# outgoing link} other {# outgoing links}}",
+    "openPage": "Open page",
+    "neighbors": "Only neighbors",
+    "neighborsOf": "Only the neighbors of <b>{title}</b>",
+    "hops": "{count, plural, one {# hop} other {# hops}}",
+    "wholeGraph": "Back to the whole graph",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "fit": "Show everything",
+    "loading": "Building the graph",
+    "failed": "Could not load the graph",
+    "empty": "Your pages do not link to each other yet",
+    "emptyHint": "The graph shows the links between pages. Paste the link of a page into another and the link shows up here."
   },
   "move": {
     "title": "Move to another page",

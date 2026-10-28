@@ -33,6 +33,7 @@ import { TrashSection } from '@/components/app/trash-section'
 import { useSidebarLayout } from '@/components/app/use-sidebar-layout'
 import { useSidebarWidth } from '@/components/app/use-sidebar-width'
 import { UserMenu } from '@/components/app/user-menu'
+import { GraphIcon } from '@/components/icons'
 import { HomeIcon, SidebarIcon, SlidersIcon } from '@/components/icons/outline'
 import { ButtonIcon } from '@/components/ui/button-icon'
 import {
@@ -243,6 +244,15 @@ function NavContent({
           initialUnread={unreadNotifications}
           onNavigate={onNavigate}
         />
+        <Link
+          className={cn(sidebarRow, 'font-medium')}
+          data-testid="sidebar-graph"
+          href="/grafo"
+          onClick={onNavigate}
+        >
+          <GraphIcon aria-hidden="true" className={sidebarIcon} />
+          <span className="min-w-0 flex-1 truncate">{t('graph')}</span>
+        </Link>
       </div>
 
       <nav
