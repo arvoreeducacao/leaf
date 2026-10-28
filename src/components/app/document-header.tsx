@@ -23,6 +23,7 @@ import { CrumbSeparator, crumbClass } from '@/components/app/document-breadcrumb
 import { HappyIcon } from '@/components/icons'
 import { PeopleIcon } from '@/components/icons/outline'
 import { LinkIcon } from '@/components/icons/topbar'
+import { LinksPanel } from '@/components/links/links-panel'
 import { ShareButton } from '@/components/sharing/share-button'
 import { Button } from '@/components/ui/button'
 import { ButtonIcon } from '@/components/ui/button-icon'
@@ -209,7 +210,7 @@ export function DocumentHeader({
         />
         <ButtonIcon
           aria-label={t('copyLink')}
-          className="[&_svg]:size-5"
+          className="hidden tablet:inline-flex [&_svg]:size-5"
           onClick={() => {
             void navigator.clipboard
               .writeText(window.location.href)
@@ -221,6 +222,7 @@ export function DocumentHeader({
           <LinkIcon aria-hidden="true" />
         </ButtonIcon>
         <CommentsPanel documentId={documentId} initialOpenCount={openComments} />
+        <LinksPanel documentId={documentId} title={value} />
         <FavoriteButton documentId={documentId} />
         <DocumentMenu
           canEdit={canEdit}

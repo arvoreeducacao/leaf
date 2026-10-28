@@ -629,6 +629,22 @@
     "sendComment": "Enviar comentário",
     "documentNewLabel": "Comentar no documento"
   },
+  "links": {
+    "open": "Ligações",
+    "openCount": "{count, plural, =0 {Nenhuma ligação} one {# ligação} other {# ligações}}",
+    "title": "Ligações",
+    "description": "Quem cita esta página e o que ela cita.",
+    "incoming": "Apontam para cá",
+    "outgoing": "Esta página aponta para",
+    "subpage": "subpágina",
+    "parent": "página mãe",
+    "empty": "Esta página ainda não tem ligações",
+    "emptyHint": "Ela aparece aqui quando outra página cita esta, ou quando esta cita outra.",
+    "emptyStepCopy": "Copie o link de uma página pelo botão de link no topo dela.",
+    "emptyStepPaste": "Cole o link no texto desta página.",
+    "failed": "Não foi possível carregar as ligações",
+    "graphLabel": "Grafo das ligações desta página"
+  },
   "move": {
     "title": "Mover para outra página",
     "description": "Escolha em qual página este documento vai ficar",
