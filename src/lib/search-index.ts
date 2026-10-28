@@ -24,6 +24,7 @@ const RECONCILE_INTERVAL = 5 * 60 * 1000
 const RECONCILE_BACKLOG_INTERVAL = 5 * 1000
 const RECONCILE_DOCUMENT_BUDGET = 500
 const RECONCILE_CHUNK_BUDGET = 24
+const RECONCILE_LINK_BUDGET = 500
 
 export type SearchSegment = Readonly<{ text: string; highlight: boolean }>
 
@@ -281,12 +282,21 @@ async function reconcileChunkRows(budget: number) {
   return reconcileSemanticIndex(budget)
 }
 
+async function reconcileLinkRows(budget: number) {
+  const { reconcileDocumentLinks } = await import('@/lib/document-link-index')
+
+  return reconcileDocumentLinks(budget)
+}
+
 async function upkeep() {
   const indexed = await reconcileSearchIndex(RECONCILE_DOCUMENT_BUDGET)
+  const linked = await reconcileLinkRows(RECONCILE_LINK_BUDGET)
   const embedded = await reconcileChunkRows(RECONCILE_CHUNK_BUDGET)
 
   return (
-    indexed >= RECONCILE_DOCUMENT_BUDGET || embedded >= RECONCILE_CHUNK_BUDGET
+    indexed >= RECONCILE_DOCUMENT_BUDGET ||
+    linked >= RECONCILE_LINK_BUDGET ||
+    embedded >= RECONCILE_CHUNK_BUDGET
   )
 }
 
