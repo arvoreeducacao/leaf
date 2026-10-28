@@ -1,13 +1,52 @@
 import type { PartialBlock } from '@blocknote/core'
-import { and, isNull, like } from 'drizzle-orm'
+import { and, eq, isNull, like, ne, or } from 'drizzle-orm'
 
 import { db } from '@/db'
-import { documents } from '@/db/schema'
+import { documentLinkScans, documentLinks, documents } from '@/db/schema'
 import { persistDocumentContentIfUnchanged } from '@/lib/document-content'
 import { retitleDocumentLinks } from '@/lib/document-link-titles'
 import { maxLinkedDocuments } from '@/lib/document-links'
 import { authIssuer } from '@/lib/mcp-config'
 import { rewriteLiveRoomBlocks } from '@/lib/realtime-room'
+
+const candidateColumns = {
+  id: documents.id,
+  content: documents.content,
+  updatedAt: documents.updatedAt,
+}
+
+async function documentsLinkingTo(documentId: string) {
+  const indexed = await db
+    .select(candidateColumns)
+    .from(documentLinks)
+    .innerJoin(documents, eq(documents.id, documentLinks.sourceId))
+    .where(
+      and(eq(documentLinks.targetId, documentId), isNull(documents.deletedAt)),
+    )
+    .limit(maxLinkedDocuments)
+
+  const unscanned = await db
+    .select(candidateColumns)
+    .from(documents)
+    .leftJoin(documentLinkScans, eq(documentLinkScans.documentId, documents.id))
+    .where(
+      and(
+        isNull(documents.deletedAt),
+        or(
+          isNull(documentLinkScans.documentId),
+          ne(documentLinkScans.scannedAt, documents.updatedAt),
+        ),
+        like(documents.content, `%/doc/${documentId.replace(/[%_]/g, '\\$&')}%`),
+      ),
+    )
+    .limit(maxLinkedDocuments)
+
+  const byId = new Map(
+    [...indexed, ...unscanned].map((candidate) => [candidate.id, candidate]),
+  )
+
+  return [...byId.values()].slice(0, maxLinkedDocuments)
+}
 
 export async function retitleLinksToDocument(
   documentId: string,
@@ -22,20 +61,7 @@ export async function retitleLinksToDocument(
     return 0
   }
 
-  const candidates = await db
-    .select({
-      id: documents.id,
-      content: documents.content,
-      updatedAt: documents.updatedAt,
-    })
-    .from(documents)
-    .where(
-      and(
-        isNull(documents.deletedAt),
-        like(documents.content, `%/doc/${documentId.replace(/[%_]/g, '\\$&')}%`),
-      ),
-    )
-    .limit(maxLinkedDocuments)
+  const candidates = await documentsLinkingTo(documentId)
 
   const origin = authIssuer()
 
