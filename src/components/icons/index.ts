@@ -62,6 +62,7 @@ export {
   FileDown as FileDownloadIcon,
   FileUp as FileUploadIcon,
   Baseline as FontdefaultIcon,
+  Waypoints as GraphIcon,
   Smile as HappyIcon,
   Bell as NotificationIcon,
   ListTree as HierarchyIcon,

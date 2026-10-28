@@ -629,6 +629,22 @@
     "sendComment": "Send comment",
     "documentNewLabel": "Comment on the document"
   },
+  "links": {
+    "open": "Links",
+    "openCount": "{count, plural, =0 {No links} one {# link} other {# links}}",
+    "title": "Links",
+    "description": "Pages that cite this one, and pages it cites.",
+    "incoming": "Linked from",
+    "outgoing": "Links to",
+    "subpage": "subpage",
+    "parent": "parent page",
+    "empty": "This page has no links yet",
+    "emptyHint": "It shows up here when another page cites this one, or when this one cites another.",
+    "emptyStepCopy": "Copy a page's link with the link button at its top.",
+    "emptyStepPaste": "Paste the link in this page's text.",
+    "failed": "Could not load the links",
+    "graphLabel": "Graph of this page's links"
+  },
   "move": {
     "title": "Move to another page",
     "description": "Choose which page this document will live in",
