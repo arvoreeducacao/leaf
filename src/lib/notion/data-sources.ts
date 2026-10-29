@@ -61,6 +61,83 @@ export function sourceTitle(
     : databaseTitle
 }
 
+const maxViewsRead = 20
+
+function sameNotionId(left: string, right: string): boolean {
+  return (
+    left.replace(/-/g, '').toLowerCase() === right.replace(/-/g, '').toLowerCase()
+  )
+}
+
+function decodedPropertyId(id: string): string {
+  try {
+    return decodeURIComponent(id)
+  } catch {
+    return id
+  }
+}
+
+function propertyNameById(
+  properties: Record<string, NotionPropertyConfig>,
+  propertyId: string,
+): string | null {
+  const wanted = decodedPropertyId(propertyId)
+
+  for (const [name, config] of Object.entries(properties)) {
+    if (config?.id && decodedPropertyId(config.id) === wanted) {
+      return name
+    }
+  }
+
+  return null
+}
+
+export async function boardGroupPropertyName(
+  client: NotionClient,
+  databaseId: string,
+  source: DatabaseSource,
+): Promise<string | null> {
+  const legacyShape = sameNotionId(source.id, databaseId)
+  let read = 0
+
+  try {
+    for await (const ref of client.views(databaseId)) {
+      if (read >= maxViewsRead) {
+        return null
+      }
+
+      read += 1
+
+      const view = await client.view(ref.id)
+
+      if (view.type !== 'board') {
+        continue
+      }
+
+      if (
+        !legacyShape &&
+        view.data_source_id &&
+        !sameNotionId(view.data_source_id, source.id)
+      ) {
+        continue
+      }
+
+      const propertyId = view.configuration?.group_by?.property_id
+      const name = propertyId
+        ? propertyNameById(source.properties, propertyId)
+        : null
+
+      if (name) {
+        return name
+      }
+    }
+  } catch {
+    return null
+  }
+
+  return null
+}
+
 export function databaseIdOfParent(parent: DatabaseParent): string | null {
   if (parent.type === 'database_id' || parent.type === 'data_source_id') {
     return parent.database_id ?? null

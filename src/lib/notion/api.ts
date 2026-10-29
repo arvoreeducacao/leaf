@@ -3,6 +3,8 @@ export const NOTION_API_BASE = 'https://api.notion.com/v1'
 export const NOTION_API_VERSION =
   process.env.NOTION_API_VERSION?.trim() || '2025-09-03'
 
+export const NOTION_VIEWS_API_VERSION = '2026-03-11'
+
 const pageSize = 100
 
 export class NotionApiError extends Error {
@@ -121,6 +123,19 @@ export type NotionComment = Readonly<{
   rich_text?: Array<NotionRichText>
 }>
 
+export type NotionViewRef = Readonly<{
+  id: string
+}>
+
+export type NotionViewObject = Readonly<{
+  id: string
+  type?: string
+  data_source_id?: string | null
+  configuration?: Readonly<{
+    group_by?: Readonly<{ property_id?: string }> | null
+  }> | null
+}>
+
 export type NotionUserObject = Readonly<{
   id: string
   name?: string | null
@@ -142,6 +157,8 @@ export type NotionClient = Readonly<{
   children: (id: string) => AsyncGenerator<NotionBlock>
   rows: (dataSourceId: string) => AsyncGenerator<NotionPageObject>
   comments: (blockId: string) => AsyncGenerator<NotionComment>
+  views: (databaseId: string) => AsyncGenerator<NotionViewRef>
+  view: (id: string) => Promise<NotionViewObject>
   user: (id: string) => Promise<NotionUserObject>
   search: () => AsyncGenerator<NotionSearchResult>
   download: (url: string) => Promise<{ bytes: Uint8Array; contentType: string }>
@@ -314,6 +331,27 @@ export function createNotionClient(
     page: (id) => request<NotionPageObject>(`/pages/${id}`),
 
     user: (id) => request<NotionUserObject>(`/users/${id}`),
+
+    view: (id) =>
+      request<NotionViewObject>(`/views/${id}`, {
+        headers: { 'Notion-Version': NOTION_VIEWS_API_VERSION },
+      }),
+
+    views: (databaseId) =>
+      paginate<NotionViewRef>((cursor) => {
+        const query = new URLSearchParams({
+          database_id: databaseId,
+          page_size: String(pageSize),
+        })
+
+        if (cursor) {
+          query.set('start_cursor', cursor)
+        }
+
+        return request<NotionList<NotionViewRef>>(`/views?${query.toString()}`, {
+          headers: { 'Notion-Version': NOTION_VIEWS_API_VERSION },
+        })
+      }),
 
     rows: (dataSourceId) =>
       paginate<NotionPageObject>((cursor) =>

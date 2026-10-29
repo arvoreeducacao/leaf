@@ -23,7 +23,11 @@ import {
   serializeValues,
 } from '@/lib/database/values'
 import type { SelectOption } from '@/lib/database/values'
-import { emptyViewConfig, serializeViewConfig } from '@/lib/database/views'
+import {
+  emptyViewConfig,
+  isGroupableType,
+  serializeViewConfig,
+} from '@/lib/database/views'
 import { normalizeCover, notionCoverValue } from '@/lib/document-cover'
 import type { NotionCoverPayload } from '@/lib/document-cover'
 import { notionIconValue } from '@/lib/document-icon'
@@ -40,6 +44,7 @@ import { convertNodes } from '@/lib/notion/convert'
 import { databaseTitle, pageTitle } from '@/lib/notion/crawl'
 import type { DatabaseParent, DatabaseSource } from '@/lib/notion/data-sources'
 import {
+  boardGroupPropertyName,
   createDatabaseResolver,
   isDatabaseParent,
   loadDatabaseSources,
@@ -109,6 +114,30 @@ function stamp(value: string | undefined): Date | null {
   return Number.isNaN(date.getTime()) ? null : date
 }
 
+function boardPropertyIndex(
+  properties: ReadonlyArray<ImportedProperty>,
+  notionBoardGroup: string | null,
+): number {
+  const fromNotionBoard =
+    notionBoardGroup === null
+      ? -1
+      : properties.findIndex(
+          (property) =>
+            property.notionName === notionBoardGroup &&
+            isGroupableType(property.type),
+        )
+
+  return fromNotionBoard >= 0
+    ? fromNotionBoard
+    : properties.findIndex((property) => property.type === 'status')
+}
+
+function commentSignature(createdAt: Date, body: string): string {
+  return `${createdAt.getTime()}:${body}`
+}
+
+const notionCommentPrefix = 'notion:'
+
 export async function* syncNotion(
   client: NotionClient,
   roots: Array<{ id: string; kind: 'page' | 'database' }> | 'workspace',
@@ -120,6 +149,7 @@ export async function* syncNotion(
   const warnings: Array<string> = []
   const unsupportedCounts = new Map<string, number>()
   const unresolvedPeople = new Set<string>()
+  let importedComments = 0
 
   function warn(message: string) {
     if (warnings.length < maxWarnings) {
@@ -393,8 +423,31 @@ export async function* syncNotion(
   }
 
   async function importComments(pageId: string, documentId: string) {
+    if (!options?.comments) {
+      return
+    }
+
     const emailIds = new Map<string, string>()
     const rootByDiscussion = new Map<string, string>()
+    const stored = await db
+      .select({
+        body: comments.body,
+        createdAt: comments.createdAt,
+        externalId: comments.externalId,
+        id: comments.id,
+      })
+      .from(comments)
+      .where(eq(comments.documentId, documentId))
+    const storedByExternalId = new Map(
+      stored.flatMap((row) => (row.externalId ? [[row.externalId, row.id]] : [])),
+    )
+    const storedBySignature = new Map(
+      stored.flatMap((row) =>
+        row.externalId
+          ? []
+          : [[commentSignature(row.createdAt, row.body), row.id]],
+      ),
+    )
 
     try {
       for await (const comment of client.comments(pageId)) {
@@ -429,6 +482,19 @@ export async function* syncNotion(
           ? new Date(comment.created_time)
           : new Date()
         const discussionId = comment.discussion_id ?? comment.id
+        const externalId = `${notionCommentPrefix}${comment.id}`
+        const known =
+          storedByExternalId.get(externalId) ??
+          storedBySignature.get(commentSignature(when, text))
+
+        if (known) {
+          if (!rootByDiscussion.has(discussionId)) {
+            rootByDiscussion.set(discussionId, known)
+          }
+
+          continue
+        }
+
         const parentId = rootByDiscussion.get(discussionId) ?? null
 
         await db.insert(comments).values({
@@ -438,17 +504,21 @@ export async function* syncNotion(
           blockId: null,
           authorId,
           body: text,
+          externalId,
           resolvedAt: null,
           createdAt: when,
           updatedAt: when,
         })
+        importedComments += 1
 
         if (!parentId) {
           rootByDiscussion.set(discussionId, id)
         }
       }
     } catch {
-      warn(messages.commentsUnavailable)
+      if (!warnings.includes(messages.commentsUnavailable)) {
+        warn(messages.commentsUnavailable)
+      }
     }
   }
 
@@ -524,6 +594,7 @@ export async function* syncNotion(
     documentId: string,
     properties: Array<ImportedProperty>,
     created: boolean,
+    notionBoardGroup: string | null,
   ): Promise<DatabaseContext> {
     const key = normalizeNotionId(notionId)
     const cached = databaseContexts.get(key)
@@ -577,15 +648,13 @@ export async function* syncNotion(
           type: 'table',
         },
       ]
-      const statusIndex = properties.findIndex(
-        (property) => property.type === 'status',
-      )
+      const boardIndex = boardPropertyIndex(properties, notionBoardGroup)
 
-      if (statusIndex >= 0) {
+      if (boardIndex >= 0) {
         views.push({
           config: serializeViewConfig({
             ...emptyViewConfig,
-            groupByPropertyId: values[statusIndex].id,
+            groupByPropertyId: values[boardIndex].id,
           }),
           id: nanoid(12),
           name: messages.boardView,
@@ -1078,11 +1147,15 @@ export async function* syncNotion(
           written += created ? 1 : 0
 
           const properties = mapDatabaseProperties(dataSource.properties)
+          const freshDatabase = created && !existing
           const context = await databaseContextFor(
             sourceId,
             documentId,
             properties,
-            created && !existing,
+            freshDatabase,
+            freshDatabase
+              ? await boardGroupPropertyName(client, database.id, dataSource)
+              : null,
           )
 
           for await (const row of rowsOf(dataSource)) {
@@ -1120,6 +1193,7 @@ export async function* syncNotion(
                 rowMapping.documentId,
                 await resolvedCover(row.cover),
               )
+              await importComments(row.id, rowMapping.documentId)
               enqueueKnownChildren(row.id, rowMapping.documentId)
               continue
             }
@@ -1205,9 +1279,7 @@ export async function* syncNotion(
 
             await refreshCover(rowKey, rowDoc.documentId, rowCover)
 
-            if (rowDoc.created && options?.comments) {
-              await importComments(row.id, rowDoc.documentId)
-            }
+            await importComments(row.id, rowDoc.documentId)
 
             await saveMapping(row.id, rowDoc.documentId, 'row', sourceId, rowEdited)
             enqueueChildren(source.tree, rowDoc.documentId, row.id)
@@ -1252,6 +1324,7 @@ export async function* syncNotion(
           known.documentId,
           await resolvedCover(alreadyListed.cover),
         )
+        await importComments(item.id, known.documentId)
 
         if (!rootDocId) {
           rootDocId = known.documentId
@@ -1291,6 +1364,7 @@ export async function* syncNotion(
           mapping.documentId,
           await resolvedCover(page.cover),
         )
+        await importComments(item.id, mapping.documentId)
 
         if (!rootDocId) {
           rootDocId = mapping.documentId
@@ -1329,7 +1403,7 @@ export async function* syncNotion(
         continue
       }
 
-      const { documentId, created } = await upsertDocument(
+      const { documentId } = await upsertDocument(
         item.id,
         mapping?.kind === 'row' ? 'row' : 'page',
         title,
@@ -1358,9 +1432,7 @@ export async function* syncNotion(
 
       await refreshCover(idKey, documentId, pageCover)
 
-      if (created && options?.comments) {
-        await importComments(item.id, documentId)
-      }
+      await importComments(item.id, documentId)
 
       await saveMapping(
         item.id,
@@ -1601,6 +1673,10 @@ export async function* syncNotion(
 
   if (skipped > 0) {
     warn(messages.skippedUnchanged(skipped))
+  }
+
+  if (importedComments > 0) {
+    warn(messages.commentsImported(importedComments))
   }
 
   if (unsupportedCounts.size > 0) {

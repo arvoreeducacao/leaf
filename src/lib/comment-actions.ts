@@ -199,7 +199,7 @@ export async function resolveComment(
 
   await setCommentResolved(commentId, resolved)
 
-  if (comment.externalId) {
+  if (comment.origin === 'slack' && comment.externalId) {
     await reactOnComment({
       documentId,
       externalId: comment.externalId,
