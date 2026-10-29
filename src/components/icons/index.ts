@@ -32,6 +32,7 @@ export {
   MicIcon,
   MoonIcon,
   PaperclipIcon,
+  PauseIcon,
   PencilIcon,
   ReplyIcon,
   SearchIcon,

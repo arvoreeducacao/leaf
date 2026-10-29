@@ -669,6 +669,8 @@
     "zoomIn": "Zoom in",
     "zoomOut": "Zoom out",
     "fit": "Show everything",
+    "spin": "Rotate the graph",
+    "stopSpin": "Stop rotating",
     "loading": "Building the graph",
     "failed": "Could not load the graph",
     "empty": "Your pages do not link to each other yet",
