@@ -10,7 +10,9 @@ import { eq } from 'drizzle-orm'
 
 import { db } from '@/db'
 import {
+  comments,
   databaseProperties,
+  databaseViews,
   documents,
   notionDocuments,
   organizationMembers,
@@ -22,6 +24,7 @@ import { parseValues } from '@/lib/database/values'
 import type {
   NotionBlock,
   NotionClient,
+  NotionComment,
   NotionPageObject,
 } from '@/lib/notion/api'
 import type { NotionImportMessages } from '@/lib/notion/messages'
@@ -74,6 +77,10 @@ type World = {
   rootCover: { file?: { url: string }; external?: { url: string } } | null
   abortOnRows?: AbortController
   userLookupFails?: boolean
+  comments?: Record<string, Array<NotionComment>>
+  commentsFail?: boolean
+  boardGroupPropertyId?: string
+  viewsFail?: boolean
 }
 
 function makeWorld(): World {
@@ -103,10 +110,11 @@ function norm(id: string): string {
 
 const schema = {
           Name: { name: 'Name', type: 'title' },
-          Responsável: { name: 'Responsável', type: 'people' },
+          Responsável: { id: 'p%3Aresp', name: 'Responsável', type: 'people' },
           'Prints & Anexos': { name: 'Prints & Anexos', type: 'files' },
           Relacionada: { name: 'Relacionada', type: 'relation' },
           Status: {
+            id: 'stat',
             name: 'Status',
             status: {
               groups: [
@@ -231,7 +239,15 @@ function makeClient(world: World): NotionClient {
         yield block
       }
     },
-    comments: async function* () {},
+    comments: async function* (id: string) {
+      if (world.commentsFail) {
+        throw new Error('restricted_resource')
+      }
+
+      for (const comment of world.comments?.[norm(id)] ?? []) {
+        yield comment
+      }
+    },
     database: async (id: string) => {
       if (world.dbDead || norm(id) !== norm(databaseId)) {
         throw new Error(`no database ${id}`)
@@ -341,7 +357,79 @@ function makeClient(world: World): NotionClient {
 
       return { id: 'u1', name: 'Someone' }
     },
+    view: async (id: string) => {
+      if (world.viewsFail) {
+        throw new Error('views unavailable')
+      }
+
+      return id === 'view-table'
+        ? { configuration: null, data_source_id: dataSourceId, id, type: 'table' }
+        : {
+            configuration: {
+              group_by: { property_id: world.boardGroupPropertyId },
+            },
+            data_source_id: dataSourceId,
+            id,
+            type: 'board',
+          }
+    },
+    views: async function* () {
+      if (world.viewsFail) {
+        throw new Error('views unavailable')
+      }
+
+      if (!world.boardGroupPropertyId) {
+        return
+      }
+
+      yield { id: 'view-table' }
+      yield { id: 'view-board' }
+    },
   }
+}
+
+function notionComment(
+  id: string,
+  discussionId: string,
+  createdTime: string,
+  text: string,
+): NotionComment {
+  return {
+    created_by: { id: 'u1' },
+    created_time: createdTime,
+    discussion_id: discussionId,
+    id,
+    rich_text: [{ plain_text: text }],
+  }
+}
+
+async function commentsOf(title: string) {
+  const document = await db.query.documents.findFirst({
+    where: eq(documents.title, title),
+  })
+
+  return db
+    .select()
+    .from(comments)
+    .where(eq(comments.documentId, document?.id ?? ''))
+}
+
+async function boardGroupName() {
+  const database = await db.query.documents.findFirst({
+    where: eq(documents.kind, 'database'),
+  })
+  const [board] = await db
+    .select()
+    .from(databaseViews)
+    .where(eq(databaseViews.databaseId, database?.id ?? ''))
+    .then((views) => views.filter((view) => view.type === 'board'))
+  const groupBy = JSON.parse(board?.config ?? '{}').groupByPropertyId
+  const [property] = await db
+    .select()
+    .from(databaseProperties)
+    .where(eq(databaseProperties.id, groupBy ?? ''))
+
+  return property?.name ?? null
 }
 
 const owner = { id: 'user-owner', orgAccess: null, orgId: null }
@@ -351,7 +439,7 @@ async function run(
   roots:
     | Array<{ id: string; kind: 'page' | 'database' }>
     | 'workspace' = [{ id: rootId, kind: 'page' }],
-  extra: { force?: boolean; orgId?: string } = {},
+  extra: { comments?: boolean; force?: boolean; orgId?: string } = {},
 ) {
   const { orgId, ...options } = extra
   const events: Array<Record<string, unknown>> = []
@@ -972,6 +1060,143 @@ describe('resumable Notion sync', () => {
     const all = await db.select({ id: documents.id }).from(documents)
 
     expect(all).toHaveLength(5)
+  })
+
+  it('brings the comments of rows a rerun skips when it asks for comments', async () => {
+    const world = makeWorld()
+
+    await run(world)
+
+    world.comments = {
+      [norm(rowOneId)]: [
+        notionComment('c1', 'd1', '2026-01-06T10:00:00.000Z', 'meeting done'),
+        notionComment('c2', 'd1', '2026-01-06T11:00:00.000Z', 'visit today'),
+      ],
+    }
+
+    const summary = await run(world, undefined, { comments: true })
+    const imported = await commentsOf('First task')
+    const root = imported.find((comment) => comment.parentId === null)
+    const reply = imported.find((comment) => comment.parentId !== null)
+
+    expect(summary.pages).toBe(0)
+    expect(imported).toHaveLength(2)
+    expect(root?.body).toBe('Someone: meeting done')
+    expect(reply?.parentId).toBe(root?.id)
+    expect(summary.warnings).toContain('2 comments')
+  })
+
+  it('adds only new comments on the next rerun and keeps them in their thread', async () => {
+    const world = makeWorld()
+
+    world.comments = {
+      [norm(rowOneId)]: [
+        notionComment('c1', 'd1', '2026-01-06T10:00:00.000Z', 'meeting done'),
+      ],
+    }
+
+    await run(world, undefined, { comments: true })
+
+    world.comments[norm(rowOneId)].push(
+      notionComment('c2', 'd1', '2026-01-06T11:00:00.000Z', 'visit today'),
+    )
+
+    const summary = await run(world, undefined, { comments: true })
+    const imported = await commentsOf('First task')
+    const root = imported.find((comment) => comment.parentId === null)
+
+    expect(imported).toHaveLength(2)
+    expect(imported.find((comment) => comment.parentId !== null)?.parentId).toBe(
+      root?.id,
+    )
+    expect(summary.warnings).toContain('1 comments')
+  })
+
+  it('does not duplicate a comment imported before the Notion id was kept', async () => {
+    const world = makeWorld()
+
+    await run(world)
+
+    const row = await db.query.documents.findFirst({
+      where: eq(documents.title, 'First task'),
+    })
+    const createdAt = new Date('2026-01-06T10:00:00.000Z')
+
+    await db.insert(comments).values({
+      authorId: null,
+      blockId: null,
+      body: 'Someone: meeting done',
+      createdAt,
+      documentId: row?.id ?? '',
+      id: 'legacy-comment',
+      parentId: null,
+      resolvedAt: null,
+      updatedAt: createdAt,
+    })
+
+    world.comments = {
+      [norm(rowOneId)]: [
+        notionComment('c1', 'd1', '2026-01-06T10:00:00.000Z', 'meeting done'),
+        notionComment('c2', 'd1', '2026-01-06T11:00:00.000Z', 'visit today'),
+      ],
+    }
+
+    await run(world, undefined, { comments: true })
+
+    const imported = await commentsOf('First task')
+
+    expect(imported).toHaveLength(2)
+    expect(
+      imported.find((comment) => comment.id !== 'legacy-comment')?.parentId,
+    ).toBe('legacy-comment')
+  })
+
+  it('warns once when Notion refuses to share comments', async () => {
+    const world = makeWorld()
+
+    world.commentsFail = true
+
+    const summary = await run(world, undefined, { comments: true })
+
+    expect(
+      summary.warnings.filter((warning) => warning === 'comments unavailable'),
+    ).toHaveLength(1)
+  })
+
+  it('leaves comments alone on a rerun that does not ask for them', async () => {
+    const world = makeWorld()
+
+    await run(world)
+
+    world.comments = {
+      [norm(rowOneId)]: [
+        notionComment('c1', 'd1', '2026-01-06T10:00:00.000Z', 'meeting done'),
+      ],
+    }
+
+    await run(world)
+
+    expect(await commentsOf('First task')).toHaveLength(0)
+  })
+
+  it('groups the board by the property the Notion board groups by', async () => {
+    const world = makeWorld()
+
+    world.boardGroupPropertyId = 'p:resp'
+
+    await run(world)
+
+    expect(await boardGroupName()).toBe('Responsável')
+  })
+
+  it('groups the board by the status column when Notion views cannot be read', async () => {
+    const world = makeWorld()
+
+    world.viewsFail = true
+
+    await run(world)
+
+    expect(await boardGroupName()).toBe('Status')
   })
 
   it('nests block-parented pages under their ancestor in workspace mode', async () => {

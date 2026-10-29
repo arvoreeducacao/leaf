@@ -31,6 +31,7 @@ export type CommentRecord = Readonly<{
   documentId: string
   parentId: string | null
   authorId: string | null
+  origin: CommentOrigin
   externalId: string | null
   resolvedAt: number | null
 }>
@@ -59,6 +60,7 @@ export async function getComment(
       documentId: comments.documentId,
       parentId: comments.parentId,
       authorId: comments.authorId,
+      origin: comments.origin,
       externalId: comments.externalId,
       resolvedAt: comments.resolvedAt,
     })
@@ -289,6 +291,7 @@ export async function getCommentByExternalId(
       documentId: comments.documentId,
       parentId: comments.parentId,
       authorId: comments.authorId,
+      origin: comments.origin,
       externalId: comments.externalId,
       resolvedAt: comments.resolvedAt,
     })

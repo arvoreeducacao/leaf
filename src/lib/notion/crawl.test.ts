@@ -209,6 +209,8 @@ function fakeClient(
         yield comment
       }
     },
+    view: async (id: string) => ({ id }),
+    views: async function* () {},
     user: async (id: string) => {
       const author = notionAuthors[id]
 
