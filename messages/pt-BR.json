@@ -669,6 +669,8 @@
     "zoomIn": "Aproximar",
     "zoomOut": "Afastar",
     "fit": "Mostrar tudo",
+    "spin": "Girar o grafo",
+    "stopSpin": "Parar o giro",
     "loading": "Montando o grafo",
     "failed": "Não foi possível carregar o grafo",
     "empty": "Suas páginas ainda não se ligam",

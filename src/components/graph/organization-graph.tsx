@@ -13,7 +13,9 @@ import {
   ArrowRightIcon,
   CancelIcon,
   GraphIcon,
+  PauseIcon,
   ReplyIcon,
+  RotateIcon,
   SearchIcon,
 } from '@/components/icons'
 import { type GraphCanvasHandle, GraphCanvas } from '@/components/graph/graph-canvas'
@@ -100,6 +102,7 @@ export function OrganizationGraph({ initialFocusId, initialDepth }: Props) {
   const [query, setQuery] = useState('')
   const [missing, setMissing] = useState(false)
   const [filtersOpen, setFiltersOpen] = useState(false)
+  const [spinning, setSpinning] = useState(false)
 
   const load = useCallback(async () => {
     setState({ status: 'loading' })
@@ -385,6 +388,7 @@ export function OrganizationGraph({ initialFocusId, initialDepth }: Props) {
           onSelect={setSelectedId}
           ref={canvasRef}
           selectedId={selectedId}
+          spinning={spinning}
         />
       ) : null}
 
@@ -444,6 +448,9 @@ export function OrganizationGraph({ initialFocusId, initialDepth }: Props) {
                 </ButtonIcon>
                 <ButtonIcon aria-label={t('fit')} onClick={() => canvasRef.current?.fit()} size="medium" variant="ghost">
                   <GraphIcon aria-hidden="true" />
+                </ButtonIcon>
+                <ButtonIcon aria-label={spinning ? t('stopSpin') : t('spin')} onClick={() => setSpinning(!spinning)} size="medium" variant="ghost">
+                  {spinning ? <PauseIcon aria-hidden="true" /> : <RotateIcon aria-hidden="true" />}
                 </ButtonIcon>
               </div>
             </>
