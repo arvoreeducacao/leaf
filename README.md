@@ -20,7 +20,7 @@ on your MySQL, in your cloud, under a licence that keeps it that way.
 <br>
 
 <a href="docs/media/leaf-intro.mp4">
-  <img src="docs/media/leaf-intro.gif" alt="Leaf in 30 seconds: the editor with live cursors, a Notion import, writing offline, sharing with roles and guests" width="860">
+  <img src="docs/media/leaf-intro.gif" alt="Leaf in 40 seconds: live cursors, the 3D link graph, search, databases, writing offline, sharing with roles and guests, and the one-command install" width="860">
 </a>
 
 <br><br>
