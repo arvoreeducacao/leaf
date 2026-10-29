@@ -3,16 +3,17 @@
   "private": true,
   "scripts": {
     "studio": "remotion studio",
-    "render": "remotion render LeafIntro out/leaf-intro.mp4"
+    "render": "remotion render LeafIntro out/capture.mp4 --codec h264 --crf 14 --audio-codec aac --audio-bitrate 256k",
+    "blend": "ffmpeg -y -i out/capture.mp4 -vf tmix=frames=4,fps=60 -c:v libx264 -crf 16 -pix_fmt yuv420p -c:a copy out/leaf-intro.mp4"
   },
   "dependencies": {
-    "@remotion/cli": "^4.0.522",
-    "@remotion/google-fonts": "^4.0.522",
-    "@remotion/transitions": "^4.0.522",
+    "@remotion/cli": "4.0.539",
+    "@remotion/google-fonts": "4.0.539",
+    "@remotion/media": "4.0.539",
     "@types/react": "^19.2.18",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
-    "remotion": "^4.0.522",
+    "remotion": "4.0.539",
     "typescript": "^7.0.2"
   }
 }
