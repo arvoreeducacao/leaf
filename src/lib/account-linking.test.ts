@@ -39,7 +39,6 @@ async function ssoSignIn() {
   return handleOAuthUserInfo(context as never, {
     account: {
       accountId: 'sso-identity-id',
-      issuer: 'https://auth.example.com/oidc',
       providerId: 'sso',
     },
     userInfo: {
@@ -108,5 +107,43 @@ describe('linking the SSO account to the email and password account', () => {
       .where(eq(session.userId, people[0]!.id))
 
     expect(sessions).toHaveLength(1)
+  })
+
+  it('leaves the issuer empty on the accounts it creates', async () => {
+    await ssoSignIn()
+
+    const accounts = await db.select().from(account)
+
+    expect(accounts).toHaveLength(1)
+    expect(accounts[0]?.issuer).toBeNull()
+  })
+
+  it('finds the account written while the issuer was the key', async () => {
+    const now = new Date()
+
+    await db.insert(user).values({
+      createdAt: now,
+      email,
+      emailVerified: true,
+      id: 'person-before-the-upgrade',
+      name: 'Person',
+      updatedAt: now,
+    })
+    await db.insert(account).values({
+      accountId: 'sso-identity-id',
+      createdAt: now,
+      id: 'account-before-the-upgrade',
+      issuer: 'https://auth.example.com/oidc',
+      providerId: 'sso',
+      updatedAt: now,
+      userId: 'person-before-the-upgrade',
+    })
+
+    const signedIn = await ssoSignIn()
+
+    expect(signedIn.error).toBeNull()
+    expect(signedIn.isRegister).toBe(false)
+    expect(signedIn.data?.user.id).toBe('person-before-the-upgrade')
+    expect(await db.select().from(account)).toHaveLength(1)
   })
 })

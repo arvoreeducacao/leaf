@@ -61,7 +61,7 @@ export const session = mysqlTable('session', {
 
 export const account = mysqlTable('account', {
   id: varchar('id', { length: AUTH_ID }).primaryKey(),
-  issuer: varchar('issuer', { length: 255 }).notNull(),
+  issuer: varchar('issuer', { length: 255 }),
   accountId: varchar('account_id', { length: 255 }).notNull(),
   providerId: varchar('provider_id', { length: 255 }).notNull(),
   userId: varchar('user_id', { length: AUTH_ID })
