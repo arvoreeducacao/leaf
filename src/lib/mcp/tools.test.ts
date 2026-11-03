@@ -53,7 +53,7 @@ function contextFor(
   person: { id: string; email: string },
   scopes: Array<string> = writeScopes,
 ): McpToolContext {
-  return { session: { user: person }, scopes, clientId: 'client-test' }
+  return { session: { user: { ...person, emailVerified: true } }, scopes, clientId: 'client-test' }
 }
 
 function paragraph(text: string) {

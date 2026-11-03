@@ -38,6 +38,7 @@ export default async function AppLayout({
   const memberships = await acceptPendingInvites(
     session.user.id,
     session.user.email,
+    session.user.emailVerified,
   )
 
   const activeOrgId = await readActiveOrgId()
@@ -49,7 +50,9 @@ export default async function AppLayout({
   const [privateDocuments, shared, trashed, organizationDocuments] =
     await Promise.all([
       listPrivateDocuments(session.user.id),
-      listSharedDocuments(session.user.email),
+      session.user.emailVerified
+        ? listSharedDocuments(session.user.email)
+        : Promise.resolve([]),
       listTrashedDocuments(session.user.id),
       membership
         ? listOrganizationDocuments(membership.orgId, session.user.id)

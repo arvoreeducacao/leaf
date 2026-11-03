@@ -140,7 +140,7 @@ export async function handleMcpRequest(request: Request): Promise<Response> {
   }
 
   const account = await db.query.user.findFirst({
-    columns: { id: true, email: true },
+    columns: { id: true, email: true, emailVerified: true },
     where: eq(user.id, access.userId),
   })
 
@@ -159,7 +159,13 @@ export async function handleMcpRequest(request: Request): Promise<Response> {
   }
 
   const server = createLeafMcpServer({
-    session: { user: { id: account.id, email: account.email } },
+    session: {
+      user: {
+        id: account.id,
+        email: account.email,
+        emailVerified: account.emailVerified,
+      },
+    },
     scopes: access.scopes,
     clientId: access.clientId,
     onDocumentWritten: revalidateDocument,

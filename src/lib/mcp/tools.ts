@@ -68,7 +68,9 @@ export class McpToolError extends Error {
 }
 
 export type McpToolContext = Readonly<{
-  session: Readonly<{ user: Readonly<{ id: string; email: string }> }>
+  session: Readonly<{
+    user: Readonly<{ id: string; email: string; emailVerified: boolean }>
+  }>
   scopes: ReadonlyArray<string>
   clientId: string
   locale?: string
@@ -272,7 +274,7 @@ export async function listDocumentsTool(
   context: McpToolContext,
   args: Readonly<{ limit?: number }>,
 ) {
-  const { id: userId, email } = context.session.user
+  const { id: userId, email, emailVerified } = context.session.user
   const limit = clampLimit(args.limit, MAX_MCP_RESULTS)
   const seen = new Set<string>()
   const listed: Array<ListedDocument> = []
@@ -292,7 +294,7 @@ export async function listDocumentsTool(
     ),
   )
   push(
-    (await listSharedDocuments(email)).map((item) =>
+    (emailVerified ? await listSharedDocuments(email) : []).map((item) =>
       fromSummary(item, { source: 'shared' }),
     ),
   )

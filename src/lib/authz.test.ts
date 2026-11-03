@@ -55,7 +55,7 @@ const liveToken = 'kQ4nPz7bLxRfT2aWmC9uVhJ8'
 const trashedToken = 'Zt6yBn3kQwEr8sDf1gHj5LpM'
 
 function sessionFor(person: { id: string; email: string }) {
-  return { user: person }
+  return { user: { ...person, emailVerified: true } }
 }
 
 const mainOrg = 'org-arvore'
@@ -279,6 +279,14 @@ describe('getDocumentAccess', () => {
     ).resolves.toBe('editor')
   })
 
+  it('ignores the invite of an unverified email', async () => {
+    await expect(
+      getDocumentAccess('doc-live', {
+        user: { ...editor, emailVerified: false },
+      }),
+    ).resolves.toBeNull()
+  })
+
   it('recognizes an invited viewer', async () => {
     await expect(
       getDocumentAccess('doc-live', sessionFor(viewer)),
@@ -288,7 +296,11 @@ describe('getDocumentAccess', () => {
   it('resolves the invite ignoring the email case', async () => {
     await expect(
       getDocumentAccess('doc-live', {
-        user: { id: editor.id, email: editor.email.toUpperCase() },
+        user: {
+          id: editor.id,
+          email: editor.email.toUpperCase(),
+          emailVerified: true,
+        },
       }),
     ).resolves.toBe('editor')
   })
@@ -656,7 +668,7 @@ describe('organization invites', () => {
     })
 
     await expect(
-      acceptPendingInvites(stranger.id, stranger.email.toUpperCase()),
+      acceptPendingInvites(stranger.id, stranger.email.toUpperCase(), true),
     ).resolves.toMatchObject([{ orgId: mainOrg, role: 'admin' }])
 
     const remaining = await db.query.organizationInvites.findFirst({
@@ -678,6 +690,7 @@ describe('organization invites', () => {
     const memberships = await acceptPendingInvites(
       orgMember.id,
       orgMember.email,
+      true,
     )
 
     expect(memberships.map((item) => item.orgId).sort()).toEqual(
@@ -691,9 +704,29 @@ describe('organization invites', () => {
     expect(remaining).toBeUndefined()
   })
 
+  it('leaves the invite pending while the email is unverified', async () => {
+    await db.insert(organizationInvites).values({
+      id: 'invite-unverified',
+      orgId: mainOrg,
+      email: stranger.email,
+      role: 'admin',
+      createdAt: new Date(),
+    })
+
+    await expect(
+      acceptPendingInvites(stranger.id, stranger.email, false),
+    ).resolves.toEqual([])
+
+    const remaining = await db.query.organizationInvites.findFirst({
+      where: eq(organizationInvites.id, 'invite-unverified'),
+    })
+
+    expect(remaining).toBeDefined()
+  })
+
   it('without an invite, the access creates no organization', async () => {
     await expect(
-      acceptPendingInvites(stranger.id, stranger.email),
+      acceptPendingInvites(stranger.id, stranger.email, true),
     ).resolves.toEqual([])
   })
 
