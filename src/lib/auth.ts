@@ -121,7 +121,6 @@ const ssoPlugin = sso
   ? genericOAuth({
       config: [
         {
-          accountIssuer: sso.issuer,
           authorizationUrl: sso.authorizationUrl,
           clientId: sso.clientId,
           clientSecret: sso.clientSecret,

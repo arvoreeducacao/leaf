@@ -58,7 +58,6 @@ async function ssoSignIn(auth: AuthInstance, email: string) {
   return handleOAuthUserInfo(context as never, {
     account: {
       accountId: `identity-${email}`,
-      issuer: 'https://auth.example.com/oidc',
       providerId: 'sso',
     },
     userInfo: {
