@@ -1,3 +1,5 @@
+import { getDocumentAccess } from '@/lib/authz'
+import type { SessionLike } from '@/lib/authz'
 import {
   getDatabaseDocument,
   listDatabaseProperties,
@@ -67,6 +69,7 @@ export async function expandDatabaseBlocks(
   titleColumn: string,
   emptyTitle: string,
   locale: string,
+  session: SessionLike,
 ): Promise<Array<unknown>> {
   const expanded: Array<unknown> = []
 
@@ -80,7 +83,9 @@ export async function expandDatabaseBlocks(
 
     if (block.type === 'database') {
       const databaseId = block.props?.databaseId ?? ''
-      const markdown = databaseId
+      const readable =
+        databaseId !== '' && (await getDocumentAccess(databaseId, session))
+      const markdown = readable
         ? await databaseToMarkdown(databaseId, titleColumn, emptyTitle, locale)
         : null
 
@@ -99,6 +104,7 @@ export async function expandDatabaseBlocks(
           titleColumn,
           emptyTitle,
           locale,
+          session,
         ),
       })
 

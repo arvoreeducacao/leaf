@@ -43,7 +43,7 @@ const openTeamspace = 'ts-open'
 const closedTeamspace = 'ts-closed'
 
 function sessionFor(person: { id: string; email: string }) {
-  return { user: person }
+  return { user: { ...person, emailVerified: true } }
 }
 
 async function insertDocument(
@@ -387,6 +387,7 @@ describe('multiple organizations', () => {
     const memberships = await acceptPendingInvites(
       'ts-newcomer',
       'newcomer@example.com',
+      true,
     )
 
     expect(memberships.map((item) => item.orgId).sort()).toEqual(

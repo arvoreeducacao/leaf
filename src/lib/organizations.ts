@@ -223,7 +223,12 @@ export async function listOrganizationEmails(orgId: string) {
 export async function acceptPendingInvites(
   userId: string,
   email: string,
+  emailVerified: boolean,
 ): Promise<Array<Membership>> {
+  if (!emailVerified) {
+    return listMemberships(userId)
+  }
+
   const normalized = email.trim().toLowerCase()
 
   const invites = await db

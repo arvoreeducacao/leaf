@@ -15,7 +15,7 @@ import { getDocument } from '@/lib/documents'
 export type AccessLevel = 'owner' | 'editor' | 'commenter' | 'viewer'
 
 export type SessionLike = {
-  user: { id: string; email: string }
+  user: { id: string; email: string; emailVerified: boolean }
 } | null
 
 const levelRank: Record<AccessLevel, number> = {
@@ -100,12 +100,14 @@ async function grantedAccess(
   document: Document,
   session: NonNullable<SessionLike>,
 ): Promise<AccessLevel | null> {
-  const share = await db.query.documentShares.findFirst({
-    where: and(
-      eq(documentShares.documentId, docId),
-      eq(documentShares.granteeEmail, session.user.email.toLowerCase()),
-    ),
-  })
+  const share = session.user.emailVerified
+    ? await db.query.documentShares.findFirst({
+        where: and(
+          eq(documentShares.documentId, docId),
+          eq(documentShares.granteeEmail, session.user.email.toLowerCase()),
+        ),
+      })
+    : undefined
 
   if (share) {
     return share.role

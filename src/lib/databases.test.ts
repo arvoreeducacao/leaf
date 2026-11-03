@@ -23,6 +23,7 @@ import {
 } from '@/db/schema'
 import { resetDatabase } from '@/db/testing'
 import { getDocumentAccess } from '@/lib/authz'
+import { expandDatabaseBlocks } from '@/lib/database/export'
 import { serializeOptions, serializeValues } from '@/lib/database/values'
 import { emptyFormConfig } from '@/lib/database/forms'
 import {
@@ -259,13 +260,13 @@ describe('row access', () => {
     })
 
     await expect(
-      getDocumentAccess('linha-1', { user: guest }),
+      getDocumentAccess('linha-1', { user: { ...guest, emailVerified: true } }),
     ).resolves.toBe('editor')
   })
 
   it('denies the row when the database was not shared', async () => {
     await expect(
-      getDocumentAccess('linha-1', { user: guest }),
+      getDocumentAccess('linha-1', { user: { ...guest, emailVerified: true } }),
     ).resolves.toBeNull()
   })
 
@@ -279,14 +280,34 @@ describe('row access', () => {
     })
 
     await expect(
-      getDocumentAccess('linha-1', { user: guest }),
+      getDocumentAccess('linha-1', { user: { ...guest, emailVerified: true } }),
     ).resolves.toBe('viewer')
   })
 
   it('keeps the row owner with owner access', async () => {
     await expect(
-      getDocumentAccess('linha-1', { user: owner }),
+      getDocumentAccess('linha-1', { user: { ...owner, emailVerified: true } }),
     ).resolves.toBe('owner')
+  })
+})
+
+describe('exporting an embedded database', () => {
+  const embedded = [{ type: 'database', props: { databaseId: 'base' } }]
+
+  it('expands the database for someone who can read it', async () => {
+    const blocks = await expandDatabaseBlocks(embedded, 'Title', 'Untitled', 'en', {
+      user: { ...owner, emailVerified: true },
+    })
+
+    expect(blocks.length).toBeGreaterThan(0)
+  })
+
+  it('drops the database for someone without access to it', async () => {
+    const blocks = await expandDatabaseBlocks(embedded, 'Title', 'Untitled', 'en', {
+      user: { ...guest, emailVerified: true },
+    })
+
+    expect(blocks).toEqual([])
   })
 })
 
