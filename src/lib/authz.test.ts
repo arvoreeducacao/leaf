@@ -82,7 +82,7 @@ beforeEach(async () => {
         id: person.id,
         name: person.email,
         email: person.email,
-        emailVerified: false,
+        emailVerified: true,
         createdAt: now,
         updatedAt: now,
       }),
@@ -327,6 +327,17 @@ describe('getDocumentAccess', () => {
     await expect(
       getDocumentAccess('doc-live', sessionFor(editor)),
     ).resolves.toBe('editor')
+  })
+
+  it('ignores the invite of an unverified email', async () => {
+    await db
+      .update(user)
+      .set({ emailVerified: false })
+      .where(eq(user.id, editor.id))
+
+    await expect(
+      getDocumentAccess('doc-live', sessionFor(editor)),
+    ).resolves.toBeNull()
   })
 
   it('recognizes an invited viewer', async () => {
@@ -799,6 +810,31 @@ describe('organization invites', () => {
     })
 
     expect(remaining).toBeUndefined()
+  })
+
+  it('leaves the invite pending while the email is unverified', async () => {
+    await db
+      .update(user)
+      .set({ emailVerified: false })
+      .where(eq(user.id, stranger.id))
+
+    await db.insert(organizationInvites).values({
+      id: 'invite-unverified',
+      orgId: mainOrg,
+      email: stranger.email,
+      role: 'admin',
+      createdAt: new Date(),
+    })
+
+    await expect(
+      acceptPendingInvites(stranger.id, stranger.email),
+    ).resolves.toEqual([])
+
+    const remaining = await db.query.organizationInvites.findFirst({
+      where: eq(organizationInvites.id, 'invite-unverified'),
+    })
+
+    expect(remaining).toBeDefined()
   })
 
   it('without an invite, the access creates no organization', async () => {

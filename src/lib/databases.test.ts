@@ -23,6 +23,7 @@ import {
 } from '@/db/schema'
 import { resetDatabase } from '@/db/testing'
 import { getDocumentAccess } from '@/lib/authz'
+import { expandDatabaseBlocks } from '@/lib/database/export'
 import { serializeOptions, serializeValues } from '@/lib/database/values'
 import { emptyFormConfig } from '@/lib/database/forms'
 import {
@@ -90,7 +91,7 @@ beforeEach(async () => {
       id: owner.id,
       name: 'Owner',
       email: owner.email,
-      emailVerified: false,
+      emailVerified: true,
       createdAt: now,
       updatedAt: now,
     },
@@ -98,7 +99,7 @@ beforeEach(async () => {
       id: guest.id,
       name: 'Guest',
       email: guest.email,
-      emailVerified: false,
+      emailVerified: true,
       createdAt: now,
       updatedAt: now,
     },
@@ -287,6 +288,34 @@ describe('row access', () => {
     await expect(
       getDocumentAccess('linha-1', { user: owner }),
     ).resolves.toBe('owner')
+  })
+})
+
+describe('exporting an embedded database', () => {
+  const embedded = [{ type: 'database', props: { databaseId: 'base' } }]
+
+  it('expands the database for someone who can read it', async () => {
+    const blocks = await expandDatabaseBlocks(
+      embedded,
+      'Title',
+      'Untitled',
+      'en',
+      { user: owner },
+    )
+
+    expect(blocks.length).toBeGreaterThan(0)
+  })
+
+  it('drops the database for someone without access to it', async () => {
+    const blocks = await expandDatabaseBlocks(
+      embedded,
+      'Title',
+      'Untitled',
+      'en',
+      { user: guest },
+    )
+
+    expect(blocks).toEqual([])
   })
 })
 

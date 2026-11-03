@@ -96,7 +96,7 @@ beforeEach(async () => {
     [ana, bruno, carla, outsider].map((person) => ({
       ...person,
       createdAt: now,
-      emailVerified: false,
+      emailVerified: true,
       updatedAt: now,
     })),
   )

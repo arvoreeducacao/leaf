@@ -20,6 +20,7 @@ import {
   user,
 } from '@/db/schema'
 import type { InviteRole, OrganizationRole } from '@/db/schema'
+import { hasVerifiedEmail } from '@/lib/authz'
 import { UNLISTED_DOCUMENT_KINDS } from '@/lib/document-kinds'
 import type { DocumentSummary } from '@/lib/documents'
 
@@ -224,6 +225,10 @@ export async function acceptPendingInvites(
   userId: string,
   email: string,
 ): Promise<Array<Membership>> {
+  if (!(await hasVerifiedEmail(userId))) {
+    return listMemberships(userId)
+  }
+
   const normalized = email.trim().toLowerCase()
 
   const invites = await db
