@@ -16,9 +16,11 @@ RUN pnpm build
 FROM ${PREVIOUS_IMAGE} AS previous
 
 FROM node:22-alpine
+ARG LEAF_BUILD_ID
 WORKDIR /app
 RUN corepack enable
 ENV NODE_ENV=production
+ENV LEAF_BUILD_ID=$LEAF_BUILD_ID
 COPY --from=build /app ./
 COPY --from=previous /app/.next/static ./.next/static-previous
 RUN find .next/static -type f -exec touch {} + \
