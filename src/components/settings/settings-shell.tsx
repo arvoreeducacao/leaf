@@ -62,6 +62,7 @@ function SettingsNavLink({
         current && sidebarRowActive,
       )}
       href={href}
+      replace
     >
       {children}
     </Link>
@@ -111,7 +112,7 @@ export function SettingsShell({
 
   return (
     <div
-      className="fixed inset-0 z-40 flex items-center justify-center bg-overlay tablet:p-8"
+      className="fade-in-0 fixed inset-0 z-40 flex animate-in items-center justify-center bg-overlay duration-150 tablet:p-8"
       onClick={(event) => {
         if (event.target === event.currentTarget) {
           close()
@@ -121,7 +122,7 @@ export function SettingsShell({
     >
       <div
         aria-label={t('title')}
-        className="relative flex h-full max-h-[860px] w-full max-w-[1200px] flex-col overflow-hidden bg-surface-card tablet:h-full tablet:flex-row tablet:rounded-xlarge tablet:shadow-center-xlarge"
+        className="fade-in-0 zoom-in-98 relative flex h-full max-h-[860px] w-full max-w-[1200px] animate-in flex-col overflow-hidden bg-surface-card duration-200 tablet:h-full tablet:flex-row tablet:rounded-xlarge tablet:shadow-center-xlarge"
         role="dialog"
       >
         <nav
