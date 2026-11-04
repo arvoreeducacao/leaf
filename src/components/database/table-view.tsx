@@ -1,7 +1,7 @@
 'use client'
 
 import { useTranslations } from 'next-intl'
-import { useEffect, useRef, useState } from 'react'
+import { type DragEvent, useEffect, useRef, useState } from 'react'
 
 import Link from 'next/link'
 
@@ -12,7 +12,7 @@ import type { DatabaseProperty } from '@/db/schema'
 import { type Person, optionsFor } from '@/lib/database/people'
 import type { PropertyValue } from '@/lib/database/values'
 import { valueOf } from '@/lib/database/values'
-import type { BoardGroup, DatabaseRow } from '@/lib/database/views'
+import type { BoardGroup, DatabaseRow, DropSide } from '@/lib/database/views'
 import { isMultiValueType } from '@/lib/database/views'
 import { cn } from '@/shared/utils'
 
@@ -39,6 +39,30 @@ type Props = Readonly<{
 }>
 
 const cellFrame = 'border-line-divider border-b p-0'
+
+type ColumnDrag = Readonly<{
+  movingId: string | null
+  targetId: string | null
+  side: DropSide
+}>
+
+const idleDrag: ColumnDrag = { movingId: null, targetId: null, side: 'before' }
+
+type ColumnDragControls = Readonly<{
+  drag: ColumnDrag
+  onDragChange: (drag: ColumnDrag) => void
+}>
+
+const dropMark: Record<DropSide, string> = {
+  before: 'shadow-[inset_2px_0_0_var(--color-focus)]',
+  after: 'shadow-[inset_-2px_0_0_var(--color-focus)]',
+}
+
+function sideOf(event: DragEvent<HTMLElement>): DropSide {
+  const box = event.currentTarget.getBoundingClientRect()
+
+  return event.clientX < box.left + box.width / 2 ? 'before' : 'after'
+}
 
 function RowTitle({
   rowId,
@@ -171,6 +195,8 @@ function Grid({
   handlers,
   people,
   onCreateRow,
+  drag,
+  onDragChange,
 }: Readonly<{
   rows: ReadonlyArray<DatabaseRow>
   properties: ReadonlyArray<DatabaseProperty>
@@ -181,14 +207,54 @@ function Grid({
   handlers: DatabaseHandlers
   people: ReadonlyArray<Person>
   onCreateRow: () => void
-}>) {
+}> &
+  ColumnDragControls) {
   const t = useTranslations('database')
+  const [editingId, setEditingId] = useState<string | null>(null)
   const bodyCell = cn(
     cellFrame,
     columnLine,
     wrap ? 'align-top' : 'align-middle',
   )
   const bodyFrame = wrap ? 'min-h-9 items-start py-1.5' : 'h-9 items-center'
+  const dragging = drag.movingId !== null
+
+  function columnState(propertyId: string) {
+    return cn(
+      drag.movingId === propertyId && 'opacity-50',
+      drag.targetId === propertyId &&
+        drag.movingId !== propertyId &&
+        dropMark[drag.side],
+    )
+  }
+
+  function dropTarget(propertyId: string) {
+    if (!dragging) {
+      return {}
+    }
+
+    return {
+      onDragOver(event: DragEvent<HTMLElement>) {
+        event.preventDefault()
+        event.dataTransfer.dropEffect = 'move'
+
+        const side = sideOf(event)
+
+        if (drag.targetId !== propertyId || drag.side !== side) {
+          onDragChange({ ...drag, targetId: propertyId, side })
+        }
+      },
+      onDrop(event: DragEvent<HTMLElement>) {
+        event.preventDefault()
+
+        if (drag.movingId && drag.movingId !== propertyId) {
+          handlers.moveProperty(drag.movingId, propertyId, sideOf(event))
+        }
+
+        onDragChange(idleDrag)
+      },
+    }
+  }
 
   return (
     <>
@@ -204,31 +270,81 @@ function Grid({
                 <span className="min-w-0 truncate">{t('titleColumn')}</span>
               </div>
             </th>
-            {properties.map((property) => (
-              <th
-                className={cn(cellFrame, columnLine, 'w-50')}
-                key={property.id}
-                scope="col"
-              >
-                <div className="group/head flex h-9 w-50 min-w-0 items-center px-2 font-regular text-content-subtle">
-                  <PropertyHeader
-                    canEdit={canEdit}
-                    onChangePrefix={(prefix) =>
-                      handlers.changeUniqueIdPrefix(property.id, prefix)
+            {properties.map((property, index) => {
+              const previous = properties[index - 1]
+              const next = properties[index + 1]
+              const movable = canEdit && editingId !== property.id
+
+              return (
+                <th
+                  className={cn(
+                    cellFrame,
+                    columnLine,
+                    'w-50',
+                    movable && 'cursor-grab active:cursor-grabbing',
+                    columnState(property.id),
+                  )}
+                  draggable={movable}
+                  key={property.id}
+                  onBlurCapture={(event) => {
+                    if (event.target instanceof HTMLInputElement) {
+                      setEditingId(null)
                     }
-                    onChangeType={(type) =>
-                      handlers.changePropertyType(property.id, type)
+                  }}
+                  onDragEnd={() => onDragChange(idleDrag)}
+                  onDragStart={(event) => {
+                    event.dataTransfer.effectAllowed = 'move'
+                    event.dataTransfer.setData('text/plain', property.name)
+                    onDragChange({
+                      movingId: property.id,
+                      targetId: null,
+                      side: 'before',
+                    })
+                  }}
+                  onFocusCapture={(event) => {
+                    if (event.target instanceof HTMLInputElement) {
+                      setEditingId(property.id)
                     }
-                    onDelete={() => handlers.deleteProperty(property.id)}
-                    onHide={() => handlers.hideProperty(property.id)}
-                    onRename={(name) =>
-                      handlers.renameProperty(property.id, name)
-                    }
-                    property={property}
-                  />
-                </div>
-              </th>
-            ))}
+                  }}
+                  scope="col"
+                  {...dropTarget(property.id)}
+                >
+                  <div className="group/head flex h-9 w-50 min-w-0 items-center px-2 font-regular text-content-subtle">
+                    <PropertyHeader
+                      canEdit={canEdit}
+                      onChangePrefix={(prefix) =>
+                        handlers.changeUniqueIdPrefix(property.id, prefix)
+                      }
+                      onChangeType={(type) =>
+                        handlers.changePropertyType(property.id, type)
+                      }
+                      onDelete={() => handlers.deleteProperty(property.id)}
+                      onHide={() => handlers.hideProperty(property.id)}
+                      onMoveLeft={
+                        previous
+                          ? () =>
+                              handlers.moveProperty(
+                                property.id,
+                                previous.id,
+                                'before',
+                              )
+                          : null
+                      }
+                      onMoveRight={
+                        next
+                          ? () =>
+                              handlers.moveProperty(property.id, next.id, 'after')
+                          : null
+                      }
+                      onRename={(name) =>
+                        handlers.renameProperty(property.id, name)
+                      }
+                      property={property}
+                    />
+                  </div>
+                </th>
+              )
+            })}
             <th className="w-32 border-line-divider border-b p-0" scope="col">
               <div className="flex h-9 items-center px-1">
                 <span className="sr-only">{t('addProperty')}</span>
@@ -322,8 +438,10 @@ function Grid({
                     className={cn(
                       bodyCell,
                       'transition-colors group-hover/row:bg-surface-hover',
+                      columnState(property.id),
                     )}
                     key={property.id}
+                    {...dropTarget(property.id)}
                   >
                     <PropertyCell
                       compact
@@ -385,6 +503,7 @@ export function TableView({
   groupProperty = null,
 }: Props) {
   const [collapsed, setCollapsed] = useState<ReadonlyArray<string>>([])
+  const [drag, setDrag] = useState<ColumnDrag>(idleDrag)
   const gutter = compact ? '' : 'pl-4 tablet:pl-24'
   const columnLine = verticalLines ? 'border-line-divider border-r' : ''
   const filled = groups?.filter((group) => group.rows.length > 0) ?? null
@@ -392,7 +511,9 @@ export function TableView({
   const shared = {
     canEdit,
     columnLine,
+    drag,
     handlers,
+    onDragChange: setDrag,
     people,
     properties,
     showPageIcon,

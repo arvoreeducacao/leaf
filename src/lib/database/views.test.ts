@@ -16,6 +16,7 @@ import {
   filterOptionIds,
   filterValueFor,
   groupRows,
+  movePropertyOrder,
   operatorsFor,
   parseViewConfig,
   peoplePropertyOf,
@@ -113,6 +114,7 @@ describe('view configuration', () => {
       filters: [{ propertyId: 'points', operator: 'greaterThan', value: 2 }],
       sorts: [{ propertyId: TITLE_PROPERTY_ID, direction: 'asc' }],
       hiddenPropertyIds: ['due'],
+      propertyOrder: ['points', 'status'],
       wrapCells: true,
       datePropertyId: null,
       endDatePropertyId: null,
@@ -317,6 +319,69 @@ describe('visible properties', () => {
         hiddenPropertyIds: ['due', 'done'],
       }).map((item) => item.id),
     ).toEqual(['status', 'points'])
+  })
+
+  it('shows the columns in the order the view saved', () => {
+    expect(
+      visibleProperties(properties, {
+        ...emptyViewConfig,
+        propertyOrder: ['points', 'status'],
+        hiddenPropertyIds: ['done'],
+      }).map((item) => item.id),
+    ).toEqual(['points', 'status', 'due'])
+  })
+
+  it('ignores an id in the order that no longer exists', () => {
+    expect(
+      visibleProperties(properties, {
+        ...emptyViewConfig,
+        propertyOrder: ['gone', 'due'],
+      }).map((item) => item.id),
+    ).toEqual(['due', 'status', 'points', 'done'])
+  })
+
+  it('drops a repeated id when it reads the order', () => {
+    expect(
+      parseViewConfig(JSON.stringify({ propertyOrder: ['due', 'due', 3] }))
+        .propertyOrder,
+    ).toEqual(['due'])
+  })
+})
+
+describe('moving a column', () => {
+  it('puts the column before the one it was dropped on', () => {
+    expect(movePropertyOrder(properties, [], 'done', 'status', 'before')).toEqual(
+      ['done', 'status', 'points', 'due'],
+    )
+  })
+
+  it('puts the column after the one it was dropped on', () => {
+    expect(movePropertyOrder(properties, [], 'status', 'due', 'after')).toEqual(
+      ['points', 'due', 'status', 'done'],
+    )
+  })
+
+  it('starts from the order the view already has', () => {
+    expect(
+      movePropertyOrder(
+        properties,
+        ['done', 'status', 'points', 'due'],
+        'due',
+        'done',
+        'after',
+      ),
+    ).toEqual(['done', 'due', 'status', 'points'])
+  })
+
+  it('keeps the order when the column is dropped on itself or on nothing', () => {
+    const untouched = ['status', 'points', 'due', 'done']
+
+    expect(
+      movePropertyOrder(properties, [], 'status', 'status', 'after'),
+    ).toEqual(untouched)
+    expect(
+      movePropertyOrder(properties, [], 'status', 'gone', 'before'),
+    ).toEqual(untouched)
   })
 })
 

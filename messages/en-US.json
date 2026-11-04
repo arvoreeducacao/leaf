@@ -382,6 +382,8 @@
     "propertyMenu": "Actions for property {name}",
     "renameProperty": "Rename",
     "changeType": "Change type",
+    "movePropertyLeft": "Move left",
+    "movePropertyRight": "Move right",
     "hideProperty": "Hide in this view",
     "deleteProperty": "Delete property",
     "deletePropertyTitle": "Delete the property {name}?",
