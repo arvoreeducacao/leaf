@@ -547,6 +547,8 @@
     "deleteTemplate": "Delete",
     "templateMenu": "Template actions for {title}",
     "templateDeleted": "Template moved to trash",
+    "templateCreator": "Whoever creates the page",
+    "templateNextCycle": "Next cycle",
     "editingTemplate": "You are editing a template in",
     "filterValuePlaceholder": "Type a value...",
     "searchOption": "Search option...",

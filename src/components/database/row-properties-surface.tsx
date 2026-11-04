@@ -47,6 +47,7 @@ export async function RowPropertiesSurface({ rowId, canEdit }: Props) {
       )}
       <RowProperties
         canEdit={canEdit}
+        isTemplate={context.isTemplate}
         people={context.people}
         properties={context.properties}
         row={context.row}
