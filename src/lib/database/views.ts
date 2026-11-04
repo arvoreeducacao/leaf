@@ -148,6 +148,7 @@ export type ViewConfig = Readonly<{
   filters: ReadonlyArray<ViewFilter>
   sorts: ReadonlyArray<ViewSort>
   hiddenPropertyIds: ReadonlyArray<string>
+  propertyOrder: ReadonlyArray<string>
   wrapCells: boolean
   showVerticalLines: boolean
   showPageIcon: boolean
@@ -167,6 +168,7 @@ export const emptyViewConfig: ViewConfig = {
   filters: [],
   sorts: [],
   hiddenPropertyIds: [],
+  propertyOrder: [],
   wrapCells: true,
   showVerticalLines: true,
   showPageIcon: true,
@@ -299,6 +301,7 @@ export function parseViewConfig(raw: string | null): ViewConfig {
     filters,
     sorts,
     hiddenPropertyIds: asStringArray(source.hiddenPropertyIds),
+    propertyOrder: [...new Set(asStringArray(source.propertyOrder))],
     wrapCells: source.wrapCells !== false,
     showVerticalLines: source.showVerticalLines !== false,
     showPageIcon: source.showPageIcon !== false,
@@ -320,6 +323,7 @@ export function serializeViewConfig(config: ViewConfig): string {
     baselineEndPropertyId: config.baselineEndPropertyId,
     absencesDatabaseId: config.absencesDatabaseId,
     hiddenPropertyIds: config.hiddenPropertyIds,
+    propertyOrder: config.propertyOrder,
     wrapCells: config.wrapCells,
     showVerticalLines: config.showVerticalLines,
     showPageIcon: config.showPageIcon,
@@ -684,13 +688,57 @@ export function applySorts(
   })
 }
 
+export function orderedProperties<T extends { id: string }>(
+  properties: ReadonlyArray<T>,
+  order: ReadonlyArray<string>,
+): Array<T> {
+  const rank = new Map(order.map((id, index) => [id, index]))
+
+  return properties
+    .map((property, index) => ({
+      property,
+      rank: rank.get(property.id) ?? order.length + index,
+    }))
+    .sort((left, right) => left.rank - right.rank)
+    .map((item) => item.property)
+}
+
 export function visibleProperties<T extends { id: string }>(
   properties: ReadonlyArray<T>,
   config: ViewConfig,
 ): Array<T> {
   const hidden = new Set(config.hiddenPropertyIds)
 
-  return properties.filter((property) => !hidden.has(property.id))
+  return orderedProperties(properties, config.propertyOrder).filter(
+    (property) => !hidden.has(property.id),
+  )
+}
+
+export type DropSide = 'before' | 'after'
+
+export function movePropertyOrder(
+  properties: ReadonlyArray<{ id: string }>,
+  order: ReadonlyArray<string>,
+  movingId: string,
+  targetId: string,
+  side: DropSide,
+): Array<string> {
+  const ids = orderedProperties(properties, order).map((item) => item.id)
+
+  if (
+    movingId === targetId ||
+    !ids.includes(movingId) ||
+    !ids.includes(targetId)
+  ) {
+    return ids
+  }
+
+  const without = ids.filter((id) => id !== movingId)
+  const target = without.indexOf(targetId)
+
+  without.splice(side === 'before' ? target : target + 1, 0, movingId)
+
+  return without
 }
 
 export type BoardGroup = Readonly<{

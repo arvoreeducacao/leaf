@@ -1,5 +1,6 @@
 import type { DatabasePropertyType } from '@/db/schema'
 import type { PropertyValue, SelectOption } from '@/lib/database/values'
+import type { DropSide } from '@/lib/database/views'
 
 export type DatabaseHandlers = Readonly<{
   commitValue: (
@@ -23,5 +24,6 @@ export type DatabaseHandlers = Readonly<{
   changePropertyType: (propertyId: string, type: DatabasePropertyType) => void
   changeUniqueIdPrefix: (propertyId: string, prefix: string) => void
   hideProperty: (propertyId: string) => void
+  moveProperty: (propertyId: string, targetId: string, side: DropSide) => void
   deleteProperty: (propertyId: string) => void
 }>
