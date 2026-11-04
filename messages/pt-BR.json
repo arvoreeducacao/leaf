@@ -382,6 +382,8 @@
     "propertyMenu": "Ações da propriedade {name}",
     "renameProperty": "Renomear",
     "changeType": "Mudar o tipo",
+    "movePropertyLeft": "Mover para a esquerda",
+    "movePropertyRight": "Mover para a direita",
     "hideProperty": "Ocultar nesta visualização",
     "deleteProperty": "Excluir propriedade",
     "deletePropertyTitle": "Excluir a propriedade {name}?",

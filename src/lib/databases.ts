@@ -383,6 +383,7 @@ function remapConfig(
       propertyId: remap(sort.propertyId),
     })),
     hiddenPropertyIds: config.hiddenPropertyIds.map(remap),
+    propertyOrder: config.propertyOrder.map(remap),
     form: config.form
       ? {
           ...config.form,

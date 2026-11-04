@@ -31,6 +31,7 @@ import {
   isColorableType,
   isGroupableType,
   operatorsFor,
+  orderedProperties,
 } from '@/lib/database/views'
 
 import {
@@ -89,6 +90,7 @@ export function ViewSettings({
     (property) => property.type === 'person',
   )
   const hidden = new Set(config.hiddenPropertyIds)
+  const ordered = orderedProperties(properties, config.propertyOrder)
   const visibleCount = properties.filter(
     (property) => !hidden.has(property.id),
   ).length
@@ -261,7 +263,7 @@ export function ViewSettings({
             <span className="text-content-subtle">{visibleCount}</span>
           </DropdownMenuSubTrigger>
           <DropdownMenuSubContent className="max-h-80 w-64 overflow-y-auto">
-            {properties.map((property) => (
+            {ordered.map((property) => (
               <DropdownMenuCheckboxItem
                 checked={!hidden.has(property.id)}
                 key={property.id}

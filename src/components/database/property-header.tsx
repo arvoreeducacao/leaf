@@ -3,7 +3,13 @@
 import { useTranslations } from 'next-intl'
 import { useState } from 'react'
 
-import { EllipsisVerticalIcon, EyeOffIcon, TrashIcon } from '@/components/icons'
+import {
+  ArrowLeftIcon,
+  ArrowRightIcon,
+  EllipsisVerticalIcon,
+  EyeOffIcon,
+  TrashIcon,
+} from '@/components/icons'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -46,6 +52,8 @@ type Props = Readonly<{
   onChangePrefix: (prefix: string) => void
   onHide: () => void
   onDelete: () => void
+  onMoveLeft?: (() => void) | null
+  onMoveRight?: (() => void) | null
 }>
 
 export function PropertyHeader({
@@ -56,6 +64,8 @@ export function PropertyHeader({
   onChangePrefix,
   onHide,
   onDelete,
+  onMoveLeft = null,
+  onMoveRight = null,
 }: Props) {
   const t = useTranslations('database')
   const tCommon = useTranslations('common')
@@ -163,6 +173,18 @@ export function PropertyHeader({
                   </DropdownMenuRadioGroup>
                 </DropdownMenuSubContent>
               </DropdownMenuSub>
+              {onMoveLeft ? (
+                <DropdownMenuItem onSelect={onMoveLeft}>
+                  <ArrowLeftIcon aria-hidden="true" />
+                  {t('movePropertyLeft')}
+                </DropdownMenuItem>
+              ) : null}
+              {onMoveRight ? (
+                <DropdownMenuItem onSelect={onMoveRight}>
+                  <ArrowRightIcon aria-hidden="true" />
+                  {t('movePropertyRight')}
+                </DropdownMenuItem>
+              ) : null}
               <DropdownMenuItem onSelect={onHide}>
                 <EyeOffIcon aria-hidden="true" />
                 {t('hideProperty')}

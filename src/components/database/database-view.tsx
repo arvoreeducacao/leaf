@@ -59,6 +59,7 @@ import {
   chosenGroupPropertyOf,
   colorPropertyOf,
   groupRows,
+  movePropertyOrder,
   parseViewConfig,
   peoplePropertyOf,
   serializeViewConfig,
@@ -590,6 +591,18 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
       changeConfig({
         ...config,
         hiddenPropertyIds: [...config.hiddenPropertyIds, propertyId],
+      })
+    },
+    moveProperty(propertyId, targetId, side) {
+      changeConfig({
+        ...config,
+        propertyOrder: movePropertyOrder(
+          properties,
+          config.propertyOrder,
+          propertyId,
+          targetId,
+          side,
+        ),
       })
     },
     deleteProperty(propertyId) {
