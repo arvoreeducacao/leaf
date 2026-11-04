@@ -390,20 +390,34 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
 
       void guard(() => renameDatabaseRow(rowId, trimmed))
     },
-    createRow(seed = {}, templateId = null) {
+    createRow(seed = {}, templateId) {
       void (async () => {
         try {
           const result = await createDatabaseRow(
             snapshot.id,
             seed,
             '',
-            templateId,
+            templateId === undefined ? snapshot.defaultTemplateId : templateId,
           )
 
           if (!result.ok) {
             toast.error(result.error)
 
             return
+          }
+
+          if (result.options.length > 0) {
+            const fresh = new Map(
+              result.options.map((item) => [item.propertyId, item.options]),
+            )
+
+            setProperties((current) =>
+              current.map((item) =>
+                fresh.has(item.id)
+                  ? { ...item, options: fresh.get(item.id) ?? item.options }
+                  : item,
+              ),
+            )
           }
 
           setRows((current) => [...current, result.row])

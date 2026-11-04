@@ -8,6 +8,10 @@ import type { DatabaseProperty } from '@/db/schema'
 import { addSelectOption, setDatabaseRowValue } from '@/lib/database-actions'
 import { type Person, optionsFor } from '@/lib/database/people'
 import {
+  withTemplateOptions,
+  withTemplatePeople,
+} from '@/lib/database/template-tokens'
+import {
   type PropertyValue,
   type SelectOption,
   parseOptions,
@@ -24,12 +28,27 @@ type Props = Readonly<{
   properties: ReadonlyArray<DatabaseProperty>
   canEdit: boolean
   people: ReadonlyArray<Person>
+  isTemplate?: boolean
 }>
 
-export function RowProperties({ row, properties, canEdit, people }: Props) {
+export function RowProperties({
+  row,
+  properties,
+  canEdit,
+  people,
+  isTemplate = false,
+}: Props) {
   const t = useTranslations('database')
   const [items, setItems] = useState(properties)
   const [values, setValues] = useState(row.values)
+  const labels = {
+    creator: t('templateCreator'),
+    nextCycle: t('templateNextCycle'),
+  }
+  const roster = isTemplate ? withTemplatePeople(people, labels) : people
+  const shown = isTemplate
+    ? items.map((item) => withTemplateOptions(item, labels))
+    : items
 
   if (items.length === 0) {
     return null
@@ -94,7 +113,7 @@ export function RowProperties({ row, properties, canEdit, people }: Props) {
   return (
     <section aria-label={t('rowProperties')} className="flex flex-col gap-1">
       <dl className="flex flex-col gap-1">
-        {items.map((property) => (
+        {shown.map((property) => (
           <div
             className="flex flex-col gap-1 tablet:flex-row tablet:items-center tablet:gap-3"
             key={property.id}
@@ -111,13 +130,13 @@ export function RowProperties({ row, properties, canEdit, people }: Props) {
                 compact
                 onCommit={(value) => commit(property.id, value)}
                 onCreateOption={(name) => createOption(property.id, name)}
-                people={people}
+                people={roster}
                 property={property}
                 readOnly={!canEdit}
                 rowTitle={
                   row.title.trim().length > 0 ? row.title : t('untitledRow')
                 }
-                value={valueOf(values, property, optionsFor(property, people))}
+                value={valueOf(values, property, optionsFor(property, roster))}
               />
             </dd>
           </div>

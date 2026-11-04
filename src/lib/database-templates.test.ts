@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('@/db', async () => {
   const { createTestDb } = await import('@/db/testing')
@@ -32,9 +32,19 @@ import {
   createDatabaseTemplate,
   deleteDatabaseTemplate,
   duplicateDatabaseTemplate,
+  setDatabaseRowValue,
   setDefaultDatabaseTemplate,
 } from '@/lib/database-actions'
-import { serializeValues } from '@/lib/database/values'
+import {
+  CREATOR_TOKEN,
+  NEXT_CYCLE_TOKEN,
+} from '@/lib/database/template-tokens'
+import {
+  parseOptions,
+  parseValues,
+  serializeOptions,
+  serializeValues,
+} from '@/lib/database/values'
 import {
   copyDatabaseInto,
   listDatabaseRows,
@@ -274,5 +284,112 @@ describe('database templates', () => {
     const snapshot = await loadDatabase('base', owner.id)
 
     expect(snapshot?.defaultTemplateId).toBeNull()
+  })
+})
+
+describe('a template that fills itself in', () => {
+  beforeEach(async () => {
+    await db.insert(databaseProperties).values([
+      {
+        id: 'prop-owner',
+        databaseId: 'base',
+        name: 'Responsáveis',
+        type: 'person',
+        position: 1,
+        createdAt: now,
+      },
+      {
+        id: 'prop-cycle',
+        databaseId: 'base',
+        name: 'Ciclo',
+        type: 'multiSelect',
+        options: serializeOptions([
+          { id: 'cycle-05', name: '2026-05', color: 'gray' },
+          { id: 'cycle-06', name: '2026-06', color: 'blue' },
+        ]),
+        position: 2,
+        createdAt: now,
+      },
+    ])
+
+    await db.insert(documents).values({
+      id: 'template-proposal',
+      ownerId: owner.id,
+      parentId: 'base',
+      kind: 'template',
+      title: '',
+      icon: 'https://www.notion.so/icons/book-closed_green.svg',
+      properties: serializeValues({
+        'prop-owner': [CREATOR_TOKEN],
+        'prop-cycle': [NEXT_CYCLE_TOKEN],
+      }),
+      createdAt: at(5),
+      updatedAt: at(5),
+    })
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('puts whoever creates the row as the owner and picks the next cycle', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-09-15T12:00:00.000Z'))
+
+    const result = await createDatabaseRow('base', {}, '', 'template-proposal')
+
+    expect(result.ok).toBe(true)
+    expect(result.ok && result.row.values).toMatchObject({
+      'prop-owner': [owner.id],
+      'prop-cycle': ['cycle-06'],
+    })
+    expect(result.ok && result.row.icon).toBe(
+      'https://www.notion.so/icons/book-closed_green.svg',
+    )
+  })
+
+  it('creates the next cycle when it does not exist yet', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-11-04T12:00:00.000Z'))
+
+    const result = await createDatabaseRow('base', {}, '', 'template-proposal')
+    const property = await db.query.databaseProperties.findFirst({
+      where: eq(databaseProperties.id, 'prop-cycle'),
+    })
+    const created = parseOptions(property?.options ?? null).find(
+      (option) => option.name === '2027-01',
+    )
+
+    expect(created).toBeDefined()
+    expect(result.ok && result.row.values['prop-cycle']).toEqual([created?.id])
+    expect(result.ok && result.options).toEqual([
+      { propertyId: 'prop-cycle', options: property?.options },
+    ])
+  })
+
+  it('keeps the tokens when the template itself is edited', async () => {
+    await setDatabaseRowValue('template-proposal', 'prop-cycle', [
+      NEXT_CYCLE_TOKEN,
+      'cycle-05',
+    ])
+
+    const template = await db.query.documents.findFirst({
+      where: eq(documents.id, 'template-proposal'),
+    })
+
+    expect(parseValues(template?.properties ?? null)['prop-cycle']).toEqual([
+      NEXT_CYCLE_TOKEN,
+      'cycle-05',
+    ])
+  })
+
+  it('drops the tokens when someone types them into a regular row', async () => {
+    await setDatabaseRowValue('row-alfa', 'prop-cycle', [NEXT_CYCLE_TOKEN])
+
+    const row = await db.query.documents.findFirst({
+      where: eq(documents.id, 'row-alfa'),
+    })
+
+    expect(parseValues(row?.properties ?? null)['prop-cycle']).toEqual([])
   })
 })

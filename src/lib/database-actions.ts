@@ -30,6 +30,14 @@ import {
 } from '@/lib/database/assign-unique-ids'
 import { personOptions } from '@/lib/database/people'
 import {
+  CREATOR_TOKEN,
+  NEXT_CYCLE_TOKEN,
+  holdsToken,
+  nextCycleName,
+  replaceToken,
+  withTemplateOptions,
+} from '@/lib/database/template-tokens'
+import {
   MAX_UNIQUE_ID_PREFIX,
   type PropertyRefresh,
   normalizeUniqueIdPrefix,
@@ -406,39 +414,19 @@ export async function addSelectOption(
     return notAllowed()
   }
 
-  const options = parseOptions(property.options)
   const trimmed = name.trim().slice(0, MAX_PROPERTY_NAME)
 
-  if (trimmed.length === 0 || options.length >= MAX_SELECT_OPTIONS) {
+  if (trimmed.length === 0) {
     return notAllowed()
   }
 
-  const existing = options.find(
-    (option) => option.name.toLowerCase() === trimmed.toLowerCase(),
-  )
+  const added = await appendOption(propertyId, property.type, trimmed)
 
-  if (existing) {
-    return { ok: true, option: existing }
+  if (!added) {
+    return notAllowed()
   }
 
-  const option: SelectOption =
-    property.type === 'status'
-      ? {
-          id: nanoid(8),
-          name: trimmed,
-          color: colorForIndex(options.length),
-          group: 'todo',
-        }
-      : {
-          id: nanoid(8),
-          name: trimmed,
-          color: colorForIndex(options.length),
-        }
-
-  await db
-    .update(databaseProperties)
-    .set({ options: serializeOptions([...options, option]) })
-    .where(eq(databaseProperties.id, propertyId))
+  const { option } = added
 
   revalidatePath(`/doc/${property.databaseId}`)
 
@@ -469,29 +457,116 @@ export async function deleteSelectOption(
   return { ok: true }
 }
 
+const tokenLabels = { creator: CREATOR_TOKEN, nextCycle: NEXT_CYCLE_TOKEN }
+
 async function normalizeForProperty(
   property: Pick<DatabaseProperty, 'type' | 'options'>,
   value: unknown,
   orgId: string | null,
   viewerId: string,
+  isTemplate = false,
 ): Promise<ReturnType<typeof normalizeValue>> {
   if (property.type !== 'person') {
-    return normalizeValue(property.type, value, parseOptions(property.options))
+    const shaped = isTemplate
+      ? withTemplateOptions(property, tokenLabels)
+      : property
+
+    return normalizeValue(property.type, value, parseOptions(shaped.options))
   }
 
-  if (!orgId) {
-    return []
+  const roster = orgId
+    ? personOptions(await listDatabasePeople(orgId, viewerId))
+    : []
+  const allowed = isTemplate
+    ? [{ id: CREATOR_TOKEN, name: CREATOR_TOKEN, color: 'gray' as const }, ...roster]
+    : roster
+
+  return allowed.length === 0 ? [] : normalizeValue('person', value, allowed)
+}
+
+async function appendOption(
+  propertyId: string,
+  type: DatabaseProperty['type'],
+  name: string,
+): Promise<{ option: SelectOption; options: string } | null> {
+  const current = await db.query.databaseProperties.findFirst({
+    where: eq(databaseProperties.id, propertyId),
+  })
+
+  if (!current) {
+    return null
   }
 
-  const roster = personOptions(await listDatabasePeople(orgId, viewerId))
+  const options = parseOptions(current.options)
+  const existing = options.find(
+    (option) => option.name.toLowerCase() === name.toLowerCase(),
+  )
 
-  return roster.length === 0
-    ? []
-    : normalizeValue('person', value, roster)
+  if (existing) {
+    return { option: existing, options: serializeOptions(options) }
+  }
+
+  if (options.length >= MAX_SELECT_OPTIONS) {
+    return null
+  }
+
+  const option: SelectOption =
+    type === 'status'
+      ? {
+          id: nanoid(8),
+          name,
+          color: colorForIndex(options.length),
+          group: 'todo',
+        }
+      : { id: nanoid(8), name, color: colorForIndex(options.length) }
+  const serialized = serializeOptions([...options, option])
+
+  await db
+    .update(databaseProperties)
+    .set({ options: serialized })
+    .where(eq(databaseProperties.id, propertyId))
+
+  return { option, options: serialized }
+}
+
+type OptionRefresh = Readonly<{ propertyId: string; options: string }>
+
+async function resolveTemplateTokens(
+  property: DatabaseProperty,
+  value: ReturnType<typeof normalizeValue>,
+  creatorId: string,
+  refreshed: Array<OptionRefresh>,
+): Promise<ReturnType<typeof normalizeValue>> {
+  if (property.type === 'person' && holdsToken(value, CREATOR_TOKEN)) {
+    return replaceToken(value, CREATOR_TOKEN, creatorId)
+  }
+
+  if (
+    (property.type === 'select' || property.type === 'multiSelect') &&
+    holdsToken(value, NEXT_CYCLE_TOKEN)
+  ) {
+    const added = await appendOption(
+      property.id,
+      property.type,
+      nextCycleName(new Date()),
+    )
+
+    if (!added) {
+      return Array.isArray(value)
+        ? value.filter((item) => item !== NEXT_CYCLE_TOKEN)
+        : null
+    }
+
+    refreshed.push({ propertyId: property.id, options: added.options })
+
+    return replaceToken(value, NEXT_CYCLE_TOKEN, added.option.id)
+  }
+
+  return value
 }
 
 export type RowResult =
-  | { ok: true; row: DatabaseRow }
+  | { ok: true; row: DatabaseRow; options: ReadonlyArray<OptionRefresh> }
   | { ok: false; error: string }
 
 export async function createDatabaseRow(
@@ -524,6 +599,7 @@ export async function createDatabaseRow(
     : null
   const templateValues = parseValues(template?.properties ?? null)
   const values: Record<string, ReturnType<typeof normalizeValue>> = {}
+  const refreshed: Array<OptionRefresh> = []
 
   for (const property of properties) {
     if (property.type === 'uniqueId') {
@@ -552,7 +628,12 @@ export async function createDatabaseRow(
     const inherited = templateValues[property.id]
 
     if (inherited !== undefined) {
-      values[property.id] = inherited
+      values[property.id] = await resolveTemplateTokens(
+        property,
+        inherited,
+        session.user.id,
+        refreshed,
+      )
     }
   }
 
@@ -597,6 +678,7 @@ export async function createDatabaseRow(
       createdAt: now,
       updatedAt: now,
     }),
+    options: refreshed,
   }
 }
 
@@ -640,6 +722,7 @@ export async function setDatabaseRowValue(
       value,
       row.orgId,
       session.user.id,
+      row.kind === 'template',
     ),
   }
 

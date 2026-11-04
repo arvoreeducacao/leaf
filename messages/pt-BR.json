@@ -549,6 +549,8 @@
     "deleteTemplate": "Excluir",
     "templateMenu": "Ações do modelo {title}",
     "templateDeleted": "Modelo movido para a lixeira",
+    "templateCreator": "Quem criar a página",
+    "templateNextCycle": "Próximo ciclo",
     "editingTemplate": "Você está editando um modelo em",
     "filterValuePlaceholder": "Digite um valor...",
     "searchOption": "Buscar opção...",
