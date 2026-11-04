@@ -413,12 +413,12 @@
 }
 
 .dark {
-  --content-strong: #d4d4d4;
-  --content: #9b9b9b;
-  --content-muted: #9b9b9b;
-  --content-subtle: #7f7f7f;
-  --content-tertiary: #6f6f6f;
-  --content-disabled: #5a5a5a;
+  --content-strong: #ececec;
+  --content: #c4c4c4;
+  --content-muted: #b4b4b4;
+  --content-subtle: #9a9a9a;
+  --content-tertiary: #858585;
+  --content-disabled: #6a6a6a;
   --content-inverse: #191919;
 
   --surface-app: #191919;
