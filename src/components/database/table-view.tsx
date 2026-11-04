@@ -1,9 +1,7 @@
 'use client'
 
 import { useTranslations } from 'next-intl'
-import { type DragEvent, useEffect, useRef, useState } from 'react'
-
-import Link from 'next/link'
+import { useEffect, useRef, useState } from 'react'
 
 import { DocumentIcon } from '@/components/app/document-icon'
 import { CaretDownIcon, CaretRightIcon } from '@/components/icons'
@@ -12,16 +10,23 @@ import type { DatabaseProperty } from '@/db/schema'
 import { type Person, optionsFor } from '@/lib/database/people'
 import type { PropertyValue } from '@/lib/database/values'
 import { valueOf } from '@/lib/database/values'
-import type { BoardGroup, DatabaseRow, DropSide } from '@/lib/database/views'
+import type { BoardGroup, DatabaseRow } from '@/lib/database/views'
 import { isMultiValueType } from '@/lib/database/views'
 import { cn } from '@/shared/utils'
 
 import { AddPropertyMenu } from './add-property-menu'
+import { PeekLink } from './peek-link'
 import { PlusIcon, TextTypeIcon } from './icons'
 import { PropertyCell } from './property-cell'
 import { PropertyHeader } from './property-header'
 import { RowContextMenu, RowMenu } from './row-menu'
 import { OptionChip, PersonChip } from './select-editor'
+import {
+  SortableColumnHeader,
+  SortableColumns,
+  columnMotion,
+  columnShift,
+} from './sortable-columns'
 import type { DatabaseHandlers } from './types'
 
 type Props = Readonly<{
@@ -39,30 +44,6 @@ type Props = Readonly<{
 }>
 
 const cellFrame = 'border-line-divider border-b p-0'
-
-type ColumnDrag = Readonly<{
-  movingId: string | null
-  targetId: string | null
-  side: DropSide
-}>
-
-const idleDrag: ColumnDrag = { movingId: null, targetId: null, side: 'before' }
-
-type ColumnDragControls = Readonly<{
-  drag: ColumnDrag
-  onDragChange: (drag: ColumnDrag) => void
-}>
-
-const dropMark: Record<DropSide, string> = {
-  before: 'shadow-[inset_2px_0_0_var(--color-focus)]',
-  after: 'shadow-[inset_-2px_0_0_var(--color-focus)]',
-}
-
-function sideOf(event: DragEvent<HTMLElement>): DropSide {
-  const box = event.currentTarget.getBoundingClientRect()
-
-  return event.clientX < box.left + box.width / 2 ? 'before' : 'after'
-}
 
 function RowTitle({
   rowId,
@@ -195,8 +176,6 @@ function Grid({
   handlers,
   people,
   onCreateRow,
-  drag,
-  onDragChange,
 }: Readonly<{
   rows: ReadonlyArray<DatabaseRow>
   properties: ReadonlyArray<DatabaseProperty>
@@ -207,273 +186,231 @@ function Grid({
   handlers: DatabaseHandlers
   people: ReadonlyArray<Person>
   onCreateRow: () => void
-}> &
-  ColumnDragControls) {
+}>) {
   const t = useTranslations('database')
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [movingId, setMovingId] = useState<string | null>(null)
+  const table = useRef<HTMLTableElement>(null)
   const bodyCell = cn(
     cellFrame,
     columnLine,
     wrap ? 'align-top' : 'align-middle',
   )
   const bodyFrame = wrap ? 'min-h-9 items-start py-1.5' : 'h-9 items-center'
-  const dragging = drag.movingId !== null
-
-  function columnState(propertyId: string) {
-    return cn(
-      drag.movingId === propertyId && 'opacity-50',
-      drag.targetId === propertyId &&
-        drag.movingId !== propertyId &&
-        dropMark[drag.side],
-    )
-  }
-
-  function dropTarget(propertyId: string) {
-    if (!dragging) {
-      return {}
-    }
-
-    return {
-      onDragOver(event: DragEvent<HTMLElement>) {
-        event.preventDefault()
-        event.dataTransfer.dropEffect = 'move'
-
-        const side = sideOf(event)
-
-        if (drag.targetId !== propertyId || drag.side !== side) {
-          onDragChange({ ...drag, targetId: propertyId, side })
-        }
-      },
-      onDrop(event: DragEvent<HTMLElement>) {
-        event.preventDefault()
-
-        if (drag.movingId && drag.movingId !== propertyId) {
-          handlers.moveProperty(drag.movingId, propertyId, sideOf(event))
-        }
-
-        onDragChange(idleDrag)
-      },
-    }
-  }
 
   return (
     <>
-      <table className="min-w-max border-collapse text-body-small">
-        <thead>
-          <tr>
-            <th
-              className={cn(cellFrame, columnLine, 'w-70 border-t-0')}
-              scope="col"
-            >
-              <div className="flex h-9 w-70 min-w-0 items-center gap-1.5 px-2 font-regular text-content-subtle">
-                <TextTypeIcon aria-hidden="true" className="size-5 shrink-0" />
-                <span className="min-w-0 truncate">{t('titleColumn')}</span>
-              </div>
-            </th>
-            {properties.map((property, index) => {
-              const previous = properties[index - 1]
-              const next = properties[index + 1]
-              const movable = canEdit && editingId !== property.id
+      <SortableColumns
+        columns={properties}
+        enabled={canEdit}
+        onMove={handlers.moveProperty}
+        onMovingChange={setMovingId}
+      >
+        <table
+          className="min-w-max border-collapse text-body-small"
+          ref={table}
+        >
+          <thead>
+            <tr>
+              <th
+                className={cn(cellFrame, columnLine, 'w-70 border-t-0')}
+                scope="col"
+              >
+                <div className="flex h-9 w-70 min-w-0 items-center gap-1.5 px-2 font-regular text-content-subtle">
+                  <TextTypeIcon aria-hidden="true" className="size-5 shrink-0" />
+                  <span className="min-w-0 truncate">{t('titleColumn')}</span>
+                </div>
+              </th>
+              {properties.map((property, index) => {
+                const previous = properties[index - 1]
+                const next = properties[index + 1]
+                const movable = canEdit && editingId !== property.id
 
-              return (
-                <th
-                  className={cn(
-                    cellFrame,
-                    columnLine,
-                    'w-50',
-                    movable && 'cursor-grab active:cursor-grabbing',
-                    columnState(property.id),
-                  )}
-                  draggable={movable}
-                  key={property.id}
-                  onBlurCapture={(event) => {
-                    if (event.target instanceof HTMLInputElement) {
-                      setEditingId(null)
-                    }
-                  }}
-                  onDragEnd={() => onDragChange(idleDrag)}
-                  onDragStart={(event) => {
-                    event.dataTransfer.effectAllowed = 'move'
-                    event.dataTransfer.setData('text/plain', property.name)
-                    onDragChange({
-                      movingId: property.id,
-                      targetId: null,
-                      side: 'before',
-                    })
-                  }}
-                  onFocusCapture={(event) => {
-                    if (event.target instanceof HTMLInputElement) {
-                      setEditingId(property.id)
-                    }
-                  }}
-                  scope="col"
-                  {...dropTarget(property.id)}
-                >
-                  <div className="group/head flex h-9 w-50 min-w-0 items-center px-2 font-regular text-content-subtle">
-                    <PropertyHeader
-                      canEdit={canEdit}
-                      onChangePrefix={(prefix) =>
-                        handlers.changeUniqueIdPrefix(property.id, prefix)
+                return (
+                  <SortableColumnHeader
+                    className={cn(cellFrame, columnLine, 'w-50')}
+                    disabled={!movable}
+                    key={property.id}
+                    movingId={movingId}
+                    onBlurCapture={(event) => {
+                      if (event.target instanceof HTMLInputElement) {
+                        setEditingId(null)
                       }
-                      onChangeType={(type) =>
-                        handlers.changePropertyType(property.id, type)
+                    }}
+                    onFocusCapture={(event) => {
+                      if (event.target instanceof HTMLInputElement) {
+                        setEditingId(property.id)
                       }
-                      onDelete={() => handlers.deleteProperty(property.id)}
-                      onHide={() => handlers.hideProperty(property.id)}
-                      onMoveLeft={
-                        previous
-                          ? () =>
-                              handlers.moveProperty(
-                                property.id,
-                                previous.id,
-                                'before',
-                              )
-                          : null
-                      }
-                      onMoveRight={
-                        next
-                          ? () =>
-                              handlers.moveProperty(property.id, next.id, 'after')
-                          : null
-                      }
-                      onRename={(name) =>
-                        handlers.renameProperty(property.id, name)
-                      }
-                      property={property}
-                    />
-                  </div>
-                </th>
-              )
-            })}
-            <th className="w-32 border-line-divider border-b p-0" scope="col">
-              <div className="flex h-9 items-center px-1">
-                <span className="sr-only">{t('addProperty')}</span>
-                {canEdit ? (
-                  <AddPropertyMenu
-                    hasOrganization={people.length > 0}
-                    onAdd={handlers.addProperty}
-                  />
-                ) : null}
-              </div>
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => (
-            <RowContextMenu
-              canEdit={canEdit}
-              key={row.id}
-              onDelete={() => handlers.deleteRow(row.id)}
-              rowId={row.id}
-              title={row.title}
-            >
-              <tr className="group/row">
-                <th
-                  className={cn(
-                    bodyCell,
-                    'relative text-left font-regular transition-colors group-hover/row:bg-surface-hover',
-                  )}
-                  scope="row"
-                >
-                  <div className={cn('flex gap-1 px-2', bodyFrame)}>
-                    {showPageIcon ? (
-                      <Link
-                        aria-hidden="true"
-                        className="flex size-6 shrink-0 cursor-pointer items-center justify-center rounded-medium transition-colors hover:bg-surface-hover"
-                        href={`/doc/${row.id}`}
-                        tabIndex={-1}
-                      >
-                        <DocumentIcon
-                          className="size-4 text-content-subtle"
-                          icon={row.icon}
-                        />
-                      </Link>
-                    ) : null}
-                    {canEdit ? (
-                      <RowTitle
-                        label={t('rowTitleLabel')}
-                        onRename={(value) => handlers.renameRow(row.id, value)}
-                        placeholder={t('untitledRow')}
-                        rowId={row.id}
-                        title={row.title}
-                        wrap={wrap}
-                      />
-                    ) : (
-                      <Link
-                        className={cn(
-                          'w-full min-w-0 cursor-pointer font-regular text-body-small text-content-strong transition-colors hover:underline focus-visible:outline-2 focus-visible:outline-focus focus-visible:-outline-offset-2',
-                          wrap ? 'break-words' : 'truncate',
-                        )}
-                        href={`/doc/${row.id}`}
-                      >
-                        {row.title.trim().length > 0
-                          ? row.title
-                          : t('untitledRow')}
-                      </Link>
-                    )}
-                  </div>
-                  <span className="pointer-events-none absolute top-1 right-1 bg-surface-app opacity-0 transition-opacity group-hover/row:opacity-100 focus-within:opacity-100">
-                    <span className="pointer-events-auto flex items-center gap-1 pl-1 transition-colors group-hover/row:bg-surface-hover">
-                      <Link
-                        className="flex h-6 shrink-0 cursor-pointer items-center gap-1 rounded-large border border-line-strong bg-surface-card px-1.5 font-medium text-caption text-content uppercase transition-colors hover:bg-surface-hover hover:text-content-strong focus-visible:outline-2 focus-visible:outline-focus"
-                        href={`/doc/${row.id}`}
-                      >
-                        <ExpandDiagonalIcon
-                          aria-hidden="true"
-                          className="size-3"
-                        />
-                        {t('openRowShort')}
-                      </Link>
-                      <RowMenu
+                    }}
+                    propertyId={property.id}
+                    table={table}
+                  >
+                    <div className="group/head flex h-9 w-50 min-w-0 items-center px-2 font-regular text-content-subtle">
+                      <PropertyHeader
                         canEdit={canEdit}
-                        onDelete={() => handlers.deleteRow(row.id)}
-                        rowId={row.id}
-                        title={row.title}
+                        onChangePrefix={(prefix) =>
+                          handlers.changeUniqueIdPrefix(property.id, prefix)
+                        }
+                        onChangeType={(type) =>
+                          handlers.changePropertyType(property.id, type)
+                        }
+                        onDelete={() => handlers.deleteProperty(property.id)}
+                        onHide={() => handlers.hideProperty(property.id)}
+                        onMoveLeft={
+                          previous
+                            ? () =>
+                                handlers.moveProperty(
+                                  property.id,
+                                  previous.id,
+                                  'before',
+                                )
+                            : null
+                        }
+                        onMoveRight={
+                          next
+                            ? () =>
+                                handlers.moveProperty(property.id, next.id, 'after')
+                            : null
+                        }
+                        onRename={(name) =>
+                          handlers.renameProperty(property.id, name)
+                        }
+                        property={property}
                       />
-                    </span>
-                  </span>
-                </th>
-                {properties.map((property) => (
-                  <td
+                    </div>
+                  </SortableColumnHeader>
+                )
+              })}
+              <th className="w-32 border-line-divider border-b p-0" scope="col">
+                <div className="flex h-9 items-center px-1">
+                  <span className="sr-only">{t('addProperty')}</span>
+                  {canEdit ? (
+                    <AddPropertyMenu
+                      hasOrganization={people.length > 0}
+                      onAdd={handlers.addProperty}
+                    />
+                  ) : null}
+                </div>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <RowContextMenu
+                canEdit={canEdit}
+                key={row.id}
+                onDelete={() => handlers.deleteRow(row.id)}
+                rowId={row.id}
+                title={row.title}
+              >
+                <tr className="group/row">
+                  <th
                     className={cn(
                       bodyCell,
-                      'transition-colors group-hover/row:bg-surface-hover',
-                      columnState(property.id),
+                      'relative text-left font-regular transition-colors group-hover/row:bg-surface-hover',
                     )}
-                    key={property.id}
-                    {...dropTarget(property.id)}
+                    scope="row"
                   >
-                    <PropertyCell
-                      compact
-                      onCommit={(value) =>
-                        handlers.commitValue(row.id, property.id, value)
-                      }
-                      onCreateOption={(name) =>
-                        handlers.createOption(property.id, name)
-                      }
-                      people={people}
-                      property={property}
-                      readOnly={!canEdit}
-                      rowTitle={
-                        row.title.trim().length > 0
-                          ? row.title
-                          : t('untitledRow')
-                      }
-                      value={valueOf(
-                        row.values,
-                        property,
-                        optionsFor(property, people),
+                    <div className={cn('flex gap-1 px-2', bodyFrame)}>
+                      {showPageIcon ? (
+                        <PeekLink
+                          aria-hidden="true"
+                          className="flex size-6 shrink-0 cursor-pointer items-center justify-center rounded-medium transition-colors hover:bg-surface-hover"
+                          rowId={row.id}
+                          tabIndex={-1}
+                        >
+                          <DocumentIcon
+                            className="size-4 text-content-subtle"
+                            icon={row.icon}
+                          />
+                        </PeekLink>
+                      ) : null}
+                      {canEdit ? (
+                        <RowTitle
+                          label={t('rowTitleLabel')}
+                          onRename={(value) => handlers.renameRow(row.id, value)}
+                          placeholder={t('untitledRow')}
+                          rowId={row.id}
+                          title={row.title}
+                          wrap={wrap}
+                        />
+                      ) : (
+                        <PeekLink
+                          className={cn(
+                            'w-full min-w-0 cursor-pointer font-regular text-body-small text-content-strong transition-colors hover:underline focus-visible:outline-2 focus-visible:outline-focus focus-visible:-outline-offset-2',
+                            wrap ? 'break-words' : 'truncate',
+                          )}
+                          rowId={row.id}
+                        >
+                          {row.title.trim().length > 0
+                            ? row.title
+                            : t('untitledRow')}
+                        </PeekLink>
                       )}
-                      wrap={wrap}
-                    />
-                  </td>
-                ))}
-                <td className="w-32 border-line-divider border-b transition-colors group-hover/row:bg-surface-hover" />
-              </tr>
-            </RowContextMenu>
-          ))}
-        </tbody>
-      </table>
+                    </div>
+                    <span className="pointer-events-none absolute top-1 right-1 bg-surface-app opacity-0 transition-opacity group-hover/row:opacity-100 focus-within:opacity-100">
+                      <span className="pointer-events-auto flex items-center gap-1 pl-1 transition-colors group-hover/row:bg-surface-hover">
+                        <PeekLink
+                          className="flex h-6 shrink-0 cursor-pointer items-center gap-1 rounded-large border border-line-strong bg-surface-card px-1.5 font-medium text-caption text-content uppercase transition-colors hover:bg-surface-hover hover:text-content-strong focus-visible:outline-2 focus-visible:outline-focus"
+                          rowId={row.id}
+                        >
+                          <ExpandDiagonalIcon
+                            aria-hidden="true"
+                            className="size-3"
+                          />
+                          {t('openRowShort')}
+                        </PeekLink>
+                        <RowMenu
+                          canEdit={canEdit}
+                          onDelete={() => handlers.deleteRow(row.id)}
+                          rowId={row.id}
+                          title={row.title}
+                        />
+                      </span>
+                    </span>
+                  </th>
+                  {properties.map((property) => (
+                    <td
+                      className={cn(
+                        bodyCell,
+                        'transition-colors group-hover/row:bg-surface-hover',
+                        columnMotion(movingId, property.id),
+                      )}
+                      key={property.id}
+                      style={{ translate: columnShift(property.id) }}
+                    >
+                      <PropertyCell
+                        compact
+                        onCommit={(value) =>
+                          handlers.commitValue(row.id, property.id, value)
+                        }
+                        onCreateOption={(name) =>
+                          handlers.createOption(property.id, name)
+                        }
+                        people={people}
+                        property={property}
+                        readOnly={!canEdit}
+                        rowTitle={
+                          row.title.trim().length > 0
+                            ? row.title
+                            : t('untitledRow')
+                        }
+                        value={valueOf(
+                          row.values,
+                          property,
+                          optionsFor(property, people),
+                        )}
+                        wrap={wrap}
+                      />
+                    </td>
+                  ))}
+                  <td className="w-32 border-line-divider border-b transition-colors group-hover/row:bg-surface-hover" />
+                </tr>
+              </RowContextMenu>
+            ))}
+          </tbody>
+        </table>
+      </SortableColumns>
 
       {canEdit ? (
         <button
@@ -503,7 +440,6 @@ export function TableView({
   groupProperty = null,
 }: Props) {
   const [collapsed, setCollapsed] = useState<ReadonlyArray<string>>([])
-  const [drag, setDrag] = useState<ColumnDrag>(idleDrag)
   const gutter = compact ? '' : 'pl-4 tablet:pl-24'
   const columnLine = verticalLines ? 'border-line-divider border-r' : ''
   const filled = groups?.filter((group) => group.rows.length > 0) ?? null
@@ -511,9 +447,7 @@ export function TableView({
   const shared = {
     canEdit,
     columnLine,
-    drag,
     handlers,
-    onDragChange: setDrag,
     people,
     properties,
     showPageIcon,
