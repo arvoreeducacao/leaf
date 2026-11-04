@@ -2,8 +2,6 @@
 
 import { useTranslations } from 'next-intl'
 
-import Link from 'next/link'
-
 import { DocumentIcon } from '@/components/app/document-icon'
 import type { DatabaseProperty } from '@/db/schema'
 import type { Person } from '@/lib/database/people'
@@ -11,6 +9,7 @@ import type { DatabaseRow } from '@/lib/database/views'
 import { cn } from '@/shared/utils'
 
 import { CardProperties } from './card-properties'
+import { PeekLink } from './peek-link'
 import { PlusIcon } from './icons'
 import { RowContextMenu, RowMenu } from './row-menu'
 import type { DatabaseHandlers } from './types'
@@ -51,9 +50,9 @@ export function ListView({
                 title={row.title}
               >
                 <div className="group/row flex min-h-11 items-center gap-2 rounded-medium px-2 transition-colors hover:bg-surface-hover">
-                  <Link
+                  <PeekLink
                     className="flex min-w-0 flex-1 items-center gap-1.5 rounded-medium font-medium text-body-small text-content-strong transition-colors hover:text-link focus-visible:outline-2 focus-visible:outline-focus focus-visible:-outline-offset-2"
-                    href={`/doc/${row.id}`}
+                    rowId={row.id}
                   >
                     {showPageIcon ? (
                       <DocumentIcon
@@ -62,7 +61,7 @@ export function ListView({
                       />
                     ) : null}
                     <span className="min-w-0 truncate">{title}</span>
-                  </Link>
+                  </PeekLink>
                   <CardProperties
                     className="hidden shrink-0 flex-row items-center gap-3 tablet:flex"
                     people={people}

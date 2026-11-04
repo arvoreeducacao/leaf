@@ -2,8 +2,6 @@
 
 import { useTranslations } from 'next-intl'
 
-import Link from 'next/link'
-
 import { DocumentIcon } from '@/components/app/document-icon'
 import type { DatabaseProperty } from '@/db/schema'
 import { gradientOfCover } from '@/lib/document-cover'
@@ -12,6 +10,7 @@ import type { DatabaseRow } from '@/lib/database/views'
 import { cn } from '@/shared/utils'
 
 import { CardProperties } from './card-properties'
+import { PeekLink } from './peek-link'
 import { PlusIcon } from './icons'
 import { RowContextMenu, RowMenu } from './row-menu'
 import type { DatabaseHandlers } from './types'
@@ -107,9 +106,9 @@ export function GalleryView({
                   <Cover cover={row.cover} preview={row.preview} />
                   <div className="flex flex-1 flex-col pb-2">
                     <div className="flex items-center gap-1 px-2.5 pt-2 pb-1.5">
-                      <Link
+                      <PeekLink
                         className="flex min-w-0 flex-1 items-center rounded-medium font-medium text-[15px] text-content-strong leading-normal focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-2"
-                        href={`/doc/${row.id}`}
+                        rowId={row.id}
                       >
                         {showPageIcon ? (
                           <DocumentIcon
@@ -118,7 +117,7 @@ export function GalleryView({
                           />
                         ) : null}
                         <span className="min-w-0 break-words">{title}</span>
-                      </Link>
+                      </PeekLink>
                       <div className="shrink-0 opacity-0 transition-opacity group-hover/card:opacity-100 focus-within:opacity-100">
                         <RowMenu
                           canEdit={canEdit}

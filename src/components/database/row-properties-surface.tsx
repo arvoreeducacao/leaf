@@ -8,9 +8,13 @@ import { loadRowContext } from '@/lib/databases'
 
 import { RowProperties } from './row-properties'
 
-type Props = Readonly<{ rowId: string; canEdit: boolean }>
+type Props = Readonly<{ rowId: string; canEdit: boolean; inPeek?: boolean }>
 
-export async function RowPropertiesSurface({ rowId, canEdit }: Props) {
+export async function RowPropertiesSurface({
+  rowId,
+  canEdit,
+  inPeek = false,
+}: Props) {
   const session = await getSession()
   const context = await loadRowContext(rowId, session?.user.id ?? null)
 
@@ -36,7 +40,7 @@ export async function RowPropertiesSurface({ rowId, canEdit }: Props) {
             <span className="font-medium">· {t('templateDefault')}</span>
           ) : null}
         </div>
-      ) : (
+      ) : inPeek ? null : (
         <Link
           className="flex w-fit items-center gap-2 rounded-medium text-body-small text-content transition-colors hover:text-content-strong focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-2"
           href={`/doc/${context.databaseId}`}

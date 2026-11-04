@@ -1,7 +1,6 @@
 'use client'
 
 import { useTranslations } from 'next-intl'
-import Link from 'next/link'
 import { useState } from 'react'
 
 import { AddIcon } from '@/components/icons'
@@ -12,6 +11,7 @@ import { isMultiValueType } from '@/lib/database/views'
 import { cn } from '@/shared/utils'
 
 import { CardProperties } from './card-properties'
+import { PeekLink } from './peek-link'
 import { RowContextMenu, RowMenu } from './row-menu'
 import type { RowMoveTarget } from './row-menu'
 import { OptionChip, PersonChip } from './select-editor'
@@ -239,12 +239,12 @@ function BoardCard({
         }}
       >
         <div className="flex items-start gap-1">
-          <Link
+          <PeekLink
             className="min-w-0 flex-1 rounded-medium font-bold text-body-small text-content-strong transition-colors hover:text-link focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-2"
-            href={`/doc/${row.id}`}
+            rowId={row.id}
           >
             {title}
-          </Link>
+          </PeekLink>
           <RowMenu
             canEdit={canEdit}
             moveTargets={moveTargets}

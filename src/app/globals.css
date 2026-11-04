@@ -568,6 +568,26 @@ input:-webkit-autofill:focus {
   transition: none;
 }
 
+:root {
+  --motion-quick: 150ms;
+  --motion-base: 200ms;
+  --motion-ease: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.column-slide {
+  transition:
+    translate var(--motion-base) var(--motion-ease),
+    background-color var(--motion-quick) ease,
+    color var(--motion-quick) ease;
+}
+
+.column-lifted {
+  position: relative;
+  z-index: 10;
+  background: var(--surface-app);
+  box-shadow: var(--elevation-low);
+}
+
 [data-sonner-toaster] {
   --width: min(420px, calc(100vw - 32px));
 }
