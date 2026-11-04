@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 
 import type { DatabaseProperty } from '@/db/schema'
 import { addSelectOption, setDatabaseRowValue } from '@/lib/database-actions'
+import { announceRowChange } from '@/lib/database/row-sync'
 import { type Person, optionsFor } from '@/lib/database/people'
 import {
   withTemplateOptions,
@@ -56,6 +57,7 @@ export function RowProperties({
 
   function commit(propertyId: string, value: PropertyValue) {
     setValues((current) => ({ ...current, [propertyId]: value }))
+    announceRowChange({ rowId: row.id, values: { [propertyId]: value } })
 
     void (async () => {
       try {

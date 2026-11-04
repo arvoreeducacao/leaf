@@ -65,6 +65,7 @@ import {
   serializeViewConfig,
   visibleProperties,
 } from '@/lib/database/views'
+import { ROW_CHANGED_EVENT, readRowChange } from '@/lib/database/row-sync'
 import type { DatabaseSnapshot } from '@/lib/databases'
 import type { FormSlackLink } from '@/lib/form-webhooks'
 import { cn } from '@/shared/utils'
@@ -138,6 +139,34 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
   const [search, setSearch] = useState('')
 
   const saveTimers = useRef(new Map<string, ReturnType<typeof setTimeout>>())
+
+  useEffect(() => {
+    function onRowChanged(event: Event) {
+      const change = readRowChange(event)
+
+      if (!change) {
+        return
+      }
+
+      setRows((current) =>
+        current.map((row) =>
+          row.id === change.rowId
+            ? {
+                ...row,
+                title: change.title ?? row.title,
+                values: change.values
+                  ? { ...row.values, ...change.values }
+                  : row.values,
+              }
+            : row,
+        ),
+      )
+    }
+
+    window.addEventListener(ROW_CHANGED_EVENT, onRowChanged)
+
+    return () => window.removeEventListener(ROW_CHANGED_EVENT, onRowChanged)
+  }, [])
 
   useEffect(() => {
     const timers = saveTimers.current

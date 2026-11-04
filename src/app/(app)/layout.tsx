@@ -31,7 +31,8 @@ import { listTeamspaceDocuments, listVisibleTeamspaces } from '@/lib/teamspaces'
 
 export default async function AppLayout({
   children,
-}: Readonly<{ children: React.ReactNode }>) {
+  overlay,
+}: Readonly<{ children: React.ReactNode; overlay: React.ReactNode }>) {
   const session = await getSession()
 
   if (!session) {
@@ -140,6 +141,7 @@ export default async function AppLayout({
       >
           <PendingJoinRedirect />
           {children}
+          {overlay}
         </AppShell>
       </FavoritesProvider>
     </SidebarPreferencesProvider>
