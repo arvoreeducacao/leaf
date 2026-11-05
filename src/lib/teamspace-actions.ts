@@ -13,6 +13,7 @@ import { getActiveMembership } from '@/lib/active-org'
 import { getSession } from '@/lib/auth'
 import { getDocumentAccess } from '@/lib/authz'
 import { listSubtreeIds } from '@/lib/documents'
+import { closeRealtimeConnections } from '@/lib/realtime-room'
 import {
   canManageTeamspace,
   canPlaceDocuments,
@@ -116,6 +117,17 @@ export async function createTeamspace(
   return { ok: true }
 }
 
+async function closeTeamspaceConnections(teamspaceId: string) {
+  const placed = await db
+    .select({ id: documents.id })
+    .from(documents)
+    .where(eq(documents.teamspaceId, teamspaceId))
+
+  await closeRealtimeConnections({
+    documentIds: placed.map((document) => document.id),
+  })
+}
+
 export async function updateTeamspace(
   teamspaceId: string,
   name: string,
@@ -142,6 +154,10 @@ export async function updateTeamspace(
     .set({ name: trimmed, access })
     .where(eq(teamspaces.id, teamspaceId))
 
+  if (access !== context.teamspace.access) {
+    await closeTeamspaceConnections(teamspaceId)
+  }
+
   revalidatePath('/', 'layout')
 
   return { ok: true }
@@ -156,11 +172,19 @@ export async function deleteTeamspace(
     return failure('errorNotAllowed')
   }
 
+  const placed = await db
+    .select({ id: documents.id })
+    .from(documents)
+    .where(eq(documents.teamspaceId, teamspaceId))
+
   await db
     .update(documents)
     .set({ teamspaceId: null })
     .where(eq(documents.teamspaceId, teamspaceId))
   await db.delete(teamspaces).where(eq(teamspaces.id, teamspaceId))
+  await closeRealtimeConnections({
+    documentIds: placed.map((document) => document.id),
+  })
 
   revalidatePath('/', 'layout')
 
@@ -225,6 +249,7 @@ export async function leaveTeamspace(
         eq(teamspaceMembers.userId, session.user.id),
       ),
     )
+  await closeRealtimeConnections({ userId: session.user.id })
 
   revalidatePath('/', 'layout')
 
@@ -290,6 +315,7 @@ export async function removeTeamspaceMember(
   }
 
   await db.delete(teamspaceMembers).where(eq(teamspaceMembers.id, memberId))
+  await closeRealtimeConnections({ userId: target.userId })
 
   revalidatePath('/', 'layout')
 
@@ -380,6 +406,7 @@ export async function moveDocumentToTeamspace(
         : { teamspaceId: null },
     )
     .where(inArray(documents.id, subtree))
+  await closeRealtimeConnections({ documentIds: subtree })
 
   revalidatePath('/', 'layout')
   revalidatePath(`/doc/${documentId}`)

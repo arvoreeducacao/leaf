@@ -40,25 +40,34 @@ export async function readRealtimeIdentity(documentId: string) {
 export async function writeRealtimeState(
   documentId: string,
   state: Uint8Array,
-  identity: string,
 ) {
+  const updatedAt = new Date()
+
+  await db
+    .insert(documentRealtimeState)
+    .values({ documentId, identity: newRealtimeIdentity(), state, updatedAt })
+    .onDuplicateKeyUpdate({
+      set: { state, updatedAt },
+    })
+}
+
+export async function reseedRealtimeState(
+  documentId: string,
+  state: Uint8Array,
+) {
+  const identity = newRealtimeIdentity()
   const updatedAt = new Date()
 
   await db
     .insert(documentRealtimeState)
     .values({ documentId, identity, state, updatedAt })
     .onDuplicateKeyUpdate({
-      set: { state, updatedAt },
+      set: { identity, state, updatedAt },
     })
+
+  return identity
 }
 
-export function isRealtimeStateStale(
-  stateUpdatedAt: Date,
-  documentUpdatedAt: Date,
-) {
-  return stateUpdatedAt.getTime() < documentUpdatedAt.getTime()
-}
-
-export function newRealtimeIdentity() {
+function newRealtimeIdentity() {
   return nanoid(16)
 }

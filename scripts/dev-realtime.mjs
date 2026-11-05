@@ -11,9 +11,11 @@ const messageSync = 0
 const messageAwareness = 1
 const messageQueryAwareness = 3
 
+const closeAccessChanged = 4100
 const closeForbidden = 4403
 const closeNotFound = 4404
 const closeUnreadable = 4409
+const closeIdentityChanged = 4410
 const closeUnavailable = 4500
 
 const roomPrefix = 'doc:'
@@ -147,6 +149,7 @@ async function loadSeed(documentId) {
 
   return {
     status: 'ok',
+    identity: typeof payload.identity === 'string' ? payload.identity : null,
     update: new Uint8Array(Buffer.from(payload.update, 'base64')),
   }
 }
@@ -320,6 +323,7 @@ async function createRoom(documentId) {
 
   const room = {
     documentId,
+    identity: seed.identity,
     doc,
     awareness,
     connections: new Map(),
@@ -603,8 +607,86 @@ async function applyAppUpdate(room, request, response) {
   })
 }
 
+function matchesAccessChange(room, entry, change) {
+  if (change.documentIds && !change.documentIds.has(room.documentId)) {
+    return false
+  }
+
+  return !change.userId || change.userId === entry.userId
+}
+
+async function closeForAccessChange(request, response) {
+  let body
+
+  try {
+    body = JSON.parse((await readBody(request)).toString('utf8'))
+  } catch {
+    answer(response, 400, { status: 'bad-request' })
+
+    return
+  }
+
+  const documentIds = Array.isArray(body?.documentIds)
+    ? new Set(
+        body.documentIds.filter(
+          (id) => typeof id === 'string' && documentIdPattern.test(id),
+        ),
+      )
+    : null
+  const userId =
+    typeof body?.userId === 'string' && body.userId.length > 0
+      ? body.userId
+      : null
+
+  if ((!documentIds || documentIds.size === 0) && !userId) {
+    answer(response, 400, { status: 'bad-request' })
+
+    return
+  }
+
+  const change = { documentIds, userId }
+  let closed = 0
+
+  for (const pending of rooms.values()) {
+    const result = await pending
+
+    if (result.status !== 'ok') {
+      continue
+    }
+
+    for (const [connection, entry] of result.room.connections) {
+      if (matchesAccessChange(result.room, entry, change)) {
+        connection.close(closeAccessChanged, closeReasons[closeAccessChanged])
+        closed += 1
+      }
+    }
+  }
+
+  log('closed', closed, 'connections after an access change')
+  answer(response, 200, { status: 'ok', closed })
+}
+
 async function handleHttp(request, response) {
   const url = new URL(request.url ?? '/', 'http://localhost')
+
+  if (url.pathname === '/access') {
+    if (request.headers['x-leaf-realtime-secret'] !== secret) {
+      answer(response, 404, { status: 'not-found' })
+
+      return
+    }
+
+    if (request.method !== 'POST') {
+      answer(response, 405, { status: 'method-not-allowed' })
+
+      return
+    }
+
+    await closeForAccessChange(request, response)
+
+    return
+  }
+
   const route = roomRoute(url.pathname)
 
   if (!route) {
@@ -660,16 +742,17 @@ const server = createServer((request, response) => {
 const wss = new WebSocketServer({ noServer: true })
 
 const closeReasons = {
+  [closeAccessChanged]: 'access changed',
   [closeNotFound]: 'document not found',
   [closeForbidden]: 'no access',
   [closeUnreadable]: 'unreadable content',
+  [closeIdentityChanged]: 'document identity changed',
   [closeUnavailable]: 'unavailable',
 }
 
 async function admit(request) {
-  const documentId = documentIdFromPath(
-    new URL(request.url ?? '/', 'http://localhost').pathname,
-  )
+  const url = new URL(request.url ?? '/', 'http://localhost')
+  const documentId = documentIdFromPath(url.pathname)
 
   if (!documentId) {
     return { closeCode: closeNotFound }
@@ -707,6 +790,16 @@ async function admit(request) {
     return { closeCode: closeUnavailable }
   }
 
+  const expectedIdentity = url.searchParams.get('identity')
+
+  if (
+    expectedIdentity &&
+    result.room.identity &&
+    expectedIdentity !== result.room.identity
+  ) {
+    return { closeCode: closeIdentityChanged, room: result.room }
+  }
+
   return { room: result.room, access }
 }
 
@@ -730,6 +823,10 @@ server.on('upgrade', async (request, socket, head) => {
         request.url,
       )
       connection.close(decision.closeCode, closeReasons[decision.closeCode])
+
+      if (decision.room && decision.room.connections.size === 0) {
+        scheduleRoomShutdown(decision.room)
+      }
 
       return
     }

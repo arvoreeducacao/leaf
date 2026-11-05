@@ -11,10 +11,9 @@ import { db } from '@/db'
 import { documents, user } from '@/db/schema'
 import { resetDatabase } from '@/db/testing'
 import {
-  isRealtimeStateStale,
-  newRealtimeIdentity,
   readRealtimeIdentity,
   readRealtimeState,
+  reseedRealtimeState,
   writeRealtimeState,
 } from '@/lib/realtime-state'
 
@@ -46,10 +45,10 @@ beforeEach(async () => {
 
 describe('server-side Yjs state', () => {
   it('returns the binary and the identity that were written', async () => {
-    const state = new Uint8Array([1, 2, 3, 250])
-    const identity = newRealtimeIdentity()
-
-    await writeRealtimeState(docId, state, identity)
+    const identity = await reseedRealtimeState(
+      docId,
+      new Uint8Array([1, 2, 3, 250]),
+    )
 
     const stored = await readRealtimeState(docId)
 
@@ -57,16 +56,21 @@ describe('server-side Yjs state', () => {
     expect(stored ? Array.from(stored.state) : null).toEqual([1, 2, 3, 250])
   })
 
+  it('creates an identity on the first save', async () => {
+    await writeRealtimeState(docId, new Uint8Array([1]))
+
+    expect(await readRealtimeIdentity(docId)).toMatch(/^[A-Za-z0-9_-]{16}$/)
+  })
+
   it('does not exist before the first write', async () => {
     expect(await readRealtimeState(docId)).toBeNull()
     expect(await readRealtimeIdentity(docId)).toBeNull()
   })
 
-  it('keeps the identity when the state is written again', async () => {
-    const identity = newRealtimeIdentity()
+  it('keeps the identity when the room saves again', async () => {
+    const identity = await reseedRealtimeState(docId, new Uint8Array([1]))
 
-    await writeRealtimeState(docId, new Uint8Array([1]), identity)
-    await writeRealtimeState(docId, new Uint8Array([1, 2]), newRealtimeIdentity())
+    await writeRealtimeState(docId, new Uint8Array([1, 2]))
 
     const stored = await readRealtimeState(docId)
 
@@ -74,30 +78,21 @@ describe('server-side Yjs state', () => {
     expect(stored ? Array.from(stored.state) : null).toEqual([1, 2])
   })
 
+  it('changes the identity when the room is seeded again', async () => {
+    const first = await reseedRealtimeState(docId, new Uint8Array([1]))
+    const second = await reseedRealtimeState(docId, new Uint8Array([3]))
+
+    const stored = await readRealtimeState(docId)
+
+    expect(second).not.toBe(first)
+    expect(stored?.identity).toBe(second)
+    expect(stored ? Array.from(stored.state) : null).toEqual([3])
+  })
+
   it('goes away with the document', async () => {
-    await writeRealtimeState(docId, new Uint8Array([1]), newRealtimeIdentity())
+    await writeRealtimeState(docId, new Uint8Array([1]))
     await db.delete(documents).where(eq(documents.id, docId))
 
     expect(await readRealtimeState(docId)).toBeNull()
-  })
-})
-
-describe('isRealtimeStateStale', () => {
-  const state = new Date('2026-09-01T12:00:00.000Z')
-
-  it('treats state written alongside the document as fresh', () => {
-    expect(isRealtimeStateStale(state, state)).toBe(false)
-  })
-
-  it('treats state written after the document as fresh', () => {
-    expect(
-      isRealtimeStateStale(state, new Date('2026-09-01T11:59:59.000Z')),
-    ).toBe(false)
-  })
-
-  it('treats state from before a solo write as stale', () => {
-    expect(
-      isRealtimeStateStale(state, new Date('2026-09-01T12:00:01.000Z')),
-    ).toBe(true)
   })
 })

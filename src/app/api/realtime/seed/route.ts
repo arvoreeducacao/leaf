@@ -1,13 +1,11 @@
 import { getDocument } from '@/lib/documents'
 import { isDocumentIdShaped } from '@/lib/realtime'
 import { hasValidRealtimeSecret, isRealtimeEnabled } from '@/lib/realtime-config'
-import { seedUpdateFromContent } from '@/lib/realtime-document'
 import {
   isRealtimeStateStale,
-  newRealtimeIdentity,
-  readRealtimeState,
-  writeRealtimeState,
-} from '@/lib/realtime-state'
+  seedUpdateFromContent,
+} from '@/lib/realtime-document'
+import { readRealtimeState, reseedRealtimeState } from '@/lib/realtime-state'
 
 export async function POST(request: Request) {
   if (!isRealtimeEnabled() || !hasValidRealtimeSecret(request)) {
@@ -30,10 +28,7 @@ export async function POST(request: Request) {
 
   const stored = await readRealtimeState(body.documentId)
 
-  if (
-    stored &&
-    !isRealtimeStateStale(stored.updatedAt, new Date(document.updatedAt))
-  ) {
+  if (stored && !isRealtimeStateStale(stored.state, document.content)) {
     return Response.json({
       status: 'ok',
       identity: stored.identity,
@@ -47,9 +42,7 @@ export async function POST(request: Request) {
     return Response.json({ status: 'unreadable' })
   }
 
-  const identity = newRealtimeIdentity()
-
-  await writeRealtimeState(body.documentId, seed.update, identity)
+  const identity = await reseedRealtimeState(body.documentId, seed.update)
 
   return Response.json({
     status: 'ok',

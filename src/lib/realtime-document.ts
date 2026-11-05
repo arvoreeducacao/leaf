@@ -61,3 +61,60 @@ export function contentFromRealtimeState(state: Uint8Array): string | null {
     doc.destroy()
   }
 }
+
+function sanitizedBlocks(content: string): unknown {
+  return sanitizeBlocks(JSON.parse(content))
+}
+
+function withoutBlockIds(value: unknown): unknown {
+  if (!Array.isArray(value)) {
+    return value
+  }
+
+  return value.map((block) => {
+    if (block === null || typeof block !== 'object') {
+      return block
+    }
+
+    const copy: Record<string, unknown> = { ...block }
+
+    delete copy.id
+    copy.children = withoutBlockIds(copy.children)
+
+    return copy
+  })
+}
+
+export function isRealtimeStateStale(
+  state: Uint8Array,
+  content: string | null,
+): boolean {
+  const fromState = contentFromRealtimeState(state)
+
+  if (fromState === null) {
+    return true
+  }
+
+  const stateBlocks = sanitizedBlocks(fromState)
+
+  if (JSON.stringify(stateBlocks) === content) {
+    return false
+  }
+
+  const seed = seedUpdateFromContent(content)
+
+  if (seed.status === 'unreadable') {
+    return false
+  }
+
+  const fromContent = contentFromRealtimeState(seed.update)
+
+  if (fromContent === null) {
+    return false
+  }
+
+  return (
+    JSON.stringify(withoutBlockIds(stateBlocks)) !==
+    JSON.stringify(withoutBlockIds(sanitizedBlocks(fromContent)))
+  )
+}

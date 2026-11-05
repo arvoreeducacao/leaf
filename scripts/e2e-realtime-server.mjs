@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process'
-import { cpSync, mkdirSync, rmSync } from 'node:fs'
+import { cpSync, mkdirSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -33,8 +33,11 @@ cpSync(join(projectRoot, 'drizzle'), join(sandbox, 'drizzle'), {
 })
 
 const children = []
+let shuttingDown = false
 
 function shutdown(code) {
+  shuttingDown = true
+
   for (const child of children) {
     child.kill('SIGTERM')
   }
@@ -80,29 +83,41 @@ const next = spawn(
 )
 
 children.push(next)
+next.on('exit', (code) => shutdown(code ?? 1))
 
-const realtime = spawn(
-  process.execPath,
-  [join(projectRoot, 'scripts/dev-realtime.mjs')],
-  {
-    cwd: sandbox,
-    env: {
-      ...process.env,
-      NODE_ENV: 'production',
-      LEAF_REALTIME: '1',
-      LEAF_REALTIME_PORT: String(wsPort),
-      LEAF_REALTIME_HOST: '127.0.0.1',
-      LEAF_REALTIME_SECRET: secret,
-      LEAF_REALTIME_PERSIST_MS: '500',
-      LEAF_REALTIME_IDLE_MS: '1000',
-      LEAF_APP_URL: `http://127.0.0.1:${port}`,
+const realtimeRestartMs = 1_000
+
+function startRealtime() {
+  const realtime = spawn(
+    process.execPath,
+    [join(projectRoot, 'scripts/dev-realtime.mjs')],
+    {
+      cwd: sandbox,
+      env: {
+        ...process.env,
+        NODE_ENV: 'production',
+        LEAF_REALTIME: '1',
+        LEAF_REALTIME_PORT: String(wsPort),
+        LEAF_REALTIME_HOST: '127.0.0.1',
+        LEAF_REALTIME_SECRET: secret,
+        LEAF_REALTIME_PERSIST_MS: '500',
+        LEAF_REALTIME_IDLE_MS: '1000',
+        LEAF_APP_URL: `http://127.0.0.1:${port}`,
+      },
+      stdio: 'inherit',
     },
-    stdio: 'inherit',
-  },
-)
+  )
 
-children.push(realtime)
+  children.push(realtime)
+  writeFileSync(join(sandbox, 'realtime.pid'), String(realtime.pid))
 
-for (const child of children) {
-  child.on('exit', (code) => shutdown(code ?? 1))
+  realtime.on('exit', () => {
+    children.splice(children.indexOf(realtime), 1)
+
+    if (!shuttingDown) {
+      setTimeout(startRealtime, realtimeRestartMs)
+    }
+  })
 }
+
+startRealtime()

@@ -251,3 +251,33 @@ export async function rewriteLiveRoomBlocks(
     secret,
   )
 }
+
+export type RealtimeAccessChange = Readonly<{
+  documentIds?: ReadonlyArray<string>
+  userId?: string
+}>
+
+const accessChangeTimeoutMs = 2_000
+
+export async function closeRealtimeConnections(change: RealtimeAccessChange) {
+  const secret = realtimeSecret()
+  const hasDocuments = (change.documentIds?.length ?? 0) > 0
+
+  if (!isRealtimeEnabled() || !secret || (!hasDocuments && !change.userId)) {
+    return
+  }
+
+  try {
+    await fetch(`${realtimeServerUrl()}/access`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        [realtimeSecretHeader]: secret,
+      },
+      body: JSON.stringify(change),
+      signal: AbortSignal.timeout(accessChangeTimeoutMs),
+    })
+  } catch {
+    return
+  }
+}

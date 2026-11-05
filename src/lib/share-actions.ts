@@ -22,6 +22,7 @@ import {
   isMemberOf,
   listOrganizationEmails,
 } from '@/lib/organizations'
+import { closeRealtimeConnections } from '@/lib/realtime-room'
 import { getTeamspace } from '@/lib/teamspaces'
 
 export type ShareTeamspace = Readonly<{
@@ -285,6 +286,17 @@ export async function inviteToDocument(
   return readState(documentId, 'owner', guard.session.user.id)
 }
 
+async function closeGranteeConnections(email: string) {
+  const grantee = await db.query.user.findFirst({
+    where: eq(user.email, email),
+    columns: { id: true },
+  })
+
+  if (grantee) {
+    await closeRealtimeConnections({ userId: grantee.id })
+  }
+}
+
 export async function updateShareRole(
   documentId: string,
   shareId: string,
@@ -306,7 +318,7 @@ export async function updateShareRole(
   )
 
   const existing = await db
-    .select({ id: documentShares.id })
+    .select({ id: documentShares.id, email: documentShares.granteeEmail })
     .from(documentShares)
     .where(target)
     .limit(1)
@@ -316,6 +328,7 @@ export async function updateShareRole(
   }
 
   await db.update(documentShares).set({ role }).where(target)
+  await closeGranteeConnections(existing[0].email)
 
   revalidatePath('/', 'layout')
 
@@ -332,14 +345,17 @@ export async function removeShare(
     return { ok: false, error: guard.error }
   }
 
-  await db
-    .delete(documentShares)
-    .where(
-      and(
-        eq(documentShares.id, shareId),
-        eq(documentShares.documentId, documentId),
-      ),
-    )
+  const target = and(
+    eq(documentShares.id, shareId),
+    eq(documentShares.documentId, documentId),
+  )
+  const existing = await db.query.documentShares.findFirst({ where: target })
+
+  await db.delete(documentShares).where(target)
+
+  if (existing) {
+    await closeGranteeConnections(existing.granteeEmail)
+  }
 
   revalidatePath('/', 'layout')
 
@@ -378,6 +394,7 @@ export async function setOrganizationAccess(
     .update(documents)
     .set({ orgAccess: next, orgId: document.orgId })
     .where(inArray(documents.id, subtree))
+  await closeRealtimeConnections({ documentIds: subtree })
 
   revalidatePath('/', 'layout')
   revalidatePath(`/doc/${documentId}`)

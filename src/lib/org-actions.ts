@@ -34,6 +34,7 @@ import {
   listOrganizationEmails,
   otherOwnersInOrganization,
 } from '@/lib/organizations'
+import { closeRealtimeConnections } from '@/lib/realtime-room'
 import { removeTeamspaceMemberships } from '@/lib/teamspaces'
 
 export type OrgActionResult = { ok: true } | { ok: false; error: string }
@@ -401,6 +402,7 @@ export async function updateMemberRole(
     .update(organizationMembers)
     .set({ role })
     .where(eq(organizationMembers.id, memberId))
+  await closeRealtimeConnections({ userId: target.userId })
 
   revalidatePath('/', 'layout')
 
@@ -437,6 +439,7 @@ export async function removeMember(
   await db
     .delete(organizationMembers)
     .where(eq(organizationMembers.id, memberId))
+  await closeRealtimeConnections({ userId: target.userId })
 
   revalidatePath('/', 'layout')
 
@@ -451,11 +454,19 @@ export async function deleteOrganization(): Promise<OrgActionResult> {
     return failure('errorNotAllowed')
   }
 
+  const orgDocuments = await db
+    .select({ id: documents.id })
+    .from(documents)
+    .where(eq(documents.orgId, membership.orgId))
+
   await db
     .update(documents)
     .set({ orgAccess: null })
     .where(eq(documents.orgId, membership.orgId))
   await db.delete(organizations).where(eq(organizations.id, membership.orgId))
+  await closeRealtimeConnections({
+    documentIds: orgDocuments.map((document) => document.id),
+  })
 
   const remaining = await listMemberships(session.user.id)
   const next = remaining[0]
@@ -491,6 +502,7 @@ export async function leaveOrganization(): Promise<OrgActionResult> {
   await db
     .delete(organizationMembers)
     .where(eq(organizationMembers.id, membership.memberId))
+  await closeRealtimeConnections({ userId: session.user.id })
 
   const remaining = await listMemberships(session.user.id)
   const next = remaining[0]

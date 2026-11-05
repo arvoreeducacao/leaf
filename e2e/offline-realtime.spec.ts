@@ -4,8 +4,10 @@ import {
   createDocument,
   editorBody,
   signUp,
+  trackCollaboration,
   typeInEditor,
   uniqueEmail,
+  waitForCollaboration,
   waitForEditorReady,
   waitForPageCached,
   waitForQueuedOffline,
@@ -17,13 +19,12 @@ test.describe('collaboration that survives a dropped connection', () => {
     context,
     page,
   }) => {
+    trackCollaboration(page)
     await signUp(page, uniqueEmail('offline-colab'))
 
     const id = await createDocument(page, 'Offline collaborative document')
 
-    await expect(page.getByText('Colaboração em tempo real').first()).toBeVisible({
-      timeout: 20_000,
-    })
+    await waitForCollaboration(page)
 
     await typeInEditor(page, 'online line')
     await waitForServiceWorker(page)
@@ -50,9 +51,7 @@ test.describe('collaboration that survives a dropped connection', () => {
 
     await context.setOffline(false)
 
-    await expect(page.getByText('Colaboração em tempo real').first()).toBeVisible({
-      timeout: 30_000,
-    })
+    await waitForCollaboration(page, 30_000)
 
     await expect
       .poll(

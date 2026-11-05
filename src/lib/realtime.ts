@@ -25,12 +25,14 @@ export function isDocumentIdShaped(value: unknown): value is string {
   return typeof value === 'string' && documentIdPattern.test(value)
 }
 
-export type RealtimeCloseCode = 4403 | 4404 | 4409 | 4500
+export type RealtimeCloseCode = 4100 | 4403 | 4404 | 4409 | 4410 | 4500
 
 export const realtimeCloseCodes = {
+  accessChanged: 4100,
   forbidden: 4403,
   notFound: 4404,
   unreadable: 4409,
+  identityChanged: 4410,
   unavailable: 4500,
 } as const satisfies Record<string, RealtimeCloseCode>
 

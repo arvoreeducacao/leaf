@@ -7,11 +7,7 @@ import { persistDocumentContent } from '@/lib/document-content'
 import { isDocumentIdShaped } from '@/lib/realtime'
 import { hasValidRealtimeSecret, isRealtimeEnabled } from '@/lib/realtime-config'
 import { contentFromRealtimeState } from '@/lib/realtime-document'
-import {
-  newRealtimeIdentity,
-  readRealtimeIdentity,
-  writeRealtimeState,
-} from '@/lib/realtime-state'
+import { writeRealtimeState } from '@/lib/realtime-state'
 
 const maxStateBytes = 4_000_000
 
@@ -64,10 +60,8 @@ export async function POST(request: Request) {
     content,
     authorId,
   )
-  const identity =
-    (await readRealtimeIdentity(body.documentId)) ?? newRealtimeIdentity()
 
-  await writeRealtimeState(body.documentId, new Uint8Array(state), identity)
+  await writeRealtimeState(body.documentId, new Uint8Array(state))
 
   if (written) {
     revalidatePath('/', 'layout')
