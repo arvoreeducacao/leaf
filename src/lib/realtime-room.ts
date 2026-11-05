@@ -267,8 +267,10 @@ export async function closeRealtimeConnections(change: RealtimeAccessChange) {
     return
   }
 
+  let response: Response
+
   try {
-    await fetch(`${realtimeServerUrl()}/access`, {
+    response = await fetch(`${realtimeServerUrl()}/access`, {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
@@ -278,6 +280,16 @@ export async function closeRealtimeConnections(change: RealtimeAccessChange) {
       signal: AbortSignal.timeout(accessChangeTimeoutMs),
     })
   } catch {
+    console.error(
+      '[leaf] the collaboration server did not answer an access change. Open tabs keep their access until they reconnect.',
+    )
+
     return
+  }
+
+  if (!response.ok) {
+    console.error(
+      `[leaf] the collaboration server refused an access change (${response.status}). Open tabs keep their access until they reconnect.`,
+    )
   }
 }

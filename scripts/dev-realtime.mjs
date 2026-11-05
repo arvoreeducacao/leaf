@@ -45,6 +45,7 @@ const seedOrigin = Symbol('leaf-seed')
 const appOrigin = Symbol('leaf-app')
 const maxBodyBytes = 4_000_000
 const rooms = new Map()
+let accessEpoch = 0
 
 function log(...args) {
   console.log('[realtime]', ...args)
@@ -223,35 +224,35 @@ async function persistOnce(room) {
   }
 }
 
+async function saveRoom(room, attempts) {
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    if (await persistOnce(room)) {
+      return
+    }
+
+    if (attempt < attempts) {
+      await wait(persistRetryMs)
+    }
+  }
+
+  room.dirty = true
+}
+
 async function persistRoom(room, attempts = persistAttempts) {
+  while (room.persisting) {
+    await room.persisting
+  }
+
   if (!room.dirty) {
     return
   }
 
-  if (room.persisting) {
-    schedulePersist(room)
-
-    return
-  }
-
-  room.persisting = true
   room.dirty = false
+  room.persisting = saveRoom(room, attempts).finally(() => {
+    room.persisting = null
+  })
 
-  try {
-    for (let attempt = 1; attempt <= attempts; attempt += 1) {
-      if (await persistOnce(room)) {
-        return
-      }
-
-      if (attempt < attempts) {
-        await wait(persistRetryMs)
-      }
-    }
-
-    room.dirty = true
-  } finally {
-    room.persisting = false
-  }
+  await room.persisting
 }
 
 function schedulePersist(room) {
@@ -328,7 +329,7 @@ async function createRoom(documentId) {
     awareness,
     connections: new Map(),
     dirty: false,
-    persisting: false,
+    persisting: null,
     lastAuthorId: null,
     persistTimer: null,
     idleTimer: null,
@@ -381,13 +382,21 @@ function getRoom(documentId) {
     return existing
   }
 
-  const pending = createRoom(documentId).then((result) => {
-    if (result.status !== 'ok') {
-      rooms.delete(documentId)
-    }
+  const pending = createRoom(documentId).then(
+    (result) => {
+      if (result.status !== 'ok') {
+        rooms.delete(documentId)
+      }
 
-    return result
-  })
+      return result
+    },
+    (error) => {
+      rooms.delete(documentId)
+      log('failed to open room', documentId, error.message)
+
+      return { status: 'unavailable' }
+    },
+  )
 
   rooms.set(documentId, pending)
 
@@ -647,6 +656,8 @@ async function closeForAccessChange(request, response) {
   const change = { documentIds, userId }
   let closed = 0
 
+  accessEpoch += 1
+
   for (const pending of rooms.values()) {
     const result = await pending
 
@@ -656,6 +667,7 @@ async function closeForAccessChange(request, response) {
 
     for (const [connection, entry] of result.room.connections) {
       if (matchesAccessChange(result.room, entry, change)) {
+        entry.canWrite = false
         connection.close(closeAccessChanged, closeReasons[closeAccessChanged])
         closed += 1
       }
@@ -804,7 +816,12 @@ async function admit(request) {
 }
 
 server.on('upgrade', async (request, socket, head) => {
-  const decision = await admit(request)
+  const epoch = accessEpoch
+  const admitted = await admit(request)
+  const decision =
+    !admitted.closeCode && epoch !== accessEpoch
+      ? { closeCode: closeAccessChanged, room: admitted.room }
+      : admitted
 
   if (socket.destroyed) {
     if (decision.room && decision.room.connections.size === 0) {

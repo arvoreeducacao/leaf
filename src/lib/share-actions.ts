@@ -272,6 +272,7 @@ export async function inviteToDocument(
       .update(documentShares)
       .set({ role })
       .where(eq(documentShares.id, existing.id))
+    await closeGranteeConnections(normalized)
   } else {
     await db.insert(documentShares).values({
       id: nanoid(12),

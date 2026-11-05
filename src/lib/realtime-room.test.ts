@@ -407,8 +407,9 @@ describe('closeRealtimeConnections', () => {
     expect(fake.received).toHaveLength(0)
   })
 
-  it('does not fail the access change when nothing answers', async () => {
+  it('does not fail the access change when nothing answers, and says so', async () => {
     const fake = await fakeRealtime()
+    const complain = vi.spyOn(console, 'error').mockImplementation(() => {})
 
     await new Promise((resolve) => server?.close(resolve))
     server = null
@@ -417,5 +418,8 @@ describe('closeRealtimeConnections', () => {
     await expect(
       closeRealtimeConnections({ userId: 'person-1' }),
     ).resolves.toBeUndefined()
+    expect(complain).toHaveBeenCalledTimes(1)
+
+    complain.mockRestore()
   })
 })

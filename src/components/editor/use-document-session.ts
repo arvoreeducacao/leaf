@@ -160,6 +160,7 @@ export function useDocumentSession({
     let stopReconnectRequests = () => {}
     let soloed = false
     let lastRejoinAt = 0
+    let editedWhileAway = false
 
     function runPendingRetry() {
       const retry = pendingRetry
@@ -232,11 +233,19 @@ export function useDocumentSession({
         resolveRealtimeUrl(url, port, window.location),
         room,
         doc,
-        identity === null ? {} : { params: { identity } },
+        {
+          disableBc: true,
+          ...(identity === null ? {} : { params: { identity } }),
+        },
       )
 
       provider = socket
       socket.awareness.setLocalStateField('user', localUser)
+      doc.on('update', (_update: Uint8Array, origin: unknown) => {
+        if (origin !== socket && !(socket.wsconnected && socket.synced)) {
+          editedWhileAway = true
+        }
+      })
 
       let opened = false
       let online = false
@@ -275,6 +284,7 @@ export function useDocumentSession({
         }
 
         markLive(documentId)
+        editedWhileAway = false
         void dropQueuedDocument(store, documentId)
         void writeLocalDocumentMeta(store, documentId, {
           identity: snapshot?.identity ?? null,
@@ -337,6 +347,9 @@ export function useDocumentSession({
     }
 
     async function rejoinSeededRoom(socket: WebsocketProvider) {
+      const droppedEdits = editedWhileAway
+
+      editedWhileAway = false
       stopReconnectRequests()
       window.clearTimeout(syncTimeout)
       socket.destroy()
@@ -354,7 +367,7 @@ export function useDocumentSession({
         return
       }
 
-      await start(true)
+      await start(droppedEdits)
     }
 
     async function startSolo(
@@ -481,7 +494,7 @@ export function useDocumentSession({
       connectRealtime(snapshot)
     }
 
-    async function start(afterReseed = false) {
+    async function start(droppedEdits = false) {
       await persistence.whenSynced
 
       if (disposed) {
@@ -513,7 +526,7 @@ export function useDocumentSession({
         server: snapshot,
       })
 
-      setConflict(decision.conflict || (afterReseed && pending !== null))
+      setConflict(decision.conflict || droppedEdits)
 
       if (decision.action === 'reset-and-connect') {
         await reset()
