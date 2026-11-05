@@ -11,7 +11,7 @@ import {
 import { cache } from 'react'
 
 import { db } from '@/db'
-import { documentShares, documents } from '@/db/schema'
+import { documentShares, documents, user } from '@/db/schema'
 import type { Document } from '@/db/schema'
 import { UNLISTED_DOCUMENT_KINDS } from '@/lib/document-kinds'
 
@@ -98,6 +98,13 @@ export async function listSharedDocuments(
     })
     .from(documentShares)
     .innerJoin(documents, eq(documents.id, documentShares.documentId))
+    .innerJoin(
+      user,
+      and(
+        eq(sql`lower(${user.email})`, documentShares.granteeEmail),
+        eq(user.emailVerified, true),
+      ),
+    )
     .where(
       and(
         eq(documentShares.granteeEmail, email.toLowerCase()),

@@ -8,6 +8,7 @@ import {
   organizationMembers,
   teamspaceMembers,
   teamspaces,
+  user,
 } from '@/db/schema'
 import type { Document } from '@/db/schema'
 import { getDocument } from '@/lib/documents'
@@ -95,6 +96,15 @@ function strongestAccess(
   return levelRank[left] >= levelRank[right] ? left : right
 }
 
+export async function hasVerifiedEmail(userId: string): Promise<boolean> {
+  const account = await db.query.user.findFirst({
+    columns: { emailVerified: true },
+    where: eq(user.id, userId),
+  })
+
+  return account?.emailVerified === true
+}
+
 async function grantedAccess(
   docId: string,
   document: Document,
@@ -107,7 +117,7 @@ async function grantedAccess(
     ),
   })
 
-  if (share) {
+  if (share && (await hasVerifiedEmail(session.user.id))) {
     return share.role
   }
 

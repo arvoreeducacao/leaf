@@ -85,7 +85,7 @@ beforeEach(async () => {
       id: person.id,
       name: person.email,
       email: person.email,
-      emailVerified: false,
+      emailVerified: true,
       createdAt: now,
       updatedAt: now,
     })),

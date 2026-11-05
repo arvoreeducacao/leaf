@@ -87,7 +87,7 @@ beforeEach(async () => {
       id: person.id,
       name: person.email,
       email: person.email,
-      emailVerified: false,
+      emailVerified: true,
       createdAt: now,
       updatedAt: now,
     })),
@@ -379,7 +379,7 @@ describe('multiple organizations', () => {
       id: 'ts-newcomer',
       name: 'newcomer',
       email: 'newcomer@example.com',
-      emailVerified: false,
+      emailVerified: true,
       createdAt: now,
       updatedAt: now,
     })

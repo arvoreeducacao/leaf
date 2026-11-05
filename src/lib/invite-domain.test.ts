@@ -97,7 +97,7 @@ beforeEach(async () => {
     id: activeSession.user.id,
     name: 'Owner',
     email: activeSession.user.email,
-    emailVerified: false,
+    emailVerified: true,
     createdAt: now,
     updatedAt: now,
   })
