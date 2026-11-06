@@ -149,6 +149,13 @@ function startCollaborationServer() {
   rmSync(pausedFile, { force: true })
 }
 
+async function setTrashed(documentId: string, trashed: boolean) {
+  await queryDatabase(
+    `update documents set deleted_at = ${trashed ? 'now(3)' : 'null'} where id = ?`,
+    [documentId],
+  )
+}
+
 async function savedContent(documentId: string) {
   const rows = await queryDatabase<Array<{ content: string | null }>>(
     'select content from documents where id = ?',
@@ -556,6 +563,46 @@ test.describe('realtime collaboration', () => {
 
     await owner.close()
     await guest.close()
+  })
+
+  test('text written as the document goes to the trash is kept, and restoring does not seed the room again', async ({
+    browser,
+  }) => {
+    const context = await browser.newContext()
+    const page = trackCollaboration(await context.newPage())
+
+    await signUp(page, uniqueEmail('trash-race'), 'Trash race')
+    const id = await createDocument(page, 'Written as it goes to the trash')
+
+    await waitForCollaboration(page)
+    await appendLine(page, 'written before the trash')
+    await expect
+      .poll(() => savedContent(id), { timeout: 20_000 })
+      .toContain('written before the trash')
+
+    const before = await roomIdentity(id)
+
+    await setTrashed(id, true)
+    await appendLine(page, 'written as it went to the trash')
+    await expect
+      .poll(() => savedContent(id), { timeout: 20_000 })
+      .toContain('written as it went to the trash')
+
+    await page.close()
+    await new Promise((resolve) => setTimeout(resolve, 2_500))
+    await setTrashed(id, false)
+
+    const reopened = trackCollaboration(await context.newPage())
+
+    await reopened.goto(`/doc/${id}`)
+    await waitForCollaboration(reopened)
+
+    expect(await occurrences(reopened, 'written as it went to the trash')).toBe(
+      1,
+    )
+    expect(await roomIdentity(id)).toBe(before)
+
+    await context.close()
   })
 
   test('restoring a version reaches every open tab and stays saved', async ({

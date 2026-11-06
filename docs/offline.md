@@ -94,8 +94,12 @@ no-access page.
 Moving a document to the trash goes through the same route with
 `reason: 'trashed'`, and the server closes those connections with `4405`
 instead. The tab keeps the text on screen, read only, says the document is in
-the trash (with **Restore** for the owner) and tries to join again every 30 s,
-so a restore brings everyone back without a reload.
+the trash (with **Restore** for the owner) and checks the document again every
+30 s, so a restore brings everyone back without a reload. If the room was
+seeded again in the meantime, the tab starts over instead of joining with the
+copy it held. The room keeps saving the body of a document in the trash, so the
+last edits before it went there are not lost and its state still matches the
+content when it comes back.
 
 ### Writes that do not come from an editor
 
@@ -110,7 +114,8 @@ preserved. When there is no room, the write goes straight to `documents.content`
 and the next room reseeds from it. When the collaboration server cannot be
 reached, a write on a page edited in the last 15 s is refused rather than
 risked. Restoring a version takes the same path, and is refused whenever the
-server cannot be reached. The app finds the server through `LEAF_REALTIME_SERVER_URL`, or by
+server cannot be reached. The version saved before a restore is the text the
+room holds, not the last one it saved. The app finds the server through `LEAF_REALTIME_SERVER_URL`, or by
 turning `LEAF_REALTIME_URL` from `ws`/`wss` into `http`/`https`.
 
 ### What still does not work offline

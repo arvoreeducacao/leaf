@@ -5,7 +5,10 @@ import { db } from '@/db'
 import { documentVersions, documents, user } from '@/db/schema'
 import { authorNameOf } from '@/lib/author-name'
 import { parseContentBlocks } from '@/lib/markdown/convert'
-import { writeBlocksToLiveRoom } from '@/lib/realtime-room'
+import {
+  rewriteLiveRoomBlocks,
+  writeBlocksToLiveRoom,
+} from '@/lib/realtime-room'
 import {
   MAX_VERSIONS_PER_DOCUMENT,
   VERSION_THROTTLE_MS,
@@ -239,13 +242,18 @@ export async function applyDocumentVersion(
     return { status: 'applied', version }
   }
 
+  const restoredBlocks = parseContentBlocks(version.content)
+  const room: { content: string | null } = { content: null }
   const live =
     current?.content === version.content
       ? 'disabled'
-      : await writeBlocksToLiveRoom(
+      : await rewriteLiveRoomBlocks(
           documentId,
-          parseContentBlocks(version.content),
-          'replace',
+          (blocks) => {
+            room.content = JSON.stringify(blocks)
+
+            return { blocks: restoredBlocks, changed: true }
+          },
           actorId,
         )
 
@@ -256,7 +264,14 @@ export async function applyDocumentVersion(
   await recordDocumentVersion(documentId, actorId, {
     force: true,
     now,
-    ...(current ? { snapshot: current } : {}),
+    ...(current
+      ? {
+          snapshot: {
+            title: current.title,
+            content: room.content ?? current.content,
+          },
+        }
+      : {}),
   })
 
   await db
@@ -267,6 +282,10 @@ export async function applyDocumentVersion(
         : { content: version.content, title: version.title, updatedAt: now },
     )
     .where(eq(documents.id, documentId))
+
+  if (live === 'no-room') {
+    await writeBlocksToLiveRoom(documentId, restoredBlocks, 'replace', actorId)
+  }
 
   return { status: 'applied', version }
 }

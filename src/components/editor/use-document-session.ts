@@ -286,15 +286,45 @@ export function useDocumentSession({
       setTrashed(false)
     }
 
-    function enterTrash(socket: WebsocketProvider) {
+    function enterTrash(socket: WebsocketProvider, identity: string | null) {
       inTrash = true
       setTrashed(true)
       window.clearTimeout(trashedRetry)
       trashedRetry = window.setTimeout(() => {
         if (!disposed && inTrash && !socket.shouldConnect) {
-          socket.connect()
+          void rejoinWhenRestored(socket, identity)
         }
       }, trashedRetryMs)
+    }
+
+    async function rejoinWhenRestored(
+      socket: WebsocketProvider,
+      identity: string | null,
+    ) {
+      window.clearTimeout(trashedRetry)
+
+      const snapshot = await fetchServerSnapshot(
+        documentId,
+        heldSinceRef.current,
+      )
+
+      if (disposed || !inTrash || provider !== socket) {
+        return
+      }
+
+      if (snapshot === null) {
+        enterTrash(socket, identity)
+
+        return
+      }
+
+      if (snapshot.identity !== identity) {
+        void rejoin(socket, editedWhileAway)
+
+        return
+      }
+
+      socket.connect()
     }
 
     function connectRealtime(snapshot: ServerSnapshot | null) {
@@ -408,7 +438,7 @@ export function useDocumentSession({
           code === realtimeCloseCodes.trashed ||
           (inTrash && code === realtimeCloseCodes.forbidden)
         ) {
-          enterTrash(socket)
+          enterTrash(socket, identity)
 
           if (!opened) {
             opened = true
@@ -428,7 +458,12 @@ export function useDocumentSession({
           return
         }
 
-        window.clearTimeout(trashedRetry)
+        if (inTrash) {
+          void rejoinWhenRestored(socket, identity)
+
+          return
+        }
+
         setConnection('reconnecting')
 
         if (socket.shouldConnect) {

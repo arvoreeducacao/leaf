@@ -8,6 +8,7 @@ vi.mock('@/db', async () => {
 })
 
 vi.mock('@/lib/realtime-room', () => ({
+  rewriteLiveRoomBlocks: vi.fn(async () => 'no-room'),
   writeBlocksToLiveRoom: vi.fn(async () => 'no-room'),
 }))
 
@@ -23,7 +24,10 @@ import {
   pruneDocumentVersions,
   recordDocumentVersion,
 } from '@/lib/document-versions'
-import { writeBlocksToLiveRoom } from '@/lib/realtime-room'
+import {
+  rewriteLiveRoomBlocks,
+  writeBlocksToLiveRoom,
+} from '@/lib/realtime-room'
 
 const author = { id: 'user-author', email: 'author@example.com', name: 'Ana' }
 const mate = { id: 'user-mate', email: 'mate@example.com', name: '' }
@@ -293,7 +297,15 @@ describe('restore', () => {
   })
 
   it('writes the restored text through the live room when one is open', async () => {
-    vi.mocked(writeBlocksToLiveRoom).mockResolvedValueOnce('applied')
+    const written: Array<unknown> = []
+
+    vi.mocked(rewriteLiveRoomBlocks).mockImplementationOnce(
+      async (_id, rewrite) => {
+        written.push(rewrite([{ id: 'live' }]).blocks)
+
+        return 'applied'
+      },
+    )
     await recordDocumentVersion(docId, author.id, { now: at(0) })
     const [first] = await listDocumentVersions(docId)
 
@@ -307,6 +319,46 @@ describe('restore', () => {
     )
 
     expect(restored).toMatchObject({ status: 'applied' })
+    expect(written).toEqual([[{ id: 'a' }]])
+
+    const document = await db.query.documents.findFirst({
+      where: eq(documents.id, docId),
+    })
+
+    expect(document?.content).toBe('[{"id":"after"}]')
+    expect(document?.title).toBe('Document')
+  })
+
+  it('keeps what the room held before the restore, even text not saved yet', async () => {
+    vi.mocked(rewriteLiveRoomBlocks).mockImplementationOnce(
+      async (_id, rewrite) => {
+        rewrite([{ id: 'live' }])
+        await setContent('[{"id":"a"}]', 'New title')
+
+        return 'applied'
+      },
+    )
+    await recordDocumentVersion(docId, author.id, { now: at(0) })
+    const [first] = await listDocumentVersions(docId)
+
+    await setContent('[{"id":"after"}]', 'New title')
+    await applyDocumentVersion(docId, first!.id, mate.id, at(60_000))
+
+    const [beforeRestore] = await listDocumentVersions(docId)
+    const saved = await getDocumentVersion(docId, beforeRestore!.id)
+
+    expect(saved?.content).toBe('[{"id":"live"}]')
+    expect(saved?.title).toBe('New title')
+  })
+
+  it('sends the restored text to a room that opened while it was being saved', async () => {
+    vi.mocked(writeBlocksToLiveRoom).mockResolvedValueOnce('applied')
+    await recordDocumentVersion(docId, author.id, { now: at(0) })
+    const [first] = await listDocumentVersions(docId)
+
+    await setContent('[{"id":"after"}]')
+    await applyDocumentVersion(docId, first!.id, mate.id, at(60_000))
+
     expect(writeBlocksToLiveRoom).toHaveBeenLastCalledWith(
       docId,
       [{ id: 'a' }],
@@ -318,31 +370,11 @@ describe('restore', () => {
       where: eq(documents.id, docId),
     })
 
-    expect(document?.content).toBe('[{"id":"after"}]')
-    expect(document?.title).toBe('Document')
-  })
-
-  it('keeps the text from before the restore even when the room saves first', async () => {
-    vi.mocked(writeBlocksToLiveRoom).mockImplementationOnce(async () => {
-      await setContent('[{"id":"a"}]', 'New title')
-
-      return 'applied'
-    })
-    await recordDocumentVersion(docId, author.id, { now: at(0) })
-    const [first] = await listDocumentVersions(docId)
-
-    await setContent('[{"id":"after"}]', 'New title')
-    await applyDocumentVersion(docId, first!.id, mate.id, at(60_000))
-
-    const [beforeRestore] = await listDocumentVersions(docId)
-    const saved = await getDocumentVersion(docId, beforeRestore!.id)
-
-    expect(saved?.content).toBe('[{"id":"after"}]')
-    expect(saved?.title).toBe('New title')
+    expect(document?.content).toBe('[{"id":"a"}]')
   })
 
   it('refuses to restore when the live room does not answer, and keeps the text', async () => {
-    vi.mocked(writeBlocksToLiveRoom).mockResolvedValueOnce('unreachable')
+    vi.mocked(rewriteLiveRoomBlocks).mockResolvedValueOnce('unreachable')
     await recordDocumentVersion(docId, author.id, { now: at(0) })
     const [first] = await listDocumentVersions(docId)
 

@@ -59,6 +59,7 @@ export async function POST(request: Request) {
     body.documentId,
     content,
     authorId,
+    { keepInTrash: true },
   )
 
   await writeRealtimeState(body.documentId, new Uint8Array(state))

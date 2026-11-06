@@ -299,6 +299,29 @@ describe('persistDocumentContent', () => {
     expect(rows[0].recipientId).toBe(bruno.id)
   })
 
+  it('keeps the room text of a document in the trash without notifying anyone', async () => {
+    await db
+      .update(documents)
+      .set({ deletedAt: new Date() })
+      .where(eq(documents.id, docId))
+
+    const content = contentWith(mention(bruno.id, 'm1', 'Bruno'))
+
+    expect(await persistDocumentContent(docId, content, ana.id)).toBe(false)
+    expect(
+      await persistDocumentContent(docId, content, ana.id, {
+        keepInTrash: true,
+      }),
+    ).toBe(true)
+
+    const saved = await db.query.documents.findFirst({
+      where: eq(documents.id, docId),
+    })
+
+    expect(saved?.content).toContain('m1')
+    expect(await notificationRows()).toEqual([])
+  })
+
   it('keeps saving when a mention points at nobody', async () => {
     const written = await persistDocumentContent(
       docId,

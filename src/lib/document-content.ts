@@ -66,12 +66,15 @@ export async function persistDocumentContent(
   id: string,
   contentJSON: string,
   authorId: string | null,
+  options: Readonly<{ keepInTrash?: boolean }> = {},
 ) {
   const current = await db.query.documents.findFirst({
     where: eq(documents.id, id),
   })
 
-  if (!current || current.deletedAt !== null) {
+  const inTrash = current?.deletedAt != null
+
+  if (!current || (inTrash && !options.keepInTrash)) {
     return false
   }
 
@@ -79,6 +82,15 @@ export async function persistDocumentContent(
 
   if (current.content === safeContent) {
     return false
+  }
+
+  if (inTrash) {
+    await db
+      .update(documents)
+      .set({ content: safeContent })
+      .where(eq(documents.id, id))
+
+    return true
   }
 
   await db
