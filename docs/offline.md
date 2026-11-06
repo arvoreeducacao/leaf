@@ -27,9 +27,11 @@ edits.
 
 **The shell.** The service worker (`public/sw.js`, registered as a module) keeps
 the build and the fonts cache-first, and pages and navigation payloads
-network-first with a cache fallback. Nothing under `/api/` is cached: auth and
-freshness always go over the network. A page that was never loaded, with no
-network, falls back to `/offline`.
+network-first with a cache fallback. The saved copy is used only when the
+network fails, never because it is slow: a slow page keeps loading like any
+site, so a reload never shows an old page that then stays old. Nothing under
+`/api/` is cached: auth and freshness always go over the network. A page that
+was never loaded, with no network, falls back to `/offline`.
 
 Navigating from the sidebar is not a browser navigation — Next only fetches the
 payload, so the page HTML would never enter the cache. That is why the client

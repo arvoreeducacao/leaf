@@ -3,6 +3,7 @@ import { expect, test } from '@playwright/test'
 import {
   createDocument,
   editorBody,
+  renameDocument,
   signUp,
   typeInEditor,
   uniqueEmail,
@@ -34,9 +35,10 @@ test.describe('editing without a connection', () => {
     await page.keyboard.press('Enter')
     await page.keyboard.type('written without internet')
 
-    await expect(page.getByText('Offline · salvo neste aparelho').first()).toBeVisible({
-      timeout: 20_000,
-    })
+    await expect(page.getByTestId('document-notice')).toContainText(
+      'Suas mudanças estão salvas neste aparelho',
+      { timeout: 20_000 },
+    )
     await waitForQueuedOffline(page, id, 'written without internet')
 
     await page.reload()
@@ -100,6 +102,54 @@ test.describe('editing without a connection', () => {
     await expect(
       page.getByText('Este documento ainda não está disponível offline'),
     ).toBeVisible({ timeout: 30_000 })
+  })
+
+  test('a slow reload waits for the fresh page instead of showing the saved one', async ({
+    context,
+    page,
+  }) => {
+    await signUp(page, uniqueEmail('offline-lenta'))
+
+    const id = await createDocument(page, 'Title the device saved')
+
+    await waitForServiceWorker(page)
+    await waitForPageCached(page)
+    await renameDocument(page, 'Title the server has now')
+
+    await context.route(
+      (url) => url.pathname === `/doc/${id}` && url.search === '',
+      async (route) => {
+        await new Promise((resolve) => setTimeout(resolve, 6_000))
+        await route.continue()
+      },
+    )
+
+    await page.reload()
+    await expect(page.getByLabel('Título do documento')).toHaveValue(
+      'Title the server has now',
+      { timeout: 30_000 },
+    )
+  })
+
+  test('a page opened with the network opens again without it', async ({
+    context,
+    page,
+  }) => {
+    await signUp(page, uniqueEmail('offline-navegacao'))
+    await createDocument(page, 'Document listed offline')
+    await waitForServiceWorker(page)
+
+    await page.goto('/documents?scope=private')
+    await expect(page.getByText('Document listed offline').first()).toBeVisible()
+    await waitForPageCached(page)
+
+    await context.setOffline(true)
+    await page.reload()
+
+    await expect(page.getByText('Document listed offline').first()).toBeVisible({
+      timeout: 30_000,
+    })
+    await expect(page.getByText('Você está sem conexão')).toHaveCount(0)
   })
 
   test('a page that was never loaded falls back to the offline screen', async ({
