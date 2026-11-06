@@ -19,6 +19,7 @@ const closeTrashed = 4405
 const closeUnreadable = 4409
 const closeIdentityChanged = 4410
 const closeUnavailable = 4500
+const closeRestarting = 1012
 
 const roomPrefix = 'doc:'
 const documentIdPattern = /^[A-Za-z0-9_-]{1,64}$/
@@ -33,6 +34,10 @@ const idleRoomMs = Number(process.env.LEAF_REALTIME_IDLE_MS ?? 5_000)
 const persistAttempts = 3
 const persistRetryMs = 1_000
 const pingIntervalMs = 25_000
+const closingConnectionsMs = 2_000
+const shutdownDeadlineMs = Number(
+  process.env.LEAF_REALTIME_SHUTDOWN_MS ?? 25_000,
+)
 
 const flag = (process.env.LEAF_REALTIME ?? '').trim().toLowerCase()
 const enabled =
@@ -50,6 +55,7 @@ const appOrigin = Symbol('leaf-app')
 const maxBodyBytes = 4_000_000
 const rooms = new Map()
 const listeners = new Map()
+let shuttingDown = false
 let accessEpoch = 0
 
 function log(...args) {
@@ -398,6 +404,7 @@ async function createRoom(documentId) {
     persistTimer: null,
     idleTimer: null,
     shutdownAttempts: 0,
+    closed: false,
   }
 
   doc.on('update', (update, origin) => {
@@ -641,6 +648,12 @@ async function applyAppUpdate(room, request, response) {
     return
   }
 
+  if (room.closed) {
+    answer(response, 503, { status: 'restarting' })
+
+    return
+  }
+
   if (typeof body.authorId === 'string' && body.authorId.length > 0) {
     room.lastAuthorId = body.authorId
   }
@@ -830,6 +843,12 @@ async function handleHttp(request, response) {
     return
   }
 
+  if (room.closed) {
+    answer(response, 503, { status: 'restarting' })
+
+    return
+  }
+
   if (!route.update && request.method === 'GET') {
     answer(response, 200, {
       status: 'ok',
@@ -869,6 +888,7 @@ const closeReasons = {
   [closeUnreadable]: 'unreadable content',
   [closeIdentityChanged]: 'document identity changed',
   [closeUnavailable]: 'unavailable',
+  [closeRestarting]: 'server restarting',
 }
 
 async function admit(request) {
@@ -928,13 +948,27 @@ async function admit(request) {
   return { room: result.room, access }
 }
 
+function decideAdmission(admitted, epoch) {
+  if (shuttingDown) {
+    return { closeCode: closeRestarting, room: admitted.room }
+  }
+
+  if (!admitted.closeCode && epoch !== accessEpoch) {
+    return { closeCode: closeAccessChanged, room: admitted.room }
+  }
+
+  return admitted
+}
+
 server.on('upgrade', async (request, socket, head) => {
+  if (shuttingDown) {
+    socket.destroy()
+
+    return
+  }
+
   const epoch = accessEpoch
-  const admitted = await admit(request)
-  const decision =
-    !admitted.closeCode && epoch !== accessEpoch
-      ? { closeCode: closeAccessChanged, room: admitted.room }
-      : admitted
+  const decision = decideAdmission(await admit(request), epoch)
 
   if (socket.destroyed) {
     if (decision.room && decision.room.connections.size === 0) {
@@ -975,15 +1009,83 @@ server.listen(port, process.env.LEAF_REALTIME_HOST, () => {
   log(`collaboration server on port ${port} (app ${appUrl})`)
 })
 
-async function shutdown() {
-  for (const value of rooms.values()) {
-    const result = await value
+function connectionsClosed() {
+  return new Promise((resolve) => {
+    const timer = setTimeout(resolve, closingConnectionsMs)
 
-    if (result.status === 'ok') {
-      await persistRoom(result.room)
+    function settle() {
+      if (wss.clients.size === 0) {
+        clearTimeout(timer)
+        resolve()
+      }
     }
+
+    for (const connection of wss.clients) {
+      connection.once('close', settle)
+    }
+
+    settle()
+  })
+}
+
+async function eachOpenRoom(task) {
+  const done = await Promise.all(
+    Array.from(rooms.values(), async (pending) => {
+      const result = await pending
+
+      if (result.status !== 'ok') {
+        return false
+      }
+
+      await task(result.room)
+
+      return true
+    }),
+  )
+
+  return done.filter(Boolean).length
+}
+
+async function closeRoom(room) {
+  room.closed = true
+
+  for (
+    let round = 0;
+    round < persistAttempts && (room.dirty || room.persisting);
+    round += 1
+  ) {
+    await persistRoom(room)
+  }
+}
+
+async function shutdown() {
+  if (shuttingDown) {
+    return
   }
 
+  shuttingDown = true
+
+  setTimeout(() => {
+    log('stopping before every room was saved')
+    process.exit(1)
+  }, shutdownDeadlineMs).unref()
+
+  await eachOpenRoom((room) => persistRoom(room))
+  log(`closing ${wss.clients.size} connections for a restart`)
+
+  for (const connection of wss.clients) {
+    connection.close(closeRestarting, closeReasons[closeRestarting])
+  }
+
+  await connectionsClosed()
+
+  for (const connection of wss.clients) {
+    connection.terminate()
+  }
+
+  const saved = await eachOpenRoom(closeRoom)
+
+  log(`saved ${saved} rooms, stopping`)
   process.exit(0)
 }
 
