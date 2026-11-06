@@ -580,7 +580,8 @@
     "restoreConfirm": "Restore this version?",
     "restoreHint": "The current content becomes a new version before the swap, so nothing is lost.",
     "restored": "Version restored",
-    "notFound": "This version no longer exists."
+    "notFound": "This version no longer exists.",
+    "roomUnreachable": "Could not restore right now. Try again in a few seconds."
   },
   "comments": {
     "open": "Comments",
@@ -1215,8 +1216,12 @@
     "someone": "Someone",
     "you": "{name} (you)",
     "peopleHere": "{count, plural, one {# person in this document} other {# people in this document}}",
-    "lost": "Live collaboration is off",
-    "retry": "Try again"
+    "lost": "Live collaboration is off. Your changes are saved on this device",
+    "retry": "Try again",
+    "trashed": "This document was moved to the trash. Only its creator can restore it.",
+    "trashedOwner": "This document is in the trash.",
+    "restore": "Restore",
+    "accessChangedToRead": "Your access to this document changed to view only. You still see the changes live."
   },
   "offline": {
     "banner": "No connection",

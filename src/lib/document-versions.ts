@@ -4,6 +4,8 @@ import { nanoid } from 'nanoid'
 import { db } from '@/db'
 import { documentVersions, documents, user } from '@/db/schema'
 import { authorNameOf } from '@/lib/author-name'
+import { parseContentBlocks } from '@/lib/markdown/convert'
+import { writeBlocksToLiveRoom } from '@/lib/realtime-room'
 import {
   MAX_VERSIONS_PER_DOCUMENT,
   VERSION_THROTTLE_MS,
@@ -22,7 +24,18 @@ export type VersionSummary = Readonly<{
 export type VersionDetail = VersionSummary &
   Readonly<{ content: string | null }>
 
-type RecordOptions = Readonly<{ force?: boolean; now?: Date }>
+export type AppliedVersion =
+  | Readonly<{ status: 'applied'; version: VersionDetail }>
+  | Readonly<{ status: 'not-found' }>
+  | Readonly<{ status: 'room-unreachable' }>
+
+type VersionSnapshot = Readonly<{ title: string; content: string | null }>
+
+type RecordOptions = Readonly<{
+  force?: boolean
+  now?: Date
+  snapshot?: VersionSnapshot
+}>
 
 function authorFilter(authorId: string | null) {
   return authorId === null
@@ -103,9 +116,11 @@ export async function recordDocumentVersion(
     }
   }
 
-  const document = await db.query.documents.findFirst({
-    where: eq(documents.id, documentId),
-  })
+  const document =
+    options.snapshot ??
+    (await db.query.documents.findFirst({
+      where: eq(documents.id, documentId),
+    }))
 
   if (!document) {
     return false
@@ -206,11 +221,11 @@ export async function applyDocumentVersion(
   versionId: string,
   actorId: string,
   now: Date = new Date(),
-): Promise<VersionDetail | null> {
+): Promise<AppliedVersion> {
   const version = await getDocumentVersion(documentId, versionId)
 
   if (!version) {
-    return null
+    return { status: 'not-found' }
   }
 
   const current = await db.query.documents.findFirst({
@@ -221,15 +236,37 @@ export async function applyDocumentVersion(
     current?.content === version.content &&
     current?.title === version.title
   ) {
-    return version
+    return { status: 'applied', version }
   }
 
-  await recordDocumentVersion(documentId, actorId, { force: true, now })
+  const live =
+    current?.content === version.content
+      ? 'disabled'
+      : await writeBlocksToLiveRoom(
+          documentId,
+          parseContentBlocks(version.content),
+          'replace',
+          actorId,
+        )
+
+  if (live === 'unreachable' || live === 'misconfigured') {
+    return { status: 'room-unreachable' }
+  }
+
+  await recordDocumentVersion(documentId, actorId, {
+    force: true,
+    now,
+    ...(current ? { snapshot: current } : {}),
+  })
 
   await db
     .update(documents)
-    .set({ content: version.content, title: version.title, updatedAt: now })
+    .set(
+      live === 'applied'
+        ? { title: version.title, updatedAt: now }
+        : { content: version.content, title: version.title, updatedAt: now },
+    )
     .where(eq(documents.id, documentId))
 
-  return version
+  return { status: 'applied', version }
 }

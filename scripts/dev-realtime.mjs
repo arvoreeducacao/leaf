@@ -14,6 +14,7 @@ const messageQueryAwareness = 3
 const closeAccessChanged = 4100
 const closeForbidden = 4403
 const closeNotFound = 4404
+const closeTrashed = 4405
 const closeUnreadable = 4409
 const closeIdentityChanged = 4410
 const closeUnavailable = 4500
@@ -646,6 +647,8 @@ async function closeForAccessChange(request, response) {
     typeof body?.userId === 'string' && body.userId.length > 0
       ? body.userId
       : null
+  const closeCode =
+    body?.reason === 'trashed' ? closeTrashed : closeAccessChanged
 
   if ((!documentIds || documentIds.size === 0) && !userId) {
     answer(response, 400, { status: 'bad-request' })
@@ -668,7 +671,7 @@ async function closeForAccessChange(request, response) {
     for (const [connection, entry] of result.room.connections) {
       if (matchesAccessChange(result.room, entry, change)) {
         entry.canWrite = false
-        connection.close(closeAccessChanged, closeReasons[closeAccessChanged])
+        connection.close(closeCode, closeReasons[closeCode])
         closed += 1
       }
     }
@@ -756,6 +759,7 @@ const wss = new WebSocketServer({ noServer: true })
 const closeReasons = {
   [closeAccessChanged]: 'access changed',
   [closeNotFound]: 'document not found',
+  [closeTrashed]: 'document moved to the trash',
   [closeForbidden]: 'no access',
   [closeUnreadable]: 'unreadable content',
   [closeIdentityChanged]: 'document identity changed',

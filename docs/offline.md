@@ -9,17 +9,21 @@ collaboration mode against a local document with no provider. Closing the tab,
 losing the network and coming back loses nothing: the state is read from the
 browser's disk before any request.
 
-**The way back to the server.** While the WebSocket is connected, the
-collaboration server is still what writes to MySQL. While it is reconnecting
-(a deploy, a restart), changes stay only in the local `Y.Doc` and reach the
-room when it comes back: saving the body straight to MySQL in that window would
-make the room look outdated and get reseeded. When there is no collaboration
-(real-time off, the room never answered, or you with no network), every change
-goes into an outbox in IndexedDB (`leaf-offline`, key `outbox:<id>`) *before*
-the server is tried. The outbox is drained when the network returns, when the
-app opens and after every save; a document that already has a live
-collaboration session is dropped from the outbox instead of sent, because Yjs
-already carried those edits.
+**The way back to the server.** With real-time on, the collaboration server is
+the only thing that writes the body to MySQL. When the room is slow to answer,
+or the server is down (a deploy, a restart), a tab that holds the document on
+the device keeps editing it, and the changes stay in the local `Y.Doc` until the
+room comes back. A tab with no local copy shows the saved text read only,
+built in a throwaway `Y.Doc` that never joins the room, and switches to the
+live document when the room answers. Saving the body straight to MySQL in that
+window would make the room look outdated and get reseeded. The page says what is
+going on in a notice under the top bar: after 3 s of reconnecting, and with a
+retry button after 30 s. Only with real-time off does every change go into an
+outbox in IndexedDB (`leaf-offline`, key `outbox:<id>`) *before* the server is
+tried. The outbox is drained when the network returns, when the app opens and
+after every save; a document that already has a live collaboration session is
+dropped from the outbox instead of sent, because Yjs already carried those
+edits.
 
 **The shell.** The service worker (`public/sw.js`, registered as a module) keeps
 the build and the fonts cache-first, and pages and navigation payloads
@@ -64,16 +68,15 @@ projection that search, export and history read.
 
 The two representations are tie-broken by content: when a room opens, the
 server rebuilds the JSON from the stored state and compares it with
-`documents.content`, ignoring block ids. Only a body written outside the room
-(the solo path, a version restore) makes them differ; then the room is
-reseeded from the JSON with a new identity, and whoever holds a local copy
+`documents.content`, ignoring block ids. Only a body written while no room was
+open (the MCP, a version restore, an import) makes them differ; then the room
+is reseeded from the JSON with a new identity, and whoever holds a local copy
 discards it. Renaming, moving or changing the icon touches
 `documents.updated_at` but not the body, so it no longer reseeds anything. A
 save from the room writes the content first and the state after, and keeps the
-identity. For the same reason, when the client has to seed the document on its
-own (no WebSocket but with network), it tears down the collaboration connection
-for that session: a document seeded in the browser must not later join the
-room's, or the content shows up twice.
+identity. The browser never seeds the room's document on its own: that is why
+the read-only preview lives in a separate `Y.Doc`, since a document seeded in
+the browser and later joined to the room shows its content twice.
 
 ### When access changes
 
@@ -83,7 +86,16 @@ the server (`POST /access`, with `LEAF_REALTIME_SECRET`) to close the affected
 connections with `4100`: those of the person, or every connection to the
 documents when the change is about the documents. The tabs reconnect in about
 200 ms and pass the same check again, so someone who became a viewer stops
-writing and someone who lost access is refused.
+writing and someone who lost access is refused. The tab also reloads the page
+data: a new viewer sees the editor turn read only, with a notice, and drops
+whatever was still only on the device; someone with no access left gets the
+no-access page.
+
+Moving a document to the trash goes through the same route with
+`reason: 'trashed'`, and the server closes those connections with `4405`
+instead. The tab keeps the text on screen, read only, says the document is in
+the trash (with **Restore** for the owner) and tries to join again every 30 s,
+so a restore brings everyone back without a reload.
 
 ### Writes that do not come from an editor
 
@@ -97,7 +109,8 @@ it to everyone connected and persists it through the usual path, identity
 preserved. When there is no room, the write goes straight to `documents.content`
 and the next room reseeds from it. When the collaboration server cannot be
 reached, a write on a page edited in the last 15 s is refused rather than
-risked. The app finds the server through `LEAF_REALTIME_SERVER_URL`, or by
+risked. Restoring a version takes the same path, and is refused whenever the
+server cannot be reached. The app finds the server through `LEAF_REALTIME_SERVER_URL`, or by
 turning `LEAF_REALTIME_URL` from `ws`/`wss` into `http`/`https`.
 
 ### What still does not work offline

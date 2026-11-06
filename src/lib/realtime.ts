@@ -25,12 +25,20 @@ export function isDocumentIdShaped(value: unknown): value is string {
   return typeof value === 'string' && documentIdPattern.test(value)
 }
 
-export type RealtimeCloseCode = 4100 | 4403 | 4404 | 4409 | 4410 | 4500
+export type RealtimeCloseCode =
+  | 4100
+  | 4403
+  | 4404
+  | 4405
+  | 4409
+  | 4410
+  | 4500
 
 export const realtimeCloseCodes = {
   accessChanged: 4100,
   forbidden: 4403,
   notFound: 4404,
+  trashed: 4405,
   unreadable: 4409,
   identityChanged: 4410,
   unavailable: 4500,
@@ -68,22 +76,35 @@ export function realtimeConnectionFrom(
   return provider.connected && provider.synced ? 'connected' : 'reconnecting'
 }
 
-export type RealtimeChip = 'none' | 'offline' | 'lost' | 'reconnecting'
+export type ConnectionNotice = 'none' | 'offline' | 'lost' | 'reconnecting'
 
-export function realtimeChipFor(
-  state: Readonly<{ online: boolean; connection: RealtimeConnection | 'solo' }>,
-): RealtimeChip {
-  if (!state.online) {
+export const reconnectingNoticeDelayMs = 3_000
+export const lostNoticeDelayMs = 30_000
+
+export function connectionNoticeFor(
+  state: Readonly<{
+    online: boolean
+    connection: RealtimeConnection | 'solo'
+    reconnectingForMs: number
+  }>,
+): ConnectionNotice {
+  if (!state.online || state.connection === 'offline') {
     return 'offline'
   }
 
-  if (state.connection === 'connected' || state.connection === 'solo') {
+  if (state.connection === 'lost') {
+    return 'lost'
+  }
+
+  if (state.connection !== 'reconnecting') {
     return 'none'
   }
 
-  if (state.connection === 'offline') {
-    return 'offline'
+  if (state.reconnectingForMs >= lostNoticeDelayMs) {
+    return 'lost'
   }
 
-  return state.connection === 'lost' ? 'lost' : 'reconnecting'
+  return state.reconnectingForMs >= reconnectingNoticeDelayMs
+    ? 'reconnecting'
+    : 'none'
 }

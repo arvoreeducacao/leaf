@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process'
-import { cpSync, mkdirSync, rmSync, writeFileSync } from 'node:fs'
+import { cpSync, existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -86,6 +86,21 @@ children.push(next)
 next.on('exit', (code) => shutdown(code ?? 1))
 
 const realtimeRestartMs = 1_000
+const pausedFile = join(sandbox, 'realtime.paused')
+
+function startWhenResumed() {
+  if (shuttingDown) {
+    return
+  }
+
+  if (existsSync(pausedFile)) {
+    setTimeout(startWhenResumed, 200)
+
+    return
+  }
+
+  startRealtime()
+}
 
 function startRealtime() {
   const realtime = spawn(
@@ -115,7 +130,7 @@ function startRealtime() {
     children.splice(children.indexOf(realtime), 1)
 
     if (!shuttingDown) {
-      setTimeout(startRealtime, realtimeRestartMs)
+      setTimeout(startWhenResumed, realtimeRestartMs)
     }
   })
 }

@@ -255,6 +255,7 @@ export async function rewriteLiveRoomBlocks(
 export type RealtimeAccessChange = Readonly<{
   documentIds?: ReadonlyArray<string>
   userId?: string
+  reason?: 'trashed'
 }>
 
 const accessChangeTimeoutMs = 2_000

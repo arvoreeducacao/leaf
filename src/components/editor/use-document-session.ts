@@ -24,7 +24,10 @@ import { avatarUrlFor } from '@/lib/avatar'
 import { peersFromAwareness, realtimeColorFor } from '@/lib/realtime-user'
 
 import { publishPresence, resetPresence } from './presence-bridge'
-import { onRealtimeReconnectRequest } from './status-bridge'
+import {
+  onLocalCopyResetRequest,
+  onRealtimeReconnectRequest,
+} from './status-bridge'
 import { markLive, unmarkLive } from '@/lib/offline/live-documents'
 
 export type DocumentUser = Readonly<{
@@ -52,6 +55,7 @@ export type SessionConnection =
 const snapshotTimeoutMs = 4_000
 const offlineRetryMs = 5_000
 const rejoinCooldownMs = 10_000
+const trashedRetryMs = 30_000
 
 type Options = Readonly<{
   realtimeEnabled: boolean
@@ -62,6 +66,7 @@ type Options = Readonly<{
   anonymousName: string
   fallbackContent: string | null
   fallbackUpdatedAt: number | null
+  onAccessChange: () => void
 }>
 
 export function resolveRealtimeUrl(
@@ -125,6 +130,7 @@ export function useDocumentSession({
   anonymousName,
   fallbackContent,
   fallbackUpdatedAt,
+  onAccessChange,
 }: Options) {
   const [phase, setPhase] = useState<SessionPhase>('loading')
   const [session, setSession] = useState<DocumentSession | null>(null)
@@ -134,11 +140,15 @@ export function useDocumentSession({
   const [seed, setSeed] = useState<string | null>(null)
   const [conflict, setConflict] = useState(false)
   const [localOnly, setLocalOnly] = useState(false)
+  const [waiting, setWaiting] = useState(false)
+  const [trashed, setTrashed] = useState(false)
   const contentRef = useRef(fallbackContent)
   const heldSinceRef = useRef(fallbackUpdatedAt)
+  const accessChangeRef = useRef(onAccessChange)
 
   contentRef.current = fallbackContent
   heldSinceRef.current = fallbackUpdatedAt
+  accessChangeRef.current = onAccessChange
 
   useEffect(() => {
     const store = offlineStore()
@@ -158,9 +168,12 @@ export function useDocumentSession({
     let pendingRetry: (() => void) | null = null
     let retryTimer = 0
     let stopReconnectRequests = () => {}
-    let soloed = false
+    let stopLocalResets = () => {}
     let lastRejoinAt = 0
     let editedWhileAway = false
+    let preview: Y.Doc | null = null
+    let inTrash = false
+    let trashedRetry = 0
 
     function runPendingRetry() {
       const retry = pendingRetry
@@ -178,7 +191,10 @@ export function useDocumentSession({
 
       disposed = true
       stopReconnectRequests()
+      stopLocalResets()
       window.clearTimeout(syncTimeout)
+      window.clearTimeout(trashedRetry)
+      preview?.destroy()
       window.removeEventListener('online', runPendingRetry)
       window.clearTimeout(retryTimer)
       pendingRetry = null
@@ -219,12 +235,66 @@ export function useDocumentSession({
     }
 
     function openLocally(withProvider: WebsocketProvider | null) {
+      if (preview) {
+        preview.destroy()
+        preview = null
+        setSeed(null)
+        setWaiting(false)
+      }
+
       setSession({
         fragment: doc.getXmlFragment(realtimeFragmentName),
         user: localUser,
         provider: withProvider,
       })
       setPhase('ready')
+    }
+
+    function openPreview(content: string | null) {
+      preview?.destroy()
+      preview = new Y.Doc({ gc: true })
+      setSeed(content)
+      setWaiting(true)
+      setSession({
+        fragment: preview.getXmlFragment(realtimeFragmentName),
+        user: localUser,
+        provider: null,
+      })
+      setPhase('ready')
+    }
+
+    function openWhileConnecting(
+      snapshot: ServerSnapshot | null,
+      socket: WebsocketProvider,
+    ) {
+      if (isFragmentEmpty(doc.getXmlFragment(realtimeFragmentName))) {
+        openPreview(snapshot?.content ?? contentRef.current)
+
+        return
+      }
+
+      openLocally(socket)
+    }
+
+    function leaveTrash() {
+      if (!inTrash) {
+        return
+      }
+
+      inTrash = false
+      window.clearTimeout(trashedRetry)
+      setTrashed(false)
+    }
+
+    function enterTrash(socket: WebsocketProvider) {
+      inTrash = true
+      setTrashed(true)
+      window.clearTimeout(trashedRetry)
+      trashedRetry = window.setTimeout(() => {
+        if (!disposed && inTrash && !socket.shouldConnect) {
+          socket.connect()
+        }
+      }, trashedRetryMs)
     }
 
     function connectRealtime(snapshot: ServerSnapshot | null) {
@@ -262,10 +332,6 @@ export function useDocumentSession({
           stillTrying: socket.shouldConnect,
         })
 
-        if (soloed && next === 'reconnecting') {
-          return
-        }
-
         setConnection(next)
       }
 
@@ -275,7 +341,8 @@ export function useDocumentSession({
         }
 
         opened = true
-        void startSolo(snapshot, socket)
+        openWhileConnecting(snapshot, socket)
+        refreshConnection()
       }, realtimeSyncTimeoutMs)
 
       socket.on('sync', (isSynced: boolean) => {
@@ -292,9 +359,9 @@ export function useDocumentSession({
         })
 
         window.clearTimeout(syncTimeout)
-        soloed = false
+        leaveTrash()
 
-        if (!opened) {
+        if (!opened || preview) {
           opened = true
           openLocally(socket)
         }
@@ -314,6 +381,12 @@ export function useDocumentSession({
         publishPeers(online)
       })
 
+      socket.on('connection-close', (event: CloseEvent | null) => {
+        if (!disposed && event?.code === realtimeCloseCodes.accessChanged) {
+          accessChangeRef.current()
+        }
+      })
+
       socket.on('closed', ({ code }: { code: number }) => {
         if (disposed) {
           return
@@ -324,37 +397,64 @@ export function useDocumentSession({
           Date.now() - lastRejoinAt > rejoinCooldownMs
         ) {
           lastRejoinAt = Date.now()
-          void rejoinSeededRoom(socket)
+          void rejoin(socket, editedWhileAway)
 
           return
         }
 
         unmarkLive(documentId)
+
+        if (
+          code === realtimeCloseCodes.trashed ||
+          (inTrash && code === realtimeCloseCodes.forbidden)
+        ) {
+          enterTrash(socket)
+
+          if (!opened) {
+            opened = true
+            window.clearTimeout(syncTimeout)
+            openWhileConnecting(snapshot, socket)
+          }
+        } else if (code === realtimeCloseCodes.forbidden) {
+          accessChangeRef.current()
+        }
+
         refreshConnection()
         publishPeers(false)
       })
 
       stopReconnectRequests = onRealtimeReconnectRequest(() => {
-        if (disposed || socket.shouldConnect) {
+        if (disposed || socket.wsconnected) {
           return
         }
 
+        window.clearTimeout(trashedRetry)
         setConnection('reconnecting')
+
+        if (socket.shouldConnect) {
+          socket.disconnect()
+        }
+
         socket.connect()
+      })
+
+      stopLocalResets = onLocalCopyResetRequest(() => {
+        if (!disposed && provider === socket) {
+          void rejoin(socket, false)
+        }
       })
 
       socket.awareness.on('change', () => publishPeers(online))
     }
 
-    async function rejoinSeededRoom(socket: WebsocketProvider) {
-      const droppedEdits = editedWhileAway
-
+    async function rejoin(socket: WebsocketProvider, droppedEdits: boolean) {
       editedWhileAway = false
       stopReconnectRequests()
+      stopLocalResets()
       window.clearTimeout(syncTimeout)
+      leaveTrash()
       socket.destroy()
       provider = null
-      soloed = false
       unmarkLive(documentId)
       resetPresence()
       setSession(null)
@@ -370,10 +470,7 @@ export function useDocumentSession({
       await start(droppedEdits)
     }
 
-    async function startSolo(
-      snapshot: ServerSnapshot | null,
-      keepProvider: WebsocketProvider | null,
-    ) {
+    async function startSolo(snapshot: ServerSnapshot | null) {
       if (disposed) {
         return
       }
@@ -414,12 +511,6 @@ export function useDocumentSession({
         }
       }
 
-      if (seeds && keepProvider) {
-        keepProvider.destroy()
-        provider = null
-        unmarkLive(documentId)
-      }
-
       if (seeds) {
         setSeed(snapshot?.content ?? contentRef.current)
       }
@@ -435,12 +526,11 @@ export function useDocumentSession({
         return
       }
 
-      soloed = true
       setConnection(
         snapshot === null && !navigator.onLine ? 'offline' : 'solo',
       )
       setLocalOnly(soloDecision.action === 'local-only')
-      openLocally(seeds ? null : keepProvider)
+      openLocally(null)
     }
 
     function whenOnlineAgain(retry: () => void) {
@@ -513,7 +603,7 @@ export function useDocumentSession({
       }
 
       if (!realtimeEnabled) {
-        await startSolo(snapshot, null)
+        await startSolo(snapshot)
 
         return
       }
@@ -561,5 +651,14 @@ export function useDocumentSession({
     return dispose
   }, [anonymousName, documentId, port, realtimeEnabled, url, user.id, user.name])
 
-  return { phase, session, connection, seed, conflict, localOnly }
+  return {
+    phase,
+    session,
+    connection,
+    seed,
+    conflict,
+    localOnly,
+    waiting,
+    trashed,
+  }
 }
