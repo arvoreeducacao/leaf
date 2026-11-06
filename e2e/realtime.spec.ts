@@ -356,6 +356,61 @@ test.describe('realtime collaboration', () => {
     await guest.close()
   })
 
+  test('stopping the collaboration server saves the text and closes every tab with a restart code', async ({
+    browser,
+  }) => {
+    const context = await browser.newContext()
+    const page = trackCollaboration(await context.newPage())
+
+    await signUp(page, uniqueEmail('restart-code'), 'Restart')
+    const id = await createDocument(page, 'Document closed for a restart')
+
+    await waitForCollaboration(page)
+    await appendLine(page, 'written before the stop')
+
+    const room = encodeURIComponent(realtimeRoomName(id))
+
+    await page.evaluate(
+      (url) =>
+        new Promise<void>((resolve) => {
+          const socket = new WebSocket(url)
+
+          Object.assign(window, {
+            restartCloseCode: new Promise<number>((settle) => {
+              socket.addEventListener('close', (event) => settle(event.code))
+            }),
+          })
+          socket.addEventListener('open', () => resolve())
+        }),
+      `ws://127.0.0.1:1235/${room}`,
+    )
+
+    stopCollaborationServer()
+
+    try {
+      const code = await page.evaluate(
+        () =>
+          (window as unknown as { restartCloseCode: Promise<number> })
+            .restartCloseCode,
+      )
+
+      expect(code).toBe(1012)
+      await expect
+        .poll(() => savedContent(id), { timeout: 10_000 })
+        .toContain('written before the stop')
+      await expect(notice(page)).toContainText(
+        'Reconectando. Suas mudanças estão salvas aqui',
+      )
+    } finally {
+      startCollaborationServer()
+    }
+
+    await waitForCollaboration(page, 30_000)
+    await expect(notice(page)).toHaveCount(0)
+
+    await context.close()
+  })
+
   test('someone who becomes a viewer stops writing into the open document', async ({
     browser,
   }) => {
