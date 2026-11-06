@@ -24,7 +24,6 @@ export const assetsCache = `${cacheVersion}-assets`
 export const pagesCache = `${cacheVersion}-pages`
 export const dataCache = `${cacheVersion}-data`
 export const offlineUrl = '/offline'
-export const networkFirstTimeoutMs = 3_500
 
 const assetExtensions = /\.(css|js|mjs|woff2?|ttf|otf|png|jpe?g|gif|svg|webp|avif|ico)$/i
 
@@ -88,9 +87,10 @@ async function putInCache(cacheName, request, response) {
     return
   }
 
+  const copy = response.clone()
   const cache = await caches.open(cacheName)
 
-  await cache.put(request, response.clone())
+  await cache.put(request, copy)
 }
 
 async function cacheFirst(request) {
@@ -107,38 +107,34 @@ async function cacheFirst(request) {
   return response
 }
 
-function timeout(ms) {
-  return new Promise((resolve) => setTimeout(() => resolve(null), ms))
-}
+export async function networkFirst(
+  cacheName,
+  request,
+  fallbackUrl,
+  keepAlive = (task) => task,
+) {
+  const response = await fetch(request).catch(() => null)
 
-async function networkFirst(cacheName, request, fallbackUrl) {
-  const network = fetch(request)
-    .then(async (response) => {
-      await putInCache(cacheName, request, response)
+  if (response) {
+    keepAlive(putInCache(cacheName, request, response).catch(() => {}))
 
-      return response
-    })
-    .catch(() => null)
+    return response
+  }
 
   const cached = await fromCache(cacheName, request)
 
   if (cached) {
-    const raced = await Promise.race([network, timeout(networkFirstTimeoutMs)])
-
-    return raced ?? cached
-  }
-
-  const response = await network
-
-  if (response) {
-    return response
+    return cached
   }
 
   if (!fallbackUrl) {
     return Response.error()
   }
 
-  const fallback = await fromCache(pagesCache, new Request(fallbackUrl))
+  const fallback = await fromCache(
+    pagesCache,
+    new Request(new URL(fallbackUrl, self.location.origin)),
+  )
 
   return fallback ?? Response.error()
 }
@@ -225,12 +221,16 @@ if (typeof self !== 'undefined' && typeof self.addEventListener === 'function') 
       return
     }
 
+    const keepAlive = (task) => event.waitUntil(task)
+
     if (route === 'page') {
-      event.respondWith(networkFirst(pagesCache, event.request, offlineUrl))
+      event.respondWith(
+        networkFirst(pagesCache, event.request, offlineUrl, keepAlive),
+      )
 
       return
     }
 
-    event.respondWith(networkFirst(dataCache, event.request, null))
+    event.respondWith(networkFirst(dataCache, event.request, null, keepAlive))
   })
 }

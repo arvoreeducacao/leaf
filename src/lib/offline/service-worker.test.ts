@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 vi.stubGlobal('self', { location: { origin: 'https://leaf.arvore.com.br' } })
 
@@ -10,9 +10,34 @@ const {
   fallbackBuildId,
   isCacheable,
   isCurrentCache,
+  networkFirst,
+  offlineUrl,
   pagesCache,
   routeFor,
 } = await import('../../../public/sw.js')
+
+function fakeCaches(saved: Readonly<Record<string, string>>) {
+  const stored = new Map<string, Response>(
+    Object.entries(saved).map(([url, body]) => [url, new Response(body)]),
+  )
+
+  const cache = {
+    match: async (request: Request) => stored.get(request.url)?.clone(),
+    put: async (request: Request, response: Response) => {
+      stored.set(request.url, response.clone())
+    },
+  }
+
+  vi.stubGlobal('caches', {
+    open: () => new Promise((resolve) => setTimeout(() => resolve(cache), 0)),
+  })
+
+  return stored
+}
+
+function page(path: string) {
+  return new Request(new URL(path, 'https://leaf.arvore.com.br'))
+}
 
 function get(
   path: string,
@@ -105,5 +130,75 @@ describe('service worker build identity', () => {
     expect(buildIdFrom('https://leaf.arvore.com.br/sw.js')).toBe(fallbackBuildId)
     expect(buildIdFrom(undefined)).toBe(fallbackBuildId)
     expect(buildIdFrom('nao-e-uma-url')).toBe(fallbackBuildId)
+  })
+})
+
+describe('service worker pages on a slow or missing network', () => {
+  afterEach(() => {
+    vi.useRealTimers()
+    vi.unstubAllGlobals()
+    vi.stubGlobal('self', { location: { origin: 'https://leaf.arvore.com.br' } })
+  })
+
+  it('waits for a slow network instead of showing the saved page', async () => {
+    vi.useFakeTimers()
+    fakeCaches({ 'https://leaf.arvore.com.br/doc/abc': 'saved page' })
+
+    let answer: (response: Response) => void = () => {}
+
+    vi.stubGlobal(
+      'fetch',
+      () => new Promise<Response>((resolve) => (answer = resolve)),
+    )
+
+    const served = networkFirst(pagesCache, page('/doc/abc'), offlineUrl)
+
+    await vi.advanceTimersByTimeAsync(30_000)
+    answer(new Response('fresh page'))
+
+    expect(await (await served).text()).toBe('fresh page')
+  })
+
+  it('hands the page over before saving it, and keeps it for the next time the network fails', async () => {
+    const stored = fakeCaches({})
+    const saving: Array<Promise<unknown>> = []
+
+    vi.stubGlobal('fetch', async () => new Response('fresh page'))
+
+    const served = await networkFirst(
+      pagesCache,
+      page('/doc/abc'),
+      offlineUrl,
+      (task: Promise<unknown>) => saving.push(task),
+    )
+
+    expect(await served.text()).toBe('fresh page')
+    expect(saving).toHaveLength(1)
+    await Promise.all(saving)
+    expect(
+      await stored.get('https://leaf.arvore.com.br/doc/abc')?.text(),
+    ).toBe('fresh page')
+  })
+
+  it('shows the saved page only when the network fails', async () => {
+    fakeCaches({ 'https://leaf.arvore.com.br/doc/abc': 'saved page' })
+    vi.stubGlobal('fetch', async () => {
+      throw new TypeError('Failed to fetch')
+    })
+
+    const served = await networkFirst(pagesCache, page('/doc/abc'), offlineUrl)
+
+    expect(await served.text()).toBe('saved page')
+  })
+
+  it('falls back to the offline screen when nothing was saved', async () => {
+    fakeCaches({ 'https://leaf.arvore.com.br/offline': 'offline screen' })
+    vi.stubGlobal('fetch', async () => {
+      throw new TypeError('Failed to fetch')
+    })
+
+    const served = await networkFirst(pagesCache, page('/doc/abc'), offlineUrl)
+
+    expect(await served.text()).toBe('offline screen')
   })
 })
