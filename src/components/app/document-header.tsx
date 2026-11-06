@@ -148,11 +148,11 @@ export function DocumentHeader({
 
   const topbar = (
     <>
-      <div className="flex min-w-0 flex-1 items-center text-body-small text-content">
+      <div className="flex min-w-0 flex-1 items-center overflow-hidden text-body-small text-content">
         {sharedWithOrganization && !teamspaceName ? (
           <>
             <span
-              className={cn(crumbClass, 'hidden shrink desktop:inline-flex')}
+              className={cn(crumbClass, 'hidden shrink-[8] desktop:inline-flex')}
               data-testid="document-org-tag"
               title={t('orgTagHint')}
             >
@@ -167,7 +167,7 @@ export function DocumentHeader({
         {teamspaceName ? (
           <>
             <span
-              className={cn(crumbClass, 'hidden shrink tablet:inline-flex')}
+              className={cn(crumbClass, 'hidden shrink-[8] tablet:inline-flex')}
               data-testid="document-teamspace-tag"
               title={tTeamspace('badgeHint')}
             >
@@ -181,7 +181,10 @@ export function DocumentHeader({
         ) : null}
         {breadcrumb}
         {breadcrumb ? <CrumbSeparator /> : null}
-        <span className={cn(crumbClass, 'shrink-0 hover:bg-transparent')}>
+        <span
+          className={cn(crumbClass, 'min-w-24 shrink hover:bg-transparent')}
+          data-testid="document-current-crumb"
+        >
           <DocumentIcon
             className="mr-1 size-4.5 text-[16px]"
             icon={icon}

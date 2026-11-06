@@ -518,6 +518,8 @@ export async function moveToTrash(id: string): Promise<ActionResult> {
     .set({ deletedAt: new Date() })
     .where(and(inArray(documents.id, subtree), isNull(documents.deletedAt)))
 
+  await closeRealtimeConnections({ documentIds: subtree, reason: 'trashed' })
+
   revalidatePath('/', 'layout')
 
   return { ok: true }

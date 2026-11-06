@@ -92,14 +92,17 @@ export async function restoreDocumentVersion(
     guard.session.user.id,
   )
 
-  if (!restored) {
+  if (restored.status !== 'applied') {
     const t = await getTranslations('versions')
 
-    return { ok: false, error: t('notFound') }
+    return {
+      ok: false,
+      error: t(restored.status === 'not-found' ? 'notFound' : 'roomUnreachable'),
+    }
   }
 
   revalidatePath('/', 'layout')
   revalidatePath(`/doc/${documentId}`)
 
-  return { ok: true, title: restored.title }
+  return { ok: true, title: restored.version.title }
 }

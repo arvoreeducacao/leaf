@@ -60,7 +60,7 @@ export function DocumentBreadcrumb({ crumbs }: Props) {
   const tail = crumbs.slice(collapsed.length)
 
   return (
-    <nav aria-label={t('breadcrumbLabel')} className="flex min-w-0 shrink">
+    <nav aria-label={t('breadcrumbLabel')} className="flex min-w-0 shrink-[8]">
       <ol className="flex min-w-0 items-center">
         {collapsed.length > 0 ? (
           <li className="flex shrink-0 items-center">

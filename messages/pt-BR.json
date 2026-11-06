@@ -580,7 +580,8 @@
     "restoreConfirm": "Restaurar esta versão?",
     "restoreHint": "O conteúdo de agora vira uma versão nova antes da troca, então nada é perdido.",
     "restored": "Versão restaurada",
-    "notFound": "Esta versão não existe mais."
+    "notFound": "Esta versão não existe mais.",
+    "roomUnreachable": "Não deu para restaurar agora. Tente de novo em alguns segundos."
   },
   "comments": {
     "open": "Comentários",
@@ -1215,8 +1216,12 @@
     "someone": "Alguém",
     "you": "{name} (você)",
     "peopleHere": "{count, plural, one {# pessoa neste documento} other {# pessoas neste documento}}",
-    "lost": "Sem colaboração ao vivo",
-    "retry": "Tentar de novo"
+    "lost": "Sem colaboração ao vivo. Suas mudanças estão salvas neste aparelho",
+    "retry": "Tentar de novo",
+    "trashed": "Este documento foi para a lixeira. Só quem criou pode restaurar.",
+    "trashedOwner": "Este documento está na lixeira.",
+    "restore": "Restaurar",
+    "accessChangedToRead": "Seu acesso a este documento mudou para leitura. Você continua vendo as mudanças ao vivo."
   },
   "offline": {
     "banner": "Sem conexão",

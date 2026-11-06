@@ -28,7 +28,10 @@ import { useSidebarPreferences } from '@/components/app/sidebar-preferences-prov
 import { SidebarSection } from '@/components/app/sidebar-section'
 import { sidebarIcon, sidebarRow } from '@/components/app/sidebar-styles'
 import { TeamspaceSections } from '@/components/app/teamspace-sections'
-import { registerTopbarSlot } from '@/components/app/topbar-slot'
+import {
+  registerNoticeSlot,
+  registerTopbarSlot,
+} from '@/components/app/topbar-slot'
 import { TrashSection } from '@/components/app/trash-section'
 import { useSidebarLayout } from '@/components/app/use-sidebar-layout'
 import { useSidebarWidth } from '@/components/app/use-sidebar-width'
@@ -359,6 +362,12 @@ export function AppShell({
     return () => registerTopbarSlot(null)
   }, [])
 
+  const noticeRef = useCallback((node: HTMLDivElement | null) => {
+    registerNoticeSlot(node)
+
+    return () => registerNoticeSlot(null)
+  }, [])
+
   useEffect(() => {
     setMobileOpen(false)
   }, [pathname])
@@ -457,48 +466,51 @@ export function AppShell({
     </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header
-          className={cn(
-            'sticky top-0 z-20 flex min-h-11 flex-wrap items-center gap-1 bg-surface-app px-3 py-1.5',
-          )}
-        >
-          <div className="tablet:hidden">
-            <ButtonIcon
-              aria-label={t('openNavigation')}
-              onClick={() => setMobileOpen(true)}
-              size="medium"
-              variant="ghost"
-            >
-              <SidebarIcon aria-hidden="true" />
-            </ButtonIcon>
-          </div>
-
-          {collapsed ? (
-            <div className="hidden animate-in fade-in duration-200 motion-reduce:animate-none tablet:block">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <ButtonIcon
-                    aria-label={t('expandNavigation')}
-                    onClick={() => toggleCollapsed(false)}
-                    ref={expandRef}
-                    size="medium"
-                    variant="ghost"
-                  >
-                    <SidebarIcon aria-hidden="true" />
-                  </ButtonIcon>
-                </TooltipTrigger>
-                <TooltipContent>{t('expand')}</TooltipContent>
-              </Tooltip>
+        <div className="sticky top-0 z-20">
+          <header
+            className={cn(
+              'flex min-h-11 flex-wrap items-center gap-1 bg-surface-app px-3 py-1.5',
+            )}
+          >
+            <div className="tablet:hidden">
+              <ButtonIcon
+                aria-label={t('openNavigation')}
+                onClick={() => setMobileOpen(true)}
+                size="medium"
+                variant="ghost"
+              >
+                <SidebarIcon aria-hidden="true" />
+              </ButtonIcon>
             </div>
-          ) : null}
 
-          <div
-            className="flex min-w-0 flex-1 flex-wrap items-center gap-1"
-            ref={topbarRef}
-          />
+            {collapsed ? (
+              <div className="hidden animate-in fade-in duration-200 motion-reduce:animate-none tablet:block">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <ButtonIcon
+                      aria-label={t('expandNavigation')}
+                      onClick={() => toggleCollapsed(false)}
+                      ref={expandRef}
+                      size="medium"
+                      variant="ghost"
+                    >
+                      <SidebarIcon aria-hidden="true" />
+                    </ButtonIcon>
+                  </TooltipTrigger>
+                  <TooltipContent>{t('expand')}</TooltipContent>
+                </Tooltip>
+              </div>
+            ) : null}
 
-          <OfflineBanner />
-        </header>
+            <div
+              className="flex min-w-0 flex-1 flex-wrap items-center gap-1"
+              ref={topbarRef}
+            />
+
+            <OfflineBanner />
+          </header>
+          <div ref={noticeRef} />
+        </div>
 
         <InstallBanner />
 

@@ -7,7 +7,9 @@ import {
   isDocumentIdShaped,
   realtimeCloseCodes,
   realtimeCloseIsFinal,
-  realtimeChipFor,
+  connectionNoticeFor,
+  lostNoticeDelayMs,
+  reconnectingNoticeDelayMs,
   realtimeConnectionFrom,
   realtimeRoomName,
   realtimeSecretHeader,
@@ -261,30 +263,53 @@ describe('realtimeConnectionFrom', () => {
   })
 })
 
-describe('realtimeChipFor', () => {
+describe('connectionNoticeFor', () => {
   it('says nothing when the connection is healthy', () => {
-    expect(realtimeChipFor({ online: true, connection: 'connected' })).toBe(
-      'none',
-    )
-    expect(realtimeChipFor({ online: true, connection: 'solo' })).toBe('none')
-  })
-
-  it('never calls a healthy connection reconnecting', () => {
     for (const connection of ['connected', 'solo'] as const) {
-      expect(realtimeChipFor({ online: true, connection })).not.toBe(
-        'reconnecting',
-      )
+      expect(
+        connectionNoticeFor({ online: true, connection, reconnectingForMs: 0 }),
+      ).toBe('none')
     }
   })
 
-  it('warns only while something is actually wrong', () => {
-    expect(realtimeChipFor({ online: true, connection: 'reconnecting' })).toBe(
-      'reconnecting',
-    )
-    expect(realtimeChipFor({ online: true, connection: 'lost' })).toBe('lost')
-    expect(realtimeChipFor({ online: true, connection: 'offline' })).toBe(
-      'offline',
-    )
+  it('waits before saying it is reconnecting, so a quick blip shows nothing', () => {
+    expect(
+      connectionNoticeFor({
+        online: true,
+        connection: 'reconnecting',
+        reconnectingForMs: reconnectingNoticeDelayMs - 1,
+      }),
+    ).toBe('none')
+    expect(
+      connectionNoticeFor({
+        online: true,
+        connection: 'reconnecting',
+        reconnectingForMs: reconnectingNoticeDelayMs,
+      }),
+    ).toBe('reconnecting')
+  })
+
+  it('stops promising a quick return after a long reconnection', () => {
+    expect(
+      connectionNoticeFor({
+        online: true,
+        connection: 'reconnecting',
+        reconnectingForMs: lostNoticeDelayMs - 1,
+      }),
+    ).toBe('reconnecting')
+    expect(
+      connectionNoticeFor({
+        online: true,
+        connection: 'reconnecting',
+        reconnectingForMs: lostNoticeDelayMs,
+      }),
+    ).toBe('lost')
+  })
+
+  it('says it at once when the server gave up', () => {
+    expect(
+      connectionNoticeFor({ online: true, connection: 'lost', reconnectingForMs: 0 }),
+    ).toBe('lost')
   })
 
   it('puts the browser being offline above the session state', () => {
@@ -295,7 +320,9 @@ describe('realtimeChipFor', () => {
       'lost',
       'offline',
     ] as const) {
-      expect(realtimeChipFor({ online: false, connection })).toBe('offline')
+      expect(
+        connectionNoticeFor({ online: false, connection, reconnectingForMs: 0 }),
+      ).toBe('offline')
     }
   })
 })

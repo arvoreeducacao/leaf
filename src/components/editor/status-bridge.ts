@@ -122,3 +122,17 @@ export function onRealtimeReconnectRequest(handler: () => void) {
     window.removeEventListener(reconnectEvent, handler)
   }
 }
+
+const localCopyResetEvent = 'leaf:reset-local-copy'
+
+export function requestLocalCopyReset() {
+  window.dispatchEvent(new Event(localCopyResetEvent))
+}
+
+export function onLocalCopyResetRequest(handler: () => void) {
+  window.addEventListener(localCopyResetEvent, handler)
+
+  return () => {
+    window.removeEventListener(localCopyResetEvent, handler)
+  }
+}

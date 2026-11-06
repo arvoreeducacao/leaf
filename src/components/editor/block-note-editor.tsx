@@ -84,6 +84,7 @@ type Props = Readonly<{
   seed: string | null
   conflict: boolean
   localOnly: boolean
+  directSave: boolean
   aiEnabled: boolean
   linkedDocuments: ReadonlyArray<LinkedDocumentIcon>
 }>
@@ -101,6 +102,7 @@ export default function BlockNoteEditor({
   seed,
   conflict,
   localOnly,
+  directSave,
   aiEnabled,
   linkedDocuments,
 }: Props) {
@@ -123,7 +125,7 @@ export default function BlockNoteEditor({
 
   const { status, schedule, flush, markSaved } = useAutosave(
     documentId,
-    isEditable && connection !== 'connected' && connection !== 'reconnecting',
+    isEditable && directSave,
   )
 
   const cursorTheme = resolvedTheme === 'dark' ? 'dark' : 'light'

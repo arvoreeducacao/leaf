@@ -259,4 +259,74 @@ describe('realtime server rooms over HTTP', () => {
 
     expect(response.status).toBe(400)
   })
+
+  async function watchRoom(documentId: string) {
+    const watched = new Y.Doc({ gc: true })
+    const closes: Array<number> = []
+    const watcher = new WebsocketProvider(
+      `ws://127.0.0.1:${port}`,
+      `doc:${documentId}`,
+      watched,
+    )
+
+    watcher.on('connection-close', (event) => {
+      if (event) {
+        closes.push(event.code)
+      }
+    })
+
+    await waitFor(() => watcher.synced, 'the watcher to sync')
+
+    return {
+      closes,
+      watcher,
+      stop() {
+        watcher.destroy()
+        watched.destroy()
+      },
+    }
+  }
+
+  function changeAccess(body: Record<string, unknown>) {
+    return fetch(url('/access'), {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        [realtimeSecretHeader]: secret,
+      },
+      body: JSON.stringify(body),
+    })
+  }
+
+  it('closes for good when the app says the document went to the trash', async () => {
+    const room = await watchRoom('lixeira')
+
+    try {
+      const response = await changeAccess({
+        documentIds: ['lixeira'],
+        reason: 'trashed',
+      })
+
+      expect(response.status).toBe(200)
+      await waitFor(() => room.closes.length > 0, 'the trash close')
+      expect(room.closes[0]).toBe(4405)
+      expect(room.watcher.shouldConnect).toBe(false)
+      expect(provider.wsconnected).toBe(true)
+    } finally {
+      room.stop()
+    }
+  })
+
+  it('closes and lets the tab come back when only the access changed', async () => {
+    const room = await watchRoom('acesso')
+
+    try {
+      await changeAccess({ documentIds: ['acesso'] })
+      await waitFor(() => room.closes.length > 0, 'the access close')
+      expect(room.closes[0]).toBe(4100)
+      await waitFor(() => room.watcher.wsconnected, 'the tab to come back')
+    } finally {
+      room.stop()
+    }
+  })
 })

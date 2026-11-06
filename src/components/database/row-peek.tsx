@@ -63,6 +63,7 @@ export async function RowPeek({ rowId }: Props) {
           documentId={document.id}
           initialContent={document.content}
           initialUpdatedAt={new Date(document.updatedAt).getTime()}
+          inlineNotice
           isOwner={access === 'owner'}
           linkedDocuments={linkedDocuments}
           openCommentCount={comments.openCount}
