@@ -37,6 +37,7 @@ import {
 import { normalizeDocumentIcon } from '@/lib/document-icon'
 import { listOwnedDocuments, listSubtreeIds } from '@/lib/documents'
 import { closeRealtimeConnections } from '@/lib/realtime-room'
+import { signalDocumentChanged } from '@/lib/realtime-signals'
 import { indexDocument, removeDocumentFromIndex } from '@/lib/search-index'
 import { registerUnsplashDownload, unsplashAccessKey } from '@/lib/unsplash'
 
@@ -169,6 +170,8 @@ export async function renameDocument(
   revalidatePath('/', 'layout')
   revalidatePath(`/doc/${id}`)
 
+  after(() => signalDocumentChanged(id))
+
   return { ok: true }
 }
 
@@ -197,6 +200,8 @@ export async function setDocumentIcon(
   revalidatePath('/', 'layout')
   revalidatePath(`/doc/${id}`)
 
+  after(() => signalDocumentChanged(id))
+
   return { ok: true }
 }
 
@@ -215,6 +220,8 @@ export async function removeDocumentIcon(id: string): Promise<ActionResult> {
 
   revalidatePath('/', 'layout')
   revalidatePath(`/doc/${id}`)
+
+  after(() => signalDocumentChanged(id))
 
   return { ok: true }
 }
@@ -262,6 +269,8 @@ export async function setDocumentCover(
 
   revalidatePath(`/doc/${id}`)
 
+  after(() => signalDocumentChanged(id))
+
   return { ok: true }
 }
 
@@ -282,6 +291,8 @@ export async function setDocumentCoverPosition(
     .where(and(eq(documents.id, id), isNull(documents.deletedAt)))
 
   revalidatePath(`/doc/${id}`)
+
+  after(() => signalDocumentChanged(id))
 
   return { ok: true }
 }
@@ -305,6 +316,8 @@ export async function removeDocumentCover(id: string): Promise<ActionResult> {
     .where(and(eq(documents.id, id), isNull(documents.deletedAt)))
 
   revalidatePath(`/doc/${id}`)
+
+  after(() => signalDocumentChanged(id))
 
   return { ok: true }
 }

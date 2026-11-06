@@ -4,11 +4,13 @@ import { redirect } from 'next/navigation'
 import { AppShell } from '@/components/app/app-shell'
 import { FavoritesProvider } from '@/components/app/favorites-provider'
 import { PendingJoinRedirect } from '@/components/app/pending-join-redirect'
+import { RealtimeEndpointProvider } from '@/components/app/realtime-endpoint-provider'
 import { SidebarPreferencesProvider } from '@/components/app/sidebar-preferences-provider'
 import { isAiEnabled } from '@/lib/ai-config'
 import { readActiveOrgId } from '@/lib/active-org'
 import { getSession } from '@/lib/auth'
 import { isMcpEnabled } from '@/lib/mcp-config'
+import { isRealtimeEnabled, realtimePort } from '@/lib/realtime-config'
 import {
   buildDocumentTree,
   capDocumentTree,
@@ -108,42 +110,53 @@ export default async function AppLayout({
   const sidebarPreferences = await readSidebarPreferences()
 
   return (
-    <SidebarPreferencesProvider initial={sidebarPreferences}>
-      <FavoritesProvider ids={favorites.map((document) => document.id)}>
-        <AppShell
-        activeOrgId={membership?.orgId ?? null}
-        aiEnabled={isAiEnabled()}
-        favorites={favorites}
-        connectedAppsEnabled={isMcpEnabled()}
-        locale={locale}
-        hiddenOrganizationDocuments={organizationTree.hidden}
-        hiddenOwnedDocuments={ownedTree.hidden}
-        organizationDocuments={organizationTree.nodes}
-        organizationName={membership?.orgName ?? null}
-        organizations={memberships.map((item) => ({
-          id: item.orgId,
-          name: item.orgName,
-          icon: item.orgIcon,
-        }))}
-        owned={ownedTree.nodes}
-        recents={recents}
-        shared={shared}
-        sidebarLayout={sidebarLayout}
-        teamspaces={teamspaceSections}
-        trashed={trashed}
-        unreadNotifications={unreadNotifications}
-        user={{
-          id: session.user.id,
-          name: session.user.name,
-          email: session.user.email,
-          image: session.user.image ?? null,
-        }}
-      >
-          <PendingJoinRedirect />
-          {children}
-          {overlay}
-        </AppShell>
-      </FavoritesProvider>
-    </SidebarPreferencesProvider>
+    <RealtimeEndpointProvider
+      endpoint={
+        isRealtimeEnabled()
+          ? {
+              url: process.env.LEAF_REALTIME_URL?.trim() || null,
+              port: realtimePort(),
+            }
+          : null
+      }
+    >
+      <SidebarPreferencesProvider initial={sidebarPreferences}>
+        <FavoritesProvider ids={favorites.map((document) => document.id)}>
+          <AppShell
+          activeOrgId={membership?.orgId ?? null}
+          aiEnabled={isAiEnabled()}
+          favorites={favorites}
+          connectedAppsEnabled={isMcpEnabled()}
+          locale={locale}
+          hiddenOrganizationDocuments={organizationTree.hidden}
+          hiddenOwnedDocuments={ownedTree.hidden}
+          organizationDocuments={organizationTree.nodes}
+          organizationName={membership?.orgName ?? null}
+          organizations={memberships.map((item) => ({
+            id: item.orgId,
+            name: item.orgName,
+            icon: item.orgIcon,
+          }))}
+          owned={ownedTree.nodes}
+          recents={recents}
+          shared={shared}
+          sidebarLayout={sidebarLayout}
+          teamspaces={teamspaceSections}
+          trashed={trashed}
+          unreadNotifications={unreadNotifications}
+          user={{
+            id: session.user.id,
+            name: session.user.name,
+            email: session.user.email,
+            image: session.user.image ?? null,
+          }}
+        >
+            <PendingJoinRedirect />
+            {children}
+            {overlay}
+          </AppShell>
+        </FavoritesProvider>
+      </SidebarPreferencesProvider>
+    </RealtimeEndpointProvider>
   )
 }

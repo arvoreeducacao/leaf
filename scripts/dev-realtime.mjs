@@ -10,6 +10,7 @@ import * as Y from 'yjs'
 const messageSync = 0
 const messageAwareness = 1
 const messageQueryAwareness = 3
+const messageSignal = 4
 
 const closeAccessChanged = 4100
 const closeForbidden = 4403
@@ -21,6 +22,8 @@ const closeUnavailable = 4500
 
 const roomPrefix = 'doc:'
 const documentIdPattern = /^[A-Za-z0-9_-]{1,64}$/
+const signalsSegment = 'signals'
+const signalTopics = new Set(['document', 'comments', 'database'])
 
 const port = Number(process.env.LEAF_REALTIME_PORT ?? 1234)
 const appUrl = process.env.LEAF_APP_URL ?? 'http://127.0.0.1:3000'
@@ -46,6 +49,7 @@ const seedOrigin = Symbol('leaf-seed')
 const appOrigin = Symbol('leaf-app')
 const maxBodyBytes = 4_000_000
 const rooms = new Map()
+const listeners = new Map()
 let accessEpoch = 0
 
 function log(...args) {
@@ -183,6 +187,65 @@ function encodeSyncUpdate(update) {
   syncProtocol.writeUpdate(encoder, update)
 
   return encoding.toUint8Array(encoder)
+}
+
+function encodeSignal(topic) {
+  const encoder = encoding.createEncoder()
+
+  encoding.writeVarUint(encoder, messageSignal)
+  encoding.writeVarString(encoder, JSON.stringify({ topic }))
+
+  return encoding.toUint8Array(encoder)
+}
+
+function isSignalsPath(pathname) {
+  const segments = pathname.split('/').filter((segment) => segment.length > 0)
+
+  return segments.at(-2) === signalsSegment
+}
+
+function keepAlive(connection, entry) {
+  connection.on('pong', () => {
+    entry.alive = true
+  })
+
+  return setInterval(() => {
+    if (!entry.alive) {
+      connection.terminate()
+
+      return
+    }
+
+    entry.alive = false
+
+    try {
+      connection.ping()
+    } catch {
+      connection.terminate()
+    }
+  }, pingIntervalMs)
+}
+
+function setupListener(connection, documentId, access) {
+  const entry = { userId: access.userId, alive: true }
+  const current = listeners.get(documentId) ?? new Map()
+
+  current.set(connection, entry)
+  listeners.set(documentId, current)
+
+  const ping = keepAlive(connection, entry)
+
+  connection.on('close', () => {
+    clearInterval(ping)
+
+    const remaining = listeners.get(documentId)
+
+    remaining?.delete(connection)
+
+    if (remaining?.size === 0) {
+      listeners.delete(documentId)
+    }
+  })
 }
 
 function encodeAwareness(awareness, clients) {
@@ -488,25 +551,7 @@ function setupConnection(connection, room, access) {
     }
   })
 
-  connection.on('pong', () => {
-    entry.alive = true
-  })
-
-  const ping = setInterval(() => {
-    if (!entry.alive) {
-      connection.terminate()
-
-      return
-    }
-
-    entry.alive = false
-
-    try {
-      connection.ping()
-    } catch {
-      connection.terminate()
-    }
-  }, pingIntervalMs)
+  const ping = keepAlive(connection, entry)
 
   connection.on('close', () => {
     clearInterval(ping)
@@ -617,12 +662,65 @@ async function applyAppUpdate(room, request, response) {
   })
 }
 
-function matchesAccessChange(room, entry, change) {
-  if (change.documentIds && !change.documentIds.has(room.documentId)) {
+function matchesAccessChange(documentId, entry, change) {
+  if (change.documentIds && !change.documentIds.has(documentId)) {
     return false
   }
 
   return !change.userId || change.userId === entry.userId
+}
+
+function readDocumentIds(value) {
+  return Array.isArray(value)
+    ? new Set(
+        value.filter(
+          (id) => typeof id === 'string' && documentIdPattern.test(id),
+        ),
+      )
+    : null
+}
+
+async function sendSignals(request, response) {
+  let body
+
+  try {
+    body = JSON.parse((await readBody(request)).toString('utf8'))
+  } catch {
+    answer(response, 400, { status: 'bad-request' })
+
+    return
+  }
+
+  const documentIds = readDocumentIds(body?.documentIds)
+  const topic = body?.topic
+
+  if (!documentIds || documentIds.size === 0 || !signalTopics.has(topic)) {
+    answer(response, 400, { status: 'bad-request' })
+
+    return
+  }
+
+  let delivered = 0
+
+  for (const documentId of documentIds) {
+    const room = await liveRoom(documentId)
+
+    if (room) {
+      const message = encodeSignal(topic)
+
+      for (const connection of room.connections.keys()) {
+        send(connection, message)
+        delivered += 1
+      }
+    }
+
+    for (const connection of listeners.get(documentId)?.keys() ?? []) {
+      send(connection, JSON.stringify({ documentId, topic }))
+      delivered += 1
+    }
+  }
+
+  answer(response, 200, { status: 'ok', delivered })
 }
 
 async function closeForAccessChange(request, response) {
@@ -636,13 +734,7 @@ async function closeForAccessChange(request, response) {
     return
   }
 
-  const documentIds = Array.isArray(body?.documentIds)
-    ? new Set(
-        body.documentIds.filter(
-          (id) => typeof id === 'string' && documentIdPattern.test(id),
-        ),
-      )
-    : null
+  const documentIds = readDocumentIds(body?.documentIds)
   const userId =
     typeof body?.userId === 'string' && body.userId.length > 0
       ? body.userId
@@ -669,8 +761,17 @@ async function closeForAccessChange(request, response) {
     }
 
     for (const [connection, entry] of result.room.connections) {
-      if (matchesAccessChange(result.room, entry, change)) {
+      if (matchesAccessChange(result.room.documentId, entry, change)) {
         entry.canWrite = false
+        connection.close(closeCode, closeReasons[closeCode])
+        closed += 1
+      }
+    }
+  }
+
+  for (const [documentId, current] of listeners) {
+    for (const [connection, entry] of current) {
+      if (matchesAccessChange(documentId, entry, change)) {
         connection.close(closeCode, closeReasons[closeCode])
         closed += 1
       }
@@ -684,7 +785,7 @@ async function closeForAccessChange(request, response) {
 async function handleHttp(request, response) {
   const url = new URL(request.url ?? '/', 'http://localhost')
 
-  if (url.pathname === '/access') {
+  if (url.pathname === '/access' || url.pathname === '/signals') {
     if (request.headers['x-leaf-realtime-secret'] !== secret) {
       answer(response, 404, { status: 'not-found' })
 
@@ -697,7 +798,11 @@ async function handleHttp(request, response) {
       return
     }
 
-    await closeForAccessChange(request, response)
+    if (url.pathname === '/access') {
+      await closeForAccessChange(request, response)
+    } else {
+      await sendSignals(request, response)
+    }
 
     return
   }
@@ -784,6 +889,10 @@ async function admit(request) {
     return { closeCode: closeForbidden }
   }
 
+  if (isSignalsPath(url.pathname)) {
+    return { listen: documentId, access }
+  }
+
   let result
 
   try {
@@ -848,6 +957,12 @@ server.on('upgrade', async (request, socket, head) => {
       if (decision.room && decision.room.connections.size === 0) {
         scheduleRoomShutdown(decision.room)
       }
+
+      return
+    }
+
+    if (decision.listen) {
+      setupListener(connection, decision.listen, decision.access)
 
       return
     }

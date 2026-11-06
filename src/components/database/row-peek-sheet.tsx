@@ -4,7 +4,7 @@ import * as PeekPrimitive from '@radix-ui/react-dialog'
 import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { type ReactNode, useState } from 'react'
+import { type ReactNode, useEffect, useRef, useState } from 'react'
 
 import { DocumentIcon } from '@/components/app/document-icon'
 import { CancelIcon } from '@/components/icons'
@@ -26,6 +26,22 @@ export function RowPeekSheet({ rowId, title, icon, canEdit, children }: Props) {
   const tCommon = useTranslations('common')
   const [open, setOpen] = useState(true)
   const [draft, setDraft] = useState(title)
+  const titleRef = useRef<HTMLInputElement>(null)
+  const shownTitle = useRef(title)
+
+  useEffect(() => {
+    if (shownTitle.current === title) {
+      return
+    }
+
+    const previous = shownTitle.current.trim()
+    const focused = titleRef.current === document.activeElement
+
+    shownTitle.current = title
+    setDraft((current) =>
+      focused && current.trim() !== previous ? current : title,
+    )
+  }, [title])
 
   function close() {
     setOpen(false)
@@ -99,6 +115,7 @@ export function RowPeekSheet({ rowId, title, icon, canEdit, children }: Props) {
                     }
                   }}
                   placeholder={t('untitledRow')}
+                  ref={titleRef}
                   value={draft}
                 />
               ) : (

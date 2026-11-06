@@ -112,10 +112,18 @@ export function DocumentHeader({
       return
     }
 
+    const focused =
+      loadedFor.current === documentId &&
+      fieldRef.current !== null &&
+      fieldRef.current === document.activeElement
+    const previous = lastSaved.current
+
     loadedFor.current = documentId
     lastFromServer.current = title
-    setValue(title)
     lastSaved.current = title
+    setValue((current) =>
+      focused && current.trim() !== previous ? current : title,
+    )
   }, [documentId, title])
 
   async function persist() {

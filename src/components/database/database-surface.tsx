@@ -4,7 +4,7 @@ import { Suspense } from 'react'
 import { getSession } from '@/lib/auth'
 import { loadDatabase } from '@/lib/databases'
 
-import { DatabaseView } from './database-view'
+import { LiveDatabaseView } from './live-database-view'
 
 type Props = Readonly<{
   databaseId: string
@@ -32,7 +32,11 @@ export async function DatabaseSurface({
 
   return (
     <Suspense>
-      <DatabaseView canEdit={canEdit} compact={compact} snapshot={snapshot} />
+      <LiveDatabaseView
+        canEdit={canEdit}
+        compact={compact}
+        snapshot={snapshot}
+      />
     </Suspense>
   )
 }

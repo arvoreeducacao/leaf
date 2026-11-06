@@ -87,7 +87,7 @@ export async function renameDocument(page: Page, title: string) {
   await expect(page.getByLabel('Título do documento')).toBeEnabled()
 }
 
-export const collaborationServerPattern = /:1235\//
+export const collaborationServerPattern = /:1235\/(?!signals\/)/
 
 type CollaborationSocket = { socket: WebSocket | null; frames: number }
 

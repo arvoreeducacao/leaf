@@ -2,6 +2,7 @@
 
 import { getTranslations } from 'next-intl/server'
 import { redirect } from 'next/navigation'
+import { after } from 'next/server'
 
 import { getSession } from '@/lib/auth'
 import { authorNameOf } from '@/lib/author-name'
@@ -22,6 +23,7 @@ import {
   setCommentResolved,
   updateCommentBody,
 } from '@/lib/comments'
+import { signalOpenTabs } from '@/lib/realtime-signals'
 import { pushCommentToThread, reactOnComment } from '@/lib/slack/sync'
 
 export type CommentsResult =
@@ -118,6 +120,8 @@ export async function addComment(
     documentId,
   })
 
+  after(() => signalOpenTabs([documentId], 'comments'))
+
   return readState(documentId, guard.access, guard.session.user.id)
 }
 
@@ -146,6 +150,8 @@ export async function editComment(
     return { ok: false, error: await message('commentEmpty') }
   }
 
+  after(() => signalOpenTabs([documentId], 'comments'))
+
   return readState(documentId, guard.access, guard.session.user.id)
 }
 
@@ -170,6 +176,8 @@ export async function removeComment(
   }
 
   await deleteComment(commentId)
+
+  after(() => signalOpenTabs([documentId], 'comments'))
 
   return readState(documentId, guard.access, guard.session.user.id)
 }
@@ -206,6 +214,8 @@ export async function resolveComment(
       resolved,
     })
   }
+
+  after(() => signalOpenTabs([documentId], 'comments'))
 
   return readState(documentId, guard.access, guard.session.user.id)
 }

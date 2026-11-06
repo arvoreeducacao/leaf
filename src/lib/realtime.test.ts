@@ -11,8 +11,10 @@ import {
   lostNoticeDelayMs,
   reconnectingNoticeDelayMs,
   realtimeConnectionFrom,
+  readRealtimeSignal,
   realtimeRoomName,
   realtimeSecretHeader,
+  realtimeSignalsUrl,
 } from './realtime'
 import {
   hasValidRealtimeSecret,
@@ -55,6 +57,24 @@ describe('document room', () => {
     expect(isDocumentIdShaped('abc-123_XYZ')).toBe(true)
     expect(isDocumentIdShaped('abc 123')).toBe(false)
     expect(isDocumentIdShaped(42)).toBe(false)
+  })
+})
+
+describe('signals to open tabs', () => {
+  it('reads a topic it knows and ignores anything else', () => {
+    expect(readRealtimeSignal('{"topic":"database"}')).toBe('database')
+    expect(readRealtimeSignal('{"documentId":"a","topic":"comments"}')).toBe(
+      'comments',
+    )
+    expect(readRealtimeSignal('{"topic":"everything"}')).toBeNull()
+    expect(readRealtimeSignal('null')).toBeNull()
+    expect(readRealtimeSignal('not json')).toBeNull()
+  })
+
+  it('listens on a path of its own, next to the rooms', () => {
+    expect(realtimeSignalsUrl('wss://leaf.example/collab/', 'abc')).toBe(
+      'wss://leaf.example/collab/signals/doc:abc',
+    )
   })
 })
 

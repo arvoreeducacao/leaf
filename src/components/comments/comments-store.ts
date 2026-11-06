@@ -10,6 +10,7 @@ type StoredComments = Readonly<{ documentId: string; state: CommentsState }>
 
 let stored: StoredComments | null = null
 let loadingFor: string | null = null
+let reloadQueuedFor: string | null = null
 
 const listeners = new Set<() => void>()
 
@@ -42,6 +43,17 @@ export function useCommentsState(documentId: string): CommentsState | null {
   return current?.documentId === documentId ? current.state : null
 }
 
+function finishLoading(documentId: string) {
+  if (loadingFor === documentId) {
+    loadingFor = null
+  }
+
+  if (reloadQueuedFor === documentId) {
+    reloadQueuedFor = null
+    void reloadComments(documentId)
+  }
+}
+
 export async function ensureCommentsLoaded(documentId: string) {
   if (stored?.documentId === documentId || loadingFor === documentId) {
     return
@@ -58,8 +70,28 @@ export async function ensureCommentsLoaded(documentId: string) {
       toast.error(result.error)
     }
   } finally {
-    if (loadingFor === documentId) {
-      loadingFor = null
+    finishLoading(documentId)
+  }
+}
+
+export async function reloadComments(documentId: string) {
+  if (loadingFor === documentId) {
+    reloadQueuedFor = documentId
+
+    return
+  }
+
+  loadingFor = documentId
+
+  try {
+    const result = await loadComments(documentId)
+
+    if (result.ok && (stored === null || stored.documentId === documentId)) {
+      publishCommentsState(documentId, result.state)
     }
+  } catch {
+    return
+  } finally {
+    finishLoading(documentId)
   }
 }

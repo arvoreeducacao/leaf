@@ -42,6 +42,27 @@ export function RowProperties({
   const t = useTranslations('database')
   const [items, setItems] = useState(properties)
   const [values, setValues] = useState(row.values)
+  const [received, setReceived] = useState({ properties, values: row.values })
+  const [pendingWrites, setPendingWrites] = useState(0)
+
+  if (received.properties !== properties || received.values !== row.values) {
+    setReceived({ properties, values: row.values })
+
+    if (pendingWrites === 0) {
+      setItems(properties)
+      setValues(row.values)
+    }
+  }
+
+  async function tracked<T>(write: () => Promise<T>): Promise<T> {
+    setPendingWrites((count) => count + 1)
+
+    try {
+      return await write()
+    } finally {
+      setPendingWrites((count) => count - 1)
+    }
+  }
   const labels = {
     creator: t('templateCreator'),
     nextCycle: t('templateNextCycle'),
@@ -61,7 +82,9 @@ export function RowProperties({
 
     void (async () => {
       try {
-        const result = await setDatabaseRowValue(row.id, propertyId, value)
+        const result = await tracked(() =>
+          setDatabaseRowValue(row.id, propertyId, value),
+        )
 
         if (!result.ok) {
           toast.error(result.error)
@@ -77,7 +100,7 @@ export function RowProperties({
     name: string,
   ): Promise<SelectOption | null> {
     try {
-      const result = await addSelectOption(propertyId, name)
+      const result = await tracked(() => addSelectOption(propertyId, name))
 
       if (!result.ok) {
         toast.error(result.error)

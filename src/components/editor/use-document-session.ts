@@ -1,5 +1,6 @@
 'use client'
 
+import * as decoding from 'lib0/decoding'
 import { useEffect, useRef, useState } from 'react'
 import { IndexeddbPersistence } from 'y-indexeddb'
 import { WebsocketProvider } from 'y-websocket'
@@ -16,14 +17,17 @@ import { offlineStore } from '@/lib/offline/store'
 import {
   realtimeCloseCodes,
   realtimeConnectionFrom,
+  readRealtimeSignal,
   realtimeFragmentName,
   realtimeRoomName,
+  realtimeSignalMessage,
   realtimeSyncTimeoutMs,
 } from '@/lib/realtime'
 import { avatarUrlFor } from '@/lib/avatar'
 import { peersFromAwareness, realtimeColorFor } from '@/lib/realtime-user'
 
 import { publishPresence, resetPresence } from './presence-bridge'
+import { publishDocumentSignal } from './signal-bridge'
 import {
   onLocalCopyResetRequest,
   onRealtimeReconnectRequest,
@@ -340,6 +344,13 @@ export function useDocumentSession({
       )
 
       provider = socket
+      socket.messageHandlers[realtimeSignalMessage] = (_encoder, decoder) => {
+        const topic = readRealtimeSignal(decoding.readVarString(decoder))
+
+        if (topic && !disposed) {
+          publishDocumentSignal({ documentId, topic })
+        }
+      }
       socket.awareness.setLocalStateField('user', localUser)
       doc.on('update', (_update: Uint8Array, origin: unknown) => {
         if (origin !== socket && !(socket.wsconnected && socket.synced)) {
