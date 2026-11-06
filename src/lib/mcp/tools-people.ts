@@ -103,7 +103,7 @@ export async function createCommentTool(
     throw new McpToolError('not_found', 'comment thread not found')
   }
 
-  context.onDocumentWritten?.(document.id)
+  context.onDocumentWritten?.(document.id, 'comments')
 
   return {
     id,
@@ -135,7 +135,7 @@ export async function resolveCommentTool(
   const resolved = args.resolved ?? true
 
   await setCommentResolved(comment.id, resolved)
-  context.onDocumentWritten?.(document.id)
+  context.onDocumentWritten?.(document.id, 'comments')
 
   return { id: comment.id, documentId: document.id, resolved }
 }

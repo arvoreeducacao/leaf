@@ -83,6 +83,7 @@ import { ViewFilterBar } from './view-filter-bar'
 import { ViewToolbar } from './view-toolbar'
 
 const configSaveDelay = 500
+const localSettleMs = 1_000
 
 const optionKinds: ReadonlyArray<DatabasePropertyType> = [
   'select',
@@ -101,9 +102,15 @@ type Props = Readonly<{
   snapshot: DatabaseSnapshot
   canEdit: boolean
   compact?: boolean
+  requestedAt?: number
 }>
 
-export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
+export function DatabaseView({
+  snapshot,
+  canEdit,
+  compact = false,
+  requestedAt = 0,
+}: Props) {
   const t = useTranslations('database')
   const [properties, setProperties] = useState(snapshot.properties)
   const [views, setViews] = useState(snapshot.views)
@@ -137,8 +144,64 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
     ),
   )
   const [search, setSearch] = useState('')
+  const [adopted, setAdopted] = useState(snapshot)
+  const [settleCheck, setSettleCheck] = useState(0)
+  const adopting = useRef(true)
+  const localEditAt = useRef(0)
+  const writes = useRef({ pending: 0, finishedAt: 0 })
 
   const saveTimers = useRef(new Map<string, ReturnType<typeof setTimeout>>())
+
+  useEffect(() => {
+    if (adopting.current) {
+      adopting.current = false
+
+      return
+    }
+
+    localEditAt.current = Date.now()
+  }, [properties, rows, views, saved])
+
+  useEffect(() => {
+    if (
+      adopted === snapshot ||
+      writes.current.pending > 0 ||
+      requestedAt < writes.current.finishedAt
+    ) {
+      return
+    }
+
+    const wait = localEditAt.current + localSettleMs - Date.now()
+
+    if (wait > 0) {
+      const timer = window.setTimeout(
+        () => setSettleCheck((count) => count + 1),
+        wait,
+      )
+
+      return () => window.clearTimeout(timer)
+    }
+
+    adopting.current = true
+    setAdopted(snapshot)
+    setProperties(snapshot.properties)
+    setRows(snapshot.rows)
+    setViews(snapshot.views)
+    setSaved(
+      Object.fromEntries(
+        snapshot.views.map((view) => [view.id, parseViewConfig(view.config)]),
+      ),
+    )
+    setNotifyingViewIds(new Set(snapshot.notifyingViewIds))
+    setSlackLinks(
+      Object.fromEntries(snapshot.slackLinks.map((link) => [link.viewId, link])),
+    )
+    setActiveViewId((current) =>
+      snapshot.views.some((view) => view.id === current)
+        ? current
+        : (snapshot.views[0]?.id ?? ''),
+    )
+  }, [adopted, requestedAt, snapshot, settleCheck])
 
   useEffect(() => {
     function onRowChanged(event: Event) {
@@ -184,9 +247,20 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
     toast.error(t('saveFailed'))
   }
 
+  async function tracked<T>(write: () => Promise<T>): Promise<T> {
+    writes.current.pending += 1
+
+    try {
+      return await write()
+    } finally {
+      writes.current.pending -= 1
+      writes.current.finishedAt = Date.now()
+    }
+  }
+
   async function guard(run: () => Promise<{ ok: boolean; error?: string }>) {
     try {
-      const result = await run()
+      const result = await tracked(run)
 
       if (!result.ok) {
         toast.error(result.error ?? t('saveFailed'))
@@ -330,10 +404,12 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
 
     void (async () => {
       try {
-        const result = await createDatabaseView(
-          snapshot.id,
-          source.type,
-          t('copyOfView', { name: source.name }),
+        const result = await tracked(() =>
+          createDatabaseView(
+            snapshot.id,
+            source.type,
+            t('copyOfView', { name: source.name }),
+          ),
         )
 
         if (!result.ok) {
@@ -342,7 +418,9 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
           return
         }
 
-        await updateDatabaseView(result.id, { config: published })
+        await tracked(() =>
+          updateDatabaseView(result.id, { config: published }),
+        )
 
         const view: DatabaseView = {
           id: result.id,
@@ -422,11 +500,15 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
     createRow(seed = {}, templateId) {
       void (async () => {
         try {
-          const result = await createDatabaseRow(
-            snapshot.id,
-            seed,
-            '',
-            templateId === undefined ? snapshot.defaultTemplateId : templateId,
+          const result = await tracked(() =>
+            createDatabaseRow(
+              snapshot.id,
+              seed,
+              '',
+              templateId === undefined
+                ? snapshot.defaultTemplateId
+                : templateId,
+            ),
           )
 
           if (!result.ok) {
@@ -467,7 +549,7 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
       }
 
       try {
-        const result = await addSelectOption(propertyId, name)
+        const result = await tracked(() => addSelectOption(propertyId, name))
 
         if (!result.ok) {
           toast.error(result.error)
@@ -523,7 +605,9 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
       const name = t(`type_${type}`)
 
       try {
-        const result = await addDatabaseProperty(snapshot.id, type, name)
+        const result = await tracked(() =>
+          addDatabaseProperty(snapshot.id, type, name),
+        )
 
         if (!result.ok) {
           toast.error(result.error)
@@ -585,7 +669,9 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
 
       void (async () => {
         try {
-          const result = await changeDatabasePropertyType(propertyId, type)
+          const result = await tracked(() =>
+            changeDatabasePropertyType(propertyId, type),
+          )
 
           if (!result.ok) {
             toast.error(result.error)
@@ -648,7 +734,9 @@ export function DatabaseView({ snapshot, canEdit, compact = false }: Props) {
 
     void (async () => {
       try {
-        const result = await createDatabaseView(snapshot.id, type, name)
+        const result = await tracked(() =>
+          createDatabaseView(snapshot.id, type, name),
+        )
 
         if (!result.ok) {
           toast.error(result.error)

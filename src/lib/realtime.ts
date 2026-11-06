@@ -44,6 +44,36 @@ export const realtimeCloseCodes = {
   unavailable: 4500,
 } as const satisfies Record<string, RealtimeCloseCode>
 
+export const realtimeSignalMessage = 4
+
+export type RealtimeSignalTopic = 'document' | 'comments' | 'database'
+
+const realtimeSignalTopics: ReadonlyArray<RealtimeSignalTopic> = [
+  'document',
+  'comments',
+  'database',
+]
+
+export function isRealtimeSignalTopic(
+  value: unknown,
+): value is RealtimeSignalTopic {
+  return realtimeSignalTopics.some((topic) => topic === value)
+}
+
+export function readRealtimeSignal(raw: string): RealtimeSignalTopic | null {
+  try {
+    const topic = (JSON.parse(raw) as { topic?: unknown } | null)?.topic
+
+    return isRealtimeSignalTopic(topic) ? topic : null
+  } catch {
+    return null
+  }
+}
+
+export function realtimeSignalsUrl(base: string, documentId: string) {
+  return `${base.replace(/\/+$/, '')}/signals/${realtimeRoomName(documentId)}`
+}
+
 export const realtimeGivesUpFrom = 4400
 export const realtimeGivesUpUntil = 4500
 

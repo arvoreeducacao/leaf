@@ -39,7 +39,7 @@ import {
   listOrganizationDocuments,
   listOrganizationPeople,
 } from '@/lib/organizations'
-import { isDocumentIdShaped } from '@/lib/realtime'
+import { isDocumentIdShaped, type RealtimeSignalTopic } from '@/lib/realtime'
 import { writeBlocksToLiveRoom } from '@/lib/realtime-room'
 import { searchDocumentsHybrid } from '@/lib/search-hybrid'
 import { scheduleSearchIndexReconcile } from '@/lib/search-index'
@@ -95,7 +95,7 @@ export type McpToolContext = Readonly<{
   scopes: ReadonlyArray<string>
   clientId: string
   locale?: string
-  onDocumentWritten?: (documentId: string) => void
+  onDocumentWritten?: (documentId: string, topic?: RealtimeSignalTopic) => void
 }>
 
 export function canWrite(context: McpToolContext) {

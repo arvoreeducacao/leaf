@@ -73,6 +73,7 @@ import {
   listDatabaseProperties,
   toDatabaseRow,
 } from '@/lib/databases'
+import { signalOpenTabs } from '@/lib/realtime-signals'
 import { indexDocument, removeDocumentFromIndex } from '@/lib/search-index'
 
 export type DatabaseActionResult = { ok: true } | { ok: false; error: string }
@@ -112,6 +113,16 @@ async function canEditDatabase(databaseId: string) {
   const access = await getDocumentAccess(databaseId, session)
 
   return canEdit(access) ? session : null
+}
+
+function revalidateDatabase(databaseId: string) {
+  revalidatePath(`/doc/${databaseId}`)
+  after(() => signalOpenTabs([databaseId], 'database'))
+}
+
+function revalidateRow(rowId: string) {
+  revalidatePath(`/doc/${rowId}`)
+  after(() => signalOpenTabs([rowId], 'document'))
 }
 
 function untitledRow(title: string) {
@@ -261,7 +272,7 @@ export async function addDatabaseProperty(
   const refresh =
     type === 'uniqueId' ? await seedUniqueIdProperty(databaseId, id) : null
 
-  revalidatePath(`/doc/${databaseId}`)
+  revalidateDatabase(databaseId)
 
   return { ok: true, id, refresh }
 }
@@ -287,7 +298,7 @@ export async function renameDatabaseProperty(
     .set({ name: trimmed })
     .where(eq(databaseProperties.id, propertyId))
 
-  revalidatePath(`/doc/${property.databaseId}`)
+  revalidateDatabase(property.databaseId)
 
   return { ok: true }
 }
@@ -331,7 +342,7 @@ export async function changeDatabasePropertyType(
       ? await seedUniqueIdProperty(property.databaseId, propertyId, [property])
       : unwrapped
 
-  revalidatePath(`/doc/${property.databaseId}`)
+  revalidateDatabase(property.databaseId)
 
   return { ok: true, refresh }
 }
@@ -362,7 +373,7 @@ export async function setDatabaseUniqueIdPrefix(
     })
     .where(eq(databaseProperties.id, propertyId))
 
-  revalidatePath(`/doc/${property.databaseId}`)
+  revalidateDatabase(property.databaseId)
 
   return { ok: true }
 }
@@ -391,7 +402,7 @@ export async function deleteDatabaseProperty(
     }
   }
 
-  revalidatePath(`/doc/${property.databaseId}`)
+  revalidateDatabase(property.databaseId)
 
   return { ok: true }
 }
@@ -428,7 +439,7 @@ export async function addSelectOption(
 
   const { option } = added
 
-  revalidatePath(`/doc/${property.databaseId}`)
+  revalidateDatabase(property.databaseId)
 
   return { ok: true, option }
 }
@@ -452,7 +463,7 @@ export async function deleteSelectOption(
     .set({ options: serializeOptions(options) })
     .where(eq(databaseProperties.id, propertyId))
 
-  revalidatePath(`/doc/${property.databaseId}`)
+  revalidateDatabase(property.databaseId)
 
   return { ok: true }
 }
@@ -665,7 +676,7 @@ export async function createDatabaseRow(
     .where(eq(documents.id, databaseId))
 
   await indexDocument(id)
-  revalidatePath(`/doc/${databaseId}`)
+  revalidateDatabase(databaseId)
 
   return {
     ok: true,
@@ -731,8 +742,8 @@ export async function setDatabaseRowValue(
     .set({ properties: serializeValues(values), updatedAt: new Date() })
     .where(eq(documents.id, rowId))
 
-  revalidatePath(`/doc/${row.parentId}`)
-  revalidatePath(`/doc/${rowId}`)
+  revalidateDatabase(row.parentId)
+  revalidateRow(rowId)
 
   return { ok: true }
 }
@@ -783,8 +794,8 @@ export async function setDatabaseRowValues(
     .set({ properties: serializeValues(next), updatedAt: new Date() })
     .where(eq(documents.id, rowId))
 
-  revalidatePath(`/doc/${row.parentId}`)
-  revalidatePath(`/doc/${rowId}`)
+  revalidateDatabase(row.parentId)
+  revalidateRow(rowId)
 
   return { ok: true }
 }
@@ -829,8 +840,8 @@ export async function renameDatabaseRow(
     }
   })
 
-  revalidatePath(`/doc/${row.parentId}`)
-  revalidatePath(`/doc/${rowId}`)
+  revalidateDatabase(row.parentId)
+  revalidateRow(rowId)
 
   return { ok: true }
 }
@@ -862,7 +873,7 @@ export async function deleteDatabaseRow(
     await removeDocumentFromIndex(id)
   }
 
-  revalidatePath(`/doc/${row.parentId}`)
+  revalidateDatabase(row.parentId)
   revalidatePath('/', 'layout')
 
   return { ok: true }
@@ -912,7 +923,7 @@ export async function createDatabaseTemplate(
     updatedAt: now,
   })
 
-  revalidatePath(`/doc/${databaseId}`)
+  revalidateDatabase(databaseId)
   revalidatePath('/', 'layout')
 
   return { ok: true, id }
@@ -956,7 +967,7 @@ export async function duplicateDatabaseTemplate(
     updatedAt: now,
   })
 
-  revalidatePath(`/doc/${template.parentId}`)
+  revalidateDatabase(template.parentId)
   revalidatePath('/', 'layout')
 
   return { ok: true, id }
@@ -983,7 +994,7 @@ export async function deleteDatabaseTemplate(
     .set({ defaultTemplateId: null })
     .where(eq(documents.defaultTemplateId, templateId))
 
-  revalidatePath(`/doc/${template.parentId}`)
+  revalidateDatabase(template.parentId)
   revalidatePath('/', 'layout')
 
   return { ok: true }
@@ -1006,7 +1017,7 @@ export async function setDefaultDatabaseTemplate(
     .set({ defaultTemplateId: templateId })
     .where(eq(documents.id, databaseId))
 
-  revalidatePath(`/doc/${databaseId}`)
+  revalidateDatabase(databaseId)
 
   return { ok: true }
 }
@@ -1061,7 +1072,7 @@ export async function createDatabaseView(
     createdAt: new Date(),
   })
 
-  revalidatePath(`/doc/${databaseId}`)
+  revalidateDatabase(databaseId)
 
   return { ok: true, id, config }
 }
@@ -1115,7 +1126,7 @@ export async function updateDatabaseView(
     .set(next)
     .where(eq(databaseViews.id, viewId))
 
-  revalidatePath(`/doc/${view.databaseId}`)
+  revalidateDatabase(view.databaseId)
 
   return { ok: true }
 }
@@ -1226,7 +1237,7 @@ export async function publishDatabaseViewDraft(
       ),
     )
 
-  revalidatePath(`/doc/${view.databaseId}`)
+  revalidateDatabase(view.databaseId)
 
   return { ok: true }
 }
@@ -1254,7 +1265,7 @@ export async function deleteDatabaseView(
 
   await db.delete(databaseViews).where(eq(databaseViews.id, viewId))
 
-  revalidatePath(`/doc/${view.databaseId}`)
+  revalidateDatabase(view.databaseId)
 
   return { ok: true }
 }

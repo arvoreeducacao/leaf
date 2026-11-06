@@ -235,9 +235,14 @@ describe('update_database_row and delete_database_row', () => {
   })
 
   it('moves the row and its subpages to the trash', async () => {
-    const result = await deleteDatabaseRowTool(contextFor(editor), { rowId: 'row-7b' })
+    const written = vi.fn()
+    const result = await deleteDatabaseRowTool(
+      { ...contextFor(editor), onDocumentWritten: written },
+      { rowId: 'row-7b' },
+    )
 
     expect(result.trashed).toBe(true)
+    expect(written).toHaveBeenCalledWith(database, 'database')
 
     const trashed = await db
       .select({ id: documents.id, deletedAt: documents.deletedAt })

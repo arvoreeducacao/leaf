@@ -1,6 +1,7 @@
 import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js'
 import { eq } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
+import { after } from 'next/server'
 
 import { db } from '@/db'
 import { user } from '@/db/schema'
@@ -14,6 +15,8 @@ import {
 import { mcpNotFound } from '@/lib/mcp/discovery'
 import { createLeafMcpServer } from '@/lib/mcp/server'
 import { verifyMcpAccessToken } from '@/lib/mcp/token'
+import type { RealtimeSignalTopic } from '@/lib/realtime'
+import { signalDocumentChanged, signalOpenTabs } from '@/lib/realtime-signals'
 
 export const MAX_MCP_BODY_BYTES = 1_000_000
 
@@ -102,10 +105,15 @@ function withNoStore(response: Response) {
   return new Response(response.body, { status: response.status, headers })
 }
 
-function revalidateDocument(documentId: string) {
+function revalidateDocument(documentId: string, topic?: RealtimeSignalTopic) {
   try {
     revalidatePath('/', 'layout')
     revalidatePath(`/doc/${documentId}`)
+    after(() =>
+      topic
+        ? signalOpenTabs([documentId], topic)
+        : signalDocumentChanged(documentId),
+    )
   } catch {
     return
   }

@@ -5,6 +5,7 @@ import {
 } from '@/lib/comments'
 import { isSlackWebhook } from '@/lib/database/form-message'
 import { getFormSlack } from '@/lib/form-webhooks'
+import { signalOpenTabs } from '@/lib/realtime-signals'
 
 import { type SlackClient, createSlackClient } from './api'
 import { SLACK_TIMEOUT_MS, slackBotToken } from './config'
@@ -157,6 +158,7 @@ export async function ingestThreadReply(
       message.messageTs,
       body,
     )
+    await signalOpenTabs([thread.documentId], 'comments')
 
     return 'updated'
   }
@@ -177,7 +179,13 @@ export async function ingestThreadReply(
     origin: 'slack',
   })
 
-  return created === null ? 'ignored' : 'created'
+  if (created === null) {
+    return 'ignored'
+  }
+
+  await signalOpenTabs([thread.documentId], 'comments')
+
+  return 'created'
 }
 
 export type PushCommentInput = Readonly<{

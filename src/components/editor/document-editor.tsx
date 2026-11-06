@@ -10,11 +10,15 @@ import { WarningIcon } from '@/components/icons'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 
 import type { CommentViewer } from '@/components/comments/comment-composer'
+import { reloadComments } from '@/components/comments/comments-store'
 
 import type { LinkedDocumentIcon } from './doc-link-icons'
 import { EditorSkeleton } from './editor-skeleton'
+import { useDocumentSignal } from './signal-bridge'
 import { requestLocalCopyReset } from './status-bridge'
 import { useDocumentSession } from './use-document-session'
+
+const pageRefreshCoalesceMs = 300
 
 const BlockNoteEditor = dynamic(() => import('./block-note-editor'), {
   ssr: false,
@@ -82,6 +86,11 @@ export function DocumentEditor({
     fallbackContent: initialContent,
     fallbackUpdatedAt: initialUpdatedAt,
     onAccessChange: refresh,
+  })
+
+  useDocumentSignal(documentId, 'document', refresh, pageRefreshCoalesceMs)
+  useDocumentSignal(documentId, 'comments', () => {
+    void reloadComments(documentId)
   })
 
   if (readOnly !== wasReadOnly) {

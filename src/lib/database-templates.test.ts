@@ -8,6 +8,16 @@ vi.mock('@/db', async () => {
 
 vi.mock('next/cache', () => ({ revalidatePath: () => undefined }))
 
+vi.mock('next/server', () => ({
+  after: (task: () => unknown) => {
+    void task()
+  },
+}))
+
+const signalOpenTabs = vi.hoisted(() => vi.fn(async () => undefined))
+
+vi.mock('@/lib/realtime-signals', () => ({ signalOpenTabs }))
+
 vi.mock('next-intl/server', () => ({
   getTranslations: async (namespace: string) => (key: string) =>
     `${namespace}.${key}`,
@@ -122,6 +132,28 @@ beforeEach(async () => {
     type: 'text',
     position: 0,
     createdAt: now,
+  })
+})
+
+describe('open tabs of the database', () => {
+  it('hear about a new row', async () => {
+    signalOpenTabs.mockClear()
+
+    const result = await createDatabaseRow('base', {}, 'Beta')
+
+    expect(result.ok).toBe(true)
+    expect(signalOpenTabs).toHaveBeenCalledWith(['base'], 'database')
+  })
+
+  it('hear about a value, and so does the open row', async () => {
+    signalOpenTabs.mockClear()
+
+    await setDatabaseRowValue('row-alfa', 'prop-status', 'done')
+
+    expect(signalOpenTabs.mock.calls).toEqual([
+      [['base'], 'database'],
+      [['row-alfa'], 'document'],
+    ])
   })
 })
 

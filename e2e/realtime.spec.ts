@@ -16,6 +16,7 @@ import {
   createDocument,
   editorBody,
   expectNoHorizontalOverflow,
+  renameDocument,
   signIn,
   signUp,
   trackCollaboration,
@@ -163,6 +164,15 @@ async function savedContent(documentId: string) {
   )
 
   return rows[0]?.content ?? ''
+}
+
+async function savedTitle(documentId: string) {
+  const rows = await queryDatabase<Array<{ title: string }>>(
+    'select title from documents where id = ?',
+    [documentId],
+  )
+
+  return rows[0]?.title ?? ''
 }
 
 async function createVersion(documentId: string) {
@@ -688,6 +698,96 @@ test.describe('realtime collaboration', () => {
     await expect(notice(page)).toHaveCount(0)
 
     await context.close()
+  })
+
+  test('a title renamed in one tab reaches the other without a reload, and spares a title being typed', async ({
+    browser,
+  }) => {
+    const { owner, guest, ownerPage, guestPage, id } = await twoEditors(
+      browser,
+      'Title before the rename',
+    )
+    const guestTitle = guestPage.getByLabel('Título do documento')
+
+    await renameDocument(ownerPage, 'Title after the rename')
+    await expect(guestTitle).toHaveValue('Title after the rename', {
+      timeout: 20_000,
+    })
+
+    await guestTitle.click()
+    await renameDocument(ownerPage, 'Title while the guest only looks')
+    await expect(guestTitle).toHaveValue('Title while the guest only looks', {
+      timeout: 20_000,
+    })
+    await guestTitle.blur()
+    await guestPage.waitForTimeout(1_500)
+    expect(await savedTitle(id)).toBe('Title while the guest only looks')
+
+    await guestTitle.click()
+    await guestTitle.fill('Title the guest is typing')
+    await renameDocument(ownerPage, 'Title renamed again')
+    await expect(
+      guestPage.getByRole('link', { name: 'Title renamed again' }).first(),
+    ).toBeVisible({ timeout: 20_000 })
+    await expect(guestTitle).toHaveValue('Title the guest is typing')
+
+    await owner.close()
+    await guest.close()
+  })
+
+  test('a comment reaches the other tab without a reload', async ({ browser }) => {
+    const { owner, guest, ownerPage, guestPage } = await twoEditors(
+      browser,
+      'Document with a live comment',
+    )
+
+    await ownerPage.getByTestId('comments-button').click()
+    await ownerPage.getByLabel('Novo comentário').fill('Comment written in the other tab')
+    await ownerPage.getByTestId('submit-comment').click()
+    await expect(
+      ownerPage.getByText('Comentário adicionado').first(),
+    ).toBeVisible()
+
+    await expect(guestPage.getByTestId('document-comments')).toContainText(
+      'Comment written in the other tab',
+      { timeout: 20_000 },
+    )
+
+    await owner.close()
+    await guest.close()
+  })
+
+  test('a row added in one tab shows in the table of the other without a reload', async ({
+    browser,
+  }) => {
+    const { owner, guest, ownerPage, guestPage, id } = await twoEditors(
+      browser,
+      'Page that holds a table',
+    )
+
+    await ownerPage.getByRole('button', { name: 'Criar novo' }).click()
+    await ownerPage.getByRole('menuitem', { name: 'Base de dados' }).click()
+    await ownerPage.waitForURL((url) => !url.pathname.endsWith(id))
+
+    const databaseId = ownerPage.url().split('/doc/')[1]
+
+    await nestUnder(databaseId, id)
+    await guestPage.goto(`/doc/${databaseId}`)
+
+    const ownerRows = ownerPage.locator('table tbody tr')
+    const guestRows = guestPage.locator('table tbody tr')
+
+    await expect(guestPage.locator('table')).toBeVisible({ timeout: 20_000 })
+
+    const before = await ownerRows.count()
+
+    await expect(guestRows).toHaveCount(before)
+    await ownerPage.getByRole('button', { name: 'Nova página', exact: true }).click()
+    await expect(ownerRows).toHaveCount(before + 1)
+    await expect(guestRows).toHaveCount(before + 1, { timeout: 20_000 })
+
+    await owner.close()
+    await guest.close()
   })
 
   test('a long breadcrumb fits the header on one line at 1024 px', async ({

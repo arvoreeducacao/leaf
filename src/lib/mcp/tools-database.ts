@@ -462,7 +462,7 @@ export async function deleteDatabaseRowTool(
     await removeDocumentFromIndex(id)
   }
 
-  context.onDocumentWritten?.(database.id)
+  context.onDocumentWritten?.(database.id, 'database')
 
   return { id: row.id, databaseId: database.id, trashed: true }
 }
@@ -712,7 +712,7 @@ export async function addDatabasePropertyTool(
     await seedUniqueIdProperty(database.id, property.id)
   }
 
-  context.onDocumentWritten?.(database.id)
+  context.onDocumentWritten?.(database.id, 'database')
 
   return { databaseId: database.id, property: propertyPayload(property as DatabaseProperty) }
 }
@@ -809,7 +809,7 @@ export async function updateDatabasePropertyTool(
     (item) => item.id === property.id,
   )
 
-  context.onDocumentWritten?.(database.id)
+  context.onDocumentWritten?.(database.id, 'database')
 
   return {
     databaseId: database.id,
@@ -840,7 +840,7 @@ export async function deleteDatabasePropertyTool(
     }
   }
 
-  context.onDocumentWritten?.(database.id)
+  context.onDocumentWritten?.(database.id, 'database')
 
   return {
     databaseId: database.id,
@@ -948,7 +948,7 @@ export async function createDatabaseViewTool(
   }
 
   await db.insert(databaseViews).values(view)
-  context.onDocumentWritten?.(database.id)
+  context.onDocumentWritten?.(database.id, 'database')
 
   return { databaseId: database.id, view: viewPayload(view, properties) }
 }
@@ -1005,7 +1005,7 @@ export async function updateDatabaseViewTool(
   }
 
   await db.update(databaseViews).set(changes).where(eq(databaseViews.id, view.id))
-  context.onDocumentWritten?.(database.id)
+  context.onDocumentWritten?.(database.id, 'database')
 
   return {
     databaseId: database.id,

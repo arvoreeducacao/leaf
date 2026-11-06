@@ -6,11 +6,18 @@ import type { AddressInfo } from 'node:net'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
+import * as decoding from 'lib0/decoding'
 import { WebsocketProvider } from 'y-websocket'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import * as Y from 'yjs'
 
-import { realtimeFragmentName, realtimeSecretHeader } from './realtime'
+import {
+  readRealtimeSignal,
+  realtimeFragmentName,
+  realtimeSecretHeader,
+  realtimeSignalMessage,
+  realtimeSignalsUrl,
+} from './realtime'
 import {
   contentFromRealtimeState,
   seedUpdateFromContent,
@@ -96,6 +103,12 @@ describe('realtime server rooms over HTTP', () => {
       response.setHeader('content-type', 'application/json')
 
       if (path === '/api/realtime/authz') {
+        if (body.documentId === 'proibido') {
+          response.writeHead(403).end('{}')
+
+          return
+        }
+
         response.end(JSON.stringify({ canWrite: true, user: { id: 'pessoa' } }))
 
         return
@@ -328,5 +341,105 @@ describe('realtime server rooms over HTTP', () => {
     } finally {
       room.stop()
     }
+  })
+
+  function sendSignal(body: Record<string, unknown>, withSecret = true) {
+    return fetch(url('/signals'), {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        ...(withSecret ? { [realtimeSecretHeader]: secret } : {}),
+      },
+      body: JSON.stringify(body),
+    })
+  }
+
+  async function listen(documentId: string) {
+    const signals: Array<string> = []
+    const closes: Array<number> = []
+    const socket = new WebSocket(
+      realtimeSignalsUrl(`ws://127.0.0.1:${port}`, documentId),
+    )
+
+    socket.addEventListener('message', (event) => {
+      signals.push(String(event.data))
+    })
+    socket.addEventListener('close', (event) => {
+      closes.push(event.code)
+    })
+
+    await waitFor(
+      () => socket.readyState === WebSocket.OPEN || closes.length > 0,
+      'the listener to open or close',
+    )
+
+    return { signals, closes, socket }
+  }
+
+  it('tells the people in the room that something around the document changed', async () => {
+    const topics: Array<string | null> = []
+
+    provider.messageHandlers[realtimeSignalMessage] = (_encoder, decoder) => {
+      topics.push(readRealtimeSignal(decoding.readVarString(decoder)))
+    }
+
+    const response = await sendSignal({ documentIds: ['abc'], topic: 'comments' })
+
+    expect(response.status).toBe(200)
+    expect(await response.json()).toMatchObject({ status: 'ok', delivered: 1 })
+    await waitFor(() => topics.length > 0, 'the signal in the room')
+    expect(topics).toEqual(['comments'])
+  })
+
+  it('tells a tab that only listens, without opening a room for it', async () => {
+    const listener = await listen('base')
+
+    try {
+      const response = await sendSignal({
+        documentIds: ['base'],
+        topic: 'database',
+      })
+
+      expect(await response.json()).toMatchObject({ delivered: 1 })
+      await waitFor(() => listener.signals.length > 0, 'the signal to the listener')
+      expect(JSON.parse(listener.signals[0])).toEqual({
+        documentId: 'base',
+        topic: 'database',
+      })
+
+      const room = await fetch(url('/rooms/doc%3Abase'), {
+        headers: { [realtimeSecretHeader]: secret },
+      })
+
+      expect(room.status).toBe(404)
+    } finally {
+      listener.socket.close()
+    }
+  })
+
+  it('does not let someone without access listen', async () => {
+    const listener = await listen('proibido')
+
+    await waitFor(() => listener.closes.length > 0, 'the refusal')
+    expect(listener.closes[0]).toBe(4403)
+  })
+
+  it('closes the listeners of a document whose access changed', async () => {
+    const listener = await listen('base-acesso')
+
+    await changeAccess({ documentIds: ['base-acesso'] })
+    await waitFor(() => listener.closes.length > 0, 'the access close')
+    expect(listener.closes[0]).toBe(4100)
+  })
+
+  it('refuses a signal without the secret or with a topic it does not know', async () => {
+    const withoutSecret = await sendSignal(
+      { documentIds: ['abc'], topic: 'document' },
+      false,
+    )
+    const unknownTopic = await sendSignal({ documentIds: ['abc'], topic: 'tudo' })
+
+    expect(withoutSecret.status).toBe(404)
+    expect(unknownTopic.status).toBe(400)
   })
 })

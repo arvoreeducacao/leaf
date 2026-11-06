@@ -6,6 +6,10 @@ vi.mock('@/db', async () => {
   return createTestDb()
 })
 
+const signalOpenTabs = vi.hoisted(() => vi.fn(async () => undefined))
+
+vi.mock('@/lib/realtime-signals', () => ({ signalOpenTabs }))
+
 import { db } from '@/db'
 import {
   databaseViews,
@@ -248,7 +252,10 @@ describe('ingestThreadReply', () => {
       name: 'Carol Uehara',
     })
 
+    signalOpenTabs.mockClear()
+
     expect(await ingestThreadReply(reply, client)).toBe('created')
+    expect(signalOpenTabs).toHaveBeenCalledWith(['slack-row'], 'comments')
 
     const threads = await listDocumentComments('slack-row')
 
@@ -268,10 +275,13 @@ describe('ingestThreadReply', () => {
 
     const { client } = recorder()
 
+    signalOpenTabs.mockClear()
+
     expect(await ingestThreadReply({ ...reply, botId: 'B1' }, client)).toBe(
       'ignored',
     )
     expect(await listDocumentComments('slack-row')).toHaveLength(0)
+    expect(signalOpenTabs).not.toHaveBeenCalled()
   })
 
   it('ignores the message that opened the thread', async () => {
@@ -313,9 +323,11 @@ describe('ingestThreadReply', () => {
     const { client } = recorder({ image: null, name: 'Carol Uehara' })
 
     expect(await ingestThreadReply(reply, client)).toBe('created')
+    signalOpenTabs.mockClear()
     expect(
       await ingestThreadReply({ ...reply, text: 'corrigindo: qualquer livro' }, client),
     ).toBe('updated')
+    expect(signalOpenTabs).toHaveBeenCalledWith(['slack-row'], 'comments')
 
     const threads = await listDocumentComments('slack-row')
 

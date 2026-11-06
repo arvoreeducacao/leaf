@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react'
 import { Skeleton } from '@/components/ui/skeleton'
 import type { DatabaseSnapshot } from '@/lib/databases'
 
-import { DatabaseView } from './database-view'
+import { LiveDatabaseView } from './live-database-view'
 
 type State =
   | Readonly<{ status: 'loading' }>
@@ -82,6 +82,10 @@ export default function DatabaseEmbed({ databaseId }: Props) {
   }
 
   return (
-    <DatabaseView canEdit={state.canEdit} compact snapshot={state.snapshot} />
+    <LiveDatabaseView
+      canEdit={state.canEdit}
+      compact
+      snapshot={state.snapshot}
+    />
   )
 }

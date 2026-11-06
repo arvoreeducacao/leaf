@@ -101,6 +101,23 @@ copy it held. The room keeps saving the body of a document in the trash, so the
 last edits before it went there are not lost and its state still matches the
 content when it comes back.
 
+### What changes around the body
+
+The room only carries the body. A title, icon or cover, a comment and a
+database row are saved by server actions, so after each one the app asks the
+collaboration server (`POST /signals`, with `LEAF_REALTIME_SECRET`) to tell the
+open tabs which part changed: `document`, `comments` or `database`. A tab with
+the document open in the editor gets the signal as message type `4` on the
+room connection. A database page or an inline database has no room, so it
+opens a connection that only listens (`/signals/doc:<id>`), checked for access
+like a room and closed with `4100` the same way. The tab then fetches only that
+part again: the page data for `document` (a title being typed is kept), the
+comments for `comments`, and the database for `database`, which waits a second
+after the last local edit so a fresh copy does not undo it. A signal that
+cannot be sent is lost and logged; the tab sees the change on the next reload,
+and a signal connection that drops fetches the database again when it comes
+back. MCP writes and Slack replies send the same signals.
+
 ### Writes that do not come from an editor
 
 The MCP (`update_document`) and any other server-side body write have to reach
