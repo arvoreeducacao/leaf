@@ -36,6 +36,7 @@ import {
 } from '@/lib/document-cover'
 import { normalizeDocumentIcon } from '@/lib/document-icon'
 import { listOwnedDocuments, listSubtreeIds } from '@/lib/documents'
+import { closeRealtimeConnections } from '@/lib/realtime-room'
 import { indexDocument, removeDocumentFromIndex } from '@/lib/search-index'
 import { registerUnsplashDownload, unsplashAccessKey } from '@/lib/unsplash'
 
@@ -475,14 +476,14 @@ export async function moveDocument(
     .set({ parentId, updatedAt: new Date() })
     .where(and(eq(documents.id, id), isNull(documents.deletedAt)))
 
+  const subtree = await listSubtreeIds(id, session.user.id)
+
   if (parentId) {
     const parent = await db.query.documents.findFirst({
       where: eq(documents.id, parentId),
     })
 
     if (parent) {
-      const subtree = await listSubtreeIds(id, session.user.id)
-
       await db
         .update(documents)
         .set({
@@ -493,6 +494,8 @@ export async function moveDocument(
         .where(inArray(documents.id, subtree))
     }
   }
+
+  await closeRealtimeConnections({ documentIds: subtree })
 
   revalidatePath('/', 'layout')
   revalidatePath(`/doc/${id}`)

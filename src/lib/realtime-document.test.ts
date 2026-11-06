@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import * as Y from 'yjs'
 
+import { sanitizeBlocks } from './markdown/sanitize'
 import { realtimeFragmentName } from './realtime'
 import {
   contentFromRealtimeState,
+  isRealtimeStateStale,
   seedUpdateFromContent,
 } from './realtime-document'
 
@@ -93,5 +95,69 @@ describe('seedUpdateFromContent', () => {
 describe('contentFromRealtimeState', () => {
   it('returns null when the state is not a Yjs update', () => {
     expect(contentFromRealtimeState(new Uint8Array([9, 9, 9, 9]))).toBeNull()
+  })
+})
+
+describe('isRealtimeStateStale', () => {
+  function seededState(content: string | null) {
+    const seed = seedUpdateFromContent(content)
+
+    if (seed.status !== 'ok') {
+      throw new Error('seed unexpectedly unreadable')
+    }
+
+    return seed.update
+  }
+
+  function savedContent(state: Uint8Array) {
+    const content = contentFromRealtimeState(state)
+
+    return JSON.stringify(sanitizeBlocks(JSON.parse(content as string)))
+  }
+
+  it('treats the content the room saved as fresh', () => {
+    const state = seededState(sample)
+
+    expect(isRealtimeStateStale(state, savedContent(state))).toBe(false)
+  })
+
+  it('treats the same text with other block ids as fresh', () => {
+    const state = seededState(sample)
+    const withoutIds = JSON.stringify(
+      (JSON.parse(sample) as Array<Record<string, unknown>>).map(
+        ({ type, props, content, children }) => ({
+          type,
+          props,
+          content,
+          children,
+        }),
+      ),
+    )
+
+    expect(isRealtimeStateStale(state, withoutIds)).toBe(false)
+  })
+
+  it('treats an empty room for a document without content as fresh', () => {
+    expect(isRealtimeStateStale(seededState(null), null)).toBe(false)
+  })
+
+  it('treats text written outside the room as stale', () => {
+    const state = seededState(sample)
+    const changed = sample.replace(
+      'Two people on the same text',
+      'A save that skipped the room',
+    )
+
+    expect(isRealtimeStateStale(state, changed)).toBe(true)
+  })
+
+  it('keeps the room when the saved content is unreadable', () => {
+    expect(isRealtimeStateStale(seededState(sample), '{ not json')).toBe(false)
+  })
+
+  it('seeds again when the stored state is unreadable', () => {
+    expect(isRealtimeStateStale(new Uint8Array([9, 9, 9, 9]), sample)).toBe(
+      true,
+    )
   })
 })

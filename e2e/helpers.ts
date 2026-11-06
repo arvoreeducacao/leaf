@@ -1,4 +1,4 @@
-import { expect, type Page } from '@playwright/test'
+import { expect, type Page, type WebSocket } from '@playwright/test'
 
 let counter = 0
 
@@ -72,7 +72,9 @@ export async function waitForEditorReady(page: Page) {
   await expect(page.locator('.leaf-editor').first()).toBeVisible({
     timeout: 30_000,
   })
-  await expect(page.getByText(/(palavras?|words?)$/).first()).toBeVisible()
+  await expect(
+    page.locator('.leaf-editor [contenteditable]').first(),
+  ).toBeVisible()
 }
 
 export async function renameDocument(page: Page, title: string) {
@@ -83,6 +85,63 @@ export async function renameDocument(page: Page, title: string) {
   await input.blur()
   await expect(page.getByLabel('Título do documento')).toHaveValue(title)
   await expect(page.getByLabel('Título do documento')).toBeEnabled()
+}
+
+export const collaborationServerPattern = /:1235\//
+
+type CollaborationSocket = { socket: WebSocket | null; frames: number }
+
+const collaborationSockets = new WeakMap<Page, CollaborationSocket>()
+
+export function trackCollaboration(page: Page) {
+  const state: CollaborationSocket = { socket: null, frames: 0 }
+
+  collaborationSockets.set(page, state)
+  page.on('websocket', (socket) => {
+    if (!collaborationServerPattern.test(socket.url())) {
+      return
+    }
+
+    state.socket = socket
+    state.frames = 0
+    socket.on('framereceived', () => {
+      if (state.socket === socket) {
+        state.frames += 1
+      }
+    })
+    socket.on('close', () => {
+      if (state.socket === socket) {
+        state.socket = null
+      }
+    })
+  })
+
+  return page
+}
+
+function collaborationOf(page: Page) {
+  const state = collaborationSockets.get(page)
+
+  if (!state) {
+    throw new Error('call trackCollaboration before opening the document')
+  }
+
+  return state
+}
+
+export async function waitForCollaboration(page: Page, timeout = 20_000) {
+  const state = collaborationOf(page)
+
+  await waitForEditorReady(page)
+  await expect
+    .poll(() => state.socket !== null && state.frames >= 2, { timeout })
+    .toBe(true)
+}
+
+export async function waitForCollaborationDrop(page: Page, timeout = 10_000) {
+  const state = collaborationOf(page)
+
+  await expect.poll(() => state.socket === null, { timeout }).toBe(true)
 }
 
 export function editorBody(page: Page) {

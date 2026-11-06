@@ -180,6 +180,14 @@ describe('realtimeCloseIsFinal', () => {
     expect(realtimeCloseIsFinal(realtimeCloseCodes.unavailable)).toBe(false)
   })
 
+  it('reconnects right away when access changed, so the server checks it again', () => {
+    expect(realtimeCloseIsFinal(realtimeCloseCodes.accessChanged)).toBe(false)
+  })
+
+  it('stops when the room was seeded again, so the tab drops its copy first', () => {
+    expect(realtimeCloseIsFinal(realtimeCloseCodes.identityChanged)).toBe(true)
+  })
+
   it('agrees with the codes the collaboration server actually sends', () => {
     const server = readFileSync('scripts/dev-realtime.mjs', 'utf8')
 

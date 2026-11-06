@@ -10,12 +10,16 @@ losing the network and coming back loses nothing: the state is read from the
 browser's disk before any request.
 
 **The way back to the server.** While the WebSocket is connected, the
-collaboration server is still what writes to MySQL. When it is not (real-time
-off, server down, or you with no network), every change goes into an outbox in
-IndexedDB (`leaf-offline`, key `outbox:<id>`) *before* the server is tried. The
-outbox is drained when the network returns, when the app opens and after every
-save; a document that already has a live collaboration session is dropped from
-the outbox instead of sent, because Yjs already carried those edits.
+collaboration server is still what writes to MySQL. While it is reconnecting
+(a deploy, a restart), changes stay only in the local `Y.Doc` and reach the
+room when it comes back: saving the body straight to MySQL in that window would
+make the room look outdated and get reseeded. When there is no collaboration
+(real-time off, the room never answered, or you with no network), every change
+goes into an outbox in IndexedDB (`leaf-offline`, key `outbox:<id>`) *before*
+the server is tried. The outbox is drained when the network returns, when the
+app opens and after every save; a document that already has a live
+collaboration session is dropped from the outbox instead of sent, because Yjs
+already carried those edits.
 
 **The shell.** The service worker (`public/sw.js`, registered as a module) keeps
 the build and the fonts cache-first, and pages and navigation payloads
@@ -49,22 +53,37 @@ in IndexedDB would add the two together on reconnect, **duplicating the
 content**. With the state persisted, the document identity never changes, and the
 merge is what Yjs promises.
 
-The `identity` is the safety belt: before connecting, the client asks
-`GET /api/documents/:id/snapshot` and compares it with the one it stored. If it
-changed (the state was lost and the room was reseeded), the local copy is
-discarded before the merge instead of duplicating the document. The `content`
-column stays the JSON projection that search, export and history read.
+The `identity` is the safety belt, checked twice. Before connecting, the client
+asks `GET /api/documents/:id/snapshot` and compares it with the one it stored.
+Then it sends that identity when it joins (`?identity=`), and the collaboration
+server compares it with the room it just opened: the room may have been
+reseeded between the two. If they differ, the server refuses with `4410`, and
+the tab discards its local copy and joins again, instead of merging two
+lineages and duplicating the document. The `content` column stays the JSON
+projection that search, export and history read.
 
-The two representations are tie-broken by date: if `documents.updated_at` is
-newer than `document_realtime_state.updated_at` — which only happens when
-someone saved through the solo path, with no WebSocket — the room is reseeded
-from the JSON with a new identity, and whoever holds a local copy discards it.
-That is why the server writes the state *after* writing the content: the other
-order would rotate the identity on every save, and everyone would lose offline
-for no reason. For the same reason, when the client has to seed the document on
-its own (no WebSocket but with network), it tears down the collaboration
-connection for that session: a document seeded in the browser must not later
-join the room's, or the content shows up twice.
+The two representations are tie-broken by content: when a room opens, the
+server rebuilds the JSON from the stored state and compares it with
+`documents.content`, ignoring block ids. Only a body written outside the room
+(the solo path, a version restore) makes them differ; then the room is
+reseeded from the JSON with a new identity, and whoever holds a local copy
+discards it. Renaming, moving or changing the icon touches
+`documents.updated_at` but not the body, so it no longer reseeds anything. A
+save from the room writes the content first and the state after, and keeps the
+identity. For the same reason, when the client has to seed the document on its
+own (no WebSocket but with network), it tears down the collaboration connection
+for that session: a document seeded in the browser must not later join the
+room's, or the content shows up twice.
+
+### When access changes
+
+The collaboration server checks access once, when a tab joins. When an owner
+changes a share, the organization access, a member or a teamspace, the app asks
+the server (`POST /access`, with `LEAF_REALTIME_SECRET`) to close the affected
+connections with `4100`: those of the person, or every connection to the
+documents when the change is about the documents. The tabs reconnect in about
+200 ms and pass the same check again, so someone who became a viewer stops
+writing and someone who lost access is refused.
 
 ### Writes that do not come from an editor
 

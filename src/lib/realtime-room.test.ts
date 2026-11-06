@@ -11,6 +11,7 @@ import {
   seedUpdateFromContent,
 } from './realtime-document'
 import {
+  closeRealtimeConnections,
   liveRoomDelta,
   resetWrongRoomAddressReports,
   writeBlocksToLiveRoom,
@@ -316,5 +317,109 @@ describe('writeBlocksToLiveRoom', () => {
       await writeBlocksToLiveRoom('abc', [paragraph('x')], 'append', null),
     ).toBe('disabled')
     expect(fake.seen).toHaveLength(0)
+  })
+})
+
+describe('closeRealtimeConnections', () => {
+  const secret = 'segredo-teste'
+  const saved = {
+    LEAF_REALTIME: process.env.LEAF_REALTIME,
+    LEAF_REALTIME_SECRET: process.env.LEAF_REALTIME_SECRET,
+    LEAF_REALTIME_SERVER_URL: process.env.LEAF_REALTIME_SERVER_URL,
+  }
+  let server: Server | null = null
+
+  afterEach(async () => {
+    for (const [key, value] of Object.entries(saved)) {
+      if (value === undefined) {
+        delete process.env[key]
+      } else {
+        process.env[key] = value
+      }
+    }
+
+    if (server) {
+      await new Promise((resolve) => server?.close(resolve))
+      server = null
+    }
+  })
+
+  async function fakeRealtime() {
+    const received: Array<{
+      path: string
+      secret: string | undefined
+      body: Record<string, unknown>
+    }> = []
+
+    server = createServer((request, response) => {
+      const chunks: Array<Buffer> = []
+
+      request.on('data', (chunk: Buffer) => chunks.push(chunk))
+      request.on('end', () => {
+        received.push({
+          path: new URL(request.url ?? '/', 'http://localhost').pathname,
+          secret: request.headers[realtimeSecretHeader] as string | undefined,
+          body: JSON.parse(Buffer.concat(chunks).toString('utf8')),
+        })
+        response.writeHead(200, { 'content-type': 'application/json' })
+        response.end('{"status":"ok","closed":1}')
+      })
+    })
+
+    await new Promise<void>((resolve) => server?.listen(0, '127.0.0.1', resolve))
+
+    const port = (server.address() as AddressInfo).port
+
+    process.env.LEAF_REALTIME = 'on'
+    process.env.LEAF_REALTIME_SECRET = secret
+    process.env.LEAF_REALTIME_SERVER_URL = `http://127.0.0.1:${port}/`
+
+    return { received, port }
+  }
+
+  it('asks the server to close what the change touched, signed with the secret', async () => {
+    const fake = await fakeRealtime()
+
+    await closeRealtimeConnections({ userId: 'person-1' })
+    await closeRealtimeConnections({ documentIds: ['doc-1', 'doc-2'] })
+
+    expect(fake.received).toEqual([
+      { path: '/access', secret, body: { userId: 'person-1' } },
+      { path: '/access', secret, body: { documentIds: ['doc-1', 'doc-2'] } },
+    ])
+  })
+
+  it('does not call the server when nothing changed', async () => {
+    const fake = await fakeRealtime()
+
+    await closeRealtimeConnections({ documentIds: [] })
+
+    expect(fake.received).toHaveLength(0)
+  })
+
+  it('does not call the server when realtime is off', async () => {
+    const fake = await fakeRealtime()
+
+    process.env.LEAF_REALTIME = 'off'
+
+    await closeRealtimeConnections({ userId: 'person-1' })
+
+    expect(fake.received).toHaveLength(0)
+  })
+
+  it('does not fail the access change when nothing answers, and says so', async () => {
+    const fake = await fakeRealtime()
+    const complain = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    await new Promise((resolve) => server?.close(resolve))
+    server = null
+    process.env.LEAF_REALTIME_SERVER_URL = `http://127.0.0.1:${fake.port}/`
+
+    await expect(
+      closeRealtimeConnections({ userId: 'person-1' }),
+    ).resolves.toBeUndefined()
+    expect(complain).toHaveBeenCalledTimes(1)
+
+    complain.mockRestore()
   })
 })

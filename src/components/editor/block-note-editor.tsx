@@ -123,7 +123,7 @@ export default function BlockNoteEditor({
 
   const { status, schedule, flush, markSaved } = useAutosave(
     documentId,
-    isEditable && connection !== 'connected',
+    isEditable && connection !== 'connected' && connection !== 'reconnecting',
   )
 
   const cursorTheme = resolvedTheme === 'dark' ? 'dark' : 'light'

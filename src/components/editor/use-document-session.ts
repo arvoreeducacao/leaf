@@ -14,6 +14,7 @@ import type { ServerSnapshot } from '@/lib/offline/local-document'
 import { dropQueuedDocument, readQueuedDocument } from '@/lib/offline/outbox'
 import { offlineStore } from '@/lib/offline/store'
 import {
+  realtimeCloseCodes,
   realtimeConnectionFrom,
   realtimeFragmentName,
   realtimeRoomName,
@@ -50,6 +51,7 @@ export type SessionConnection =
 
 const snapshotTimeoutMs = 4_000
 const offlineRetryMs = 5_000
+const rejoinCooldownMs = 10_000
 
 type Options = Readonly<{
   realtimeEnabled: boolean
@@ -157,6 +159,8 @@ export function useDocumentSession({
     let retryTimer = 0
     let stopReconnectRequests = () => {}
     let soloed = false
+    let lastRejoinAt = 0
+    let editedWhileAway = false
 
     function runPendingRetry() {
       const retry = pendingRetry
@@ -224,14 +228,24 @@ export function useDocumentSession({
     }
 
     function connectRealtime(snapshot: ServerSnapshot | null) {
+      const identity = snapshot?.identity ?? null
       const socket = new WebsocketProvider(
         resolveRealtimeUrl(url, port, window.location),
         room,
         doc,
+        {
+          disableBc: true,
+          ...(identity === null ? {} : { params: { identity } }),
+        },
       )
 
       provider = socket
       socket.awareness.setLocalStateField('user', localUser)
+      doc.on('update', (_update: Uint8Array, origin: unknown) => {
+        if (origin !== socket && !(socket.wsconnected && socket.synced)) {
+          editedWhileAway = true
+        }
+      })
 
       let opened = false
       let online = false
@@ -270,6 +284,7 @@ export function useDocumentSession({
         }
 
         markLive(documentId)
+        editedWhileAway = false
         void dropQueuedDocument(store, documentId)
         void writeLocalDocumentMeta(store, documentId, {
           identity: snapshot?.identity ?? null,
@@ -299,8 +314,18 @@ export function useDocumentSession({
         publishPeers(online)
       })
 
-      socket.on('closed', () => {
+      socket.on('closed', ({ code }: { code: number }) => {
         if (disposed) {
+          return
+        }
+
+        if (
+          code === realtimeCloseCodes.identityChanged &&
+          Date.now() - lastRejoinAt > rejoinCooldownMs
+        ) {
+          lastRejoinAt = Date.now()
+          void rejoinSeededRoom(socket)
+
           return
         }
 
@@ -319,6 +344,30 @@ export function useDocumentSession({
       })
 
       socket.awareness.on('change', () => publishPeers(online))
+    }
+
+    async function rejoinSeededRoom(socket: WebsocketProvider) {
+      const droppedEdits = editedWhileAway
+
+      editedWhileAway = false
+      stopReconnectRequests()
+      window.clearTimeout(syncTimeout)
+      socket.destroy()
+      provider = null
+      soloed = false
+      unmarkLive(documentId)
+      resetPresence()
+      setSession(null)
+      setPhase('loading')
+      setConnection('reconnecting')
+
+      await reset()
+
+      if (disposed) {
+        return
+      }
+
+      await start(droppedEdits)
     }
 
     async function startSolo(
@@ -445,7 +494,7 @@ export function useDocumentSession({
       connectRealtime(snapshot)
     }
 
-    async function start() {
+    async function start(droppedEdits = false) {
       await persistence.whenSynced
 
       if (disposed) {
@@ -477,7 +526,7 @@ export function useDocumentSession({
         server: snapshot,
       })
 
-      setConflict(decision.conflict)
+      setConflict(decision.conflict || droppedEdits)
 
       if (decision.action === 'reset-and-connect') {
         await reset()
