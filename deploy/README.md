@@ -35,6 +35,19 @@ The pieces you need:
 Anything else — SSO, AI, Unsplash, Notion import, semantic search — is optional
 and switches itself off when its keys are absent.
 
+**Restarting the collaboration server** drops every open connection, so restart
+it only when its code changes. Each image built by `.github/workflows/deploy.yml`
+carries a `realtime-<fingerprint>` tag computed from `scripts/dev-realtime.mjs`,
+`package.json`, `pnpm-lock.yaml` and the `Dockerfile`: two images with the same
+fingerprint run the same collaboration code. On `SIGTERM` the server refuses new
+connections, saves every room, closes the open connections with `1012` (service
+restart), then saves each room once more and answers `503` to any later write
+from the app, which the app treats as the server being down. It gives up after
+25 s (`LEAF_REALTIME_SHUTDOWN_MS`). Tabs reconnect on their own and keep their
+text on the device meanwhile. Give the process a longer grace period than that,
+and run a single replica that stops before the new one starts: rooms live in
+memory, and the last save wins.
+
 ## Árvore's own deployment
 
 Árvore runs Leaf on EKS. Those manifests are not in this repository: they name
