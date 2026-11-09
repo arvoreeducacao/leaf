@@ -1,3 +1,4 @@
+import { nanoid } from 'nanoid'
 import type { Metadata } from 'next'
 import { getTranslations } from 'next-intl/server'
 import { notFound, redirect } from 'next/navigation'
@@ -9,6 +10,7 @@ import { DocumentAccessDenied } from '@/components/app/document-access-denied'
 import { DocumentBreadcrumb } from '@/components/app/document-breadcrumb'
 import { DocumentCover } from '@/components/app/document-cover'
 import { DocumentHeader } from '@/components/app/document-header'
+import { RefreshWhenRestored } from '@/components/app/refresh-when-restored'
 import { DocumentComments } from '@/components/comments/document-comments'
 import { DatabaseSurface } from '@/components/database/database-surface'
 import { RowPropertiesSurface } from '@/components/database/row-properties-surface'
@@ -71,7 +73,12 @@ export default async function DocumentPage({ params }: Props) {
   }
 
   if (!access) {
-    return <DocumentAccessDenied />
+    return (
+      <>
+        <RefreshWhenRestored renderId={nanoid()} />
+        <DocumentAccessDenied />
+      </>
+    )
   }
 
   after(() => recordDocumentVisit(session.user.id, document.id))
@@ -108,6 +115,7 @@ export default async function DocumentPage({ params }: Props) {
 
   return (
     <>
+      <RefreshWhenRestored renderId={nanoid()} />
       <ActiveTrail
         trail={{
           documentId: document.id,

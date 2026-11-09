@@ -1,7 +1,7 @@
 'use client'
 
 import { useFormatter, useTranslations } from 'next-intl'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 
 import { CommentComposer } from '@/components/comments/comment-composer'
@@ -9,6 +9,7 @@ import type { CommentViewer } from '@/components/comments/comment-composer'
 import { CommentThreadItem } from '@/components/comments/comment-thread-item'
 import {
   publishCommentsState,
+  reloadComments,
   useCommentsState,
 } from '@/components/comments/comments-store'
 import { SlackIcon } from '@/components/icons'
@@ -51,10 +52,24 @@ export function DocumentComments({
     setNow(Date.now())
   }, [])
 
+  const seenState = useRef<CommentsState | null>(null)
+
   useEffect(() => {
-    if (published === null) {
-      publishCommentsState(documentId, initialState)
+    if (seenState.current === initialState) {
+      return
     }
+
+    const firstState = seenState.current === null
+
+    seenState.current = initialState
+
+    if (firstState && published === null) {
+      publishCommentsState(documentId, initialState)
+
+      return
+    }
+
+    void reloadComments(documentId)
   }, [documentId, initialState, published])
 
   async function run(

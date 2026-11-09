@@ -845,6 +845,89 @@ test.describe('realtime collaboration', () => {
     await guest.close()
   })
 
+  test('going back to a table shows the rows added while it was open and while away', async ({
+    browser,
+  }) => {
+    const { owner, guest, ownerPage, guestPage, id } = await twoEditors(
+      browser,
+      'Page the guest steps out to',
+    )
+
+    await ownerPage.getByRole('button', { name: 'Criar novo' }).click()
+    await ownerPage.getByRole('menuitem', { name: 'Base de dados' }).click()
+    await ownerPage.waitForURL((url) => !url.pathname.endsWith(id))
+
+    const databaseId = ownerPage.url().split('/doc/')[1]
+
+    await nestUnder(databaseId, id)
+    await guestPage.goto(`/doc/${databaseId}`)
+
+    const ownerRows = ownerPage.locator('table tbody tr')
+    const guestRows = guestPage.locator('table tbody tr')
+
+    await expect(guestPage.locator('table')).toBeVisible({ timeout: 20_000 })
+
+    const before = await ownerRows.count()
+
+    await ownerPage.getByRole('button', { name: 'Nova página', exact: true }).click()
+    await expect(guestRows).toHaveCount(before + 1, { timeout: 20_000 })
+
+    await guestPage
+      .getByRole('link', { name: 'Page the guest steps out to' })
+      .first()
+      .click()
+    await guestPage.waitForURL((url) => url.pathname.endsWith(id))
+    await ownerPage.getByRole('button', { name: 'Nova página', exact: true }).click()
+    await expect(ownerRows).toHaveCount(before + 2)
+
+    await guestPage.goBack()
+    await expect(guestRows).toHaveCount(before + 2, { timeout: 10_000 })
+
+    await owner.close()
+    await guest.close()
+  })
+
+  test('going back to a document shows the title and comments changed while it was open and while away', async ({
+    browser,
+  }) => {
+    const { owner, guest, ownerPage, guestPage } = await twoEditors(
+      browser,
+      'Title the guest saw first',
+    )
+    const guestComments = guestPage.getByTestId('document-comments')
+
+    await ownerPage.getByTestId('comments-button').click()
+    await ownerPage.getByLabel('Novo comentário').fill('Comment seen live')
+    await ownerPage.getByTestId('submit-comment').click()
+    await expect(guestComments).toContainText('Comment seen live', {
+      timeout: 20_000,
+    })
+    await ownerPage.keyboard.press('Escape')
+
+    await guestPage.getByRole('link', { name: 'Página inicial' }).click()
+    await guestPage.waitForURL((url) => url.pathname === '/')
+
+    await renameDocument(ownerPage, 'Title renamed while away')
+    await ownerPage
+      .getByTestId('document-comment-input')
+      .fill('Comment written while away')
+    await ownerPage.getByTestId('submit-document-comment').click()
+    await expect(ownerPage.getByTestId('document-comments')).toContainText(
+      'Comment written while away',
+    )
+
+    await guestPage.goBack()
+    await expect(guestPage.getByLabel('Título do documento')).toHaveValue(
+      'Title renamed while away',
+      { timeout: 10_000 },
+    )
+    await expect(guestComments).toContainText('Comment seen live')
+    await expect(guestComments).toContainText('Comment written while away')
+
+    await owner.close()
+    await guest.close()
+  })
+
   test('a long breadcrumb fits the header on one line at 1024 px', async ({
     browser,
   }) => {

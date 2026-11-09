@@ -33,6 +33,7 @@ export function LiveDatabaseView({ snapshot, canEdit, compact = false }: Props) 
   const refetchTimer = useRef<number | undefined>(undefined)
   const latestRequest = useRef(0)
   const pageStale = useRef(false)
+  const shownSnapshot = useRef(snapshot)
   const databaseId = snapshot.id
 
   useEffect(() => {
@@ -41,12 +42,23 @@ export function LiveDatabaseView({ snapshot, canEdit, compact = false }: Props) 
     }
   }, [])
 
-  function refetch() {
+  useEffect(() => {
+    if (shownSnapshot.current === snapshot) {
+      return
+    }
+
+    shownSnapshot.current = snapshot
+    refetch(false)
+  }, [snapshot])
+
+  function refetch(refreshWhenMissing = true) {
     window.clearTimeout(refetchTimer.current)
     refetchTimer.current = window.setTimeout(async () => {
       if (pageStale.current) {
         pageStale.current = false
         router.refresh()
+
+        return
       }
 
       const request = ++latestRequest.current
@@ -63,7 +75,7 @@ export function LiveDatabaseView({ snapshot, canEdit, compact = false }: Props) 
         }
 
         if (!response.ok) {
-          if (!compact) {
+          if (!compact && refreshWhenMissing) {
             router.refresh()
           }
 
