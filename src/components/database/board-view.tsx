@@ -24,6 +24,7 @@ type Props = Readonly<{
   canEdit: boolean
   handlers: DatabaseHandlers
   people: ReadonlyArray<Person>
+  compact?: boolean
 }>
 
 export function BoardView({
@@ -33,6 +34,7 @@ export function BoardView({
   canEdit,
   handlers,
   people,
+  compact = false,
 }: Props) {
   const t = useTranslations('database')
   const [dragging, setDragging] = useState<{
@@ -74,7 +76,12 @@ export function BoardView({
 
   return (
     <div className="overflow-x-auto pb-2">
-      <div className="relative flex min-w-max items-start gap-3">
+      <div
+        className={cn(
+          'relative flex min-w-max items-start gap-3',
+          compact ? undefined : 'px-4 tablet:px-24',
+        )}
+      >
         {groups.map((group) => {
           const key = group.id ?? 'none'
 

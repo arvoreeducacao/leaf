@@ -1110,6 +1110,7 @@ export function DatabaseView({
       {activeView.type === 'board' ? (
         <BoardView
           canEdit={canEdit}
+          compact={compact}
           groupProperty={resolvedGroupProperty}
           groups={groups}
           handlers={handlers}
