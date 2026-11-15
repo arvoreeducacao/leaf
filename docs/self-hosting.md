@@ -63,6 +63,7 @@ the environment:
 | `LEAF_SSO_CLIENT_ID` / `LEAF_SSO_CLIENT_SECRET` / `LEAF_SSO_ISSUER` | Switch on company SSO over OAuth2/OIDC. With no client id or no issuer the provider is not registered and the screen stays the email-and-password form; with them, password sign-up leaves the screen. Accounts are keyed by provider id and subject, not by issuer: pointing the issuer at a different identity provider under the same provider id signs a repeated `sub` in as the person who already holds it |
 | `LEAF_SSO_PROVIDER_ID` / `LEAF_SSO_PROVIDER_NAME` | The provider id (default `sso`, written to `account.provider_id` — changing it later locks out whoever already signed in) and the name shown on the button (default `SSO`) |
 | `LEAF_SSO_AUTHORIZATION_URL` / `LEAF_SSO_TOKEN_URL` / `LEAF_SSO_LOGOUT_URL` | The provider's endpoints. The first two default to `{issuer}/oauth2/authorize` and `{issuer}/oauth2/token`; without the logout one, the switch-account link does not appear |
+| `LEAF_SSO_JWKS_URL` / `LEAF_SSO_ID_TOKEN_ISSUER` / `LEAF_SSO_ID_TOKEN_AUDIENCE` | How the `id_token` is verified. Its signature is checked against the keys at `LEAF_SSO_JWKS_URL` (default `{issuer}/oauth2/jwks`), its `iss` must equal `LEAF_SSO_ID_TOKEN_ISSUER` (default `LEAF_SSO_ISSUER`) and its `aud` must contain `LEAF_SSO_ID_TOKEN_AUDIENCE` (default `LEAF_SSO_CLIENT_ID`). Set the last two when the provider's `iss` is not the base URL of its endpoints or its `aud` is not the client id. A token that fails any check signs nobody in |
 | `NOTION_CLIENT_ID` / `NOTION_CLIENT_SECRET` / `NOTION_REDIRECT_URI` | Switch on the Notion import by link; without them the path is off and the dialog says so. In production the redirect is `https://<your-host>/api/notion/callback` |
 | `NOTION_API_VERSION` | The Notion API version in the `Notion-Version` header (default `2025-09-03`, the first with *data sources*: a database with more than one data source becomes one Leaf database per source, with the source name in the title; a database with a single source stays as it was, mapped by the database id) |
 | `LEAF_EMBEDDING_MODEL` / `LEAF_EMBEDDING_DIMENSIONS` / `LEAF_EMBEDDING_BASE_URL` | Semantic search (optional; defaults to `text-embedding-3-small` at 512 dimensions, on OpenAI's API). What switches semantic search on is `OPENAI_API_KEY`; the initial chunk load is `node scripts/backfill-index.mjs` |
@@ -78,10 +79,11 @@ the environment:
 whole thing up locally in one command.
 
 **Restricted access**: with `LEAF_ALLOWED_EMAIL_DOMAINS` set, validation happens
-on the server at four points — better-auth's `before` hook on `/sign-up/email`
+on the server at five points — better-auth's `before` hook on `/sign-up/email`
 and `/sign-in/email`, `databaseHooks.user.create.before` (covering any account
-creation path, OAuth included) and `databaseHooks.session.create.before`
-(covering any sign-in path). Document and organisation invitations use the same
+creation path, OAuth included), `databaseHooks.session.create.before`
+(covering any sign-in path) and every MCP call (covering access tokens issued
+before the list changed). Document and organisation invitations use the same
 list.
 
 **Importing from Notion**: Leaf is a Notion *public connection*, with OAuth per
@@ -144,7 +146,9 @@ on `http://localhost:3000`). The provider is registered by better-auth's
 anticipated case. `token` authenticates the client with `client_secret_post` in
 an `x-www-form-urlencoded` body and answers `access_token` + `id_token` with no
 `refresh_token` and no `userinfo` endpoint. Identity comes from the `id_token`
-claims (`sub` becomes the account's external id, `email` becomes the email; since
+claims, read only after the token passes the signature, issuer, audience and
+expiry checks described in the table above (`sub` becomes the account's external
+id, `email` becomes the email; since
 the IdP does not send `name`, the name is born from the local part of the email).
 Which authentication method to offer is the provider's screen to decide, not
 Leaf's.
