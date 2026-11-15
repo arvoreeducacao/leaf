@@ -61,6 +61,8 @@ export async function verifySsoIdToken(
       typeof payload.email !== 'string' ||
       payload.email.length === 0
     ) {
+      console.error('SSO id_token refused', 'ERR_MISSING_SUBJECT_OR_EMAIL')
+
       return null
     }
 
@@ -79,9 +81,19 @@ export async function verifySsoIdToken(
       error instanceof SyntaxError ||
       error instanceof TypeError
     ) {
+      console.error('SSO id_token refused', refusalReason(error))
+
       return null
     }
 
     throw error
   }
+}
+
+function refusalReason(error: unknown) {
+  if (error instanceof errors.JWTClaimValidationFailed) {
+    return `${error.code} (${error.claim})`
+  }
+
+  return error instanceof errors.JOSEError ? error.code : 'ERR_MALFORMED_TOKEN'
 }
