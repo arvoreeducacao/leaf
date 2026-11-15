@@ -4,8 +4,9 @@ import { revalidatePath } from 'next/cache'
 import { after } from 'next/server'
 
 import { db } from '@/db'
-import { user } from '@/db/schema'
+import { oauthClients, user } from '@/db/schema'
 import { createRateLimiter } from '@/lib/authz'
+import { emailDomainPolicy, isEmailDomainAllowed } from '@/lib/email-domain'
 import {
   isMcpEnabled,
   mcpAllowedHosts,
@@ -147,12 +148,23 @@ export async function handleMcpRequest(request: Request): Promise<Response> {
     return tooManyRequests(decision.retryAfterSeconds)
   }
 
-  const account = await db.query.user.findFirst({
-    columns: { id: true, email: true },
-    where: eq(user.id, access.userId),
-  })
+  const [account, client] = await Promise.all([
+    db.query.user.findFirst({
+      columns: { id: true, email: true },
+      where: eq(user.id, access.userId),
+    }),
+    db.query.oauthClients.findFirst({
+      columns: { disabled: true },
+      where: eq(oauthClients.clientId, access.clientId),
+    }),
+  ])
 
-  if (!account) {
+  if (
+    !account ||
+    !isEmailDomainAllowed(account.email, emailDomainPolicy().domains) ||
+    !client ||
+    client.disabled
+  ) {
     return unauthorized()
   }
 
