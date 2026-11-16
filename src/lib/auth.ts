@@ -26,6 +26,7 @@ import {
 } from '@/lib/mcp-config'
 import { validateDynamicClientRegistration } from '@/lib/mcp/client-registration'
 import { googleConfig, ssoConfig } from '@/lib/sso-config'
+import { ssoIdTokenPolicy, verifySsoIdToken } from '@/lib/sso-id-token'
 import { buildSsoSignOutUrl, requestOrigin } from '@/lib/sso-sign-out'
 
 const guardedPaths = new Set(['/sign-up/email', '/sign-in/email'])
@@ -117,13 +118,16 @@ const sso = ssoConfig()
 
 const google = googleConfig()
 
-const ssoPlugin = sso
+const ssoIdToken = sso ? ssoIdTokenPolicy(sso) : null
+
+const ssoPlugin = sso && ssoIdToken
   ? genericOAuth({
       config: [
         {
           authorizationUrl: sso.authorizationUrl,
           clientId: sso.clientId,
           clientSecret: sso.clientSecret,
+          getUserInfo: (tokens) => verifySsoIdToken(tokens.idToken, ssoIdToken),
           mapProfileToUser: (profile) => ({
             emailVerified: true,
             name: ssoUserName(profile),

@@ -18,12 +18,15 @@ describe('ssoConfig', () => {
     ).toBeNull()
   })
 
-  it('derives the endpoints from the issuer', () => {
+  it('derives the endpoints and the id token checks from the issuer', () => {
     expect(ssoConfig(credentials)).toEqual({
       authorizationUrl: 'https://auth.example.com/oidc/oauth2/authorize',
       clientId: 'leaf',
       clientSecret: undefined,
+      idTokenAudience: 'leaf',
+      idTokenIssuer: 'https://auth.example.com/oidc',
       issuer: 'https://auth.example.com/oidc',
+      jwksUrl: 'https://auth.example.com/oidc/oauth2/jwks',
       logoutUrl: null,
       providerId: 'sso',
       providerName: 'SSO',
@@ -44,6 +47,9 @@ describe('ssoConfig', () => {
         ...credentials,
         LEAF_SSO_AUTHORIZATION_URL: 'https://auth.example.com/authorize',
         LEAF_SSO_CLIENT_SECRET: 'secret',
+        LEAF_SSO_ID_TOKEN_AUDIENCE: 'https://auth.example.com',
+        LEAF_SSO_ID_TOKEN_ISSUER: 'https://auth.example.com',
+        LEAF_SSO_JWKS_URL: 'https://auth.example.com/keys',
         LEAF_SSO_LOGOUT_URL: 'https://auth.example.com/logout',
         LEAF_SSO_PROVIDER_ID: 'acme',
         LEAF_SSO_PROVIDER_NAME: 'Acme',
@@ -53,7 +59,10 @@ describe('ssoConfig', () => {
       authorizationUrl: 'https://auth.example.com/authorize',
       clientId: 'leaf',
       clientSecret: 'secret',
+      idTokenAudience: 'https://auth.example.com',
+      idTokenIssuer: 'https://auth.example.com',
       issuer: 'https://auth.example.com/oidc',
+      jwksUrl: 'https://auth.example.com/keys',
       logoutUrl: 'https://auth.example.com/logout',
       providerId: 'acme',
       providerName: 'Acme',

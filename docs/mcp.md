@@ -28,6 +28,12 @@ authorised apps under **Connected apps** in the account menu
 (`/connected-apps`); revoking deletes the consent and invalidates that client's
 refresh tokens.
 
+Besides the JWT checks (signature, `iss`, `aud`, `exp`), every MCP call looks up
+the client and the person behind the token: a client that was disabled
+(`oauth_clients.disabled`) or deleted, a person who no longer exists, and a
+person whose email domain left `LEAF_ALLOWED_EMAIL_DOMAINS` get a `401` on the
+next call, without waiting for the access token to expire.
+
 Read tools: `search_documents`, `get_document`, `get_document_links` (the
 documents that link to a document and the ones it links to, with the sentence
 around each link), `list_documents`, `list_organizations`, `list_teamspaces`,

@@ -7,8 +7,10 @@ vi.mock('@/db', async () => {
   return createTestDb()
 })
 
+import { eq } from 'drizzle-orm'
+
 import { db } from '@/db'
-import { documents, jwks, user } from '@/db/schema'
+import { documents, jwks, oauthClients, user } from '@/db/schema'
 import { resetDatabase } from '@/db/testing'
 import { authIssuer, mcpResourceUrl } from '@/lib/mcp-config'
 import { handleMcpRequest, resetMcpLimiter } from '@/lib/mcp/handler'
@@ -16,6 +18,7 @@ import { resetMcpKeyCache } from '@/lib/mcp/token'
 
 const kid = 'jwk-handler'
 const person = { id: 'handler-user', email: 'pessoa@example.com' }
+const clientId = 'client-handler'
 
 let privateKey: CryptoKey
 
@@ -41,6 +44,14 @@ beforeAll(async () => {
     createdAt: new Date(),
     updatedAt: new Date(),
   })
+  await db.insert(oauthClients).values({
+    id: 'oauth-client-handler',
+    clientId,
+    name: 'Cliente de teste',
+    redirectUris: JSON.stringify(['http://localhost:3118/callback']),
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  })
   await db.insert(documents).values({
     id: 'doc-handler',
     ownerId: person.id,
@@ -58,14 +69,19 @@ beforeEach(() => {
   resetMcpKeyCache()
   vi.stubEnv('NODE_ENV', 'test')
   vi.stubEnv('LEAF_MCP_ENABLED', '1')
+  vi.stubEnv('LEAF_ALLOWED_EMAIL_DOMAINS', '')
 })
 
 afterEach(() => {
   vi.unstubAllEnvs()
 })
 
-async function token(sub = person.id, scope = 'leaf:read leaf:write offline_access') {
-  return new SignJWT({ scope, client_id: 'client-handler' })
+async function token(
+  sub = person.id,
+  scope = 'leaf:read leaf:write offline_access',
+  client = clientId,
+) {
+  return new SignJWT({ scope, client_id: client })
     .setProtectedHeader({ alg: 'EdDSA', kid, typ: 'at+jwt' })
     .setIssuer(authIssuer())
     .setAudience(mcpResourceUrl())
@@ -123,6 +139,38 @@ describe('endpoint MCP', () => {
   it('answers 401 for an invalid token and for a user who no longer exists', async () => {
     expect((await handleMcpRequest(post(initialize, 'token-falso'))).status).toBe(401)
     expect((await handleMcpRequest(post(initialize, await token('user-removido')))).status).toBe(401)
+  })
+
+  it('answers 401 for a token whose client was disabled, right away', async () => {
+    const bearer = await token()
+
+    expect((await handleMcpRequest(post(initialize, bearer))).status).toBe(200)
+
+    await db.update(oauthClients).set({ disabled: true }).where(eq(oauthClients.clientId, clientId))
+
+    try {
+      expect((await handleMcpRequest(post(initialize, bearer))).status).toBe(401)
+    } finally {
+      await db.update(oauthClients).set({ disabled: false }).where(eq(oauthClients.clientId, clientId))
+    }
+  })
+
+  it('answers 401 for a token whose client no longer exists', async () => {
+    const bearer = await token(person.id, 'leaf:read leaf:write offline_access', 'client-removido')
+
+    expect((await handleMcpRequest(post(initialize, bearer))).status).toBe(401)
+  })
+
+  it('answers 401 when the email domain of the user is no longer allowed', async () => {
+    const bearer = await token()
+
+    vi.stubEnv('LEAF_ALLOWED_EMAIL_DOMAINS', 'outro.example')
+
+    expect((await handleMcpRequest(post(initialize, bearer))).status).toBe(401)
+
+    vi.stubEnv('LEAF_ALLOWED_EMAIL_DOMAINS', 'example.com')
+
+    expect((await handleMcpRequest(post(initialize, bearer))).status).toBe(200)
   })
 
   it('accepts POST only', async () => {

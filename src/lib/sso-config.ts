@@ -10,6 +10,9 @@ export type SsoConfig = Readonly<{
   clientSecret: string | undefined
   authorizationUrl: string
   tokenUrl: string
+  jwksUrl: string
+  idTokenIssuer: string
+  idTokenAudience: string
   logoutUrl: string | null
 }>
 
@@ -39,7 +42,10 @@ export function ssoConfig(env: Env = process.env): SsoConfig | null {
       trimmed(env, 'LEAF_SSO_AUTHORIZATION_URL') || `${issuer}/oauth2/authorize`,
     clientId,
     clientSecret: clientSecret.length > 0 ? clientSecret : undefined,
+    idTokenAudience: trimmed(env, 'LEAF_SSO_ID_TOKEN_AUDIENCE') || clientId,
+    idTokenIssuer: trimmed(env, 'LEAF_SSO_ID_TOKEN_ISSUER') || issuer,
     issuer,
+    jwksUrl: trimmed(env, 'LEAF_SSO_JWKS_URL') || `${issuer}/oauth2/jwks`,
     logoutUrl: logoutUrl.length > 0 ? logoutUrl : null,
     providerId: trimmed(env, 'LEAF_SSO_PROVIDER_ID') || defaultProviderId,
     providerName: trimmed(env, 'LEAF_SSO_PROVIDER_NAME') || defaultProviderName,
