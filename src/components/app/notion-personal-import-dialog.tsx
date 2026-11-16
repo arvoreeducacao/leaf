@@ -25,6 +25,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Sheet, SheetContent, SheetHeader } from '@/components/ui/sheet'
+import { Switch } from '@/components/ui/switch'
 import { notionPersonalImportState } from '@/lib/import-actions'
 import type { NotionPersonalImportState } from '@/lib/import-actions'
 import { useIsMobile } from '@/shared/hooks/use-mobile'
@@ -56,6 +57,7 @@ export function NotionPersonalImportDialog({
   const [connection, setConnection] = useState<NotionPersonalImportState | null>(
     null,
   )
+  const [withComments, setWithComments] = useState(false)
   const announced = useRef<typeof summary>(null)
 
   useEffect(() => {
@@ -103,6 +105,7 @@ export function NotionPersonalImportDialog({
     void stream.start(
       '/api/import/notion/link',
       JSON.stringify({
+        comments: withComments,
         destination: 'private',
         skipAlreadyImported,
         workspace: true,
@@ -223,6 +226,23 @@ export function NotionPersonalImportDialog({
               {t('reconnect')}
             </a>
           </p>
+        ) : null}
+        {connection.state === 'connected' ? (
+          <label className="flex cursor-pointer items-start gap-3 rounded-large px-3 py-2 transition-colors hover:bg-surface-hover has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-focus has-[:focus-visible]:outline-offset-2">
+            <Switch
+              checked={withComments}
+              className="mt-1"
+              onCheckedChange={setWithComments}
+            />
+            <span className="flex min-w-0 flex-1 flex-col">
+              <span className="text-body-small text-content-strong">
+                {t('withComments')}
+              </span>
+              <span className="text-body-small text-content">
+                {t('withCommentsHint')}
+              </span>
+            </span>
+          </label>
         ) : null}
       </div>
     )

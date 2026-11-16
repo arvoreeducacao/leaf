@@ -1326,7 +1326,9 @@
     "alreadyImported": "{count, plural, one {# página já estava} other {# páginas já estavam}} no acervo do time",
     "alreadyImportedHint": "Elas não foram copiadas. Abra a versão do time ou traga como cópia no seu Privado.",
     "importAsCopies": "Trazer como cópia",
-    "untitledPage": "Página sem título"
+    "untitledPage": "Página sem título",
+    "withComments": "Trazer também os comentários abertos",
+    "withCommentsHint": "As threads não resolvidas entram presas à página, não ao trecho. Deixa a importação mais lenta."
   },
   "notionWorkspaceImport": {
     "title": "Importar workspace do Notion",
