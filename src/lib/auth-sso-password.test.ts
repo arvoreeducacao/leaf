@@ -12,9 +12,14 @@ import { resetDatabase } from '@/db/testing'
 
 const password = 'strong-password-123'
 
-async function loadAuth(withSso: boolean) {
+async function loadAuth(withSso: boolean, production = false) {
   vi.resetModules()
+  vi.unstubAllEnvs()
   delete process.env.LEAF_ALLOWED_EMAIL_DOMAINS
+
+  if (production) {
+    vi.stubEnv('NODE_ENV', 'production')
+  }
 
   if (withSso) {
     process.env.LEAF_SSO_CLIENT_ID = 'leaf-client'
@@ -52,6 +57,7 @@ beforeEach(async () => {
 afterAll(() => {
   delete process.env.LEAF_SSO_CLIENT_ID
   delete process.env.LEAF_SSO_ISSUER
+  vi.unstubAllEnvs()
 })
 
 describe('email and password with SSO configured', () => {
@@ -77,8 +83,25 @@ describe('email and password with SSO configured', () => {
   })
 })
 
-describe('email and password without SSO', () => {
-  it('keeps the password sign-up and sign-in', async () => {
+describe('email and password in production without SSO', () => {
+  it('rejects the password sign-in and sign-up', async () => {
+    const open = await loadAuth(false)
+
+    await signUp(open, 'person@example.com')
+    await db.delete(session)
+
+    const production = await loadAuth(false, true)
+
+    await expect(signIn(production, 'person@example.com')).rejects.toBeTruthy()
+    await expect(signUp(production, 'other@example.com')).rejects.toBeTruthy()
+
+    expect(await db.select().from(session)).toHaveLength(0)
+    expect(await db.select().from(user)).toHaveLength(1)
+  })
+})
+
+describe('email and password outside production without SSO', () => {
+  it('keeps the password sign-up and sign-in for local development and tests', async () => {
     const open = await loadAuth(false)
 
     const created = await signUp(open, 'person@example.com')

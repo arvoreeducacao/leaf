@@ -22,7 +22,8 @@ export default async function LoginPage({ searchParams }: Props) {
     redirect('/')
   }
 
-  const { googleEnabled, restrictedDomain, sso } = authAccessConfig()
+  const { googleEnabled, passwordEnabled, restrictedDomain, sso } =
+    authAccessConfig()
   const { error } = await searchParams
 
   return (
@@ -30,7 +31,7 @@ export default async function LoginPage({ searchParams }: Props) {
       errorCode={typeof error === 'string' ? error : null}
       googleEnabled={googleEnabled}
       mode="login"
-      passwordEnabled={sso === null}
+      passwordEnabled={passwordEnabled}
       restrictedDomain={restrictedDomain}
       sso={sso}
       ssoSignOutUrl={await ssoSignOutUrl()}

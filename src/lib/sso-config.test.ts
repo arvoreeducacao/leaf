@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest'
 
-import { googleConfig, ssoConfig } from '@/lib/sso-config'
+import {
+  googleConfig,
+  passwordSignInEnabled,
+  ssoConfig,
+} from '@/lib/sso-config'
 
 const credentials = {
   LEAF_SSO_CLIENT_ID: 'leaf',
@@ -82,5 +86,25 @@ describe('googleConfig', () => {
     expect(
       googleConfig({ GOOGLE_CLIENT_ID: 'id', GOOGLE_CLIENT_SECRET: 'secret' }),
     ).toEqual({ clientId: 'id', clientSecret: 'secret' })
+  })
+})
+
+describe('passwordSignInEnabled', () => {
+  it('stays off in production, with or without SSO', () => {
+    expect(passwordSignInEnabled(null, 'production')).toBe(false)
+    expect(passwordSignInEnabled(ssoConfig(credentials), 'production')).toBe(
+      false,
+    )
+  })
+
+  it('stays off whenever SSO is configured', () => {
+    expect(passwordSignInEnabled(ssoConfig(credentials), 'development')).toBe(
+      false,
+    )
+  })
+
+  it('stays on only outside production and without SSO', () => {
+    expect(passwordSignInEnabled(null, 'development')).toBe(true)
+    expect(passwordSignInEnabled(null, 'test')).toBe(true)
   })
 })

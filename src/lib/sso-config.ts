@@ -53,6 +53,13 @@ export function ssoConfig(env: Env = process.env): SsoConfig | null {
   }
 }
 
+export function passwordSignInEnabled(
+  sso: SsoConfig | null,
+  nodeEnv: string | undefined = process.env.NODE_ENV,
+): boolean {
+  return sso === null && nodeEnv !== 'production'
+}
+
 export function googleConfig(
   env: Env = process.env,
 ): Readonly<{ clientId: string; clientSecret: string }> | null {
