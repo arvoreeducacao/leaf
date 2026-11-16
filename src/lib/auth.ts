@@ -25,7 +25,11 @@ import {
   mcpScopes,
 } from '@/lib/mcp-config'
 import { validateDynamicClientRegistration } from '@/lib/mcp/client-registration'
-import { googleConfig, ssoConfig } from '@/lib/sso-config'
+import {
+  googleConfig,
+  passwordSignInEnabled,
+  ssoConfig,
+} from '@/lib/sso-config'
 import { ssoIdTokenPolicy, verifySsoIdToken } from '@/lib/sso-id-token'
 import { buildSsoSignOutUrl, requestOrigin } from '@/lib/sso-sign-out'
 
@@ -91,6 +95,7 @@ export function authAccessConfig() {
 
   return {
     googleEnabled: google !== null,
+    passwordEnabled,
     restrictedDomain: active ? primaryDomain : null,
     sso: sso
       ? { providerId: sso.providerId, providerName: sso.providerName }
@@ -117,6 +122,8 @@ function ssoUserName(profile: { email?: string | null; name?: unknown }) {
 const sso = ssoConfig()
 
 const google = googleConfig()
+
+const passwordEnabled = passwordSignInEnabled(sso)
 
 const ssoIdToken = sso ? ssoIdTokenPolicy(sso) : null
 
@@ -216,9 +223,8 @@ export const auth = betterAuth({
     },
   }),
   emailAndPassword: {
-    enabled: true,
+    enabled: passwordEnabled,
     minPasswordLength: 8,
-    disableSignUp: sso !== null,
   },
   socialProviders: google ? { google } : {},
   account: {
