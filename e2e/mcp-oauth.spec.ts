@@ -4,7 +4,7 @@ import { expect, test } from '@playwright/test'
 
 import { signUp, uniqueEmail } from './helpers'
 
-const redirectUri = 'https://cliente-mcp.exemplo.test/callback'
+const redirectUri = 'https://claude.ai/api/mcp/auth_callback'
 
 function base64url(buffer: Buffer) {
   return buffer

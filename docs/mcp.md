@@ -12,8 +12,10 @@ How it works, in order: the MCP client gets a `401` with
 `/.well-known/oauth-protected-resource` and
 `/.well-known/oauth-authorization-server`, registers itself at
 `/api/auth/oauth2/register` (dynamic registration, always a **public** client
-with PKCE S256; redirects only `https`, or `http` on
-`localhost`/`127.0.0.1`/`[::1]` for command-line clients), sends the person to
+with PKCE S256; redirects only `https` on `claude.ai` or `claude.com`, or
+`http` on `localhost`/`127.0.0.1`/`[::1]` for command-line clients, so a
+client registered without a session can only send the code back to Claude or
+to the person's own machine), sends the person to
 Leaf's sign-in and then to the consent screen at `/oauth/consent`, and trades the
 code for a 15-minute JWT access token (`aud` = `${BETTER_AUTH_URL}/api/mcp`,
 signed with the EdDSA key kept in the `jwks` table) plus a rotating refresh

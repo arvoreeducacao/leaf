@@ -1,5 +1,7 @@
 const loopbackHosts = new Set(['localhost', '127.0.0.1', '[::1]'])
 
+const trustedHttpsRedirectHosts = new Set(['claude.ai', 'claude.com'])
+
 export type RegistrationBody = Readonly<Record<string, unknown>>
 
 export type RegistrationDecision =
@@ -23,7 +25,7 @@ function classifyRedirectUri(value: unknown): 'https' | 'loopback' | 'invalid' {
     return 'invalid'
   }
 
-  if (url.protocol === 'https:' && !loopbackHosts.has(url.hostname)) {
+  if (url.protocol === 'https:' && trustedHttpsRedirectHosts.has(url.hostname)) {
     return 'https'
   }
 
@@ -55,7 +57,7 @@ export function validateDynamicClientRegistration(
   if (kinds.has('invalid')) {
     return reject(
       'invalid_redirect_uri',
-      'redirect_uris must use https, or http on localhost, 127.0.0.1 or [::1]',
+      'redirect_uris must use https on claude.ai or claude.com, or http on localhost, 127.0.0.1 or [::1]',
     )
   }
 
