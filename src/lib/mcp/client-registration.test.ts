@@ -34,6 +34,40 @@ describe('dynamic client registration', () => {
     }
   })
 
+  it('accepts the https callback of claude.com', () => {
+    expect(
+      validateDynamicClientRegistration({
+        ...base,
+        redirect_uris: ['https://claude.com/api/mcp/auth_callback'],
+      }).ok,
+    ).toBe(true)
+  })
+
+  it('refuses an https redirect outside claude.ai and claude.com', () => {
+    for (const redirect of [
+      'https://atacante.example.com/callback',
+      'https://claude.ai.atacante.example.com/callback',
+      'https://sub.claude.ai/callback',
+      'https://leaf.arvore.com.br/callback',
+    ]) {
+      expect(
+        validateDynamicClientRegistration({ ...base, redirect_uris: [redirect] }),
+      ).toMatchObject({ ok: false, error: 'invalid_redirect_uri' })
+    }
+  })
+
+  it('refuses a list that mixes claude.ai with an untrusted https host', () => {
+    expect(
+      validateDynamicClientRegistration({
+        ...base,
+        redirect_uris: [
+          'https://claude.ai/api/mcp/auth_callback',
+          'https://atacante.example.com/callback',
+        ],
+      }),
+    ).toMatchObject({ ok: false, error: 'invalid_redirect_uri' })
+  })
+
   it('refuses an http redirect outside the loopback', () => {
     const decision = validateDynamicClientRegistration({
       ...base,
