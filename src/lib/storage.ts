@@ -26,6 +26,17 @@ function requireEnv(name: string) {
   return value
 }
 
+function s3Credentials() {
+  if (!process.env.S3_ACCESS_KEY_ID && !process.env.S3_SECRET_ACCESS_KEY) {
+    return undefined
+  }
+
+  return {
+    accessKeyId: requireEnv('S3_ACCESS_KEY_ID'),
+    secretAccessKey: requireEnv('S3_SECRET_ACCESS_KEY'),
+  }
+}
+
 function createS3Driver(): StorageDriver {
   let client: S3Client | null = null
 
@@ -34,10 +45,7 @@ function createS3Driver(): StorageDriver {
       client = new S3Client({
         endpoint: requireEnv('S3_ENDPOINT'),
         region: process.env.S3_REGION ?? 'us-east-1',
-        credentials: {
-          accessKeyId: requireEnv('S3_ACCESS_KEY_ID'),
-          secretAccessKey: requireEnv('S3_SECRET_ACCESS_KEY'),
-        },
+        credentials: s3Credentials(),
         forcePathStyle: true,
       })
     }

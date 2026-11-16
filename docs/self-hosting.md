@@ -53,7 +53,7 @@ the environment:
 |---|---|
 | `DATABASE_URL` | `mysql://user:password@host:3306/leaf` — required; the app will not boot without it |
 | `DATABASE_POOL_SIZE` | `mysql2` pool size (default `10`) |
-| `S3_ENDPOINT` / `S3_BUCKET` / `S3_ACCESS_KEY_ID` / `S3_SECRET_ACCESS_KEY` | Image storage |
+| `S3_ENDPOINT` / `S3_BUCKET` / `S3_ACCESS_KEY_ID` / `S3_SECRET_ACCESS_KEY` | Image storage. Leave both keys unset on AWS to use the SDK default credential chain (instance role, IRSA, SSO profile); set one and the other is required |
 | `LEAF_REALTIME` / `LEAF_REALTIME_URL` (`wss://`) / `LEAF_REALTIME_SECRET` | Real-time collaboration (the ws runs as its own process) |
 | `LEAF_REALTIME_SERVER_URL` | Internal HTTP address of the collaboration process, used by the app to write into open rooms (default: `LEAF_REALTIME_URL` with `ws`/`wss` turned into `http`/`https`) |
 | `BETTER_AUTH_URL` / `BETTER_AUTH_SECRET` | Auth |
