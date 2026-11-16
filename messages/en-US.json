@@ -1326,7 +1326,9 @@
     "alreadyImported": "{count, plural, one {# page was} other {# pages were}} already in the team library",
     "alreadyImportedHint": "They were not copied. Open the team version or bring them as copies into your Private space.",
     "importAsCopies": "Bring as copies",
-    "untitledPage": "Untitled page"
+    "untitledPage": "Untitled page",
+    "withComments": "Bring the open comments too",
+    "withCommentsHint": "Unresolved threads come anchored to the page, not to the passage. Makes the import slower."
   },
   "notionWorkspaceImport": {
     "title": "Import a Notion workspace",
