@@ -216,9 +216,8 @@ export const auth = betterAuth({
     },
   }),
   emailAndPassword: {
-    enabled: true,
+    enabled: sso === null,
     minPasswordLength: 8,
-    disableSignUp: sso !== null,
   },
   socialProviders: google ? { google } : {},
   account: {
