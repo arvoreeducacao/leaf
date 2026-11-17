@@ -1,6 +1,8 @@
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 
+import { Signer } from '@aws-sdk/rds-signer'
+import awsSslProfiles from 'aws-ssl-profiles'
 import { readMigrationFiles } from 'drizzle-orm/migrator'
 import { drizzle } from 'drizzle-orm/mysql2'
 import { migrate } from 'drizzle-orm/mysql2/migrator'
@@ -20,20 +22,92 @@ export function databaseUrl() {
   return url
 }
 
-export function connectionOptions(url: string): mysql.PoolOptions {
-  const parsed = new URL(url)
+type DatabaseEnv = Record<string, string | undefined>
+
+export type IamTokenSource = (target: {
+  host: string
+  port: number
+  user: string
+  region: string
+}) => Promise<string>
+
+const signers = new Map<string, Signer>()
+
+const rdsIamToken: IamTokenSource = ({ host, port, user, region }) => {
+  const key = `${host}:${port}:${user}:${region}`
+  let signer = signers.get(key)
+
+  if (!signer) {
+    signer = new Signer({ hostname: host, port, username: user, region })
+    signers.set(key, signer)
+  }
+
+  return signer.getAuthToken()
+}
+
+function iamRegion(env: DatabaseEnv) {
+  const region =
+    env.DATABASE_IAM_REGION?.trim() ||
+    env.AWS_REGION?.trim() ||
+    env.AWS_DEFAULT_REGION?.trim()
+
+  if (!region) {
+    throw new Error(
+      'DATABASE_IAM_AUTH needs DATABASE_IAM_REGION or AWS_REGION to sign the token',
+    )
+  }
+
+  return region
+}
+
+function authentication(
+  target: { host: string; port: number; user: string },
+  password: string,
+  env: DatabaseEnv,
+  tokenSource: IamTokenSource,
+): mysql.PoolOptions {
+  if (env.DATABASE_IAM_AUTH?.trim() !== 'true') {
+    return { password }
+  }
+
+  const region = iamRegion(env)
 
   return {
+    ssl: { ca: awsSslProfiles.ca, rejectUnauthorized: true },
+    authPlugins: {
+      mysql_clear_password: () => async () =>
+        Buffer.from(`${await tokenSource({ ...target, region })}\0`),
+    },
+  }
+}
+
+export function connectionOptions(
+  url: string,
+  env: DatabaseEnv = process.env,
+  tokenSource: IamTokenSource = rdsIamToken,
+): mysql.PoolOptions {
+  const parsed = new URL(url)
+
+  const target = {
     host: parsed.hostname,
     port: parsed.port.length > 0 ? Number(parsed.port) : 3306,
     user: decodeURIComponent(parsed.username),
-    password: decodeURIComponent(parsed.password),
+  }
+
+  return {
+    ...target,
+    ...authentication(
+      target,
+      decodeURIComponent(parsed.password),
+      env,
+      tokenSource,
+    ),
     database: decodeURIComponent(parsed.pathname.replace(/^\//, '')),
     charset: 'UTF8MB4_UNICODE_CI',
     dateStrings: true,
     timezone: 'Z',
     supportBigNumbers: true,
-    connectionLimit: Number(process.env.DATABASE_POOL_SIZE ?? 10),
+    connectionLimit: Number(env.DATABASE_POOL_SIZE ?? 10),
     enableKeepAlive: true,
   }
 }
