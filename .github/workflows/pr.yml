@@ -123,6 +123,7 @@ jobs:
         run: pnpm exec next build
         env:
           LEAF_DIST_DIR: .next-e2e
+          DATABASE_URL: mysql://root:leaf@127.0.0.1:3306/leaf
 
       - name: E2E
         run: pnpm exec playwright test
