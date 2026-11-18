@@ -33,13 +33,16 @@ emulator on `4568`, and the collaboration server on `1234`. Migrations run on
 boot. Create an account at `/signup` — there is no email verification in
 development.
 
-The tests need a real MySQL; there is no in-memory fallback. See the README.
+The tests need a real MySQL; there is no in-memory fallback. Run a throwaway
+one with `docker compose -f docker-compose.test.yml up -d --wait` and never
+point the suites at a shared or production server. See
+[docs/self-hosting.md](docs/self-hosting.md#tests).
 
 ## Before you open the pull request
 
 ```bash
-pnpm typecheck   # must pass — CI runs exactly this
-pnpm test        # needs MySQL
+pnpm typecheck   # CI runs it
+pnpm test        # CI runs it too, against its own MySQL
 ```
 
 House rules that reviewers will otherwise ask you about:

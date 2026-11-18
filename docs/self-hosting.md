@@ -24,8 +24,28 @@ pnpm test        # unit (vitest)
 pnpm test:e2e    # Playwright, in its own sandbox (does not disturb the dev server)
 ```
 
-The tests need a real MySQL — there is no in-memory SQLite any more. Each vitest
-worker uses its own database `<LEAF_TEST_DATABASE_URL>_<VITEST_POOL_ID>`
+The tests need a real MySQL — there is no in-memory SQLite any more. Use a
+throwaway one on your machine, never a shared or production server:
+
+```bash
+docker compose -f docker-compose.test.yml up -d --wait
+```
+
+It is MySQL 8.4 on `127.0.0.1:3306` (user `root`, password `leaf`), with its data
+in memory, so `docker compose -f docker-compose.test.yml down` wipes everything.
+`scripts/test-databases.sql` creates every database the suites use. Point the
+suites at it in `.env.local`:
+
+```bash
+LEAF_TEST_DATABASE_URL=mysql://root:leaf@127.0.0.1:3306/leaf_test
+LEAF_E2E_DATABASE_URL=mysql://root:leaf@127.0.0.1:3306/leaf_e2e
+LEAF_E2E_REALTIME_DATABASE_URL=mysql://root:leaf@127.0.0.1:3306/leaf_e2e_realtime
+```
+
+CI does the same: each run of the `test` and `e2e` jobs gets its own MySQL
+service container and throws it away at the end.
+
+Each vitest worker uses its own database `<LEAF_TEST_DATABASE_URL>_<VITEST_POOL_ID>`
 (`leaf_test_1` … `leaf_test_6`, with `maxWorkers: 6`), truncated between suites;
 the schema is applied by the migrations on first use.
 
@@ -38,9 +58,8 @@ before starting the server; the other two reuse the already-prepared `leaf_e2e`
 and so prepare nothing. `DATABASE_URL` is injected into the child process, so the
 dev `.env.local` is never used by the sandbox.
 
-E2E runs with a single worker (`E2E_WORKERS` changes that). With the database
-~150 ms away, each case takes close to 20 s and the whole suite runs past 15
-minutes. To run it in pieces, build once
+E2E runs with a single worker (`E2E_WORKERS` changes that). To run it in pieces,
+build once
 (`LEAF_DIST_DIR=.next-e2e pnpm exec next build`) and then
 `pnpm exec playwright test --project=<project> <specs>`.
 
