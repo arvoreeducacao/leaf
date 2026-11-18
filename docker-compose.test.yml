@@ -1,0 +1,16 @@
+services:
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: leaf
+    ports:
+      - "127.0.0.1:3306:3306"
+    volumes:
+      - ./scripts/test-databases.sql:/docker-entrypoint-initdb.d/test-databases.sql:ro
+    tmpfs:
+      - /var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-pleaf"]
+      interval: 5s
+      timeout: 5s
+      retries: 30

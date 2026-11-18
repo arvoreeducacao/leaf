@@ -34,6 +34,11 @@ vi.mock('@/lib/realtime-room', () => ({
   }),
 }))
 
+vi.mock('next-intl/server', () => ({
+  getTranslations: async (namespace: string) => (key: string) =>
+    `${namespace}.${key}`,
+}))
+
 import { eq } from 'drizzle-orm'
 
 import { db } from '@/db'
