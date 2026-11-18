@@ -126,7 +126,7 @@ jobs:
           DATABASE_URL: mysql://root:leaf@127.0.0.1:3306/leaf
 
       - name: E2E
-        run: pnpm exec playwright test
+        run: pnpm exec playwright test --max-failures=1
 
       - name: Keep the traces
         if: failure()
