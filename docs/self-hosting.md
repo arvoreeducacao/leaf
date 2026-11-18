@@ -42,8 +42,8 @@ LEAF_E2E_DATABASE_URL=mysql://root:leaf@127.0.0.1:3306/leaf_e2e
 LEAF_E2E_REALTIME_DATABASE_URL=mysql://root:leaf@127.0.0.1:3306/leaf_e2e_realtime
 ```
 
-CI does the same: each run of the `test` and `e2e` jobs gets its own MySQL
-service container and throws it away at the end.
+CI does the same for the unit suite: each run of the `test` job gets its own
+MySQL service container and throws it away at the end.
 
 Each vitest worker uses its own database `<LEAF_TEST_DATABASE_URL>_<VITEST_POOL_ID>`
 (`leaf_test_1` … `leaf_test_6`, with `maxWorkers: 6`), truncated between suites;
