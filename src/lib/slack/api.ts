@@ -84,6 +84,18 @@ export function encodeArguments(
   return body
 }
 
+function isImageBlock(block: unknown): boolean {
+  return asRecord(block)?.type === 'image'
+}
+
+export function withoutImageBlocks(
+  blocks: ReadonlyArray<unknown>,
+): ReadonlyArray<unknown> | null {
+  const kept = blocks.filter((block) => !isImageBlock(block))
+
+  return kept.length === blocks.length ? null : kept
+}
+
 function refusalOf(body: SlackResponse | null): string {
   if (body === null) {
     return 'no_response'
@@ -135,18 +147,34 @@ export function createSlackClient(
     return body?.ok === true ? body : null
   }
 
+  function sendMessage(input: PostMessageInput) {
+    return request('chat.postMessage', {
+      channel: input.channelId,
+      text: input.text,
+      unfurl_links: false,
+      unfurl_media: false,
+      ...(input.blocks === undefined ? {} : { blocks: input.blocks }),
+      ...(input.threadTs === undefined ? {} : { thread_ts: input.threadTs }),
+      ...(input.username === undefined ? {} : { username: input.username }),
+      ...(input.iconUrl ? { icon_url: input.iconUrl } : {}),
+    })
+  }
+
   return {
     async postMessage(input) {
-      const body = await request('chat.postMessage', {
-        channel: input.channelId,
-        text: input.text,
-        unfurl_links: false,
-        unfurl_media: false,
-        ...(input.blocks === undefined ? {} : { blocks: input.blocks }),
-        ...(input.threadTs === undefined ? {} : { thread_ts: input.threadTs }),
-        ...(input.username === undefined ? {} : { username: input.username }),
-        ...(input.iconUrl ? { icon_url: input.iconUrl } : {}),
-      })
+      let body = await sendMessage(input)
+      const textOnly =
+        input.blocks === undefined ? null : withoutImageBlocks(input.blocks)
+
+      if (body?.error === 'invalid_blocks' && textOnly !== null) {
+        console.error(
+          'Slack refused chat.postMessage, posting it without images',
+          refusalOf(body),
+          input.channelId,
+        )
+
+        body = await sendMessage({ ...input, blocks: textOnly })
+      }
 
       if (body?.ok !== true) {
         console.error(

@@ -191,9 +191,7 @@ function isImage(block: unknown): boolean {
   return (block as { type?: unknown }).type === 'image'
 }
 
-function refusingRecorder(
-  refuses: (input: PostMessageInput) => boolean,
-): Recorder {
+function refusingRecorder(): Recorder {
   const base = recorder()
 
   return {
@@ -201,9 +199,9 @@ function refusingRecorder(
     client: {
       ...base.client,
       async postMessage(input) {
-        const result = await base.client.postMessage(input)
+        await base.client.postMessage(input)
 
-        return refuses(input) ? null : result
+        return null
       },
     },
   }
@@ -273,55 +271,19 @@ describe('announceSubmission', () => {
     expect(posted).toHaveLength(0)
   })
 
-  it('posts again without the images when Slack cannot fetch them', async () => {
+  it('says so when Slack refuses the announcement', async () => {
     await seed()
-    const { client, posted } = refusingRecorder(
-      (input) => input.blocks?.some(isImage) ?? false,
-    )
-    const errors = vi.spyOn(console, 'error').mockImplementation(() => {})
-
-    expect(
-      await announceSubmission({ ...announce, client, payload: withImage }),
-    ).toBe(true)
-    expect(posted).toHaveLength(2)
-    expect(posted[0].blocks?.some(isImage)).toBe(true)
-    expect(posted[1].blocks?.some(isImage)).toBe(false)
-    expect(posted[1].blocks).toContainEqual(withImage.blocks[1])
-    expect(errors).not.toHaveBeenCalled()
-
-    const thread = await db.query.slackThreads.findFirst()
-
-    expect(thread).toMatchObject({ documentId: 'slack-row', messageTs: 'ts-2' })
-
-    errors.mockRestore()
-  })
-
-  it('does not post twice when there is no image to drop', async () => {
-    await seed()
-    const { client, posted } = refusingRecorder(() => true)
-    const errors = vi.spyOn(console, 'error').mockImplementation(() => {})
-
-    expect(await announceSubmission({ ...announce, client })).toBe(false)
-    expect(posted).toHaveLength(1)
-    expect(errors).toHaveBeenCalledWith(
-      'Form submission not announced on Slack',
-      'slack-row',
-    )
-    expect(await db.query.slackThreads.findFirst()).toBeUndefined()
-
-    errors.mockRestore()
-  })
-
-  it('says so when Slack refuses the message without images too', async () => {
-    await seed()
-    const { client, posted } = refusingRecorder(() => true)
+    const { client, posted } = refusingRecorder()
     const errors = vi.spyOn(console, 'error').mockImplementation(() => {})
 
     expect(
       await announceSubmission({ ...announce, client, payload: withImage }),
     ).toBe(false)
-    expect(posted).toHaveLength(2)
-    expect(errors).toHaveBeenCalledOnce()
+    expect(posted).toHaveLength(1)
+    expect(errors).toHaveBeenCalledWith(
+      'Form submission not announced on Slack',
+      'slack-row',
+    )
     expect(await db.query.slackThreads.findFirst()).toBeUndefined()
 
     errors.mockRestore()
@@ -353,6 +315,32 @@ describe('announceSubmission', () => {
     expect(bodies[1].blocks.some(isImage)).toBe(false)
 
     vi.unstubAllGlobals()
+  })
+
+  it('does not retry the old webhook when it fails for another reason', async () => {
+    await seed({ channelId: null, url: WEBHOOK })
+
+    let calls = 0
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    vi.stubGlobal('fetch', async () => {
+      calls += 1
+
+      return new Response('no_service', { status: 404 })
+    })
+
+    expect(
+      await announceSubmission({
+        ...announce,
+        client: null,
+        payload: withImage,
+      }),
+    ).toBe(false)
+    expect(calls).toBe(1)
+    expect(errors).toHaveBeenCalledOnce()
+
+    vi.unstubAllGlobals()
+    errors.mockRestore()
   })
 })
 

@@ -7,7 +7,11 @@ import { isSlackWebhook } from '@/lib/database/form-message'
 import { getFormSlack } from '@/lib/form-webhooks'
 import { signalOpenTabs } from '@/lib/realtime-signals'
 
-import { type SlackClient, createSlackClient } from './api'
+import {
+  type SlackClient,
+  createSlackClient,
+  withoutImageBlocks,
+} from './api'
 import { SLACK_TIMEOUT_MS, slackBotToken } from './config'
 import { escapeSlackText } from './text'
 import { getThreadOfDocument, getThreadOfMessage, saveThread } from './threads'
@@ -38,10 +42,12 @@ export function botClient(): SlackClient | null {
   return token === null ? null : createSlackClient(token)
 }
 
+type WebhookOutcome = 'delivered' | 'refused_blocks' | 'failed'
+
 async function postToWebhook(
   url: string,
   payload: SlackAnnouncePayload,
-): Promise<boolean> {
+): Promise<WebhookOutcome> {
   try {
     const response = await fetch(url, {
       body: JSON.stringify(payload),
@@ -50,41 +56,32 @@ async function postToWebhook(
       signal: AbortSignal.timeout(SLACK_TIMEOUT_MS),
     })
 
-    return response.ok
+    if (response.ok) {
+      return 'delivered'
+    }
+
+    return (await response.text()).includes('invalid_blocks')
+      ? 'refused_blocks'
+      : 'failed'
   } catch {
-    return false
+    return 'failed'
   }
 }
 
-function isImageBlock(block: unknown): boolean {
-  return (
-    typeof block === 'object' &&
-    block !== null &&
-    (block as { type?: unknown }).type === 'image'
-  )
-}
+async function deliverToWebhook(
+  url: string,
+  payload: SlackAnnouncePayload,
+): Promise<boolean> {
+  const outcome = await postToWebhook(url, payload)
+  const textOnly = withoutImageBlocks(payload.blocks)
 
-function withoutImages(
-  blocks: ReadonlyArray<unknown>,
-): ReadonlyArray<unknown> | null {
-  const kept = blocks.filter((block) => !isImageBlock(block))
+  if (outcome === 'refused_blocks' && textOnly !== null) {
+    const retried = await postToWebhook(url, { ...payload, blocks: textOnly })
 
-  return kept.length === blocks.length ? null : kept
-}
-
-async function withImageFallback<T>(
-  blocks: ReadonlyArray<unknown>,
-  send: (attempt: ReadonlyArray<unknown>) => Promise<T | null>,
-): Promise<T | null> {
-  const first = await send(blocks)
-
-  if (first !== null) {
-    return first
+    return retried === 'delivered'
   }
 
-  const textOnly = withoutImages(blocks)
-
-  return textOnly === null ? null : send(textOnly)
+  return outcome === 'delivered'
 }
 
 export type AnnounceInput = Readonly<{
@@ -117,14 +114,13 @@ export async function announceSubmission(
   const client = input.client === undefined ? botClient() : input.client
 
   if (link.channelId && client) {
-    const channelId = link.channelId
-    const posted = await withImageFallback(
-      link.pullThread
+    const posted = await client.postMessage({
+      blocks: link.pullThread
         ? withReplyHint(input.payload, input.replyHint)
         : input.payload.blocks,
-      (blocks) =>
-        client.postMessage({ blocks, channelId, text: input.payload.text }),
-    )
+      channelId: link.channelId,
+      text: input.payload.text,
+    })
 
     if (!posted) {
       console.error('Form submission not announced on Slack', input.documentId)
@@ -143,14 +139,7 @@ export async function announceSubmission(
   }
 
   if (link.url && isSlackWebhook(link.url)) {
-    const url = link.url
-    const delivered = await withImageFallback(input.payload.blocks, (blocks) =>
-      postToWebhook(url, { ...input.payload, blocks }).then((ok) =>
-        ok ? true : null,
-      ),
-    )
-
-    if (!delivered) {
+    if (!(await deliverToWebhook(link.url, input.payload))) {
       console.error('Form submission not announced on Slack', input.documentId)
 
       return false

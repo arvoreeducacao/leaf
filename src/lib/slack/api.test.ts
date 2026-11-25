@@ -24,6 +24,36 @@ function recordingFetch(payload: Record<string, unknown>) {
   return { calls, fetcher }
 }
 
+function sequenceFetch(payloads: ReadonlyArray<Record<string, unknown>>) {
+  const bodies: Array<URLSearchParams> = []
+
+  const fetcher = (async (_url: string, init: RequestInit) => {
+    const payload = payloads[Math.min(bodies.length, payloads.length - 1)]
+
+    bodies.push(new URLSearchParams(String(init.body)))
+
+    return new Response(JSON.stringify(payload), {
+      headers: { 'content-type': 'application/json' },
+    })
+  }) as unknown as typeof globalThis.fetch
+
+  return { bodies, fetcher }
+}
+
+const blocksWithImage = [
+  { text: { text: '*Prints*', type: 'mrkdwn' }, type: 'section' },
+  {
+    alt_text: 'print.png',
+    image_url: 'https://leaf.test/api/uploads/u/print.png',
+    type: 'image',
+  },
+]
+
+function blockTypes(body: URLSearchParams): Array<string> {
+  return (JSON.parse(body.get('blocks') ?? '[]') as Array<{ type: string }>)
+    .map((block) => block.type)
+}
+
 describe('encodeArguments', () => {
   it('writes the body in the shape Slack accepts', () => {
     const body = encodeArguments({
@@ -118,6 +148,87 @@ describe('createSlackClient', () => {
       'invalid_blocks [ERROR] downloading image failed [json-pointer:/blocks/2]',
       'C01',
     )
+
+    errors.mockRestore()
+  })
+
+  it('posts again without the images when Slack cannot fetch them', async () => {
+    const { bodies, fetcher } = sequenceFetch([
+      { error: 'invalid_blocks', ok: false },
+      { channel: 'C01', ok: true, ts: '1.3' },
+    ])
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    const posted = await createSlackClient('xoxb-teste', {
+      fetch: fetcher,
+    }).postMessage({ blocks: blocksWithImage, channelId: 'C01', text: 'oi' })
+
+    expect(posted).toEqual({ channelId: 'C01', messageTs: '1.3' })
+    expect(bodies.map(blockTypes)).toEqual([
+      ['section', 'image'],
+      ['section'],
+    ])
+    expect(errors).toHaveBeenCalledOnce()
+
+    errors.mockRestore()
+  })
+
+  it('does not post again when Slack did not answer', async () => {
+    let calls = 0
+    const fetcher = (async () => {
+      calls += 1
+
+      throw new DOMException('The operation timed out.', 'TimeoutError')
+    }) as unknown as typeof globalThis.fetch
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    const posted = await createSlackClient('xoxb-teste', {
+      fetch: fetcher,
+    }).postMessage({ blocks: blocksWithImage, channelId: 'C01', text: 'oi' })
+
+    expect(posted).toBeNull()
+    expect(calls).toBe(1)
+    expect(errors).toHaveBeenCalledWith(
+      'Slack refused chat.postMessage',
+      'no_response',
+      'C01',
+    )
+
+    errors.mockRestore()
+  })
+
+  it('does not post again when the refusal is not about the blocks', async () => {
+    const { bodies, fetcher } = sequenceFetch([
+      { error: 'channel_not_found', ok: false },
+    ])
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    const posted = await createSlackClient('xoxb-teste', {
+      fetch: fetcher,
+    }).postMessage({ blocks: blocksWithImage, channelId: 'C01', text: 'oi' })
+
+    expect(posted).toBeNull()
+    expect(bodies).toHaveLength(1)
+
+    errors.mockRestore()
+  })
+
+  it('does not post again when there is no image to drop', async () => {
+    const { bodies, fetcher } = sequenceFetch([
+      { error: 'invalid_blocks', ok: false },
+    ])
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    const posted = await createSlackClient('xoxb-teste', {
+      fetch: fetcher,
+    }).postMessage({
+      blocks: blocksWithImage.slice(0, 1),
+      channelId: 'C01',
+      text: 'oi',
+    })
+
+    expect(posted).toBeNull()
+    expect(bodies).toHaveLength(1)
 
     errors.mockRestore()
   })
