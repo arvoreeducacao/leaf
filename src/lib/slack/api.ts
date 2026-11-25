@@ -84,13 +84,38 @@ export function encodeArguments(
   return body
 }
 
+function isImageBlock(block: unknown): boolean {
+  return asRecord(block)?.type === 'image'
+}
+
+export function withoutImageBlocks(
+  blocks: ReadonlyArray<unknown>,
+): ReadonlyArray<unknown> | null {
+  const kept = blocks.filter((block) => !isImageBlock(block))
+
+  return kept.length === blocks.length ? null : kept
+}
+
+function refusalOf(body: SlackResponse | null): string {
+  if (body === null) {
+    return 'no_response'
+  }
+
+  const metadata = asRecord(body.response_metadata)
+  const details = Array.isArray(metadata?.messages)
+    ? metadata.messages.filter((item) => typeof item === 'string')
+    : []
+
+  return [asString(body.error) ?? 'unknown_error', ...details].join(' ')
+}
+
 export function createSlackClient(
   token: string,
   options: SlackClientOptions = {},
 ): SlackClient {
   const call = options.fetch ?? globalThis.fetch
 
-  async function post(
+  async function request(
     method: string,
     payload: Record<string, unknown>,
   ): Promise<SlackResponse | null> {
@@ -106,26 +131,60 @@ export function createSlackClient(
       })
 
       const body: unknown = await response.json()
-      const parsed = asRecord(body)
 
-      return parsed?.ok === true ? (parsed as SlackResponse) : null
+      return asRecord(body) as SlackResponse | null
     } catch {
       return null
     }
   }
 
+  async function post(
+    method: string,
+    payload: Record<string, unknown>,
+  ): Promise<SlackResponse | null> {
+    const body = await request(method, payload)
+
+    return body?.ok === true ? body : null
+  }
+
+  function sendMessage(input: PostMessageInput) {
+    return request('chat.postMessage', {
+      channel: input.channelId,
+      text: input.text,
+      unfurl_links: false,
+      unfurl_media: false,
+      ...(input.blocks === undefined ? {} : { blocks: input.blocks }),
+      ...(input.threadTs === undefined ? {} : { thread_ts: input.threadTs }),
+      ...(input.username === undefined ? {} : { username: input.username }),
+      ...(input.iconUrl ? { icon_url: input.iconUrl } : {}),
+    })
+  }
+
   return {
     async postMessage(input) {
-      const body = await post('chat.postMessage', {
-        channel: input.channelId,
-        text: input.text,
-        unfurl_links: false,
-        unfurl_media: false,
-        ...(input.blocks === undefined ? {} : { blocks: input.blocks }),
-        ...(input.threadTs === undefined ? {} : { thread_ts: input.threadTs }),
-        ...(input.username === undefined ? {} : { username: input.username }),
-        ...(input.iconUrl ? { icon_url: input.iconUrl } : {}),
-      })
+      let body = await sendMessage(input)
+      const textOnly =
+        input.blocks === undefined ? null : withoutImageBlocks(input.blocks)
+
+      if (body?.error === 'invalid_blocks' && textOnly !== null) {
+        console.error(
+          'Slack refused chat.postMessage, posting it without images',
+          refusalOf(body),
+          input.channelId,
+        )
+
+        body = await sendMessage({ ...input, blocks: textOnly })
+      }
+
+      if (body?.ok !== true) {
+        console.error(
+          'Slack refused chat.postMessage',
+          refusalOf(body),
+          input.channelId,
+        )
+
+        return null
+      }
 
       const channelId = asString(body?.channel)
       const messageTs = asString(body?.ts)

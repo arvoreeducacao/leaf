@@ -7,7 +7,11 @@ import { isSlackWebhook } from '@/lib/database/form-message'
 import { getFormSlack } from '@/lib/form-webhooks'
 import { signalOpenTabs } from '@/lib/realtime-signals'
 
-import { type SlackClient, createSlackClient } from './api'
+import {
+  type SlackClient,
+  createSlackClient,
+  withoutImageBlocks,
+} from './api'
 import { SLACK_TIMEOUT_MS, slackBotToken } from './config'
 import { escapeSlackText } from './text'
 import { getThreadOfDocument, getThreadOfMessage, saveThread } from './threads'
@@ -38,20 +42,46 @@ export function botClient(): SlackClient | null {
   return token === null ? null : createSlackClient(token)
 }
 
+type WebhookOutcome = 'delivered' | 'refused_blocks' | 'failed'
+
 async function postToWebhook(
   url: string,
   payload: SlackAnnouncePayload,
-): Promise<void> {
+): Promise<WebhookOutcome> {
   try {
-    await fetch(url, {
+    const response = await fetch(url, {
       body: JSON.stringify(payload),
       headers: { 'content-type': 'application/json' },
       method: 'POST',
       signal: AbortSignal.timeout(SLACK_TIMEOUT_MS),
     })
+
+    if (response.ok) {
+      return 'delivered'
+    }
+
+    return (await response.text()).includes('invalid_blocks')
+      ? 'refused_blocks'
+      : 'failed'
   } catch {
-    return
+    return 'failed'
   }
+}
+
+async function deliverToWebhook(
+  url: string,
+  payload: SlackAnnouncePayload,
+): Promise<boolean> {
+  const outcome = await postToWebhook(url, payload)
+  const textOnly = withoutImageBlocks(payload.blocks)
+
+  if (outcome === 'refused_blocks' && textOnly !== null) {
+    const retried = await postToWebhook(url, { ...payload, blocks: textOnly })
+
+    return retried === 'delivered'
+  }
+
+  return outcome === 'delivered'
 }
 
 export type AnnounceInput = Readonly<{
@@ -93,6 +123,8 @@ export async function announceSubmission(
     })
 
     if (!posted) {
+      console.error('Form submission not announced on Slack', input.documentId)
+
       return false
     }
 
@@ -107,7 +139,11 @@ export async function announceSubmission(
   }
 
   if (link.url && isSlackWebhook(link.url)) {
-    await postToWebhook(link.url, input.payload)
+    if (!(await deliverToWebhook(link.url, input.payload))) {
+      console.error('Form submission not announced on Slack', input.documentId)
+
+      return false
+    }
 
     return true
   }

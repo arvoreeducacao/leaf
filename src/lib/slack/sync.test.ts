@@ -168,6 +168,45 @@ const announce = {
   viewId: 'slack-view',
 }
 
+const withImage = {
+  blocks: [
+    ...payload.blocks,
+    {
+      text: {
+        text: '*Prints*\nhttps://leaf.test/api/uploads/u/print.png',
+        type: 'mrkdwn',
+      },
+      type: 'section',
+    },
+    {
+      alt_text: 'print.png',
+      image_url: 'https://leaf.test/api/uploads/u/print.png',
+      type: 'image',
+    },
+  ],
+  text: payload.text,
+}
+
+function isImage(block: unknown): boolean {
+  return (block as { type?: unknown }).type === 'image'
+}
+
+function refusingRecorder(): Recorder {
+  const base = recorder()
+
+  return {
+    ...base,
+    client: {
+      ...base.client,
+      async postMessage(input) {
+        await base.client.postMessage(input)
+
+        return null
+      },
+    },
+  }
+}
+
 describe('escapeSlackText', () => {
   it('escapes what would break the message', () => {
     expect(escapeSlackText('a < b & c > d')).toBe('a &lt; b &amp; c &gt; d')
@@ -230,6 +269,78 @@ describe('announceSubmission', () => {
 
     expect(await announceSubmission({ ...announce, client })).toBe(false)
     expect(posted).toHaveLength(0)
+  })
+
+  it('says so when Slack refuses the announcement', async () => {
+    await seed()
+    const { client, posted } = refusingRecorder()
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    expect(
+      await announceSubmission({ ...announce, client, payload: withImage }),
+    ).toBe(false)
+    expect(posted).toHaveLength(1)
+    expect(errors).toHaveBeenCalledWith(
+      'Form submission not announced on Slack',
+      'slack-row',
+    )
+    expect(await db.query.slackThreads.findFirst()).toBeUndefined()
+
+    errors.mockRestore()
+  })
+
+  it('retries the old webhook without the images when it refuses them', async () => {
+    await seed({ channelId: null, url: WEBHOOK })
+
+    const bodies: Array<{ blocks: Array<unknown> }> = []
+
+    vi.stubGlobal('fetch', async (_url: string, init: RequestInit) => {
+      const body = JSON.parse(String(init.body)) as { blocks: Array<unknown> }
+
+      bodies.push(body)
+
+      return body.blocks.some(isImage)
+        ? new Response('invalid_blocks', { status: 400 })
+        : new Response('ok')
+    })
+
+    expect(
+      await announceSubmission({
+        ...announce,
+        client: null,
+        payload: withImage,
+      }),
+    ).toBe(true)
+    expect(bodies).toHaveLength(2)
+    expect(bodies[1].blocks.some(isImage)).toBe(false)
+
+    vi.unstubAllGlobals()
+  })
+
+  it('does not retry the old webhook when it fails for another reason', async () => {
+    await seed({ channelId: null, url: WEBHOOK })
+
+    let calls = 0
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    vi.stubGlobal('fetch', async () => {
+      calls += 1
+
+      return new Response('no_service', { status: 404 })
+    })
+
+    expect(
+      await announceSubmission({
+        ...announce,
+        client: null,
+        payload: withImage,
+      }),
+    ).toBe(false)
+    expect(calls).toBe(1)
+    expect(errors).toHaveBeenCalledOnce()
+
+    vi.unstubAllGlobals()
+    errors.mockRestore()
   })
 })
 
