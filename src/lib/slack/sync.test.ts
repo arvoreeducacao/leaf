@@ -168,6 +168,47 @@ const announce = {
   viewId: 'slack-view',
 }
 
+const withImage = {
+  blocks: [
+    ...payload.blocks,
+    {
+      text: {
+        text: '*Prints*\nhttps://leaf.test/api/uploads/u/print.png',
+        type: 'mrkdwn',
+      },
+      type: 'section',
+    },
+    {
+      alt_text: 'print.png',
+      image_url: 'https://leaf.test/api/uploads/u/print.png',
+      type: 'image',
+    },
+  ],
+  text: payload.text,
+}
+
+function isImage(block: unknown): boolean {
+  return (block as { type?: unknown }).type === 'image'
+}
+
+function refusingRecorder(
+  refuses: (input: PostMessageInput) => boolean,
+): Recorder {
+  const base = recorder()
+
+  return {
+    ...base,
+    client: {
+      ...base.client,
+      async postMessage(input) {
+        const result = await base.client.postMessage(input)
+
+        return refuses(input) ? null : result
+      },
+    },
+  }
+}
+
 describe('escapeSlackText', () => {
   it('escapes what would break the message', () => {
     expect(escapeSlackText('a < b & c > d')).toBe('a &lt; b &amp; c &gt; d')
@@ -230,6 +271,88 @@ describe('announceSubmission', () => {
 
     expect(await announceSubmission({ ...announce, client })).toBe(false)
     expect(posted).toHaveLength(0)
+  })
+
+  it('posts again without the images when Slack cannot fetch them', async () => {
+    await seed()
+    const { client, posted } = refusingRecorder(
+      (input) => input.blocks?.some(isImage) ?? false,
+    )
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    expect(
+      await announceSubmission({ ...announce, client, payload: withImage }),
+    ).toBe(true)
+    expect(posted).toHaveLength(2)
+    expect(posted[0].blocks?.some(isImage)).toBe(true)
+    expect(posted[1].blocks?.some(isImage)).toBe(false)
+    expect(posted[1].blocks).toContainEqual(withImage.blocks[1])
+    expect(errors).not.toHaveBeenCalled()
+
+    const thread = await db.query.slackThreads.findFirst()
+
+    expect(thread).toMatchObject({ documentId: 'slack-row', messageTs: 'ts-2' })
+
+    errors.mockRestore()
+  })
+
+  it('does not post twice when there is no image to drop', async () => {
+    await seed()
+    const { client, posted } = refusingRecorder(() => true)
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    expect(await announceSubmission({ ...announce, client })).toBe(false)
+    expect(posted).toHaveLength(1)
+    expect(errors).toHaveBeenCalledWith(
+      'Form submission not announced on Slack',
+      'slack-row',
+    )
+    expect(await db.query.slackThreads.findFirst()).toBeUndefined()
+
+    errors.mockRestore()
+  })
+
+  it('says so when Slack refuses the message without images too', async () => {
+    await seed()
+    const { client, posted } = refusingRecorder(() => true)
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    expect(
+      await announceSubmission({ ...announce, client, payload: withImage }),
+    ).toBe(false)
+    expect(posted).toHaveLength(2)
+    expect(errors).toHaveBeenCalledOnce()
+    expect(await db.query.slackThreads.findFirst()).toBeUndefined()
+
+    errors.mockRestore()
+  })
+
+  it('retries the old webhook without the images when it refuses them', async () => {
+    await seed({ channelId: null, url: WEBHOOK })
+
+    const bodies: Array<{ blocks: Array<unknown> }> = []
+
+    vi.stubGlobal('fetch', async (_url: string, init: RequestInit) => {
+      const body = JSON.parse(String(init.body)) as { blocks: Array<unknown> }
+
+      bodies.push(body)
+
+      return body.blocks.some(isImage)
+        ? new Response('invalid_blocks', { status: 400 })
+        : new Response('ok')
+    })
+
+    expect(
+      await announceSubmission({
+        ...announce,
+        client: null,
+        payload: withImage,
+      }),
+    ).toBe(true)
+    expect(bodies).toHaveLength(2)
+    expect(bodies[1].blocks.some(isImage)).toBe(false)
+
+    vi.unstubAllGlobals()
   })
 })
 

@@ -41,17 +41,50 @@ export function botClient(): SlackClient | null {
 async function postToWebhook(
   url: string,
   payload: SlackAnnouncePayload,
-): Promise<void> {
+): Promise<boolean> {
   try {
-    await fetch(url, {
+    const response = await fetch(url, {
       body: JSON.stringify(payload),
       headers: { 'content-type': 'application/json' },
       method: 'POST',
       signal: AbortSignal.timeout(SLACK_TIMEOUT_MS),
     })
+
+    return response.ok
   } catch {
-    return
+    return false
   }
+}
+
+function isImageBlock(block: unknown): boolean {
+  return (
+    typeof block === 'object' &&
+    block !== null &&
+    (block as { type?: unknown }).type === 'image'
+  )
+}
+
+function withoutImages(
+  blocks: ReadonlyArray<unknown>,
+): ReadonlyArray<unknown> | null {
+  const kept = blocks.filter((block) => !isImageBlock(block))
+
+  return kept.length === blocks.length ? null : kept
+}
+
+async function withImageFallback<T>(
+  blocks: ReadonlyArray<unknown>,
+  send: (attempt: ReadonlyArray<unknown>) => Promise<T | null>,
+): Promise<T | null> {
+  const first = await send(blocks)
+
+  if (first !== null) {
+    return first
+  }
+
+  const textOnly = withoutImages(blocks)
+
+  return textOnly === null ? null : send(textOnly)
 }
 
 export type AnnounceInput = Readonly<{
@@ -84,15 +117,18 @@ export async function announceSubmission(
   const client = input.client === undefined ? botClient() : input.client
 
   if (link.channelId && client) {
-    const posted = await client.postMessage({
-      blocks: link.pullThread
+    const channelId = link.channelId
+    const posted = await withImageFallback(
+      link.pullThread
         ? withReplyHint(input.payload, input.replyHint)
         : input.payload.blocks,
-      channelId: link.channelId,
-      text: input.payload.text,
-    })
+      (blocks) =>
+        client.postMessage({ blocks, channelId, text: input.payload.text }),
+    )
 
     if (!posted) {
+      console.error('Form submission not announced on Slack', input.documentId)
+
       return false
     }
 
@@ -107,7 +143,18 @@ export async function announceSubmission(
   }
 
   if (link.url && isSlackWebhook(link.url)) {
-    await postToWebhook(link.url, input.payload)
+    const url = link.url
+    const delivered = await withImageFallback(input.payload.blocks, (blocks) =>
+      postToWebhook(url, { ...input.payload, blocks }).then((ok) =>
+        ok ? true : null,
+      ),
+    )
+
+    if (!delivered) {
+      console.error('Form submission not announced on Slack', input.documentId)
+
+      return false
+    }
 
     return true
   }

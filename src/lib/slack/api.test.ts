@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import { createSlackClient, encodeArguments } from './api'
 
@@ -96,6 +96,30 @@ describe('createSlackClient', () => {
     expect(body.get('thread_ts')).toBe('1.1')
     expect(body.get('username')).toBe('João Barros')
     expect(body.get('icon_url')).toBe('https://leaf.test/rosto.png')
+  })
+
+  it('tells the log why Slack refused the message', async () => {
+    const { fetcher } = recordingFetch({
+      error: 'invalid_blocks',
+      ok: false,
+      response_metadata: {
+        messages: ['[ERROR] downloading image failed [json-pointer:/blocks/2]'],
+      },
+    })
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    const posted = await createSlackClient('xoxb-teste', {
+      fetch: fetcher,
+    }).postMessage({ channelId: 'C01', text: 'oi' })
+
+    expect(posted).toBeNull()
+    expect(errors).toHaveBeenCalledWith(
+      'Slack refused chat.postMessage',
+      'invalid_blocks [ERROR] downloading image failed [json-pointer:/blocks/2]',
+      'C01',
+    )
+
+    errors.mockRestore()
   })
 
   it('returns null when Slack refuses', async () => {
