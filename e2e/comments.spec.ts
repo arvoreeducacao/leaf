@@ -476,6 +476,82 @@ test.describe('comments', () => {
     await expect(page.getByTestId('comments-button')).toContainText('2')
   })
 
+  test('the card peek shows the page conversation without opening the page', async ({
+    browser,
+    page,
+  }) => {
+    await signUp(page, uniqueEmail('peek-conversation'), 'Author')
+
+    await page.getByRole('button', { name: 'Criar novo' }).click()
+    await page.getByRole('menuitem', { name: 'Base de dados' }).click()
+    await page.waitForURL((url) => /\/doc\/[\w-]+$/.test(url.pathname))
+
+    const databaseUrl = page.url()
+
+    await page.getByRole('button', { name: 'Nova página' }).click()
+
+    const row = page.getByRole('row').filter({
+      has: page.getByLabel('Nome da linha'),
+    })
+
+    await expect(row).toHaveCount(1)
+
+    async function openPeek() {
+      await row.hover()
+      await row.getByRole('link', { name: 'Abrir', exact: true }).click()
+      await page.waitForURL((url) => /\/peek\/[\w-]+$/.test(url.pathname))
+
+      const peek = page.getByRole('dialog')
+
+      await expect(peek).toBeVisible()
+
+      return peek
+    }
+
+    const emptyPeek = await openPeek()
+
+    await expect(emptyPeek.getByTestId('document-comments')).toHaveCount(0)
+
+    await emptyPeek.getByRole('link', { name: 'Abrir como página' }).click()
+    await page.waitForURL((url) => /\/doc\/[\w-]+$/.test(url.pathname))
+    await waitForEditorReady(page)
+
+    await openPanel(page)
+    await page.getByLabel('Novo comentário').fill('Seen from the card')
+    await page.getByTestId('submit-comment').click()
+    await expect(page.getByText('Comentário adicionado').first()).toBeVisible()
+    await page.keyboard.press('Escape')
+
+    await page.goto(databaseUrl)
+
+    const peek = await openPeek()
+    const conversation = peek.getByTestId('document-comments')
+
+    await expect(conversation).toBeVisible()
+    await expect(conversation).toContainText('Seen from the card')
+    await expect(conversation).toContainText('Author')
+
+    await conversation
+      .getByTestId('document-comment-input')
+      .fill('Answered from the card')
+    await conversation.getByTestId('submit-document-comment').click()
+
+    await expect(conversation).toContainText('Answered from the card')
+    await expect(peek.getByRole('link', { name: 'Abrir como página' })).toBeVisible()
+
+    const rowPath = new URL(page.url()).pathname
+    const strangerContext = await browser.newContext()
+    const strangerPage = await strangerContext.newPage()
+
+    await signUp(strangerPage, uniqueEmail('peek-stranger'), 'Stranger')
+    await strangerPage.goto(rowPath)
+
+    await expect(strangerPage.getByRole('dialog')).toHaveCount(0)
+    await expect(strangerPage.getByText('Seen from the card')).toHaveCount(0)
+
+    await strangerContext.close()
+  })
+
   test('the public page does not show comments', async ({ browser }) => {
     const ownerContext = await browser.newContext()
     const anonContext = await browser.newContext()
