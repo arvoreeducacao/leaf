@@ -1,13 +1,16 @@
+import { DocumentComments } from '@/components/comments/document-comments'
 import { DocumentEditor } from '@/components/editor/document-editor'
 import { isAiEnabled } from '@/lib/ai-config'
 import { authorNameOf } from '@/lib/author-name'
 import { getSession } from '@/lib/auth'
 import { canComment, canEdit, getDocumentAccess } from '@/lib/authz'
 import { readCommentsState } from '@/lib/comments-access'
+import { relativeTimeAnchor } from '@/lib/comments-state'
 import { documentIdsInContent } from '@/lib/document-links'
 import { getDocument, listDocumentLinkTargets } from '@/lib/documents'
 import { authIssuer as appBaseUrl } from '@/lib/mcp-config'
 import { isRealtimeEnabled, realtimePort } from '@/lib/realtime-config'
+import { getDocumentSlackChannel } from '@/lib/slack/document-channel'
 
 import { RowPeekSheet } from './row-peek-sheet'
 import { RowPropertiesSurface } from './row-properties-surface'
@@ -35,8 +38,9 @@ export async function RowPeek({ rowId }: Props) {
     return null
   }
 
-  const [comments, linkedDocuments] = await Promise.all([
+  const [comments, slack, linkedDocuments] = await Promise.all([
     readCommentsState(document.id, access, session.user.id),
+    getDocumentSlackChannel(document.id),
     listDocumentLinkTargets(
       documentIdsInContent(document.content, appBaseUrl()),
     ),
@@ -45,6 +49,11 @@ export async function RowPeek({ rowId }: Props) {
   const name =
     authorNameOf(session.user.name, session.user.email) ?? session.user.email
   const editable = canEdit(access)
+  const viewer = {
+    id: session.user.id,
+    image: session.user.image ?? null,
+    name,
+  }
 
   return (
     <RowPeekSheet
@@ -57,6 +66,13 @@ export async function RowPeek({ rowId }: Props) {
         <div className="px-4 tablet:px-[54px]">
           <RowPropertiesSurface canEdit={editable} inPeek rowId={document.id} />
         </div>
+        <DocumentComments
+          documentId={document.id}
+          initialState={comments}
+          renderedAt={relativeTimeAnchor()}
+          slack={slack}
+          viewer={viewer}
+        />
         <DocumentEditor
           aiEnabled={isAiEnabled()}
           canComment={canComment(access)}
@@ -81,11 +97,7 @@ export async function RowPeek({ rowId }: Props) {
                 }
               : null
           }
-          viewer={{
-            id: session.user.id,
-            image: session.user.image ?? null,
-            name,
-          }}
+          viewer={viewer}
         />
       </div>
     </RowPeekSheet>
